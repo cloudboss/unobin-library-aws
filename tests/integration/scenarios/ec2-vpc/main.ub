@@ -1,0 +1,12 @@
+description: 'Manages a VPC.'
+
+inputs: { cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' } }
+
+imports: {
+  core: 'github.com/cloudboss/unobin//pkg/libraries/core@v0.4.0'
+  aws:  'github.com/cloudboss/unobin-library-aws@v0.0.0'
+}
+
+resources: { aws: { ec2-vpc: { it: { cidr-block: var.cidr-block } } } }
+
+outputs: { vpc-id: { value: resource.aws.ec2-vpc.it.vpc-id } }

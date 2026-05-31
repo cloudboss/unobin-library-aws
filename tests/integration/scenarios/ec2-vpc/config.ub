@@ -1,0 +1,5 @@
+inputs: { cidr-block: '10.42.0.0/16' }
+
+configurations: { aws: { default: {} } }
+
+state: { @backend: core.local, path: '.unobin/state', encryption: { @key-source: core.noop } }
