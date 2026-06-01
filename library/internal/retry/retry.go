@@ -26,6 +26,16 @@ func defaultConfig() config {
 	}
 }
 
+// Option overrides a retry default.
+type Option func(*config)
+
+// WithTimeout sets how long OnError keeps retrying before it gives up and
+// returns the last error. The default is two minutes; a slow-propagating
+// dependency may warrant a longer window.
+func WithTimeout(timeout time.Duration) Option {
+	return func(c *config) { c.timeout = timeout }
+}
+
 // OnError runs fn and returns its result. When fn returns an error that
 // retryable reports as transient, it waits and runs fn again, until fn
 // succeeds, returns an error retryable does not recognize, or the timeout
@@ -35,8 +45,13 @@ func OnError(
 	ctx context.Context,
 	retryable func(error) bool,
 	fn func(context.Context) error,
+	opts ...Option,
 ) error {
-	return onError(ctx, retryable, fn, defaultConfig())
+	cfg := defaultConfig()
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return onError(ctx, retryable, fn, cfg)
 }
 
 func onError(

@@ -1,0 +1,27 @@
+description: '''>-
+  Manages a KMS key with tags and an alias that points
+  at it, then turns on key rotation with an action.
+  '''
+
+imports: {
+  core: 'github.com/cloudboss/unobin//pkg/libraries/core@v0.4.0'
+  aws:  'github.com/cloudboss/unobin-library-aws@v0.0.0'
+}
+
+resources: {
+  aws: {
+    kms-key: { it: { description: 'unobin integration test key', tags: { unobin: 'kms-it' } } }
+    kms-alias: {
+      it: { alias-name: 'alias/unobin-it-key', target-key-id: resource.aws.kms-key.it.key-id }
+    }
+  }
+}
+
+actions: { aws: { kms-enable-key-rotation: { it: { key-id: resource.aws.kms-key.it.key-id } } } }
+
+outputs: {
+  key-arn:              { value: resource.aws.kms-key.it.arn }
+  key-id:               { value: resource.aws.kms-key.it.key-id }
+  alias-arn:            { value: resource.aws.kms-alias.it.arn }
+  alias-target-key-arn: { value: resource.aws.kms-alias.it.target-key-arn }
+}

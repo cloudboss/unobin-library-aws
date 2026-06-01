@@ -8,6 +8,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
+	"github.com/cloudboss/unobin-library-aws/library/actions"
 	"github.com/cloudboss/unobin-library-aws/library/config"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
 )
@@ -34,8 +35,20 @@ func Library() *runtime.Library {
 			"iam-role-policy-attachment": runtime.MakeResource[
 				resources.IamRolePolicyAttachment,
 				*resources.IamRolePolicyAttachmentOutput](),
+			"kms-key": runtime.MakeResource[resources.KmsKey, *resources.KmsKeyOutput](),
+			"kms-alias": runtime.MakeResource[
+				resources.KmsAlias, *resources.KmsAliasOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{},
-		Actions:     map[string]runtime.ActionRegistration{},
+		Actions: map[string]runtime.ActionRegistration{
+			"kms-enable-key": runtime.MakeAction[
+				actions.KmsEnableKey, *actions.KmsKeyActionOutput](),
+			"kms-disable-key": runtime.MakeAction[
+				actions.KmsDisableKey, *actions.KmsKeyActionOutput](),
+			"kms-enable-key-rotation": runtime.MakeAction[
+				actions.KmsEnableKeyRotation, *actions.KmsKeyActionOutput](),
+			"kms-disable-key-rotation": runtime.MakeAction[
+				actions.KmsDisableKeyRotation, *actions.KmsKeyActionOutput](),
+		},
 	}
 }

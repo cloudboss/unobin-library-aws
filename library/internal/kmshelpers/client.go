@@ -1,0 +1,70 @@
+package kmshelpers
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	kms "github.com/aws/aws-sdk-go-v2/service/kms"
+	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
+
+	"github.com/cloudboss/unobin-library-aws/library/config"
+)
+
+// NewClient returns the AWS SDK Go v2 client for kms, configured from cfg.
+// cfg is the *config.Configuration the runtime hands every lifecycle
+// method; the helper unwraps it and builds an aws.Config via
+// config.LoadAWSConfig.
+func NewClient(ctx context.Context, cfg any) (*kms.Client, error) {
+	c, ok := cfg.(*config.Configuration)
+	if !ok {
+		return nil, fmt.Errorf("kmsclient: unexpected configuration type %T", cfg)
+	}
+	awsCfg, err := config.LoadAWSConfig(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	return kms.NewFromConfig(awsCfg), nil
+}
+
+// IsNotFound reports whether err is KMS's NotFound error. KMS models each
+// failure as its own error type, so a Read matches the type to turn a read
+// of a gone key or alias into runtime.ErrNotFound. This is the same
+// condition the Terraform provider tests with its typed error check.
+func IsNotFound(err error) bool {
+	var notFound *kmstypes.NotFoundException
+	return errors.As(err, &notFound)
+}
+
+// Region returns the region the client is configured for.
+func Region(client *kms.Client) string {
+	return client.Options().Region
+}
+
+// IsMalformedPolicy reports whether err is the malformed-policy error KMS
+// returns when a key policy names a principal that was created moments
+// earlier and has not propagated. KMS is eventually consistent about the
+// principals it knows, so a create or a policy update that trips this
+// succeeds once the principal is visible, and a caller retries.
+func IsMalformedPolicy(err error) bool {
+	var malformed *kmstypes.MalformedPolicyDocumentException
+	return errors.As(err, &malformed)
+}
+
+// IsDisabled reports whether err is KMS's Disabled error. Enabling rotation
+// on a key that is still settling into the enabled state can briefly fail
+// this way, so a caller retries until the key is ready.
+func IsDisabled(err error) bool {
+	var disabled *kmstypes.DisabledException
+	return errors.As(err, &disabled)
+}
+
+// IsPendingDeletion reports whether err is the invalid-state error KMS
+// returns when an operation targets a key already scheduled for deletion. A
+// delete treats it as success: the key is on its way out either way.
+func IsPendingDeletion(err error) bool {
+	var invalidState *kmstypes.KMSInvalidStateException
+	return errors.As(err, &invalidState) &&
+		strings.Contains(invalidState.ErrorMessage(), "is pending deletion")
+}
