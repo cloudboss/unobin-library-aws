@@ -103,7 +103,14 @@ for sdir in "${@}"; do
     build_dir=$(mktemp -d "/tmp/unobin-library-aws-it-${name}-XXXXXX")
     rel="${sdir#${REPO_DIR}/}"
 
+    # failed_step holds the first failure seen and stays the reported reason no
+    # matter what fails after it. Once apply is attempted, the scenario may have
+    # created cloud resources, so destroy runs even after an earlier failure to
+    # tear them down; a destroy failure is reported only when nothing failed
+    # before it.
     failed_step=""
+    applied=""
+
     if [ -d "${sdir}/prepare" ]; then
         (
             cd "${REPO_DIR}"
@@ -133,9 +140,18 @@ for sdir in "${@}"; do
     if [ -z "${failed_step}" ]; then
         (
             cd "${build_dir}"
-            ./${name} plan --allow-version-mismatch \
+            ./${name} plan \
                 -c ./config.ub \
                 -o "${build_dir}/plan.json"
+        ) || failed_step="plan"
+    fi
+
+    if [ -z "${failed_step}" ]; then
+        # apply is the step that creates cloud resources, so from here a failed
+        # run has something to tear down even when apply itself fails partway.
+        applied="true"
+        (
+            cd "${build_dir}"
             ./${name} apply "${build_dir}/plan.json"
         ) || failed_step="apply"
     fi
@@ -144,24 +160,30 @@ for sdir in "${@}"; do
         (
             cd "${REPO_DIR}"
             VERIFY_PHASE=applied go run "./${rel}/verify"
-        ) || failed_step="verify-${VERIFY_PHASE}"
+        ) || failed_step="verify-applied"
     fi
 
-    if [ -z "${failed_step}" ]; then
-        (
+    # Destroy runs whenever apply was attempted, even after an earlier failure,
+    # so a failed run still cleans up what it created. verify-destroyed runs only
+    # on an otherwise-clean run, since a run that already failed keeps its first
+    # error as the reason.
+    if [ -n "${applied}" ]; then
+        if (
             cd "${build_dir}"
-            ./${name} plan --allow-version-mismatch --destroy \
+            ./${name} plan --destroy \
                 -c ./config.ub \
                 -o "${build_dir}/destroy.json"
             ./${name} apply "${build_dir}/destroy.json"
-        ) || failed_step="destroy"
-    fi
-
-    if [ -z "${failed_step}" ] && [ -d "${sdir}/verify" ]; then
-        (
-            cd "${REPO_DIR}"
-            VERIFY_PHASE=destroyed go run "./${rel}/verify"
-        ) || failed_step="verify-${VERIFY_PHASE}"
+        ); then
+            if [ -z "${failed_step}" ] && [ -d "${sdir}/verify" ]; then
+                (
+                    cd "${REPO_DIR}"
+                    VERIFY_PHASE=destroyed go run "./${rel}/verify"
+                ) || failed_step="verify-destroyed"
+            fi
+        elif [ -z "${failed_step}" ]; then
+            failed_step="destroy"
+        fi
     fi
 
     rm -rf "${build_dir}"
