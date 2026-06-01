@@ -7,8 +7,6 @@ package library
 import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
-	"github.com/cloudboss/unobin/pkg/sdk/encrypt"
-	"github.com/cloudboss/unobin/pkg/sdk/state"
 
 	"github.com/cloudboss/unobin-library-aws/library/config"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
@@ -37,9 +35,7 @@ func Library() *runtime.Library {
 				resources.IamRolePolicyAttachment,
 				*resources.IamRolePolicyAttachmentOutput](),
 		},
-		DataSources:   map[string]runtime.DataSourceRegistration{},
-		Actions:       map[string]runtime.ActionRegistration{},
-		StateBackends: map[string]state.BackendType{},
-		Encrypters:    map[string]encrypt.EncrypterType{},
+		DataSources: map[string]runtime.DataSourceRegistration{},
+		Actions:     map[string]runtime.ActionRegistration{},
 	}
 }
