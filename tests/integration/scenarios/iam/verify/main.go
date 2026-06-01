@@ -1,0 +1,233 @@
+// verify checks the IAM group the scenario applied against the phase named in
+// the VERIFY_PHASE environment variable, looking each resource up by its stable
+// name because the test driver does not pass plan outputs into verify. It only
+// reads cloud state: applied requires the role, policy, attachment, instance
+// profile, and OIDC provider to be present and joined together; destroyed
+// requires them all to be gone. Tearing the group down is the destroy plan's
+// job, not the verifier's.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+)
+
+const (
+	roleName    = "unobin-it-role"
+	policyName  = "unobin-it-policy"
+	profileName = "unobin-it-profile"
+	oidcURL     = "https://oidc.unobin-it.example.com"
+)
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("verify: %v", err)
+	}
+}
+
+func run() error {
+	phase := os.Getenv("VERIFY_PHASE")
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("load aws config: %w", err)
+	}
+	client := iam.NewFromConfig(cfg)
+
+	switch phase {
+	case "applied":
+		return verifyApplied(ctx, client)
+	case "destroyed":
+		return verifyDestroyed(ctx, client)
+	default:
+		return fmt.Errorf("VERIFY_PHASE must be applied or destroyed, got %q", phase)
+	}
+}
+
+func verifyApplied(ctx context.Context, client *iam.Client) error {
+	if _, err := client.GetRole(ctx, &iam.GetRoleInput{
+		RoleName: aws.String(roleName),
+	}); err != nil {
+		return fmt.Errorf("get role %s: %w", roleName, err)
+	}
+
+	policyArn, err := findPolicyArn(ctx, client)
+	if err != nil {
+		return err
+	}
+	if policyArn == "" {
+		return fmt.Errorf("no managed policy named %s", policyName)
+	}
+
+	attached, err := roleHasPolicy(ctx, client, policyArn)
+	if err != nil {
+		return err
+	}
+	if !attached {
+		return fmt.Errorf("policy %s is not attached to role %s", policyName, roleName)
+	}
+
+	profile, err := client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+		InstanceProfileName: aws.String(profileName),
+	})
+	if err != nil {
+		return fmt.Errorf("get instance profile %s: %w", profileName, err)
+	}
+	if !profileHasRole(profile.InstanceProfile, roleName) {
+		return fmt.Errorf("instance profile %s does not hold role %s", profileName, roleName)
+	}
+
+	oidcArn, err := findOIDCProviderArn(ctx, client)
+	if err != nil {
+		return err
+	}
+	if oidcArn == "" {
+		return fmt.Errorf("no OIDC provider for url %s", oidcURL)
+	}
+
+	fmt.Printf("ok: role %s, policy %s attached, profile %s, OIDC provider %s present\n",
+		roleName, policyName, profileName, oidcArn)
+	return nil
+}
+
+func verifyDestroyed(ctx context.Context, client *iam.Client) error {
+	if err := requireRoleGone(ctx, client); err != nil {
+		return err
+	}
+	if err := requireProfileGone(ctx, client); err != nil {
+		return err
+	}
+	policyArn, err := findPolicyArn(ctx, client)
+	if err != nil {
+		return err
+	}
+	if policyArn != "" {
+		return fmt.Errorf("policy %s still exists at %s", policyName, policyArn)
+	}
+	oidcArn, err := findOIDCProviderArn(ctx, client)
+	if err != nil {
+		return err
+	}
+	if oidcArn != "" {
+		return fmt.Errorf("OIDC provider for url %s still exists at %s", oidcURL, oidcArn)
+	}
+	fmt.Printf("ok: role %s, policy %s, instance profile %s, and the OIDC provider are gone\n",
+		roleName, policyName, profileName)
+	return nil
+}
+
+func requireRoleGone(ctx context.Context, client *iam.Client) error {
+	_, err := client.GetRole(ctx, &iam.GetRoleInput{RoleName: aws.String(roleName)})
+	if err == nil {
+		return fmt.Errorf("role %s still exists", roleName)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get role %s: %w", roleName, err)
+}
+
+func requireProfileGone(ctx context.Context, client *iam.Client) error {
+	_, err := client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+		InstanceProfileName: aws.String(profileName),
+	})
+	if err == nil {
+		return fmt.Errorf("instance profile %s still exists", profileName)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get instance profile %s: %w", profileName, err)
+}
+
+// findPolicyArn returns the ARN of the customer managed policy named policyName,
+// or the empty string when no such policy exists.
+func findPolicyArn(ctx context.Context, client *iam.Client) (string, error) {
+	pager := iam.NewListPoliciesPaginator(client, &iam.ListPoliciesInput{
+		Scope: iamtypes.PolicyScopeTypeLocal,
+	})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return "", fmt.Errorf("list policies: %w", err)
+		}
+		for _, p := range page.Policies {
+			if aws.ToString(p.PolicyName) == policyName {
+				return aws.ToString(p.Arn), nil
+			}
+		}
+	}
+	return "", nil
+}
+
+// roleHasPolicy reports whether policyArn is attached to the role.
+func roleHasPolicy(ctx context.Context, client *iam.Client, policyArn string) (bool, error) {
+	pager := iam.NewListAttachedRolePoliciesPaginator(client,
+		&iam.ListAttachedRolePoliciesInput{RoleName: aws.String(roleName)})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, fmt.Errorf("list attached role policies: %w", err)
+		}
+		for _, p := range page.AttachedPolicies {
+			if aws.ToString(p.PolicyArn) == policyArn {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// profileHasRole reports whether the instance profile holds a role named name.
+func profileHasRole(profile *iamtypes.InstanceProfile, name string) bool {
+	if profile == nil {
+		return false
+	}
+	for _, r := range profile.Roles {
+		if aws.ToString(r.RoleName) == name {
+			return true
+		}
+	}
+	return false
+}
+
+// findOIDCProviderArn returns the ARN of the OIDC provider whose URL matches
+// oidcURL, or the empty string when none matches. IAM stores the provider URL
+// without its scheme, so the comparison strips the leading https:// first.
+func findOIDCProviderArn(ctx context.Context, client *iam.Client) (string, error) {
+	list, err := client.ListOpenIDConnectProviders(ctx,
+		&iam.ListOpenIDConnectProvidersInput{})
+	if err != nil {
+		return "", fmt.Errorf("list oidc providers: %w", err)
+	}
+	want := strings.TrimPrefix(oidcURL, "https://")
+	for _, p := range list.OpenIDConnectProviderList {
+		arn := aws.ToString(p.Arn)
+		got, err := client.GetOpenIDConnectProvider(ctx,
+			&iam.GetOpenIDConnectProviderInput{OpenIDConnectProviderArn: aws.String(arn)})
+		if err != nil {
+			if isNotFound(err) {
+				continue
+			}
+			return "", fmt.Errorf("get oidc provider %s: %w", arn, err)
+		}
+		if aws.ToString(got.Url) == want {
+			return arn, nil
+		}
+	}
+	return "", nil
+}
+
+func isNotFound(err error) bool {
+	var notFound *iamtypes.NoSuchEntityException
+	return errors.As(err, &notFound)
+}

@@ -24,6 +24,18 @@ func Library() *runtime.Library {
 		},
 		Resources: map[string]runtime.ResourceRegistration{
 			"ec2-vpc": runtime.MakeResource[resources.Ec2Vpc, *resources.Ec2VpcOutput](),
+			"iam-role": runtime.MakeResource[
+				resources.IamRole, *resources.IamRoleOutput](),
+			"iam-policy": runtime.MakeResource[
+				resources.IamPolicy, *resources.IamPolicyOutput](),
+			"iam-instance-profile": runtime.MakeResource[
+				resources.IamInstanceProfile, *resources.IamInstanceProfileOutput](),
+			"iam-openid-connect-provider": runtime.MakeResource[
+				resources.IamOpenIDConnectProvider,
+				*resources.IamOpenIDConnectProviderOutput](),
+			"iam-role-policy-attachment": runtime.MakeResource[
+				resources.IamRolePolicyAttachment,
+				*resources.IamRolePolicyAttachmentOutput](),
 		},
 		DataSources:   map[string]runtime.DataSourceRegistration{},
 		Actions:       map[string]runtime.ActionRegistration{},

@@ -1,0 +1,3 @@
+configurations: { aws: { default: {} } }
+
+state: { @backend: core.local, path: '.unobin/state', encryption: { @key-source: core.noop } }

@@ -1,0 +1,54 @@
+description: '''>-
+  Manages an IAM role with a managed policy, an
+  attachment, an instance profile, and an OIDC provider.
+  '''
+
+imports: {
+  core: 'github.com/cloudboss/unobin//pkg/libraries/core@v0.4.0'
+  aws:  'github.com/cloudboss/unobin-library-aws@v0.0.0'
+}
+
+resources: {
+  aws: {
+    iam-role: {
+      it: {
+        role-name: 'unobin-it-role'
+        assume-role-policy-document: '''\-
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+          {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+          '''
+      }
+    }
+    iam-policy: {
+      it: {
+        policy-name: 'unobin-it-policy'
+        policy-document: '''\-
+          {"Version":"2012-10-17","Statement":[{"Effect":
+          "Allow","Action":["s3:GetObject"],"Resource":"*"}]}
+          '''
+      }
+    }
+    iam-role-policy-attachment: {
+      it: {
+        role-name:  resource.aws.iam-role.it.role-name
+        policy-arn: resource.aws.iam-policy.it.arn
+      }
+    }
+    iam-instance-profile: {
+      it: { instance-profile-name: 'unobin-it-profile', role: resource.aws.iam-role.it.role-name }
+    }
+    iam-openid-connect-provider: {
+      it: {
+        url:             'https://oidc.unobin-it.example.com'
+        client-id-list:  ['sts.amazonaws.com']
+        thumbprint-list: ['990f4193972f2becf12ddeda5237f9c952f20d9e']
+      }
+    }
+  }
+}
+
+outputs: {
+  role-arn:    { value: resource.aws.iam-role.it.arn }
+  policy-arn:  { value: resource.aws.iam-policy.it.arn }
+  profile-arn: { value: resource.aws.iam-instance-profile.it.arn }
+}
