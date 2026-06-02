@@ -1,4 +1,4 @@
-package resources
+package iam
 
 import (
 	"context"
@@ -11,33 +11,33 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
 )
 
-// IamRolePolicyAttachment attaches a managed policy to an IAM role. It is
+// RolePolicyAttachment attaches a managed policy to an IAM role. It is
 // a pure association between a role and a policy ARN, so it has no tags,
 // no description, and no mutable fields. Changing either the role or the
 // policy ARN makes a different attachment, which is why both are replace
 // fields.
-type IamRolePolicyAttachment struct {
+type RolePolicyAttachment struct {
 	RoleName  string `ub:"role-name"`
 	PolicyArn string `ub:"policy-arn"`
 }
 
-// IamRolePolicyAttachmentOutput is empty because the attachment has no
+// RolePolicyAttachmentOutput is empty because the attachment has no
 // identifier or computed value of its own. The role name and policy ARN
 // are inputs and are already referenceable, so nothing is echoed here.
-type IamRolePolicyAttachmentOutput struct{}
+type RolePolicyAttachmentOutput struct{}
 
-func (r *IamRolePolicyAttachment) SchemaVersion() int { return 1 }
+func (r *RolePolicyAttachment) SchemaVersion() int { return 1 }
 
-func (r *IamRolePolicyAttachment) ReplaceFields() []string {
+func (r *RolePolicyAttachment) ReplaceFields() []string {
 	return []string{
 		"role-name",
 		"policy-arn",
 	}
 }
 
-func (r *IamRolePolicyAttachment) Create(
+func (r *RolePolicyAttachment) Create(
 	ctx context.Context, cfg any,
-) (*IamRolePolicyAttachmentOutput, error) {
+) (*RolePolicyAttachmentOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (r *IamRolePolicyAttachment) Create(
 	if err != nil {
 		return nil, err
 	}
-	return &IamRolePolicyAttachmentOutput{}, nil
+	return &RolePolicyAttachmentOutput{}, nil
 }
 
 // Read lists the policies attached to the role and confirms the policy
@@ -64,9 +64,9 @@ func (r *IamRolePolicyAttachment) Create(
 // presence of the ARN in the list is the attachment. A missing role
 // returns NoSuchEntity, and a role whose list no longer contains the ARN
 // means the attachment drifted away. Both map to runtime.ErrNotFound.
-func (r *IamRolePolicyAttachment) Read(
-	ctx context.Context, cfg any, prior *IamRolePolicyAttachmentOutput,
-) (*IamRolePolicyAttachmentOutput, error) {
+func (r *RolePolicyAttachment) Read(
+	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
+) (*RolePolicyAttachmentOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -85,25 +85,25 @@ func (r *IamRolePolicyAttachment) Read(
 		}
 		for _, policy := range page.AttachedPolicies {
 			if aws.ToString(policy.PolicyArn) == r.PolicyArn {
-				return &IamRolePolicyAttachmentOutput{}, nil
+				return &RolePolicyAttachmentOutput{}, nil
 			}
 		}
 	}
 	return nil, runtime.ErrNotFound
 }
 
-func (r *IamRolePolicyAttachment) Update(
+func (r *RolePolicyAttachment) Update(
 	ctx context.Context, cfg any,
-	prior runtime.Prior[IamRolePolicyAttachment, *IamRolePolicyAttachmentOutput],
-) (*IamRolePolicyAttachmentOutput, error) {
+	prior runtime.Prior[RolePolicyAttachment, *RolePolicyAttachmentOutput],
+) (*RolePolicyAttachmentOutput, error) {
 	return prior.Outputs, nil
 }
 
 // Delete detaches the policy from the role. A detach of an attachment
 // that is already gone returns NoSuchEntity, which is treated as success
 // so delete is idempotent.
-func (r *IamRolePolicyAttachment) Delete(
-	ctx context.Context, cfg any, prior *IamRolePolicyAttachmentOutput,
+func (r *RolePolicyAttachment) Delete(
+	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
 ) error {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {

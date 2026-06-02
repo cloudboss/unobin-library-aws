@@ -1,4 +1,4 @@
-package resources
+package iam
 
 import (
 	"context"
@@ -22,13 +22,13 @@ import (
 // non-default version is removed to make room.
 const maxPolicyVersions = 5
 
-// IamPolicy manages an IAM customer managed policy. The policy document is
+// Policy manages an IAM customer managed policy. The policy document is
 // the permission set the policy grants; a change to it is applied in place
 // by adding a new default version. The name, path, and description are
 // fixed at create time: IAM cannot rename or re-path a policy, and it
 // treats the description as immutable, so a change to any of them recreates
 // the policy.
-type IamPolicy struct {
+type Policy struct {
 	PolicyName     string            `ub:"policy-name"`
 	PolicyDocument string            `ub:"policy-document"`
 	Path           *string           `ub:"path"`
@@ -36,9 +36,9 @@ type IamPolicy struct {
 	Tags           map[string]string `ub:"tags"`
 }
 
-// IamPolicyOutput holds the values IAM computes for a managed policy. The
+// PolicyOutput holds the values IAM computes for a managed policy. The
 // ARN is the policy's identity, used to read, update, and delete it.
-type IamPolicyOutput struct {
+type PolicyOutput struct {
 	Arn              string `ub:"arn"`
 	PolicyId         string `ub:"policy-id"`
 	DefaultVersionId string `ub:"default-version-id"`
@@ -46,13 +46,13 @@ type IamPolicyOutput struct {
 	CreateDate       string `ub:"create-date"`
 }
 
-func (r *IamPolicy) SchemaVersion() int { return 1 }
+func (r *Policy) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that IAM cannot change on an existing
 // policy. The name and path are part of the policy's ARN, and IAM treats
 // the description as immutable once set, so a change to any of them
 // requires replacing the policy.
-func (r *IamPolicy) ReplaceFields() []string {
+func (r *Policy) ReplaceFields() []string {
 	return []string{
 		"policy-name",
 		"path",
@@ -60,7 +60,7 @@ func (r *IamPolicy) ReplaceFields() []string {
 	}
 }
 
-func (r *IamPolicy) Create(ctx context.Context, cfg any) (*IamPolicyOutput, error) {
+func (r *Policy) Create(ctx context.Context, cfg any) (*PolicyOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -99,9 +99,9 @@ func (r *IamPolicy) Create(ctx context.Context, cfg any) (*IamPolicyOutput, erro
 	return r.read(ctx, client, aws.ToString(resp.Policy.Arn), true)
 }
 
-func (r *IamPolicy) Read(
-	ctx context.Context, cfg any, prior *IamPolicyOutput,
-) (*IamPolicyOutput, error) {
+func (r *Policy) Read(
+	ctx context.Context, cfg any, prior *PolicyOutput,
+) (*PolicyOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -114,9 +114,9 @@ func (r *IamPolicy) Read(
 // propagated yet and read waits for it; otherwise a not-found is drift and
 // maps to runtime.ErrNotFound at once. A policy ARN is well-formed as soon as
 // the policy exists, so visibility is the only thing to wait for.
-func (r *IamPolicy) read(
+func (r *Policy) read(
 	ctx context.Context, client *iam.Client, arn string, created bool,
-) (*IamPolicyOutput, error) {
+) (*PolicyOutput, error) {
 	var policy *iamtypes.Policy
 	err := wait.Until(ctx, fmt.Sprintf("policy %s", r.PolicyName),
 		func(ctx context.Context) (bool, error) {
@@ -148,9 +148,9 @@ func (r *IamPolicy) read(
 	return policyOutput(policy), nil
 }
 
-func (r *IamPolicy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[IamPolicy, *IamPolicyOutput],
-) (*IamPolicyOutput, error) {
+func (r *Policy) Update(
+	ctx context.Context, cfg any, prior runtime.Prior[Policy, *PolicyOutput],
+) (*PolicyOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -171,7 +171,7 @@ func (r *IamPolicy) Update(
 	return policyOutput(resp.Policy), nil
 }
 
-func (r *IamPolicy) Delete(ctx context.Context, cfg any, prior *IamPolicyOutput) error {
+func (r *Policy) Delete(ctx context.Context, cfg any, prior *PolicyOutput) error {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func (r *IamPolicy) Delete(ctx context.Context, cfg any, prior *IamPolicyOutput)
 // applyNewVersion records the current policy document as a new version and
 // makes it the default. IAM caps a policy at five versions, so a full
 // policy is pruned of its oldest non-default version first.
-func (r *IamPolicy) applyNewVersion(ctx context.Context, client *iam.Client, arn string) error {
+func (r *Policy) applyNewVersion(ctx context.Context, client *iam.Client, arn string) error {
 	if err := pruneVersions(ctx, client, arn, maxPolicyVersions-1); err != nil {
 		return err
 	}
@@ -301,8 +301,8 @@ func syncPolicyTags(
 	)
 }
 
-func policyOutput(p *iamtypes.Policy) *IamPolicyOutput {
-	out := &IamPolicyOutput{
+func policyOutput(p *iamtypes.Policy) *PolicyOutput {
+	out := &PolicyOutput{
 		Arn:              aws.ToString(p.Arn),
 		PolicyId:         aws.ToString(p.PolicyId),
 		DefaultVersionId: aws.ToString(p.DefaultVersionId),

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/resources"
+	"github.com/cloudboss/unobin-library-aws/library/iam"
 )
 
 // TestLibraryRegistersIamResources checks the runtime registration: every
@@ -20,11 +20,11 @@ import (
 func TestLibraryRegistersIamResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"iam-role":                    reflect.TypeFor[*resources.IamRoleOutput](),
-		"iam-policy":                  reflect.TypeFor[*resources.IamPolicyOutput](),
-		"iam-instance-profile":        reflect.TypeFor[*resources.IamInstanceProfileOutput](),
-		"iam-openid-connect-provider": reflect.TypeFor[*resources.IamOpenIDConnectProviderOutput](),
-		"iam-role-policy-attachment":  reflect.TypeFor[*resources.IamRolePolicyAttachmentOutput](),
+		"iam-role":                    reflect.TypeFor[*iam.RoleOutput](),
+		"iam-policy":                  reflect.TypeFor[*iam.PolicyOutput](),
+		"iam-instance-profile":        reflect.TypeFor[*iam.InstanceProfileOutput](),
+		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
+		"iam-role-policy-attachment":  reflect.TypeFor[*iam.RolePolicyAttachmentOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {

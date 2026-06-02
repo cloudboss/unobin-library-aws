@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudboss/unobin-library-aws/library/config"
 	"github.com/cloudboss/unobin-library-aws/library/ec2"
+	"github.com/cloudboss/unobin-library-aws/library/iam"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
 	"github.com/cloudboss/unobin-library-aws/library/s3"
 )
@@ -25,17 +26,17 @@ func Library() *runtime.Library {
 		Resources: map[string]runtime.ResourceRegistration{
 			"ec2-vpc": runtime.MakeResource[ec2.Vpc, *ec2.VpcOutput](),
 			"iam-role": runtime.MakeResource[
-				resources.IamRole, *resources.IamRoleOutput](),
+				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[
-				resources.IamPolicy, *resources.IamPolicyOutput](),
+				iam.Policy, *iam.PolicyOutput](),
 			"iam-instance-profile": runtime.MakeResource[
-				resources.IamInstanceProfile, *resources.IamInstanceProfileOutput](),
+				iam.InstanceProfile, *iam.InstanceProfileOutput](),
 			"iam-openid-connect-provider": runtime.MakeResource[
-				resources.IamOpenIDConnectProvider,
-				*resources.IamOpenIDConnectProviderOutput](),
+				iam.OpenIDConnectProvider,
+				*iam.OpenIDConnectProviderOutput](),
 			"iam-role-policy-attachment": runtime.MakeResource[
-				resources.IamRolePolicyAttachment,
-				*resources.IamRolePolicyAttachmentOutput](),
+				iam.RolePolicyAttachment,
+				*iam.RolePolicyAttachmentOutput](),
 			"kms-key": runtime.MakeResource[resources.KmsKey, *resources.KmsKeyOutput](),
 			"kms-alias": runtime.MakeResource[
 				resources.KmsAlias, *resources.KmsAliasOutput](),

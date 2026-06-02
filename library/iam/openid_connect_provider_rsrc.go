@@ -1,4 +1,4 @@
-package resources
+package iam
 
 import (
 	"context"
@@ -15,44 +15,44 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
 )
 
-// IamOpenIDConnectProvider manages an IAM OpenID Connect (OIDC) identity provider.
-type IamOpenIDConnectProvider struct {
+// OpenIDConnectProvider manages an IAM OpenID Connect (OIDC) identity provider.
+type OpenIDConnectProvider struct {
 	Url            string            `ub:"url"`
 	ClientIDList   []string          `ub:"client-id-list"`
 	ThumbprintList []string          `ub:"thumbprint-list"`
 	Tags           map[string]string `ub:"tags"`
 }
 
-// IamOpenIDConnectProviderOutput holds attributes that IAM computes for the
+// OpenIDConnectProviderOutput holds attributes that IAM computes for the
 // provider. ThumbprintList is here as well as on the input because IAM derives
 // it from the provider's certificate chain when the input omits it; carrying
 // the read-back value lets a reference to thumbprint-list resolve to what IAM
 // actually used rather than the empty input. URL, client ID list, and tags are
 // returned unchanged from the input, so they are not echoed.
-type IamOpenIDConnectProviderOutput struct {
+type OpenIDConnectProviderOutput struct {
 	Arn            string   `ub:"arn"`
 	CreateDate     string   `ub:"create-date"`
 	ThumbprintList []string `ub:"thumbprint-list"`
 }
 
 // SchemaVersion reports the schema version of the resource state.
-func (r *IamOpenIDConnectProvider) SchemaVersion() int {
+func (r *OpenIDConnectProvider) SchemaVersion() int {
 	return 1
 }
 
 // ReplaceFields lists the input fields that force the provider to be replaced.
 // Only the URL is immutable; the client ID list, thumbprint list, and tags all
 // change in place.
-func (r *IamOpenIDConnectProvider) ReplaceFields() []string {
+func (r *OpenIDConnectProvider) ReplaceFields() []string {
 	return []string{"url"}
 }
 
 // Create provisions a new IAM OIDC provider. When the thumbprint list is
 // omitted, IAM derives it from the provider's certificate chain.
-func (r *IamOpenIDConnectProvider) Create(
+func (r *OpenIDConnectProvider) Create(
 	ctx context.Context,
 	cfg any,
-) (*IamOpenIDConnectProviderOutput, error) {
+) (*OpenIDConnectProviderOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -87,11 +87,11 @@ func (r *IamOpenIDConnectProvider) Create(
 }
 
 // Read fetches the current state of the IAM OIDC provider.
-func (r *IamOpenIDConnectProvider) Read(
+func (r *OpenIDConnectProvider) Read(
 	ctx context.Context,
 	cfg any,
-	prior *IamOpenIDConnectProviderOutput,
-) (*IamOpenIDConnectProviderOutput, error) {
+	prior *OpenIDConnectProviderOutput,
+) (*OpenIDConnectProviderOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -101,11 +101,11 @@ func (r *IamOpenIDConnectProvider) Read(
 
 // Update applies in-place changes to the IAM OIDC provider: a replaced
 // thumbprint list, added or removed client IDs, and changed tags.
-func (r *IamOpenIDConnectProvider) Update(
+func (r *OpenIDConnectProvider) Update(
 	ctx context.Context,
 	cfg any,
-	prior runtime.Prior[IamOpenIDConnectProvider, *IamOpenIDConnectProviderOutput],
-) (*IamOpenIDConnectProviderOutput, error) {
+	prior runtime.Prior[OpenIDConnectProvider, *OpenIDConnectProviderOutput],
+) (*OpenIDConnectProviderOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -142,10 +142,10 @@ func (r *IamOpenIDConnectProvider) Update(
 }
 
 // Delete removes the IAM OIDC provider. A provider already gone is treated as deleted.
-func (r *IamOpenIDConnectProvider) Delete(
+func (r *OpenIDConnectProvider) Delete(
 	ctx context.Context,
 	cfg any,
-	prior *IamOpenIDConnectProviderOutput,
+	prior *OpenIDConnectProviderOutput,
 ) error {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
@@ -169,7 +169,7 @@ func oidcProviderRead(
 	ctx context.Context,
 	client *iam.Client,
 	arn string,
-) (*IamOpenIDConnectProviderOutput, error) {
+) (*OpenIDConnectProviderOutput, error) {
 	resp, err := client.GetOpenIDConnectProvider(ctx, &iam.GetOpenIDConnectProviderInput{
 		OpenIDConnectProviderArn: aws.String(arn),
 	})
@@ -179,7 +179,7 @@ func oidcProviderRead(
 		}
 		return nil, fmt.Errorf("get iam oidc provider: %w", err)
 	}
-	out := &IamOpenIDConnectProviderOutput{
+	out := &OpenIDConnectProviderOutput{
 		Arn:            arn,
 		ThumbprintList: resp.ThumbprintList,
 	}

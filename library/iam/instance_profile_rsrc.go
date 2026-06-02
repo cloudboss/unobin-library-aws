@@ -1,4 +1,4 @@
-package resources
+package iam
 
 import (
 	"context"
@@ -18,44 +18,44 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
 )
 
-// IamInstanceProfile is a container that an EC2 instance assumes to gain
+// InstanceProfile is a container that an EC2 instance assumes to gain
 // the permissions of a single IAM role. The name and path fix the
 // profile's identity, so changing either replaces the profile. The role
 // is the one role the profile holds; it is attached after the profile
 // exists and can be swapped in place. Tags are reconciled to match the
 // configuration on every apply.
-type IamInstanceProfile struct {
+type InstanceProfile struct {
 	InstanceProfileName string            `ub:"instance-profile-name"`
 	Path                *string           `ub:"path"`
 	Role                *string           `ub:"role"`
 	Tags                map[string]string `ub:"tags"`
 }
 
-// IamInstanceProfileOutput holds the values the IAM API computes for an
+// InstanceProfileOutput holds the values the IAM API computes for an
 // instance profile. The name, path, and role are configuration inputs and
 // are referenced from the input, so they are not echoed here.
-type IamInstanceProfileOutput struct {
+type InstanceProfileOutput struct {
 	Arn               string `ub:"arn"`
 	InstanceProfileId string `ub:"instance-profile-id"`
 	CreateDate        string `ub:"create-date"`
 }
 
-func (r *IamInstanceProfile) SchemaVersion() int { return 1 }
+func (r *InstanceProfile) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that fix the profile's identity. The name
 // and path cannot change on an existing profile, so a change to either
 // forces a replace. The role is left out because it is attached and
 // detached in place during Update.
-func (r *IamInstanceProfile) ReplaceFields() []string {
+func (r *InstanceProfile) ReplaceFields() []string {
 	return []string{
 		"instance-profile-name",
 		"path",
 	}
 }
 
-func (r *IamInstanceProfile) Create(
+func (r *InstanceProfile) Create(
 	ctx context.Context, cfg any,
-) (*IamInstanceProfileOutput, error) {
+) (*InstanceProfileOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -95,9 +95,9 @@ func (r *IamInstanceProfile) Create(
 	return r.read(ctx, client, true)
 }
 
-func (r *IamInstanceProfile) Read(
-	ctx context.Context, cfg any, prior *IamInstanceProfileOutput,
-) (*IamInstanceProfileOutput, error) {
+func (r *InstanceProfile) Read(
+	ctx context.Context, cfg any, prior *InstanceProfileOutput,
+) (*InstanceProfileOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -116,9 +116,9 @@ func (r *IamInstanceProfile) Read(
 // On a create the ARN can also flap between replicas, so read requires it
 // well-formed on a few consecutive reads before trusting it; a steady-state
 // read takes the first well-formed ARN, since by then it has settled.
-func (r *IamInstanceProfile) read(
+func (r *InstanceProfile) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*IamInstanceProfileOutput, error) {
+) (*InstanceProfileOutput, error) {
 	var profile *iamtypes.InstanceProfile
 	probe := func(ctx context.Context) (bool, error) {
 		resp, err := client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
@@ -155,9 +155,9 @@ func (r *IamInstanceProfile) read(
 	return instanceProfileOutput(profile), nil
 }
 
-func (r *IamInstanceProfile) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[IamInstanceProfile, *IamInstanceProfileOutput],
-) (*IamInstanceProfileOutput, error) {
+func (r *InstanceProfile) Update(
+	ctx context.Context, cfg any, prior runtime.Prior[InstanceProfile, *InstanceProfileOutput],
+) (*InstanceProfileOutput, error) {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -182,8 +182,8 @@ func (r *IamInstanceProfile) Update(
 	return prior.Outputs, nil
 }
 
-func (r *IamInstanceProfile) Delete(
-	ctx context.Context, cfg any, prior *IamInstanceProfileOutput,
+func (r *InstanceProfile) Delete(
+	ctx context.Context, cfg any, prior *InstanceProfileOutput,
 ) error {
 	client, err := iamhelpers.NewClient(ctx, cfg)
 	if err != nil {
@@ -208,7 +208,7 @@ func (r *IamInstanceProfile) Delete(
 	return nil
 }
 
-func (r *IamInstanceProfile) addRole(
+func (r *InstanceProfile) addRole(
 	ctx context.Context, client *iam.Client, role string,
 ) error {
 	// A profile or role created moments earlier may not have propagated to the
@@ -224,7 +224,7 @@ func (r *IamInstanceProfile) addRole(
 		})
 }
 
-func (r *IamInstanceProfile) removeRole(
+func (r *InstanceProfile) removeRole(
 	ctx context.Context, client *iam.Client, role string,
 ) error {
 	_, err := client.RemoveRoleFromInstanceProfile(ctx, &iam.RemoveRoleFromInstanceProfileInput{
@@ -244,7 +244,7 @@ func (r *IamInstanceProfile) removeRole(
 // It is the IAM instance profile binding of tagsync.Sync, reading the
 // current tags with the list-tags paginator and applying changes through
 // the IAM tag and untag calls, which upsert and remove by key.
-func (r *IamInstanceProfile) syncTags(ctx context.Context, client *iam.Client) error {
+func (r *InstanceProfile) syncTags(ctx context.Context, client *iam.Client) error {
 	return tagsync.Sync(ctx, r.Tags,
 		func(ctx context.Context) (map[string]string, error) {
 			out := make(map[string]string)
@@ -280,8 +280,8 @@ func (r *IamInstanceProfile) syncTags(ctx context.Context, client *iam.Client) e
 	)
 }
 
-func instanceProfileOutput(p *iamtypes.InstanceProfile) *IamInstanceProfileOutput {
-	out := &IamInstanceProfileOutput{
+func instanceProfileOutput(p *iamtypes.InstanceProfile) *InstanceProfileOutput {
+	out := &InstanceProfileOutput{
 		Arn:               aws.ToString(p.Arn),
 		InstanceProfileId: aws.ToString(p.InstanceProfileId),
 	}
