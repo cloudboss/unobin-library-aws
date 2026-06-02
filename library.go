@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
@@ -55,6 +56,10 @@ func Library() *runtime.Library {
 				lambda.Function, *lambda.FunctionOutput](),
 			"lambda-permission": runtime.MakeResource[
 				lambda.Permission, *lambda.PermissionOutput](),
+			"eventbridge-rule": runtime.MakeResource[
+				eventbridge.Rule, *eventbridge.RuleOutput](),
+			"eventbridge-target": runtime.MakeResource[
+				eventbridge.Target, *eventbridge.TargetOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{},
 		Actions: map[string]runtime.ActionRegistration{
