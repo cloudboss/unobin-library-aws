@@ -9,6 +9,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
 	"github.com/cloudboss/unobin-library-aws/library/config"
+	"github.com/cloudboss/unobin-library-aws/library/ec2"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
 	"github.com/cloudboss/unobin-library-aws/library/s3"
 )
@@ -22,7 +23,7 @@ func Library() *runtime.Library {
 			New:         func() any { return &config.Configuration{} },
 		},
 		Resources: map[string]runtime.ResourceRegistration{
-			"ec2-vpc": runtime.MakeResource[resources.Ec2Vpc, *resources.Ec2VpcOutput](),
+			"ec2-vpc": runtime.MakeResource[ec2.Vpc, *ec2.VpcOutput](),
 			"iam-role": runtime.MakeResource[
 				resources.IamRole, *resources.IamRoleOutput](),
 			"iam-policy": runtime.MakeResource[

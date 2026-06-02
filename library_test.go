@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/resources"
+	"github.com/cloudboss/unobin-library-aws/library/ec2"
 )
 
 // TestLibraryRegistersEc2Vpc checks the runtime registration: ec2-vpc is
@@ -21,7 +21,7 @@ func TestLibraryRegistersEc2Vpc(t *testing.T) {
 	lib := library.Library()
 	require.Contains(t, lib.Resources, "ec2-vpc")
 	assert.Equal(t,
-		reflect.TypeFor[*resources.Ec2VpcOutput](),
+		reflect.TypeFor[*ec2.VpcOutput](),
 		lib.Resources["ec2-vpc"].OutputType())
 }
 

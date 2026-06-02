@@ -1,4 +1,4 @@
-package resources
+package ec2
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
 )
 
-type Ec2Vpc struct {
+type Vpc struct {
 	CidrBlock                       *string `ub:"cidr-block"`
 	InstanceTenancy                 *string `ub:"instance-tenancy"`
 	AmazonProvidedIpv6CidrBlock     *bool   `ub:"amazon-provided-ipv6-cidr-block"`
@@ -26,15 +26,15 @@ type Ec2Vpc struct {
 	Ipv6NetmaskLength               *int64  `ub:"ipv6-netmask-length"`
 }
 
-type Ec2VpcOutput struct {
+type VpcOutput struct {
 	VpcId         string `ub:"vpc-id"`
 	DhcpOptionsId string `ub:"dhcp-options-id"`
 	OwnerId       string `ub:"owner-id"`
 }
 
-func (r *Ec2Vpc) SchemaVersion() int { return 1 }
+func (r *Vpc) SchemaVersion() int { return 1 }
 
-func (r *Ec2Vpc) ReplaceFields() []string {
+func (r *Vpc) ReplaceFields() []string {
 	return []string{
 		"cidr-block",
 		"instance-tenancy",
@@ -55,7 +55,7 @@ func (r *Ec2Vpc) ReplaceFields() []string {
 // IPAM pool, or a netmask length from an IPAM pool. A network border
 // group only applies to an Amazon-provided block, and tenancy is one of
 // the two values CreateVpc accepts.
-func (r Ec2Vpc) Constraints() []constraint.Constraint {
+func (r Vpc) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.InstanceTenancy)).
 			Require(constraint.OneOf(r.InstanceTenancy, "default", "dedicated")).
@@ -74,7 +74,7 @@ func (r Ec2Vpc) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Ec2Vpc) Create(ctx context.Context, cfg any) (*Ec2VpcOutput, error) {
+func (r *Vpc) Create(ctx context.Context, cfg any) (*VpcOutput, error) {
 	client, err := ec2helpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -99,14 +99,14 @@ func (r *Ec2Vpc) Create(ctx context.Context, cfg any) (*Ec2VpcOutput, error) {
 	}, 5*time.Minute); err != nil {
 		return nil, err
 	}
-	return &Ec2VpcOutput{
+	return &VpcOutput{
 		VpcId:         aws.ToString(resp.Vpc.VpcId),
 		DhcpOptionsId: aws.ToString(resp.Vpc.DhcpOptionsId),
 		OwnerId:       aws.ToString(resp.Vpc.OwnerId),
 	}, nil
 }
 
-func (r *Ec2Vpc) Read(ctx context.Context, cfg any, prior *Ec2VpcOutput) (*Ec2VpcOutput, error) {
+func (r *Vpc) Read(ctx context.Context, cfg any, prior *VpcOutput) (*VpcOutput, error) {
 	client, err := ec2helpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -124,20 +124,20 @@ func (r *Ec2Vpc) Read(ctx context.Context, cfg any, prior *Ec2VpcOutput) (*Ec2Vp
 		return nil, runtime.ErrNotFound
 	}
 	v := resp.Vpcs[0]
-	return &Ec2VpcOutput{
+	return &VpcOutput{
 		VpcId:         aws.ToString(v.VpcId),
 		DhcpOptionsId: aws.ToString(v.DhcpOptionsId),
 		OwnerId:       aws.ToString(v.OwnerId),
 	}, nil
 }
 
-func (r *Ec2Vpc) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Ec2Vpc, *Ec2VpcOutput],
-) (*Ec2VpcOutput, error) {
+func (r *Vpc) Update(
+	ctx context.Context, cfg any, prior runtime.Prior[Vpc, *VpcOutput],
+) (*VpcOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *Ec2Vpc) Delete(ctx context.Context, cfg any, prior *Ec2VpcOutput) error {
+func (r *Vpc) Delete(ctx context.Context, cfg any, prior *VpcOutput) error {
 	client, err := ec2helpers.NewClient(ctx, cfg)
 	if err != nil {
 		return err
