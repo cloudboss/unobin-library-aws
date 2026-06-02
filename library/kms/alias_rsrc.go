@@ -1,4 +1,4 @@
-package resources
+package kms
 
 import (
 	"context"
@@ -16,33 +16,33 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
 )
 
-// KmsAlias manages a friendly name that points at a KMS key. The alias name
+// Alias manages a friendly name that points at a KMS key. The alias name
 // is the alias's identity: KMS has no rename, so a change to it replaces the
 // alias. The target key can be re-pointed in place, and accepts either a key
 // id or a key ARN, which KMS treats as the same key.
-type KmsAlias struct {
+type Alias struct {
 	AliasName   string `ub:"alias-name"`
 	TargetKeyId string `ub:"target-key-id"`
 }
 
-// KmsAliasOutput holds the values KMS computes for an alias. Arn is the
+// AliasOutput holds the values KMS computes for an alias. Arn is the
 // alias's own ARN; TargetKeyArn is the ARN of the key it points at, which KMS
 // reports only as a bare key id, so it is reconstructed from the alias ARN.
-type KmsAliasOutput struct {
+type AliasOutput struct {
 	Arn          string `ub:"arn"`
 	TargetKeyArn string `ub:"target-key-arn"`
 }
 
-func (r *KmsAlias) SchemaVersion() int { return 1 }
+func (r *Alias) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs KMS cannot change on an existing alias. The
 // alias name is the alias's identity and KMS offers no rename, so a change to
 // it requires replacing the alias.
-func (r *KmsAlias) ReplaceFields() []string {
+func (r *Alias) ReplaceFields() []string {
 	return []string{"alias-name"}
 }
 
-func (r *KmsAlias) Create(ctx context.Context, cfg any) (*KmsAliasOutput, error) {
+func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
 	client, err := kmshelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -70,9 +70,9 @@ func (r *KmsAlias) Create(ctx context.Context, cfg any) (*KmsAliasOutput, error)
 	return r.read(ctx, client, r.AliasName, true)
 }
 
-func (r *KmsAlias) Read(
-	ctx context.Context, cfg any, prior *KmsAliasOutput,
-) (*KmsAliasOutput, error) {
+func (r *Alias) Read(
+	ctx context.Context, cfg any, prior *AliasOutput,
+) (*AliasOutput, error) {
 	client, err := kmshelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -86,9 +86,9 @@ func (r *KmsAlias) Read(
 // When created is true the alias was just made, so a not-yet-listed alias is
 // still propagating and read waits for it; otherwise a missing alias is drift
 // and maps to runtime.ErrNotFound.
-func (r *KmsAlias) read(
+func (r *Alias) read(
 	ctx context.Context, client *kms.Client, name string, created bool,
-) (*KmsAliasOutput, error) {
+) (*AliasOutput, error) {
 	var entry *kmstypes.AliasListEntry
 	err := wait.Until(ctx, fmt.Sprintf("alias %s", name),
 		func(ctx context.Context) (bool, error) {
@@ -114,12 +114,12 @@ func (r *KmsAlias) read(
 	if err != nil {
 		return nil, err
 	}
-	return &KmsAliasOutput{Arn: aliasARN, TargetKeyArn: keyARN}, nil
+	return &AliasOutput{Arn: aliasARN, TargetKeyArn: keyARN}, nil
 }
 
-func (r *KmsAlias) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[KmsAlias, *KmsAliasOutput],
-) (*KmsAliasOutput, error) {
+func (r *Alias) Update(
+	ctx context.Context, cfg any, prior runtime.Prior[Alias, *AliasOutput],
+) (*AliasOutput, error) {
 	client, err := kmshelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func (r *KmsAlias) Update(
 	return r.read(ctx, client, r.AliasName, false)
 }
 
-func (r *KmsAlias) Delete(ctx context.Context, cfg any, prior *KmsAliasOutput) error {
+func (r *Alias) Delete(ctx context.Context, cfg any, prior *AliasOutput) error {
 	client, err := kmshelpers.NewClient(ctx, cfg)
 	if err != nil {
 		return err

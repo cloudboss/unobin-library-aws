@@ -11,7 +11,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/config"
 	"github.com/cloudboss/unobin-library-aws/library/ec2"
 	"github.com/cloudboss/unobin-library-aws/library/iam"
-	"github.com/cloudboss/unobin-library-aws/library/resources"
+	"github.com/cloudboss/unobin-library-aws/library/kms"
 	"github.com/cloudboss/unobin-library-aws/library/s3"
 )
 
@@ -37,9 +37,9 @@ func Library() *runtime.Library {
 			"iam-role-policy-attachment": runtime.MakeResource[
 				iam.RolePolicyAttachment,
 				*iam.RolePolicyAttachmentOutput](),
-			"kms-key": runtime.MakeResource[resources.KmsKey, *resources.KmsKeyOutput](),
+			"kms-key": runtime.MakeResource[kms.Key, *kms.KeyOutput](),
 			"kms-alias": runtime.MakeResource[
-				resources.KmsAlias, *resources.KmsAliasOutput](),
+				kms.Alias, *kms.AliasOutput](),
 			"s3-bucket": runtime.MakeResource[s3.Bucket, *s3.BucketOutput](),
 			"s3-bucket-policy": runtime.MakeResource[
 				s3.BucketPolicy, *s3.BucketPolicyOutput](),

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/resources"
+	"github.com/cloudboss/unobin-library-aws/library/kms"
 )
 
 // TestLibraryRegistersKmsResources checks the runtime registration: every
@@ -20,8 +20,8 @@ import (
 func TestLibraryRegistersKmsResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"kms-key":   reflect.TypeFor[*resources.KmsKeyOutput](),
-		"kms-alias": reflect.TypeFor[*resources.KmsAliasOutput](),
+		"kms-key":   reflect.TypeFor[*kms.KeyOutput](),
+		"kms-alias": reflect.TypeFor[*kms.AliasOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
