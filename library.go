@@ -27,10 +27,10 @@ func Library() *runtime.Library {
 			"ec2-vpc": runtime.MakeResource[ec2.Vpc, *ec2.VpcOutput](),
 			"ec2-security-group": runtime.MakeResource[
 				ec2.SecurityGroup, *ec2.SecurityGroupOutput](),
-			"ec2-vpc-security-group-ingress-rule": runtime.MakeResource[
-				ec2.VpcSecurityGroupIngressRule, *ec2.VpcSecurityGroupIngressRuleOutput](),
-			"ec2-vpc-security-group-egress-rule": runtime.MakeResource[
-				ec2.VpcSecurityGroupEgressRule, *ec2.VpcSecurityGroupEgressRuleOutput](),
+			"ec2-security-group-ingress-rule": runtime.MakeResource[
+				ec2.SecurityGroupIngressRule, *ec2.SecurityGroupIngressRuleOutput](),
+			"ec2-security-group-egress-rule": runtime.MakeResource[
+				ec2.SecurityGroupEgressRule, *ec2.SecurityGroupEgressRuleOutput](),
 			"iam-role": runtime.MakeResource[
 				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[

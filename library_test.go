@@ -88,9 +88,9 @@ func TestEc2VpcSchema(t *testing.T) {
 func TestLibraryRegistersEc2SecurityGroups(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"ec2-security-group":                  reflect.TypeFor[*ec2.SecurityGroupOutput](),
-		"ec2-vpc-security-group-ingress-rule": reflect.TypeFor[*ec2.VpcSecurityGroupIngressRuleOutput](),
-		"ec2-vpc-security-group-egress-rule":  reflect.TypeFor[*ec2.VpcSecurityGroupEgressRuleOutput](),
+		"ec2-security-group":              reflect.TypeFor[*ec2.SecurityGroupOutput](),
+		"ec2-security-group-ingress-rule": reflect.TypeFor[*ec2.SecurityGroupIngressRuleOutput](),
+		"ec2-security-group-egress-rule":  reflect.TypeFor[*ec2.SecurityGroupEgressRuleOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -167,8 +167,8 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 				{Kind: "at-most-one-of", Fields: []string{"name", "name-prefix"}},
 			},
 		},
-		"ec2-vpc-security-group-ingress-rule": ruleSchema,
-		"ec2-vpc-security-group-egress-rule":  ruleSchema,
+		"ec2-security-group-ingress-rule": ruleSchema,
+		"ec2-security-group-egress-rule":  ruleSchema,
 	}
 
 	for key, want := range cases {

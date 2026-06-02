@@ -18,7 +18,7 @@ resources: {
         tags:        { unobin: 'ec2-it' }
       }
     }
-    ec2-vpc-security-group-ingress-rule: {
+    ec2-security-group-ingress-rule: {
       it: {
         security-group-id: resource.aws.ec2-security-group.it.id
         ip-protocol:       'tcp'
@@ -28,7 +28,7 @@ resources: {
         description:       'ssh from the vpc'
       }
     }
-    ec2-vpc-security-group-egress-rule: {
+    ec2-security-group-egress-rule: {
       it: {
         security-group-id: resource.aws.ec2-security-group.it.id
         ip-protocol:       'tcp'
@@ -45,9 +45,9 @@ outputs: {
   vpc-id:            { value: resource.aws.ec2-vpc.it.vpc-id }
   security-group-id: { value: resource.aws.ec2-security-group.it.id }
   ingress-rule-id: {
-    value: resource.aws.ec2-vpc-security-group-ingress-rule.it.security-group-rule-id
+    value: resource.aws.ec2-security-group-ingress-rule.it.security-group-rule-id
   }
   egress-rule-id: {
-    value: resource.aws.ec2-vpc-security-group-egress-rule.it.security-group-rule-id
+    value: resource.aws.ec2-security-group-egress-rule.it.security-group-rule-id
   }
 }
