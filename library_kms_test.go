@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/actions"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
 )
 
@@ -28,23 +27,6 @@ func TestLibraryRegistersKmsResources(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, lib.Resources, key)
 			assert.Equal(t, outputType, lib.Resources[key].OutputType())
-		})
-	}
-}
-
-// TestLibraryRegistersKmsActions checks the runtime registration: every KMS
-// key operation is present under Actions and dispatches to the action output
-// type.
-func TestLibraryRegistersKmsActions(t *testing.T) {
-	lib := library.Library()
-	out := reflect.TypeFor[*actions.KmsKeyActionOutput]()
-	for _, key := range []string{
-		"kms-enable-key", "kms-disable-key",
-		"kms-enable-key-rotation", "kms-disable-key-rotation",
-	} {
-		t.Run(key, func(t *testing.T) {
-			require.Contains(t, lib.Actions, key)
-			assert.Equal(t, out, lib.Actions[key].OutputType())
 		})
 	}
 }
@@ -69,6 +51,9 @@ func TestKmsSchemas(t *testing.T) {
 				"custom-key-store-id":                typecheck.TOptional(typecheck.TString()),
 				"xks-key-id":                         typecheck.TOptional(typecheck.TString()),
 				"multi-region":                       typecheck.TOptional(typecheck.TBoolean()),
+				"enable-key":                         typecheck.TOptional(typecheck.TBoolean()),
+				"enable-key-rotation":                typecheck.TOptional(typecheck.TBoolean()),
+				"rotation-period-in-days":            typecheck.TOptional(typecheck.TInteger()),
 				"tags":                               typecheck.TMap(typecheck.TString()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -101,6 +86,18 @@ func TestKmsSchemas(t *testing.T) {
 						"var.key-usage == 'GENERATE_VERIFY_MAC' || var.key-usage == 'KEY_AGREEMENT')",
 					Message: "key-usage must be a valid KMS key usage",
 				},
+				{
+					Kind:   "required-with",
+					Fields: []string{"rotation-period-in-days", "enable-key-rotation"},
+				},
+				{
+					Kind: "predicate",
+					When: "(var.rotation-period-in-days != null)",
+					Require: "(var.rotation-period-in-days == null || " +
+						"var.rotation-period-in-days >= 90) && " +
+						"(var.rotation-period-in-days == null || var.rotation-period-in-days <= 2560)",
+					Message: "rotation-period-in-days must be between 90 and 2560",
+				},
 			},
 		},
 		"kms-alias": {
@@ -119,55 +116,6 @@ func TestKmsSchemas(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assert.Equal(t, want, schema.Resources[key])
-		})
-	}
-}
-
-// TestKmsActionSchemas checks the input and output field types the dev CLI
-// reads for each KMS key action, including the rotation period bound.
-func TestKmsActionSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-
-	keyIDOnly := map[string]typecheck.Type{"key-id": typecheck.TString()}
-	noOutputs := map[string]typecheck.Type{}
-	cases := map[string]*runtime.TypeSchema{
-		"kms-enable-key": {
-			Inputs:  keyIDOnly,
-			Outputs: noOutputs,
-		},
-		"kms-disable-key": {
-			Inputs:  keyIDOnly,
-			Outputs: noOutputs,
-		},
-		"kms-disable-key-rotation": {
-			Inputs:  keyIDOnly,
-			Outputs: noOutputs,
-		},
-		"kms-enable-key-rotation": {
-			Inputs: map[string]typecheck.Type{
-				"key-id":                  typecheck.TString(),
-				"rotation-period-in-days": typecheck.TOptional(typecheck.TInteger()),
-			},
-			Outputs: noOutputs,
-			Constraints: []lang.ConstraintSpec{
-				{
-					Kind: "predicate",
-					When: "(var.rotation-period-in-days != null)",
-					Require: "(var.rotation-period-in-days == null || " +
-						"var.rotation-period-in-days >= 90) && " +
-						"(var.rotation-period-in-days == null || var.rotation-period-in-days <= 2560)",
-					Message: "rotation-period-in-days must be between 90 and 2560",
-				},
-			},
-		},
-	}
-
-	for key, want := range cases {
-		t.Run(key, func(t *testing.T) {
-			require.Contains(t, schema.Actions, key)
-			assert.Equal(t, want, schema.Actions[key])
 		})
 	}
 }

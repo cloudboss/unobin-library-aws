@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	kms "github.com/aws/aws-sdk-go-v2/service/kms"
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/library/internal/kmshelpers"
+	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
@@ -27,9 +29,11 @@ const policyNameDefault = "default"
 // governs who may use it. The key spec, key usage, custom key store, external
 // key, and multi-Region flag are fixed at create time, so a change to any of
 // them replaces the key; the policy, description, and tags change in place.
-// Enabling, disabling, and rotation are separate KMS operations offered as
-// actions rather than fields: a key is not declared enabled or rotating at
-// create time, it is created enabled and toggled afterward.
+// Whether the key is enabled and whether it rotates are distinct KMS operations
+// with no create-time setting, so they are optional fields applied after the
+// key exists: an unset enable-key or enable-key-rotation leaves the AWS default
+// (created enabled, rotation off), and a set value is reconciled by enabling or
+// disabling the key or its rotation.
 type KmsKey struct {
 	Policy                         *string           `ub:"policy"`
 	BypassPolicyLockoutSafetyCheck *bool             `ub:"bypass-policy-lockout-safety-check"`
@@ -39,6 +43,9 @@ type KmsKey struct {
 	CustomKeyStoreId               *string           `ub:"custom-key-store-id"`
 	XksKeyId                       *string           `ub:"xks-key-id"`
 	MultiRegion                    *bool             `ub:"multi-region"`
+	EnableKey                      *bool             `ub:"enable-key"`
+	EnableKeyRotation              *bool             `ub:"enable-key-rotation"`
+	RotationPeriodInDays           *int64            `ub:"rotation-period-in-days"`
 	Tags                           map[string]string `ub:"tags"`
 }
 
@@ -68,7 +75,9 @@ func (r *KmsKey) ReplaceFields() []string {
 
 // Constraints declares the rules KMS places on a key's inputs. An external key
 // belongs to an external key store, so an xks key id requires a custom key
-// store id. The key spec and key usage each accept a fixed set of values.
+// store id. The key spec and key usage each accept a fixed set of values. A
+// rotation period applies only when rotation is enabled and must be between 90
+// and 2560 days.
 func (r KmsKey) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.RequiredWith(r.XksKeyId, r.CustomKeyStoreId),
@@ -86,6 +95,11 @@ func (r KmsKey) Constraints() []constraint.Constraint {
 			Require(constraint.OneOf(r.KeyUsage,
 				"ENCRYPT_DECRYPT", "SIGN_VERIFY", "GENERATE_VERIFY_MAC", "KEY_AGREEMENT")).
 			Message("key-usage must be a valid KMS key usage"),
+		constraint.RequiredWith(r.RotationPeriodInDays, r.EnableKeyRotation),
+		constraint.When(constraint.Present(r.RotationPeriodInDays)).
+			Require(constraint.AtLeast(r.RotationPeriodInDays, 90),
+				constraint.AtMost(r.RotationPeriodInDays, 2560)).
+			Message("rotation-period-in-days must be between 90 and 2560"),
 	}
 }
 
@@ -131,11 +145,25 @@ func (r *KmsKey) Create(ctx context.Context, cfg any) (*KmsKeyOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create key: %w", err)
 	}
+	keyID := aws.ToString(resp.KeyMetadata.KeyId)
+	// A key is created enabled with rotation off, so only the inputs that differ
+	// from those defaults need a call. Rotation is set while the key is still
+	// enabled; a disable is left until after, so it cannot get in the way.
+	if r.EnableKeyRotation != nil && *r.EnableKeyRotation {
+		if err := r.enableRotation(ctx, client, keyID); err != nil {
+			return nil, err
+		}
+	}
+	if r.EnableKey != nil && !*r.EnableKey {
+		if err := r.disableKey(ctx, client, keyID); err != nil {
+			return nil, err
+		}
+	}
 	// Read settles the eventual consistency that follows a create: KMS can
 	// briefly report the just-made key as absent, and a later plan that read it
 	// absent would take it for deleted and recreate it. Waiting here for it to
 	// become visible keeps the next read truthful.
-	return r.read(ctx, client, aws.ToString(resp.KeyMetadata.KeyId), true)
+	return r.read(ctx, client, keyID, true)
 }
 
 func (r *KmsKey) Read(ctx context.Context, cfg any, prior *KmsKeyOutput) (*KmsKeyOutput, error) {
@@ -201,6 +229,14 @@ func (r *KmsKey) Update(
 		return nil, err
 	}
 	keyID := prior.Outputs.KeyId
+	// Rotation cannot be changed on a disabled key, so the key is enabled ahead
+	// of any rotation change and disabled only after one.
+	enableChanged := r.EnableKey != nil && runtime.Changed(prior.Inputs.EnableKey, r.EnableKey)
+	if enableChanged && *r.EnableKey {
+		if err := r.enableKey(ctx, client, keyID); err != nil {
+			return nil, err
+		}
+	}
 	// AWS keeps the description and policy until they are set again, so each is
 	// reconciled only when present rather than cleared on removal. Tags are
 	// reconciled as a set to match the desired map.
@@ -220,6 +256,26 @@ func (r *KmsKey) Update(
 	}
 	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
 		if err := r.syncTags(ctx, client, keyID); err != nil {
+			return nil, err
+		}
+	}
+	// Rotation reconciles when its toggle or its period changed; the period is
+	// only meaningful while rotation is on.
+	if r.EnableKeyRotation != nil &&
+		(runtime.Changed(prior.Inputs.EnableKeyRotation, r.EnableKeyRotation) ||
+			runtime.Changed(prior.Inputs.RotationPeriodInDays, r.RotationPeriodInDays)) {
+		if *r.EnableKeyRotation {
+			if err := r.enableRotation(ctx, client, keyID); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := r.disableRotation(ctx, client, keyID); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if enableChanged && !*r.EnableKey {
+		if err := r.disableKey(ctx, client, keyID); err != nil {
 			return nil, err
 		}
 	}
@@ -265,6 +321,67 @@ func (r *KmsKey) putPolicy(ctx context.Context, client *kms.Client, keyID string
 	})
 	if err != nil {
 		return fmt.Errorf("put key policy: %w", err)
+	}
+	return nil
+}
+
+// enableKey enables the key, retrying while a just-created key is still
+// propagating and reports as not found. That window clears in about a second,
+// so the retry polls at that interval rather than the slower default.
+func (r *KmsKey) enableKey(ctx context.Context, client *kms.Client, keyID string) error {
+	err := retry.OnError(ctx, kmshelpers.IsNotFound, func(ctx context.Context) error {
+		_, err := client.EnableKey(ctx, &kms.EnableKeyInput{KeyId: aws.String(keyID)})
+		return err
+	}, retry.WithInterval(time.Second))
+	if err != nil {
+		return fmt.Errorf("enable key: %w", err)
+	}
+	return nil
+}
+
+// disableKey disables the key, retrying through the same not-found settling
+// window as enableKey, at the same one-second interval.
+func (r *KmsKey) disableKey(ctx context.Context, client *kms.Client, keyID string) error {
+	err := retry.OnError(ctx, kmshelpers.IsNotFound, func(ctx context.Context) error {
+		_, err := client.DisableKey(ctx, &kms.DisableKeyInput{KeyId: aws.String(keyID)})
+		return err
+	}, retry.WithInterval(time.Second))
+	if err != nil {
+		return fmt.Errorf("disable key: %w", err)
+	}
+	return nil
+}
+
+// enableRotation turns on automatic rotation, setting the rotation period when
+// one is given. A key still settling can report as not found or not yet
+// enabled; that window clears fast, so the call retries through both at a
+// one-second interval.
+func (r *KmsKey) enableRotation(ctx context.Context, client *kms.Client, keyID string) error {
+	in := &kms.EnableKeyRotationInput{
+		KeyId:                aws.String(keyID),
+		RotationPeriodInDays: ptr.Int32(r.RotationPeriodInDays),
+	}
+	err := retry.OnError(ctx, kmsRotationRetryable, func(ctx context.Context) error {
+		_, err := client.EnableKeyRotation(ctx, in)
+		return err
+	}, retry.WithInterval(time.Second))
+	if err != nil {
+		return fmt.Errorf("enable key rotation: %w", err)
+	}
+	return nil
+}
+
+// disableRotation turns off automatic rotation, retrying through the same
+// settling states as enableRotation, at the same one-second interval.
+func (r *KmsKey) disableRotation(ctx context.Context, client *kms.Client, keyID string) error {
+	err := retry.OnError(ctx, kmsRotationRetryable, func(ctx context.Context) error {
+		_, err := client.DisableKeyRotation(ctx, &kms.DisableKeyRotationInput{
+			KeyId: aws.String(keyID),
+		})
+		return err
+	}, retry.WithInterval(time.Second))
+	if err != nil {
+		return fmt.Errorf("disable key rotation: %w", err)
 	}
 	return nil
 }
@@ -316,6 +433,12 @@ func (r *KmsKey) syncTags(ctx context.Context, client *kms.Client, keyID string)
 // yet visible to KMS.
 func kmsPolicyRetryable(err error) bool {
 	return kmshelpers.IsNotFound(err) || kmshelpers.IsMalformedPolicy(err)
+}
+
+// kmsRotationRetryable reports whether a rotation call error clears on its own:
+// the key not yet propagated, or still settling into the enabled state.
+func kmsRotationRetryable(err error) bool {
+	return kmshelpers.IsNotFound(err) || kmshelpers.IsDisabled(err)
 }
 
 // kmsKeyTags converts a desired tag map into the KMS SDK tag list, ordered by

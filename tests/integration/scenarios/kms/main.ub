@@ -1,6 +1,5 @@
 description: '''>-
-  Manages a KMS key with tags and an alias that points
-  at it, then turns on key rotation with an action.
+  Manages a KMS key with tags and an alias that points at it, with automatic key rotation turned on.
   '''
 
 imports: {
@@ -10,14 +9,18 @@ imports: {
 
 resources: {
   aws: {
-    kms-key: { it: { description: 'unobin integration test key', tags: { unobin: 'kms-it' } } }
+    kms-key: {
+      it: {
+        description:         'unobin integration test key'
+        enable-key-rotation: true
+        tags:                { unobin: 'kms-it' }
+      }
+    }
     kms-alias: {
       it: { alias-name: 'alias/unobin-it-key', target-key-id: resource.aws.kms-key.it.key-id }
     }
   }
 }
-
-actions: { aws: { kms-enable-key-rotation: { it: { key-id: resource.aws.kms-key.it.key-id } } } }
 
 outputs: {
   key-arn:              { value: resource.aws.kms-key.it.arn }
