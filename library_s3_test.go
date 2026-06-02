@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/s3"
+	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
 )
 
 // normalizeType sorts the fields of every object type it contains by name.

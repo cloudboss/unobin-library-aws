@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/iam"
+	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 )
 
 // TestLibraryRegistersIamResources checks the runtime registration: every

@@ -17,11 +17,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/s3helpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // bucketRegionUSEast1 is the one region whose name must not be sent as a
@@ -85,7 +84,7 @@ func (r *Bucket) ReplaceFields() []string {
 }
 
 func (r *Bucket) Create(ctx context.Context, cfg any) (*BucketOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +192,7 @@ func (r *Bucket) reconcile(ctx context.Context, client *s3.Client, prior *Bucket
 // reconcile one at a time, so this rarely fires; it polls every second, since
 // the conflict clears in well under a second.
 func bucketConfigPut(ctx context.Context, what string, put func(context.Context) error) error {
-	if err := retry.OnError(ctx, s3helpers.IsOperationAborted, put,
+	if err := retry.OnError(ctx, isOperationAborted, put,
 		retry.WithInterval(time.Second)); err != nil {
 		return fmt.Errorf("configure bucket %s: %w", what, err)
 	}
@@ -205,8 +204,8 @@ func bucketConfigPut(ctx context.Context, what string, put func(context.Context)
 func bucketConfigDelete(
 	ctx context.Context, what string, goneCodes []string, del func(context.Context) error,
 ) error {
-	err := retry.OnError(ctx, s3helpers.IsOperationAborted, del, retry.WithInterval(time.Second))
-	if err != nil && !s3helpers.IsNotFound(err, goneCodes...) {
+	err := retry.OnError(ctx, isOperationAborted, del, retry.WithInterval(time.Second))
+	if err != nil && !isNotFound(err, goneCodes...) {
 		return fmt.Errorf("remove bucket %s: %w", what, err)
 	}
 	return nil
@@ -280,7 +279,7 @@ func (r *Bucket) createInput(region string, withTags, withConfig bool) *s3.Creat
 func (r *Bucket) Read(
 	ctx context.Context, cfg any, prior *BucketOutput,
 ) (*BucketOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +321,7 @@ func (r *Bucket) read(
 func (r *Bucket) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Bucket, *BucketOutput],
 ) (*BucketOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +339,7 @@ func (r *Bucket) Update(
 }
 
 func (r *Bucket) Delete(ctx context.Context, cfg any, prior *BucketOutput) error {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -361,7 +360,7 @@ func (r *Bucket) Delete(ctx context.Context, cfg any, prior *BucketOutput) error
 		}
 		// A race may have repopulated the bucket between the empty and the delete;
 		// empty once more and delete again before giving up.
-		if force && s3helpers.IsNotFound(err, "BucketNotEmpty") {
+		if force && isNotFound(err, "BucketNotEmpty") {
 			if err := bucketEmptyAll(ctx, client, r.Bucket); err != nil {
 				return err
 			}
@@ -457,7 +456,7 @@ func (r *Bucket) readTags(ctx context.Context, client *s3.Client) (map[string]st
 		Bucket: aws.String(r.Bucket),
 	})
 	if err != nil {
-		if s3helpers.IsNotFound(err, "NoSuchTagSet") {
+		if isNotFound(err, "NoSuchTagSet") {
 			return map[string]string{}, nil
 		}
 		return nil, fmt.Errorf("get bucket tagging %s: %w", r.Bucket, err)
@@ -476,7 +475,7 @@ func (r *Bucket) readTags(ctx context.Context, client *s3.Client) (map[string]st
 // same name can run past the default two-minute window, so the budget is
 // widened to give the conflict time to clear.
 func bucketCreateRetry(ctx context.Context, client *s3.Client, in *s3.CreateBucketInput) error {
-	return retry.OnError(ctx, s3helpers.IsOperationAborted, func(ctx context.Context) error {
+	return retry.OnError(ctx, isOperationAborted, func(ctx context.Context) error {
 		_, err := client.CreateBucket(ctx, in)
 		return err
 	}, retry.WithTimeout(5*time.Minute), retry.WithInterval(time.Second))
@@ -488,7 +487,7 @@ func bucketCreateRetry(ctx context.Context, client *s3.Client, in *s3.CreateBuck
 // time. The caller classifies the returned error: a gone bucket is success, a
 // non-empty one may be re-emptied and retried.
 func bucketDeleteCall(ctx context.Context, client *s3.Client, bucket string) error {
-	return retry.OnError(ctx, s3helpers.IsOperationAborted, func(ctx context.Context) error {
+	return retry.OnError(ctx, isOperationAborted, func(ctx context.Context) error {
 		_, err := client.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: aws.String(bucket)})
 		return err
 	}, retry.WithInterval(time.Second))
@@ -675,7 +674,7 @@ func bucketHeadGone(ctx context.Context, client *s3.Client, bucket string) (bool
 // so the HTTP status is checked alongside the codes rather than the codes
 // alone.
 func bucketIsGone(err error) bool {
-	if s3helpers.IsNotFound(err, "NoSuchBucket", "NotFound", "NoSuchKey") {
+	if isNotFound(err, "NoSuchBucket", "NotFound", "NoSuchKey") {
 		return true
 	}
 	var respErr *smithyhttp.ResponseError

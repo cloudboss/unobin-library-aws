@@ -13,10 +13,9 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/ec2helpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // SecurityGroup is an EC2 security group: a named, stateful firewall attached
@@ -74,7 +73,7 @@ func (r SecurityGroup) Constraints() []constraint.Constraint {
 }
 
 func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutput, error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +82,10 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutp
 		return nil, err
 	}
 	in := &ec2.CreateSecurityGroupInput{
-		GroupName:   aws.String(name),
-		Description: aws.String(r.Description),
-		VpcId:       r.VpcId,
-		TagSpecifications: ec2helpers.TagSpecifications(
-			ec2types.ResourceTypeSecurityGroup, r.Tags),
+		GroupName:         aws.String(name),
+		Description:       aws.String(r.Description),
+		VpcId:             r.VpcId,
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSecurityGroup, r.Tags),
 	}
 	resp, err := client.CreateSecurityGroup(ctx, in)
 	// Some partitions, such as the ISO partitions, cannot tag a group as it is
@@ -95,7 +93,7 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutp
 	// without tags and apply them with a separate call below.
 	taggedSeparately := false
 	if err != nil && in.TagSpecifications != nil &&
-		partition.UnsupportedOperation(ec2helpers.Region(client), err) {
+		partition.UnsupportedOperation(region(client), err) {
 		in.TagSpecifications = nil
 		taggedSeparately = true
 		resp, err = client.CreateSecurityGroup(ctx, in)
@@ -105,7 +103,7 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutp
 	}
 	id := aws.ToString(resp.GroupId)
 	if taggedSeparately && len(r.Tags) > 0 {
-		if err := ec2helpers.SyncTags(ctx, client, id, r.Tags); err != nil {
+		if err := syncTags(ctx, client, id, r.Tags); err != nil {
 			return nil, err
 		}
 	}
@@ -141,7 +139,7 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutp
 func (r *SecurityGroup) Read(
 	ctx context.Context, cfg any, prior *SecurityGroupOutput,
 ) (*SecurityGroupOutput, error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +157,7 @@ func (r *SecurityGroup) read(
 	if err != nil {
 		return nil, err
 	}
-	region := ec2helpers.Region(client)
+	region := region(client)
 	ownerID := aws.ToString(group.OwnerId)
 	arn := fmt.Sprintf("arn:%s:ec2:%s:%s:security-group/%s",
 		partition.Of(region), region, ownerID, aws.ToString(group.GroupId))
@@ -180,8 +178,7 @@ func (r *SecurityGroup) describe(
 		GroupIds: []string{id},
 	})
 	if err != nil {
-		if ec2helpers.IsNotFound(err,
-			"InvalidGroup.NotFound", "InvalidSecurityGroupID.NotFound") {
+		if isNotFound(err, "InvalidGroup.NotFound", "InvalidSecurityGroupID.NotFound") {
 			return nil, runtime.ErrNotFound
 		}
 		return nil, fmt.Errorf("describe security groups: %w", err)
@@ -195,12 +192,12 @@ func (r *SecurityGroup) describe(
 func (r *SecurityGroup) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[SecurityGroup, *SecurityGroupOutput],
 ) (*SecurityGroupOutput, error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := ec2helpers.SyncTags(ctx, client, prior.Outputs.Id, r.Tags); err != nil {
+		if err := syncTags(ctx, client, prior.Outputs.Id, r.Tags); err != nil {
 			return nil, err
 		}
 	}
@@ -211,7 +208,7 @@ func (r *SecurityGroup) Update(
 }
 
 func (r *SecurityGroup) Delete(ctx context.Context, cfg any, prior *SecurityGroupOutput) error {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -230,7 +227,7 @@ func (r *SecurityGroup) Delete(ctx context.Context, cfg any, prior *SecurityGrou
 		return err
 	}, retry.WithTimeout(15*time.Minute))
 	if err != nil {
-		if ec2helpers.IsNotFound(err, "InvalidGroup.NotFound") {
+		if isNotFound(err, "InvalidGroup.NotFound") {
 			return nil
 		}
 		return fmt.Errorf("delete security group: %w", err)
@@ -377,5 +374,5 @@ func randomSuffix() (string, error) {
 // raises it by service code on an HTTP 400, so it is matched the same way as a
 // not-found.
 func isSecurityGroupInUse(err error) bool {
-	return ec2helpers.IsNotFound(err, "DependencyViolation", "InvalidGroup.InUse")
+	return isNotFound(err, "DependencyViolation", "InvalidGroup.InUse")
 }

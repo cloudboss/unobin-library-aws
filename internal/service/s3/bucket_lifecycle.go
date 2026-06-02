@@ -10,7 +10,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // lifecycleNotFoundCodes are the S3 codes that mean no lifecycle configuration

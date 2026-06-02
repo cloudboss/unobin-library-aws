@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	library "github.com/cloudboss/unobin-library-aws"
-	"github.com/cloudboss/unobin-library-aws/library/ec2"
+	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 )
 
 // TestLibraryRegistersEc2Vpc checks the runtime registration: ec2-vpc is

@@ -18,8 +18,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/s3helpers"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
 )
 
 // Object manages a single object in a bucket: the bytes plus the metadata,
@@ -128,7 +127,7 @@ func (r Object) Constraints() []constraint.Constraint {
 }
 
 func (r *Object) Create(ctx context.Context, cfg any) (*ObjectOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +143,7 @@ func (r *Object) Create(ctx context.Context, cfg any) (*ObjectOutput, error) {
 func (r *Object) Read(
 	ctx context.Context, cfg any, prior *ObjectOutput,
 ) (*ObjectOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +153,7 @@ func (r *Object) Read(
 func (r *Object) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Object, *ObjectOutput],
 ) (*ObjectOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +169,7 @@ func (r *Object) Update(
 }
 
 func (r *Object) Delete(ctx context.Context, cfg any, prior *ObjectOutput) error {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -184,7 +183,7 @@ func (r *Object) Delete(ctx context.Context, cfg any, prior *ObjectOutput) error
 		Bucket: aws.String(r.Bucket),
 		Key:    aws.String(key),
 	})
-	if err != nil && !s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchKey") {
+	if err != nil && !isNotFound(err, "NoSuchBucket", "NoSuchKey") {
 		return fmt.Errorf("delete object: %w", err)
 	}
 	return nil
@@ -268,7 +267,7 @@ func (r *Object) read(ctx context.Context, client *s3.Client) (*ObjectOutput, er
 		ChecksumMode: s3types.ChecksumModeEnabled,
 	})
 	if err != nil {
-		if s3helpers.IsNotFound(err, "NotFound", "NoSuchKey") {
+		if isNotFound(err, "NotFound", "NoSuchKey") {
 			return nil, runtime.ErrNotFound
 		}
 		return nil, fmt.Errorf("head object: %w", err)
@@ -409,7 +408,7 @@ func objectPurgeVersions(ctx context.Context, client *s3.Client, bucket, key str
 	for pager.HasMorePages() {
 		page, err := pager.NextPage(ctx)
 		if err != nil {
-			if s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchKey") {
+			if isNotFound(err, "NoSuchBucket", "NoSuchKey") {
 				return nil
 			}
 			return fmt.Errorf("list object versions: %w", err)
@@ -460,7 +459,7 @@ func objectDeleteVersions(
 			},
 		})
 		if err != nil {
-			if s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchKey") {
+			if isNotFound(err, "NoSuchBucket", "NoSuchKey") {
 				return nil
 			}
 			return fmt.Errorf("delete object versions: %w", err)
@@ -501,7 +500,7 @@ func objectRetryDenied(
 			VersionId:                 e.VersionId,
 			BypassGovernanceRetention: aws.Bool(true),
 		})
-		if err != nil && !s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchKey") {
+		if err != nil && !isNotFound(err, "NoSuchBucket", "NoSuchKey") {
 			return fmt.Errorf("delete object version %s: %w", aws.ToString(e.Key), err)
 		}
 	}

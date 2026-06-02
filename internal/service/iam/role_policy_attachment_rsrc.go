@@ -7,8 +7,7 @@ import (
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/iamhelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
 // RolePolicyAttachment attaches a managed policy to an IAM role. It is
@@ -38,7 +37,7 @@ func (r *RolePolicyAttachment) ReplaceFields() []string {
 func (r *RolePolicyAttachment) Create(
 	ctx context.Context, cfg any,
 ) (*RolePolicyAttachmentOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +47,7 @@ func (r *RolePolicyAttachment) Create(
 	}
 	// IAM serializes changes to one role, so attaching several policies at
 	// once can collide. The conflict clears on its own, so retry through it.
-	err = retry.OnError(ctx, iamhelpers.IsConcurrentModification,
+	err = retry.OnError(ctx, isConcurrentModification,
 		func(ctx context.Context) error {
 			_, err := client.AttachRolePolicy(ctx, in)
 			return err
@@ -67,7 +66,7 @@ func (r *RolePolicyAttachment) Create(
 func (r *RolePolicyAttachment) Read(
 	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
 ) (*RolePolicyAttachmentOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func (r *RolePolicyAttachment) Read(
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			if iamhelpers.IsNotFound(err) {
+			if isNotFound(err) {
 				return nil, runtime.ErrNotFound
 			}
 			return nil, err
@@ -105,7 +104,7 @@ func (r *RolePolicyAttachment) Update(
 func (r *RolePolicyAttachment) Delete(
 	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
 ) error {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -115,13 +114,13 @@ func (r *RolePolicyAttachment) Delete(
 	}
 	// As with attach, a concurrent change to the role can make detach collide;
 	// retry through the conflict.
-	err = retry.OnError(ctx, iamhelpers.IsConcurrentModification,
+	err = retry.OnError(ctx, isConcurrentModification,
 		func(ctx context.Context) error {
 			_, err := client.DetachRolePolicy(ctx, in)
 			return err
 		})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return err

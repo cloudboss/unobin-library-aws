@@ -10,9 +10,8 @@ import (
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/iamhelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
 // OpenIDConnectProvider manages an IAM OpenID Connect (OIDC) identity provider.
@@ -53,7 +52,7 @@ func (r *OpenIDConnectProvider) Create(
 	ctx context.Context,
 	cfg any,
 ) (*OpenIDConnectProviderOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func (r *OpenIDConnectProvider) Create(
 	// provider without tags and apply them with a separate call below.
 	taggedSeparately := false
 	if err != nil && input.Tags != nil &&
-		partition.UnsupportedOperation(iamhelpers.Region(client), err) {
+		partition.UnsupportedOperation(region(client), err) {
 		input.Tags = nil
 		taggedSeparately = true
 		resp, err = client.CreateOpenIDConnectProvider(ctx, input)
@@ -92,7 +91,7 @@ func (r *OpenIDConnectProvider) Read(
 	cfg any,
 	prior *OpenIDConnectProviderOutput,
 ) (*OpenIDConnectProviderOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +105,7 @@ func (r *OpenIDConnectProvider) Update(
 	cfg any,
 	prior runtime.Prior[OpenIDConnectProvider, *OpenIDConnectProviderOutput],
 ) (*OpenIDConnectProviderOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +146,7 @@ func (r *OpenIDConnectProvider) Delete(
 	cfg any,
 	prior *OpenIDConnectProviderOutput,
 ) error {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -155,7 +154,7 @@ func (r *OpenIDConnectProvider) Delete(
 		OpenIDConnectProviderArn: aws.String(prior.Arn),
 	})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("delete iam oidc provider: %w", err)
@@ -174,7 +173,7 @@ func oidcProviderRead(
 		OpenIDConnectProviderArn: aws.String(arn),
 	})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, runtime.ErrNotFound
 		}
 		return nil, fmt.Errorf("get iam oidc provider: %w", err)

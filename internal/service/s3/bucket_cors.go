@@ -6,8 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/runtime"
+
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // corsNotFoundCodes are the S3 codes that mean no CORS configuration is present:

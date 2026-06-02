@@ -11,11 +11,10 @@ import (
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/iamhelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // InstanceProfile is a container that an EC2 instance assumes to gain
@@ -56,7 +55,7 @@ func (r *InstanceProfile) ReplaceFields() []string {
 func (r *InstanceProfile) Create(
 	ctx context.Context, cfg any,
 ) (*InstanceProfileOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func (r *InstanceProfile) Create(
 	// the profile without tags and apply them with a separate call below.
 	taggedSeparately := false
 	if err != nil && in.Tags != nil &&
-		partition.UnsupportedOperation(iamhelpers.Region(client), err) {
+		partition.UnsupportedOperation(region(client), err) {
 		in.Tags = nil
 		taggedSeparately = true
 		_, err = client.CreateInstanceProfile(ctx, in)
@@ -98,7 +97,7 @@ func (r *InstanceProfile) Create(
 func (r *InstanceProfile) Read(
 	ctx context.Context, cfg any, prior *InstanceProfileOutput,
 ) (*InstanceProfileOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +124,7 @@ func (r *InstanceProfile) read(
 			InstanceProfileName: aws.String(r.InstanceProfileName),
 		})
 		if err != nil {
-			if iamhelpers.IsNotFound(err) {
+			if isNotFound(err) {
 				if created {
 					return false, nil
 				}
@@ -158,7 +157,7 @@ func (r *InstanceProfile) read(
 func (r *InstanceProfile) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[InstanceProfile, *InstanceProfileOutput],
 ) (*InstanceProfileOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func (r *InstanceProfile) Update(
 func (r *InstanceProfile) Delete(
 	ctx context.Context, cfg any, prior *InstanceProfileOutput,
 ) error {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -200,7 +199,7 @@ func (r *InstanceProfile) Delete(
 		InstanceProfileName: aws.String(r.InstanceProfileName),
 	})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return err
@@ -214,7 +213,7 @@ func (r *InstanceProfile) addRole(
 	// A profile or role created moments earlier may not have propagated to the
 	// add call yet, which IAM reports as a transient parameter or not-found
 	// error; retry through it.
-	return retry.OnError(ctx, iamhelpers.IsRoleNotYetPropagated,
+	return retry.OnError(ctx, isRoleNotYetPropagated,
 		func(ctx context.Context) error {
 			_, err := client.AddRoleToInstanceProfile(ctx, &iam.AddRoleToInstanceProfileInput{
 				InstanceProfileName: aws.String(r.InstanceProfileName),
@@ -232,7 +231,7 @@ func (r *InstanceProfile) removeRole(
 		RoleName:            aws.String(role),
 	})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return err

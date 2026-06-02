@@ -11,9 +11,8 @@ import (
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/kmshelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // Alias manages a friendly name that points at a KMS key. The alias name
@@ -43,7 +42,7 @@ func (r *Alias) ReplaceFields() []string {
 }
 
 func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
 	// it. Key propagation can take minutes, so the window is generous, matching
 	// the condition the Terraform provider retries with its typed
 	// NotFoundException check.
-	err = retry.OnError(ctx, kmshelpers.IsNotFound, func(ctx context.Context) error {
+	err = retry.OnError(ctx, isNotFound, func(ctx context.Context) error {
 		_, err := client.CreateAlias(ctx, in)
 		return err
 	}, retry.WithTimeout(10*time.Minute))
@@ -73,7 +72,7 @@ func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
 func (r *Alias) Read(
 	ctx context.Context, cfg any, prior *AliasOutput,
 ) (*AliasOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +119,7 @@ func (r *Alias) read(
 func (r *Alias) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Alias, *AliasOutput],
 ) (*AliasOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +138,7 @@ func (r *Alias) Update(
 }
 
 func (r *Alias) Delete(ctx context.Context, cfg any, prior *AliasOutput) error {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -147,7 +146,7 @@ func (r *Alias) Delete(ctx context.Context, cfg any, prior *AliasOutput) error {
 		AliasName: aws.String(r.AliasName),
 	})
 	if err != nil {
-		if kmshelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("delete alias: %w", err)

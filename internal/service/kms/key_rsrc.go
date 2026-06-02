@@ -12,11 +12,10 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/kmshelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // policyNameDefault is the only key-policy name KMS accepts. A key has one
@@ -104,7 +103,7 @@ func (r Key) Constraints() []constraint.Constraint {
 }
 
 func (r *Key) Create(ctx context.Context, cfg any) (*KeyOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +136,7 @@ func (r *Key) Create(ctx context.Context, cfg any) (*KeyOutput, error) {
 	// carrying such a policy is rejected as malformed until the principal is
 	// visible. Retry through that window.
 	var resp *kms.CreateKeyOutput
-	err = retry.OnError(ctx, kmshelpers.IsMalformedPolicy, func(ctx context.Context) error {
+	err = retry.OnError(ctx, isMalformedPolicy, func(ctx context.Context) error {
 		var err error
 		resp, err = client.CreateKey(ctx, in)
 		return err
@@ -167,7 +166,7 @@ func (r *Key) Create(ctx context.Context, cfg any) (*KeyOutput, error) {
 }
 
 func (r *Key) Read(ctx context.Context, cfg any, prior *KeyOutput) (*KeyOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +189,7 @@ func (r *Key) read(
 				KeyId: aws.String(keyID),
 			})
 			if err != nil {
-				if kmshelpers.IsNotFound(err) {
+				if isNotFound(err) {
 					if created {
 						return false, nil
 					}
@@ -224,7 +223,7 @@ func (r *Key) read(
 func (r *Key) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Key, *KeyOutput],
 ) (*KeyOutput, error) {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +282,7 @@ func (r *Key) Update(
 }
 
 func (r *Key) Delete(ctx context.Context, cfg any, prior *KeyOutput) error {
-	client, err := kmshelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -296,7 +295,7 @@ func (r *Key) Delete(ctx context.Context, cfg any, prior *KeyOutput) error {
 	if err != nil {
 		// A key already gone, or already scheduled for deletion by an earlier
 		// run, is on its way out either way and counts as deleted.
-		if kmshelpers.IsNotFound(err) || kmshelpers.IsPendingDeletion(err) {
+		if isNotFound(err) || isPendingDeletion(err) {
 			return nil
 		}
 		return fmt.Errorf("schedule key deletion: %w", err)
@@ -329,7 +328,7 @@ func (r *Key) putPolicy(ctx context.Context, client *kms.Client, keyID string) e
 // propagating and reports as not found. That window clears in about a second,
 // so the retry polls at that interval rather than the slower default.
 func (r *Key) enableKey(ctx context.Context, client *kms.Client, keyID string) error {
-	err := retry.OnError(ctx, kmshelpers.IsNotFound, func(ctx context.Context) error {
+	err := retry.OnError(ctx, isNotFound, func(ctx context.Context) error {
 		_, err := client.EnableKey(ctx, &kms.EnableKeyInput{KeyId: aws.String(keyID)})
 		return err
 	}, retry.WithInterval(time.Second))
@@ -342,7 +341,7 @@ func (r *Key) enableKey(ctx context.Context, client *kms.Client, keyID string) e
 // disableKey disables the key, retrying through the same not-found settling
 // window as enableKey, at the same one-second interval.
 func (r *Key) disableKey(ctx context.Context, client *kms.Client, keyID string) error {
-	err := retry.OnError(ctx, kmshelpers.IsNotFound, func(ctx context.Context) error {
+	err := retry.OnError(ctx, isNotFound, func(ctx context.Context) error {
 		_, err := client.DisableKey(ctx, &kms.DisableKeyInput{KeyId: aws.String(keyID)})
 		return err
 	}, retry.WithInterval(time.Second))
@@ -432,13 +431,13 @@ func (r *Key) syncTags(ctx context.Context, client *kms.Client, keyID string) er
 // its own: the key not yet propagated, or a principal named in the policy not
 // yet visible to KMS.
 func kmsPolicyRetryable(err error) bool {
-	return kmshelpers.IsNotFound(err) || kmshelpers.IsMalformedPolicy(err)
+	return isNotFound(err) || isMalformedPolicy(err)
 }
 
 // kmsRotationRetryable reports whether a rotation call error clears on its own:
 // the key not yet propagated, or still settling into the enabled state.
 func kmsRotationRetryable(err error) bool {
-	return kmshelpers.IsNotFound(err) || kmshelpers.IsDisabled(err)
+	return isNotFound(err) || isDisabled(err)
 }
 
 // kmsKeyTags converts a desired tag map into the KMS SDK tag list, ordered by

@@ -10,8 +10,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/ec2helpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 type Vpc struct {
@@ -75,7 +74,7 @@ func (r Vpc) Constraints() []constraint.Constraint {
 }
 
 func (r *Vpc) Create(ctx context.Context, cfg any) (*VpcOutput, error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ func (r *Vpc) Create(ctx context.Context, cfg any) (*VpcOutput, error) {
 }
 
 func (r *Vpc) Read(ctx context.Context, cfg any, prior *VpcOutput) (*VpcOutput, error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func (r *Vpc) Read(ctx context.Context, cfg any, prior *VpcOutput) (*VpcOutput, 
 		VpcIds: []string{prior.VpcId},
 	})
 	if err != nil {
-		if ec2helpers.IsNotFound(err, "InvalidVpcID.NotFound") {
+		if isNotFound(err, "InvalidVpcID.NotFound") {
 			return nil, runtime.ErrNotFound
 		}
 		return nil, err
@@ -138,7 +137,7 @@ func (r *Vpc) Update(
 }
 
 func (r *Vpc) Delete(ctx context.Context, cfg any, prior *VpcOutput) error {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}

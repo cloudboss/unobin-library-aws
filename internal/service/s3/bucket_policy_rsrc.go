@@ -9,9 +9,8 @@ import (
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/s3helpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // BucketPolicy manages the resource policy attached to an S3 bucket. The
@@ -41,7 +40,7 @@ func (r *BucketPolicy) ReplaceFields() []string {
 }
 
 func (r *BucketPolicy) Create(ctx context.Context, cfg any) (*BucketPolicyOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func (r *BucketPolicy) Create(ctx context.Context, cfg any) (*BucketPolicyOutput
 func (r *BucketPolicy) Read(
 	ctx context.Context, cfg any, prior *BucketPolicyOutput,
 ) (*BucketPolicyOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +81,7 @@ func (r *BucketPolicy) Read(
 		// A bucket with no policy reports NoSuchBucketPolicy, and a bucket that
 		// is gone reports NoSuchBucket; either means the policy is absent and the
 		// resource should be recreated.
-		if s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchBucketPolicy") {
+		if isNotFound(err, "NoSuchBucket", "NoSuchBucketPolicy") {
 			return nil, runtime.ErrNotFound
 		}
 		return nil, fmt.Errorf("get bucket policy: %w", err)
@@ -98,7 +97,7 @@ func (r *BucketPolicy) Read(
 func (r *BucketPolicy) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[BucketPolicy, *BucketPolicyOutput],
 ) (*BucketPolicyOutput, error) {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +108,13 @@ func (r *BucketPolicy) Update(
 }
 
 func (r *BucketPolicy) Delete(ctx context.Context, cfg any, prior *BucketPolicyOutput) error {
-	client, err := s3helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	// The delete retries OperationAborted, since the bucket's other configurations
 	// are torn down at the same time and S3 serializes operations on a bucket.
-	err = retry.OnError(ctx, s3helpers.IsOperationAborted, func(ctx context.Context) error {
+	err = retry.OnError(ctx, isOperationAborted, func(ctx context.Context) error {
 		_, err := client.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{
 			Bucket: aws.String(r.Bucket),
 		})
@@ -125,7 +124,7 @@ func (r *BucketPolicy) Delete(ctx context.Context, cfg any, prior *BucketPolicyO
 		// A bucket already gone takes its policy with it, so a missing bucket
 		// counts as deleted. A missing policy on a live bucket does not, so only
 		// NoSuchBucket is tolerated.
-		if !s3helpers.IsNotFound(err, "NoSuchBucket") {
+		if !isNotFound(err, "NoSuchBucket") {
 			return fmt.Errorf("delete bucket policy: %w", err)
 		}
 	}
@@ -172,7 +171,7 @@ func (r *BucketPolicy) exists(ctx context.Context, client *s3.Client) (bool, err
 		Bucket: aws.String(r.Bucket),
 	})
 	if err != nil {
-		if s3helpers.IsNotFound(err, "NoSuchBucket", "NoSuchBucketPolicy") {
+		if isNotFound(err, "NoSuchBucket", "NoSuchBucketPolicy") {
 			return false, nil
 		}
 		return false, fmt.Errorf("get bucket policy: %w", err)
@@ -187,6 +186,6 @@ func (r *BucketPolicy) exists(ctx context.Context, client *s3.Client) (bool, err
 // smithy.APIError by service code, so it serves for MalformedPolicy as well as
 // the genuine not-found codes.
 func bucketPolicyRetryable(err error) bool {
-	return s3helpers.IsNotFound(err, "MalformedPolicy", "NoSuchBucket") ||
-		s3helpers.IsOperationAborted(err)
+	return isNotFound(err, "MalformedPolicy", "NoSuchBucket") ||
+		isOperationAborted(err)
 }

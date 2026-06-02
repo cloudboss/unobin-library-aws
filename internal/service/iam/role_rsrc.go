@@ -12,12 +12,11 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/iamhelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
-	"github.com/cloudboss/unobin-library-aws/library/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // Role is an IAM role: a named identity, governed by a trust policy, that
@@ -69,7 +68,7 @@ func (r Role) Constraints() []constraint.Constraint {
 }
 
 func (r *Role) Create(ctx context.Context, cfg any) (*RoleOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,7 @@ func (r *Role) Create(ctx context.Context, cfg any) (*RoleOutput, error) {
 	// without tags and apply them with a separate call below.
 	taggedSeparately := false
 	if err != nil && in.Tags != nil &&
-		partition.UnsupportedOperation(iamhelpers.Region(client), err) {
+		partition.UnsupportedOperation(region(client), err) {
 		in.Tags = nil
 		taggedSeparately = true
 		err = createRole()
@@ -118,7 +117,7 @@ func (r *Role) Create(ctx context.Context, cfg any) (*RoleOutput, error) {
 }
 
 func (r *Role) Read(ctx context.Context, cfg any, prior *RoleOutput) (*RoleOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +141,7 @@ func (r *Role) read(
 			RoleName: aws.String(r.RoleName),
 		})
 		if err != nil {
-			if iamhelpers.IsNotFound(err) {
+			if isNotFound(err) {
 				if created {
 					return false, nil
 				}
@@ -172,14 +171,14 @@ func (r *Role) read(
 func (r *Role) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Role, *RoleOutput],
 ) (*RoleOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 	if runtime.Changed(prior.Inputs.AssumeRolePolicyDocument, r.AssumeRolePolicyDocument) {
 		// As with create, a trust policy naming a just-created principal can be
 		// rejected until that principal propagates, so retry through it.
-		err := retry.OnError(ctx, iamhelpers.IsUnpropagatedPrincipal,
+		err := retry.OnError(ctx, isUnpropagatedPrincipal,
 			func(ctx context.Context) error {
 				_, err := client.UpdateAssumeRolePolicy(ctx, &iam.UpdateAssumeRolePolicyInput{
 					RoleName:       aws.String(r.RoleName),
@@ -241,7 +240,7 @@ func (r *Role) Update(
 }
 
 func (r *Role) Delete(ctx context.Context, cfg any, prior *RoleOutput) error {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -253,7 +252,7 @@ func (r *Role) Delete(ctx context.Context, cfg any, prior *RoleOutput) error {
 	}
 	// Just after the detach, IAM can still report the role as in use, so retry
 	// the delete through that conflict.
-	err = retry.OnError(ctx, iamhelpers.IsDeleteConflict,
+	err = retry.OnError(ctx, isDeleteConflict,
 		func(ctx context.Context) error {
 			_, err := client.DeleteRole(ctx, &iam.DeleteRoleInput{
 				RoleName: aws.String(r.RoleName),
@@ -261,7 +260,7 @@ func (r *Role) Delete(ctx context.Context, cfg any, prior *RoleOutput) error {
 			return err
 		})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("delete role: %w", err)
@@ -320,7 +319,7 @@ func iamRoleDetachInstanceProfiles(ctx context.Context, client *iam.Client, role
 	for pager.HasMorePages() {
 		page, err := pager.NextPage(ctx)
 		if err != nil {
-			if iamhelpers.IsNotFound(err) {
+			if isNotFound(err) {
 				return nil
 			}
 			return fmt.Errorf("list instance profiles for role: %w", err)
@@ -331,7 +330,7 @@ func iamRoleDetachInstanceProfiles(ctx context.Context, client *iam.Client, role
 					InstanceProfileName: profile.InstanceProfileName,
 					RoleName:            aws.String(roleName),
 				})
-			if err != nil && !iamhelpers.IsNotFound(err) {
+			if err != nil && !isNotFound(err) {
 				return fmt.Errorf("remove role from instance profile: %w", err)
 			}
 		}
@@ -343,8 +342,7 @@ func iamRoleDetachInstanceProfiles(ctx context.Context, client *iam.Client, role
 // clears on its own: a trust policy naming a principal that has not propagated
 // yet, or a concurrent change to IAM.
 func iamRoleCreateRetryable(err error) bool {
-	return iamhelpers.IsUnpropagatedPrincipal(err) ||
-		iamhelpers.IsConcurrentModification(err)
+	return isUnpropagatedPrincipal(err) || isConcurrentModification(err)
 }
 
 // iamRoleTags converts a desired tag map into the IAM SDK tag list.

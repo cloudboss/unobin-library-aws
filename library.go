@@ -8,11 +8,11 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
-	"github.com/cloudboss/unobin-library-aws/library/config"
-	"github.com/cloudboss/unobin-library-aws/library/ec2"
-	"github.com/cloudboss/unobin-library-aws/library/iam"
-	"github.com/cloudboss/unobin-library-aws/library/kms"
-	"github.com/cloudboss/unobin-library-aws/library/s3"
+	"github.com/cloudboss/unobin-library-aws/internal/config"
+	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
+	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
+	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
 )
 
 func Library() *runtime.Library {

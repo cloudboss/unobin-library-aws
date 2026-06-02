@@ -1,4 +1,4 @@
-package s3helpers
+package s3
 
 import (
 	"context"
@@ -9,14 +9,14 @@ import (
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	smithy "github.com/aws/smithy-go"
 
-	"github.com/cloudboss/unobin-library-aws/library/config"
+	"github.com/cloudboss/unobin-library-aws/internal/config"
 )
 
-// NewClient returns the AWS SDK Go v2 client for s3, configured from cfg.
+// newClient returns the AWS SDK Go v2 client for s3, configured from cfg.
 // cfg is the *config.Configuration the runtime hands every lifecycle
 // method; the helper unwraps it and builds an aws.Config via
 // config.LoadAWSConfig.
-func NewClient(ctx context.Context, cfg any) (*s3.Client, error) {
+func newClient(ctx context.Context, cfg any) (*s3.Client, error) {
 	c, ok := cfg.(*config.Configuration)
 	if !ok {
 		return nil, fmt.Errorf("s3client: unexpected configuration type %T", cfg)
@@ -36,14 +36,14 @@ func NewClient(ctx context.Context, cfg any) (*s3.Client, error) {
 	}), nil
 }
 
-// IsNotFound reports whether err is an AWS API error whose service code is
+// isNotFound reports whether err is an AWS API error whose service code is
 // one of codes. S3 reports a missing bucket, object, or sub-resource config
 // with a service code: some are typed exceptions (NoSuchBucket, NoSuchKey,
 // NotFound), others are plain codes (NoSuchBucketPolicy,
 // NoSuchPublicAccessBlockConfiguration). Both reach the caller as a
 // smithy.APIError, so a resource Read matches the code to turn a read of a
 // gone resource into runtime.ErrNotFound.
-func IsNotFound(err error, codes ...string) bool {
+func isNotFound(err error, codes ...string) bool {
 	var apiErr smithy.APIError
 	if errors.As(err, &apiErr) {
 		return slices.Contains(codes, apiErr.ErrorCode())
@@ -51,13 +51,13 @@ func IsNotFound(err error, codes ...string) bool {
 	return false
 }
 
-// IsOperationAborted reports whether err is S3's OperationAborted. S3
+// isOperationAborted reports whether err is S3's OperationAborted. S3
 // serializes the configuration operations against a single bucket -- its
 // versioning, policy, public access block, and the rest -- and rejects one
 // that arrives while another is in progress with this code. Several such
 // resources sharing a bucket apply at once, so each retries through it until
 // the bucket is free.
-func IsOperationAborted(err error) bool {
+func isOperationAborted(err error) bool {
 	var apiErr smithy.APIError
 	return errors.As(err, &apiErr) && apiErr.ErrorCode() == "OperationAborted"
 }

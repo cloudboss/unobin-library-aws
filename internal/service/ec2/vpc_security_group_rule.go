@@ -10,9 +10,8 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/ec2helpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // sgRule is the common input form of an ingress and an egress security group
@@ -133,12 +132,12 @@ func composeRuleARN(region, accountID, ruleID string) string {
 func sgRuleCreate(
 	ctx context.Context, cfg any, r sgRule, egress bool,
 ) (ruleID, arn string, err error) {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return "", "", err
 	}
 	perms := []ec2types.IpPermission{r.ipPermission()}
-	tagSpecs := ec2helpers.TagSpecifications(ec2types.ResourceTypeSecurityGroupRule, r.Tags)
+	tagSpecs := tagSpecifications(ec2types.ResourceTypeSecurityGroupRule, r.Tags)
 	var rule ec2types.SecurityGroupRule
 	if egress {
 		resp, err := client.AuthorizeSecurityGroupEgress(ctx,
@@ -170,7 +169,7 @@ func sgRuleCreate(
 		rule = resp.SecurityGroupRules[0]
 	}
 	ruleID = aws.ToString(rule.SecurityGroupRuleId)
-	arn = composeRuleARN(ec2helpers.Region(client),
+	arn = composeRuleARN(region(client),
 		aws.ToString(rule.GroupOwnerId), ruleID)
 	return ruleID, arn, nil
 }
@@ -189,7 +188,7 @@ func findRule(
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			if ec2helpers.IsNotFound(err, sgRuleNotFoundCode) {
+			if isNotFound(err, sgRuleNotFoundCode) {
 				return nil, nil
 			}
 			return nil, fmt.Errorf("describe security group rules: %w", err)
@@ -210,7 +209,7 @@ func findRule(
 // and ARN are immutable, so a present rule needs no values read back; the
 // caller keeps the prior output.
 func sgRuleRead(ctx context.Context, cfg any, ruleID string, egress bool) error {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -231,7 +230,7 @@ func sgRuleRead(ctx context.Context, cfg any, ruleID string, egress bool) error 
 // of its writable properties changed, then reconciles tags. The id and ARN
 // cannot change, so the caller returns the prior output unchanged.
 func sgRuleUpdate(ctx context.Context, cfg any, r sgRule, prior sgRule, ruleID string) error {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -247,7 +246,7 @@ func sgRuleUpdate(ctx context.Context, cfg any, r sgRule, prior sgRule, ruleID s
 			return fmt.Errorf("modify security group rules: %w", err)
 		}
 	}
-	if err := ec2helpers.SyncTags(ctx, client, ruleID, r.Tags); err != nil {
+	if err := syncTags(ctx, client, ruleID, r.Tags); err != nil {
 		return err
 	}
 	return nil
@@ -274,7 +273,7 @@ func sgRuleSpecChanged(prior, current sgRule) bool {
 // is a successful delete with nothing to do, as is a Revoke that races another
 // deletion and reports the rule or group already absent.
 func sgRuleDelete(ctx context.Context, cfg any, ruleID string, egress bool) error {
-	client, err := ec2helpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -298,7 +297,7 @@ func sgRuleDelete(ctx context.Context, cfg any, ruleID string, egress bool) erro
 		})
 	}
 	if err != nil {
-		if ec2helpers.IsNotFound(err, sgRuleRevokeNotFoundCodes...) {
+		if isNotFound(err, sgRuleRevokeNotFoundCodes...) {
 			return nil
 		}
 		return fmt.Errorf("revoke security group rule: %w", err)

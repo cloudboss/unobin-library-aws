@@ -11,10 +11,9 @@ import (
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/library/internal/iamhelpers"
-	"github.com/cloudboss/unobin-library-aws/library/internal/partition"
-	"github.com/cloudboss/unobin-library-aws/library/internal/tagsync"
-	"github.com/cloudboss/unobin-library-aws/library/internal/wait"
+	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 // maxPolicyVersions is the number of versions IAM keeps for a managed
@@ -61,7 +60,7 @@ func (r *Policy) ReplaceFields() []string {
 }
 
 func (r *Policy) Create(ctx context.Context, cfg any) (*PolicyOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func (r *Policy) Create(ctx context.Context, cfg any) (*PolicyOutput, error) {
 	// policy without tags and apply them with a separate call below.
 	taggedSeparately := false
 	if err != nil && in.Tags != nil &&
-		partition.UnsupportedOperation(iamhelpers.Region(client), err) {
+		partition.UnsupportedOperation(region(client), err) {
 		in.Tags = nil
 		taggedSeparately = true
 		resp, err = client.CreatePolicy(ctx, in)
@@ -102,7 +101,7 @@ func (r *Policy) Create(ctx context.Context, cfg any) (*PolicyOutput, error) {
 func (r *Policy) Read(
 	ctx context.Context, cfg any, prior *PolicyOutput,
 ) (*PolicyOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +123,7 @@ func (r *Policy) read(
 				PolicyArn: aws.String(arn),
 			})
 			if err != nil {
-				if iamhelpers.IsNotFound(err) {
+				if isNotFound(err) {
 					if created {
 						return false, nil
 					}
@@ -151,7 +150,7 @@ func (r *Policy) read(
 func (r *Policy) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[Policy, *PolicyOutput],
 ) (*PolicyOutput, error) {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +171,7 @@ func (r *Policy) Update(
 }
 
 func (r *Policy) Delete(ctx context.Context, cfg any, prior *PolicyOutput) error {
-	client, err := iamhelpers.NewClient(ctx, cfg)
+	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -182,7 +181,7 @@ func (r *Policy) Delete(ctx context.Context, cfg any, prior *PolicyOutput) error
 	}
 	_, err = client.DeletePolicy(ctx, &iam.DeletePolicyInput{PolicyArn: aws.String(arn)})
 	if err != nil {
-		if iamhelpers.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("delete policy: %w", err)
