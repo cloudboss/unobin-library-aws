@@ -1,0 +1,72 @@
+description: '''>-
+  Manages a Lambda function with its execution role, a
+  resource-policy permission, and a one-shot invocation.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws@v0.0.0' }
+
+resources: {
+  aws: {
+    iam-role: {
+      it: {
+        role-name: 'unobin-it-lambda-role'
+        assume-role-policy-document: '''\-
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+          {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+          '''
+      }
+    }
+    iam-policy: {
+      it: {
+        policy-name: 'unobin-it-lambda-policy'
+        policy-document: '''\-
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
+          CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+          '''
+      }
+    }
+    iam-role-policy-attachment: {
+      it: {
+        role-name:  resource.aws.iam-role.it.role-name
+        policy-arn: resource.aws.iam-policy.it.arn
+      }
+    }
+    lambda-function: {
+      it: {
+        function-name: 'unobin-it-function'
+        role:          resource.aws.iam-role.it.arn
+        runtime:       'python3.12'
+        handler:       'index.handler'
+        zip-file-path: '/tmp/unobin-it-lambda.zip'
+        environment:   { variables: { GREETING: 'hello from unobin' } }
+        tags:          { unobin: 'lambda-it' }
+      }
+    }
+    lambda-permission: {
+      it: {
+        function-name: resource.aws.lambda-function.it.function-name
+        statement-id:  'unobin-it-allow-invoke'
+        action:        'lambda:InvokeFunction'
+        principal:     's3.amazonaws.com'
+      }
+    }
+  }
+}
+
+actions: {
+  aws: {
+    lambda-invoke: {
+      it: {
+        function-name:   resource.aws.lambda-function.it.function-name
+        payload-content: '{"name":"unobin"}'
+      }
+    }
+  }
+}
+
+outputs: {
+  function-arn:     { value: resource.aws.lambda-function.it.arn }
+  function-version: { value: resource.aws.lambda-function.it.version }
+  invoke-status:    { value: action.aws.lambda-invoke.it.status-code }
+  invoke-payload:   { value: action.aws.lambda-invoke.it.payload }
+}

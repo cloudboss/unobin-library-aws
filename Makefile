@@ -57,6 +57,9 @@ localstack-up: | $(HAS_COMMAND_CURL)
 		--name $(LOCALSTACK_NAME) \
 		--network $(NETWORK) \
 		-p 4566:4566 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--security-opt label=type:container_runtime_t \
+		-e DEBUG=1 \
 		$(CTR_IMAGE_LOCALSTACK) >/dev/null
 	@i=0; while [ $${i} -lt 30 ]; do \
 		if curl -fsS http://localhost:4566/_localstack/health >/dev/null 2>&1; then \

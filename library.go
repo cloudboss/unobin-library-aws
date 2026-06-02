@@ -12,6 +12,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
+	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
 )
 
@@ -50,8 +51,15 @@ func Library() *runtime.Library {
 			"s3-bucket-policy": runtime.MakeResource[
 				s3.BucketPolicy, *s3.BucketPolicyOutput](),
 			"s3-object": runtime.MakeResource[s3.Object, *s3.ObjectOutput](),
+			"lambda-function": runtime.MakeResource[
+				lambda.Function, *lambda.FunctionOutput](),
+			"lambda-permission": runtime.MakeResource[
+				lambda.Permission, *lambda.PermissionOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{},
-		Actions:     map[string]runtime.ActionRegistration{},
+		Actions: map[string]runtime.ActionRegistration{
+			"lambda-invoke": runtime.MakeAction[
+				lambda.Invoke, *lambda.InvokeOutput](),
+		},
 	}
 }

@@ -59,6 +59,15 @@ func WithInterval(interval time.Duration) Option {
 	return func(c *config) { c.interval = interval }
 }
 
+// WithTimeout sets how long the wait runs before it gives up. Both Until and
+// UntilStable default to two minutes, which suits a resource that settles in
+// seconds; a slower one -- a Lambda function provisioning network interfaces
+// for a VPC, a permission statement propagating -- needs a longer bound so the
+// wait does not give up while the resource is still on its way.
+func WithTimeout(timeout time.Duration) Option {
+	return func(c *config) { c.timeout = timeout }
+}
+
 func withOptions(cfg config, opts []Option) config {
 	for _, opt := range opts {
 		opt(&cfg)
