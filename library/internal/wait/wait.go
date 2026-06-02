@@ -47,6 +47,25 @@ func stableConfig() config {
 	}
 }
 
+// Option overrides a wait default.
+type Option func(*config)
+
+// WithInterval sets how long the wait sleeps between polls. Until defaults to
+// five seconds, suited to a create that propagates over several seconds where
+// the first poll usually already finds the resource; a wait for something to
+// disappear after a delete settles in about a second, so a shorter interval
+// keeps it from sleeping a full five.
+func WithInterval(interval time.Duration) Option {
+	return func(c *config) { c.interval = interval }
+}
+
+func withOptions(cfg config, opts []Option) config {
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
+}
+
 // Until polls probe until it reports ready once, then returns. A probe error
 // stops the wait at once: a probe returns one to abort, such as turning a
 // missing resource that is not merely propagating into a not-found error the
@@ -56,8 +75,9 @@ func Until(
 	ctx context.Context,
 	what string,
 	probe func(context.Context) (ready bool, err error),
+	opts ...Option,
 ) error {
-	return until(ctx, what, 1, probe, untilConfig())
+	return until(ctx, what, 1, probe, withOptions(untilConfig(), opts))
 }
 
 // UntilStable polls probe until it reports ready on consecutive observations
@@ -69,8 +89,9 @@ func UntilStable(
 	what string,
 	consecutive int,
 	probe func(context.Context) (ready bool, err error),
+	opts ...Option,
 ) error {
-	return until(ctx, what, consecutive, probe, stableConfig())
+	return until(ctx, what, consecutive, probe, withOptions(stableConfig(), opts))
 }
 
 func until(

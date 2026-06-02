@@ -11,6 +11,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/library/actions"
 	"github.com/cloudboss/unobin-library-aws/library/config"
 	"github.com/cloudboss/unobin-library-aws/library/resources"
+	"github.com/cloudboss/unobin-library-aws/library/s3"
 )
 
 func Library() *runtime.Library {
@@ -38,6 +39,10 @@ func Library() *runtime.Library {
 			"kms-key": runtime.MakeResource[resources.KmsKey, *resources.KmsKeyOutput](),
 			"kms-alias": runtime.MakeResource[
 				resources.KmsAlias, *resources.KmsAliasOutput](),
+			"s3-bucket": runtime.MakeResource[s3.Bucket, *s3.BucketOutput](),
+			"s3-bucket-policy": runtime.MakeResource[
+				s3.BucketPolicy, *s3.BucketPolicyOutput](),
+			"s3-object": runtime.MakeResource[s3.Object, *s3.ObjectOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{},
 		Actions: map[string]runtime.ActionRegistration{

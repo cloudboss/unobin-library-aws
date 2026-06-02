@@ -36,6 +36,15 @@ func WithTimeout(timeout time.Duration) Option {
 	return func(c *config) { c.timeout = timeout }
 }
 
+// WithInterval sets how long OnError waits between attempts. The default is
+// five seconds, tuned for a dependency that propagates over several seconds; a
+// conflict that clears in well under a second, such as one operation waiting on
+// another against the same resource, warrants a shorter interval so the retry
+// is not slower than the conflict.
+func WithInterval(interval time.Duration) Option {
+	return func(c *config) { c.interval = interval }
+}
+
 // OnError runs fn and returns its result. When fn returns an error that
 // retryable reports as transient, it waits and runs fn again, until fn
 // succeeds, returns an error retryable does not recognize, or the timeout
