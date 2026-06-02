@@ -40,3 +40,9 @@ func IsNotFound(err error, codes ...string) bool {
 	}
 	return false
 }
+
+// Region returns the region the client is configured for. A resource that
+// composes an ARN needs it alongside the partition and account id.
+func Region(client *ec2.Client) string {
+	return client.Options().Region
+}

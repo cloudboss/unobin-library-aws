@@ -1,4 +1,4 @@
-description: 'Manages a VPC.'
+description: 'Manages a VPC with a security group and ingress and egress rules.'
 
 inputs: { cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' } }
 
@@ -7,6 +7,47 @@ imports: {
   aws:  'github.com/cloudboss/unobin-library-aws@v0.0.0'
 }
 
-resources: { aws: { ec2-vpc: { it: { cidr-block: var.cidr-block } } } }
+resources: {
+  aws: {
+    ec2-vpc: { it: { cidr-block: var.cidr-block } }
+    ec2-security-group: {
+      it: {
+        name:        'unobin-it-sg'
+        description: 'unobin integration test security group'
+        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+        tags:        { unobin: 'ec2-it' }
+      }
+    }
+    ec2-vpc-security-group-ingress-rule: {
+      it: {
+        security-group-id: resource.aws.ec2-security-group.it.id
+        ip-protocol:       'tcp'
+        from-port:         22
+        to-port:           22
+        cidr-ipv4:         var.cidr-block
+        description:       'ssh from the vpc'
+      }
+    }
+    ec2-vpc-security-group-egress-rule: {
+      it: {
+        security-group-id: resource.aws.ec2-security-group.it.id
+        ip-protocol:       'tcp'
+        from-port:         443
+        to-port:           443
+        cidr-ipv4:         '0.0.0.0/0'
+        description:       'https outbound'
+      }
+    }
+  }
+}
 
-outputs: { vpc-id: { value: resource.aws.ec2-vpc.it.vpc-id } }
+outputs: {
+  vpc-id:            { value: resource.aws.ec2-vpc.it.vpc-id }
+  security-group-id: { value: resource.aws.ec2-security-group.it.id }
+  ingress-rule-id: {
+    value: resource.aws.ec2-vpc-security-group-ingress-rule.it.security-group-rule-id
+  }
+  egress-rule-id: {
+    value: resource.aws.ec2-vpc-security-group-egress-rule.it.security-group-rule-id
+  }
+}

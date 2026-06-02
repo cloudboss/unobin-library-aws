@@ -81,3 +81,100 @@ func TestEc2VpcSchema(t *testing.T) {
 
 	assert.Equal(t, want, schema.Resources["ec2-vpc"])
 }
+
+// TestLibraryRegistersEc2SecurityGroups checks the runtime registration: the
+// security group and its ingress and egress rule resources are present under
+// Resources and dispatch to their output types.
+func TestLibraryRegistersEc2SecurityGroups(t *testing.T) {
+	lib := library.Library()
+	cases := map[string]reflect.Type{
+		"ec2-security-group":                  reflect.TypeFor[*ec2.SecurityGroupOutput](),
+		"ec2-vpc-security-group-ingress-rule": reflect.TypeFor[*ec2.VpcSecurityGroupIngressRuleOutput](),
+		"ec2-vpc-security-group-egress-rule":  reflect.TypeFor[*ec2.VpcSecurityGroupEgressRuleOutput](),
+	}
+	for key, outputType := range cases {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, lib.Resources, key)
+			assert.Equal(t, outputType, lib.Resources[key].OutputType())
+		})
+	}
+}
+
+// TestEc2SecurityGroupSchemas checks the input and output field types and the
+// cross-field constraints the dev CLI reads for the security group and its rule
+// resources. The ingress and egress rules are mirrors, so they share a schema.
+func TestEc2SecurityGroupSchemas(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+
+	ruleSchema := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"security-group-id":            typecheck.TString(),
+			"ip-protocol":                  typecheck.TString(),
+			"from-port":                    typecheck.TOptional(typecheck.TInteger()),
+			"to-port":                      typecheck.TOptional(typecheck.TInteger()),
+			"cidr-ipv4":                    typecheck.TOptional(typecheck.TString()),
+			"cidr-ipv6":                    typecheck.TOptional(typecheck.TString()),
+			"prefix-list-id":               typecheck.TOptional(typecheck.TString()),
+			"referenced-security-group-id": typecheck.TOptional(typecheck.TString()),
+			"description":                  typecheck.TOptional(typecheck.TString()),
+			"tags":                         typecheck.TMap(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"security-group-rule-id": typecheck.TString(),
+			"arn":                    typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "exactly-one-of",
+				Fields: []string{"cidr-ipv4", "cidr-ipv6", "prefix-list-id",
+					"referenced-security-group-id"},
+			},
+			{
+				Kind: "predicate",
+				When: "(var.from-port != null)",
+				Require: "(var.from-port == null || var.from-port >= -1) && " +
+					"(var.from-port == null || var.from-port <= 65535)",
+				Message: "from-port must be between -1 and 65535",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.to-port != null)",
+				Require: "(var.to-port == null || var.to-port >= -1) && " +
+					"(var.to-port == null || var.to-port <= 65535)",
+				Message: "to-port must be between -1 and 65535",
+			},
+		},
+	}
+
+	cases := map[string]*runtime.TypeSchema{
+		"ec2-security-group": {
+			Inputs: map[string]typecheck.Type{
+				"name":                   typecheck.TOptional(typecheck.TString()),
+				"name-prefix":            typecheck.TOptional(typecheck.TString()),
+				"description":            typecheck.TString(),
+				"vpc-id":                 typecheck.TOptional(typecheck.TString()),
+				"tags":                   typecheck.TMap(typecheck.TString()),
+				"revoke-rules-on-delete": typecheck.TOptional(typecheck.TBoolean()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"id":       typecheck.TString(),
+				"arn":      typecheck.TString(),
+				"owner-id": typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{Kind: "at-most-one-of", Fields: []string{"name", "name-prefix"}},
+			},
+		},
+		"ec2-vpc-security-group-ingress-rule": ruleSchema,
+		"ec2-vpc-security-group-egress-rule":  ruleSchema,
+	}
+
+	for key, want := range cases {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.Resources, key)
+			assert.Equal(t, want, schema.Resources[key])
+		})
+	}
+}
