@@ -88,6 +88,9 @@ fi
 go install github.com/cloudboss/unobin/cmd/unobin@${UNOBIN_VERSION}
 UNOBIN=${GOPATH}/bin/unobin
 
+tmp_dir=$(mktemp -d "/tmp/unobin-library-aws-XXXXXX")
+trap "rm -rf ${tmp_dir}" EXIT
+
 FAILED=""
 COUNT=0
 for sdir in "${@}"; do
@@ -100,7 +103,7 @@ for sdir in "${@}"; do
         continue
     fi
 
-    build_dir=$(mktemp -d "/tmp/unobin-library-aws-it-${name}-XXXXXX")
+    build_dir="${tmp_dir}/${name}"
     rel="${sdir#${REPO_DIR}/}"
 
     # failed_step holds the first failure seen and stays the reported reason no
@@ -185,8 +188,6 @@ for sdir in "${@}"; do
             failed_step="destroy"
         fi
     fi
-
-    rm -rf "${build_dir}"
 
     if [ -n "${failed_step}" ]; then
         FAILED="${FAILED} ${name}(${failed_step})"
