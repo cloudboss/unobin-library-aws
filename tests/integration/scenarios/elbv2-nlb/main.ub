@@ -1,0 +1,66 @@
+description: '''>-
+  Manages an internal Network Load Balancer and its dependencies: a VPC with two subnets,
+  a TCP target group, the network load balancer across both subnets with cross-zone load
+  balancing enabled, and a TCP listener that forwards to the target group. Exercises the
+  network load-balancer type and its per-type attribute path across apply and destroy.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+resources: {
+  aws: {
+    ec2-vpc: { it: { cidr-block: '10.30.0.0/16' } }
+    ec2-subnet: {
+      a: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.30.1.0/24'
+        availability-zone: 'us-east-1a'
+        tags:              { unobin: 'nlb-it' }
+      }
+      b: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.30.2.0/24'
+        availability-zone: 'us-east-1b'
+        tags:              { unobin: 'nlb-it' }
+      }
+    }
+    elbv2-target-group: {
+      it: {
+        name:        'unobin-it-nlb-tg'
+        target-type: 'instance'
+        port:        80
+        protocol:    'TCP'
+        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+        tags:        { unobin: 'nlb-it' }
+      }
+    }
+    elbv2-load-balancer: {
+      it: {
+        name:               'unobin-it-nlb'
+        internal:           true
+        load-balancer-type: 'network'
+        subnets:            [resource.aws.ec2-subnet.a.id, resource.aws.ec2-subnet.b.id]
+        enable-cross-zone-load-balancing: true
+        tags:                             { unobin: 'nlb-it' }
+      }
+    }
+    elbv2-listener: {
+      it: {
+        load-balancer-arn: resource.aws.elbv2-load-balancer.it.arn
+        protocol:          'TCP'
+        port:              80
+        default-action: [
+          { type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn },
+        ]
+        tags: { unobin: 'nlb-it' }
+      }
+    }
+  }
+}
+
+outputs: {
+  load-balancer-arn: { value: resource.aws.elbv2-load-balancer.it.arn }
+  dns-name:          { value: resource.aws.elbv2-load-balancer.it.dns-name }
+  target-group-arn:  { value: resource.aws.elbv2-target-group.it.arn }
+  listener-arn:      { value: resource.aws.elbv2-listener.it.arn }
+}

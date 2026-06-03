@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
@@ -61,6 +62,16 @@ func Library() *runtime.Library {
 				eventbridge.Rule, *eventbridge.RuleOutput](),
 			"eventbridge-target": runtime.MakeResource[
 				eventbridge.Target, *eventbridge.TargetOutput](),
+			"elbv2-load-balancer": runtime.MakeResource[
+				elbv2.LoadBalancer, *elbv2.LoadBalancerOutput](),
+			"elbv2-target-group": runtime.MakeResource[
+				elbv2.TargetGroup, *elbv2.TargetGroupOutput](),
+			"elbv2-listener": runtime.MakeResource[
+				elbv2.Listener, *elbv2.ListenerOutput](),
+			"elbv2-listener-rule": runtime.MakeResource[
+				elbv2.ListenerRule, *elbv2.ListenerRuleOutput](),
+			"elbv2-listener-certificate": runtime.MakeResource[
+				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{},
 		Actions: map[string]runtime.ActionRegistration{
