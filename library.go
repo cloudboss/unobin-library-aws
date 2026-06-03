@@ -33,6 +33,7 @@ func Library() *runtime.Library {
 				ec2.SecurityGroupIngressRule, *ec2.SecurityGroupIngressRuleOutput](),
 			"ec2-security-group-egress-rule": runtime.MakeResource[
 				ec2.SecurityGroupEgressRule, *ec2.SecurityGroupEgressRuleOutput](),
+			"ec2-subnet": runtime.MakeResource[ec2.Subnet, *ec2.SubnetOutput](),
 			"iam-role": runtime.MakeResource[
 				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[

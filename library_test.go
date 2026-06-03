@@ -230,3 +230,107 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 		})
 	}
 }
+
+// TestLibraryRegistersEc2Subnet checks the runtime registration: ec2-subnet
+// is present under Resources and dispatches to its output type.
+func TestLibraryRegistersEc2Subnet(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.Resources, "ec2-subnet")
+	assert.Equal(t, reflect.TypeFor[*ec2.SubnetOutput](),
+		lib.Resources["ec2-subnet"].OutputType())
+}
+
+// TestEc2SubnetSchema asserts the whole derived TypeSchema for ec2-subnet:
+// the input and output field types, that nothing is sensitive, and the
+// cross-field constraints derived from the Constraints method.
+func TestEc2SubnetSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.Resources, "ec2-subnet")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"assign-ipv6-address-on-creation":                typecheck.TOptional(typecheck.TBoolean()),
+			"availability-zone":                              typecheck.TOptional(typecheck.TString()),
+			"availability-zone-id":                           typecheck.TOptional(typecheck.TString()),
+			"cidr-block":                                     typecheck.TOptional(typecheck.TString()),
+			"customer-owned-ipv4-pool":                       typecheck.TOptional(typecheck.TString()),
+			"enable-dns64":                                   typecheck.TOptional(typecheck.TBoolean()),
+			"enable-lni-at-device-index":                     typecheck.TOptional(typecheck.TInteger()),
+			"enable-resource-name-dns-a-record-on-launch":    typecheck.TOptional(typecheck.TBoolean()),
+			"enable-resource-name-dns-aaaa-record-on-launch": typecheck.TOptional(typecheck.TBoolean()),
+			"ipv4-ipam-pool-id":                              typecheck.TOptional(typecheck.TString()),
+			"ipv4-netmask-length":                            typecheck.TOptional(typecheck.TInteger()),
+			"ipv6-cidr-block":                                typecheck.TOptional(typecheck.TString()),
+			"ipv6-ipam-pool-id":                              typecheck.TOptional(typecheck.TString()),
+			"ipv6-native":                                    typecheck.TOptional(typecheck.TBoolean()),
+			"ipv6-netmask-length":                            typecheck.TOptional(typecheck.TInteger()),
+			"map-customer-owned-ip-on-launch":                typecheck.TOptional(typecheck.TBoolean()),
+			"map-public-ip-on-launch":                        typecheck.TOptional(typecheck.TBoolean()),
+			"outpost-arn":                                    typecheck.TOptional(typecheck.TString()),
+			"private-dns-hostname-type-on-launch":            typecheck.TOptional(typecheck.TString()),
+			"tags":                                           typecheck.TMap(typecheck.TString()),
+			"vpc-id":                                         typecheck.TString(),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":                            typecheck.TString(),
+			"availability-zone":              typecheck.TString(),
+			"availability-zone-id":           typecheck.TString(),
+			"cidr-block":                     typecheck.TString(),
+			"id":                             typecheck.TString(),
+			"ipv6-cidr-block":                typecheck.TString(),
+			"ipv6-cidr-block-association-id": typecheck.TString(),
+			"owner-id":                       typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"availability-zone", "availability-zone-id"},
+			},
+			{
+				Kind:   "forbidden-with",
+				Fields: []string{"ipv4-netmask-length", "cidr-block", "customer-owned-ipv4-pool"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"ipv4-netmask-length", "ipv4-ipam-pool-id"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"ipv4-ipam-pool-id", "customer-owned-ipv4-pool"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"customer-owned-ipv4-pool", "map-customer-owned-ip-on-launch", "outpost-arn"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"map-customer-owned-ip-on-launch", "customer-owned-ipv4-pool", "outpost-arn"},
+			},
+			{
+				Kind:   "forbidden-with",
+				Fields: []string{"ipv6-netmask-length", "ipv6-cidr-block"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"ipv6-netmask-length", "ipv6-ipam-pool-id"},
+			},
+			{
+				Kind: "predicate",
+				When: "(var.private-dns-hostname-type-on-launch != null)",
+				Require: "(var.private-dns-hostname-type-on-launch == 'ip-name' || " +
+					"var.private-dns-hostname-type-on-launch == 'resource-name')",
+				Message: "private-dns-hostname-type-on-launch must be ip-name or " +
+					"resource-name",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.enable-lni-at-device-index != null)",
+				Require: "(var.enable-lni-at-device-index == null || " +
+					"var.enable-lni-at-device-index > 0)",
+				Message: "enable-lni-at-device-index must be a positive device position",
+			},
+		},
+	}
+	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-subnet"]))
+}
