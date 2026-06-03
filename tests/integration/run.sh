@@ -2,16 +2,21 @@
 # Integration test driver.
 #
 # Usage: run.sh <tier>
-#   tier:  localstack | live
+#   tier:  emulator | live
 #
 # Environment:
 #   SCENARIO=<name>      Run only one scenario directory.
 #   UNOBIN_VERSION       Version of unobin to use for the test.
-#   LOCALSTACK_ENDPOINT  The localstack tier injects this as
-#                        AWS_ENDPOINT_URL, defaults to http://localhost:4566.
+#   LOCALSTACK_ENDPOINT  Endpoint of the LocalStack emulator, defaults to
+#                        http://localhost:4566.
+#   MINISTACK_ENDPOINT   Endpoint of the ministack emulator, defaults to
+#                        http://localhost:4567.
 #
-# For the localstack tier, the driver exports dummy AWS credentials, AWS_REGION,
-# and AWS_ENDPOINT_URL before invoking the scenarios. For the live tier, the
+# The emulator tier runs each scenario against ministack unless the scenario
+# directory holds a .backend file naming localstack, which pins a scenario
+# whose operations ministack does not support. The driver exports dummy AWS
+# credentials, AWS_REGION, and the chosen emulator's endpoint as
+# AWS_ENDPOINT_URL before invoking each scenario. For the live tier, the
 # environment must already contain real credentials and region.
 
 set -eu
@@ -28,15 +33,15 @@ healthcheck() {
 }
 
 if [ ${#} -lt 1 ]; then
-    echo "usage: ${0} <localstack|live>" >&2
+    echo "usage: ${0} <emulator|live>" >&2
     exit 2
 fi
 
 TIER="${1}"
 case "${TIER}" in
-    localstack|live) ;;
+    emulator|live) ;;
     *)
-        echo "unknown tier ${TIER}; expected localstack or live" >&2
+        echo "unknown tier ${TIER}; expected emulator or live" >&2
         exit 2
         ;;
 esac
@@ -51,16 +56,18 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 UNOBIN_VERSION="${UNOBIN_VERSION:?UNOBIN_VERSION is required}"
 SCENARIOS_DIR="${SCRIPT_DIR}/scenarios"
 
-if [ "${TIER}" = "localstack" ]; then
+if [ "${TIER}" = "emulator" ]; then
     LOCALSTACK_ENDPOINT="${LOCALSTACK_ENDPOINT:-http://localhost:4566}"
-    if ! healthcheck "${LOCALSTACK_ENDPOINT}/_localstack/health"; then
-        echo "LocalStack is not reachable at ${LOCALSTACK_ENDPOINT}" >&2
-        exit 2
-    fi
+    MINISTACK_ENDPOINT="${MINISTACK_ENDPOINT:-http://localhost:4567}"
+    for endpoint in "${LOCALSTACK_ENDPOINT}" "${MINISTACK_ENDPOINT}"; do
+        if ! healthcheck "${endpoint}/_localstack/health"; then
+            echo "emulator is not reachable at ${endpoint}" >&2
+            exit 2
+        fi
+    done
     export AWS_ACCESS_KEY_ID=test
     export AWS_SECRET_ACCESS_KEY=test
     export AWS_REGION=us-east-1
-    export AWS_ENDPOINT_URL="${LOCALSTACK_ENDPOINT}"
 fi
 
 # Populate the scenario list via positional parameters. Iterate every directory
@@ -96,7 +103,27 @@ COUNT=0
 for sdir in "${@}"; do
     COUNT=$((COUNT + 1))
     name=$(basename "${sdir}")
-    echo "==> ${TIER}/${name}"
+    # Each scenario picks its emulator: ministack unless a .backend file pins
+    # it to localstack. The endpoint is exported per scenario so one run
+    # serves scenarios on both emulators.
+    if [ "${TIER}" = "emulator" ]; then
+        backend="ministack"
+        if [ -f "${sdir}/.backend" ]; then
+            backend=$(cat "${sdir}/.backend")
+        fi
+        case "${backend}" in
+            ministack) export AWS_ENDPOINT_URL="${MINISTACK_ENDPOINT}" ;;
+            localstack) export AWS_ENDPOINT_URL="${LOCALSTACK_ENDPOINT}" ;;
+            *)
+                echo "unknown backend ${backend} in ${sdir}/.backend" >&2
+                FAILED="${FAILED} ${name}(backend)"
+                continue
+                ;;
+        esac
+        echo "==> ${TIER}/${name} (${backend})"
+    else
+        echo "==> ${TIER}/${name}"
+    fi
     if [ ! -f "${sdir}/main.ub" ]; then
         echo "missing main.ub" >&2
         FAILED="${FAILED} ${name}"
