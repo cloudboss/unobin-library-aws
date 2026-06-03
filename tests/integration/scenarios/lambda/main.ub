@@ -3,7 +3,7 @@ description: '''>-
   resource-policy permission, and a one-shot invocation.
   '''
 
-imports: { aws: 'github.com/cloudboss/unobin-library-aws@v0.0.0' }
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {

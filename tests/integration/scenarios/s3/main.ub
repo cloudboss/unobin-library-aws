@@ -3,7 +3,7 @@ description: '''>-
   block, a non-public bucket policy, and an object.
   '''
 
-imports: { aws: 'github.com/cloudboss/unobin-library-aws@v0.0.0' }
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {

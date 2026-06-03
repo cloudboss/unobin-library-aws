@@ -3,8 +3,8 @@ description: 'Manages a VPC with a security group and ingress and egress rules.'
 inputs: { cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' } }
 
 imports: {
-  core: 'github.com/cloudboss/unobin//pkg/libraries/core@v0.4.0'
-  aws:  'github.com/cloudboss/unobin-library-aws@v0.0.0'
+  core: 'github.com/cloudboss/unobin//pkg/libraries/core'
+  aws:  'github.com/cloudboss/unobin-library-aws'
 }
 
 resources: {

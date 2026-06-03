@@ -126,7 +126,6 @@ for sdir in "${@}"; do
             ${UNOBIN} compile \
                 -p "${sdir}/main.ub" \
                 -o "${build_dir}" \
-                --replace-go-module="github.com/cloudboss/unobin-library-aws=${REPO_DIR}" \
                 --unobin-version="${UNOBIN_VERSION}" \
                 --build
         ) || failed_step="compile"

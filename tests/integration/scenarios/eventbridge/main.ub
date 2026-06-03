@@ -3,7 +3,7 @@ description: '''>-
   function, its execution role, and the resource permission that lets EventBridge invoke it.
   '''
 
-imports: { aws: 'github.com/cloudboss/unobin-library-aws@v0.0.0' }
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {
