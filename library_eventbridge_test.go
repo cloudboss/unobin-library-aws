@@ -62,7 +62,10 @@ func TestEventbridgeSchemas(t *testing.T) {
 				"arn": typecheck.TString(),
 			},
 			Constraints: []lang.ConstraintSpec{
-				{Kind: "at-least-one-of", Fields: []string{"event-pattern", "schedule-expression"}},
+				{
+					Kind:   "at-least-one-of",
+					Fields: []string{"var.event-pattern", "var.schedule-expression"},
+				},
 				{
 					Kind: "predicate",
 					When: "(var.state != null)",
@@ -177,7 +180,14 @@ func TestEventbridgeSchemas(t *testing.T) {
 				"target-id": typecheck.TString(),
 			},
 			Constraints: []lang.ConstraintSpec{
-				{Kind: "at-most-one-of", Fields: []string{"input", "input-path", "input-transformer"}},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.input",
+						"var.input-path",
+						"var.input-transformer",
+					},
+				},
 			},
 		},
 	}

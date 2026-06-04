@@ -125,14 +125,37 @@ func TestLambdaSchemas(t *testing.T) {
 				"version":                        typecheck.TString(),
 			},
 			Constraints: []lang.ConstraintSpec{
-				{Kind: "exactly-one-of", Fields: []string{
-					"zip-file-content", "zip-file-path", "s3-bucket", "image-uri"}},
-				{Kind: "at-most-one-of", Fields: []string{"zip-file-content", "zip-file-path"}},
-				{Kind: "required-with", Fields: []string{"s3-bucket", "s3-key"}},
-				{Kind: "required-with", Fields: []string{"s3-key", "s3-bucket"}},
-				{Kind: "forbidden-with", Fields: []string{
-					"s3-object-version", "zip-file-content", "zip-file-path", "image-uri"}},
-				{Kind: "forbidden-with", Fields: []string{"source-kms-key-arn", "image-uri"}},
+				{
+					Kind: "exactly-one-of", Fields: []string{
+						"var.zip-file-content", "var.zip-file-path",
+						"var.s3-bucket", "var.image-uri",
+					},
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.zip-file-content", "var.zip-file-path",
+					},
+				},
+				{
+					Kind:   "required-with",
+					Fields: []string{"var.s3-bucket", "var.s3-key"},
+				},
+				{
+					Kind:   "required-with",
+					Fields: []string{"var.s3-key", "var.s3-bucket"},
+				},
+				{
+					Kind: "forbidden-with",
+					Fields: []string{
+						"var.s3-object-version", "var.zip-file-content",
+						"var.zip-file-path", "var.image-uri",
+					},
+				},
+				{
+					Kind:   "forbidden-with",
+					Fields: []string{"var.source-kms-key-arn", "var.image-uri"},
+				},
 				{
 					Kind:    "predicate",
 					When:    "!(var.package-type == 'Image')",
@@ -222,7 +245,10 @@ func TestLambdaSchemas(t *testing.T) {
 				"status-code":      typecheck.TInteger(),
 			},
 			Constraints: []lang.ConstraintSpec{
-				{Kind: "exactly-one-of", Fields: []string{"payload-content", "payload-path"}},
+				{
+					Kind:   "exactly-one-of",
+					Fields: []string{"var.payload-content", "var.payload-path"},
+				},
 				{
 					Kind: "predicate",
 					When: "(var.invocation-type != null)",

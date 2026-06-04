@@ -111,11 +111,26 @@ func TestEc2VpcSchema(t *testing.T) {
 				Require: "(var.instance-tenancy == 'default' || var.instance-tenancy == 'dedicated')",
 				Message: "instance-tenancy must be default or dedicated",
 			},
-			{Kind: "at-most-one-of", Fields: []string{"cidr-block", "ipv4-netmask-length"}},
-			{Kind: "required-with", Fields: []string{"ipv4-netmask-length", "ipv4-ipam-pool-id"}},
-			{Kind: "at-most-one-of", Fields: []string{"ipv6-cidr-block", "ipv6-netmask-length"}},
-			{Kind: "required-with", Fields: []string{"ipv6-cidr-block", "ipv6-ipam-pool-id"}},
-			{Kind: "required-with", Fields: []string{"ipv6-netmask-length", "ipv6-ipam-pool-id"}},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.cidr-block", "var.ipv4-netmask-length"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"var.ipv4-netmask-length", "var.ipv4-ipam-pool-id"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.ipv6-cidr-block", "var.ipv6-netmask-length"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"var.ipv6-cidr-block", "var.ipv6-ipam-pool-id"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"var.ipv6-netmask-length", "var.ipv6-ipam-pool-id"},
+			},
 			{
 				Kind:    "predicate",
 				When:    "(var.amazon-provided-ipv6-cidr-block == true)",
@@ -180,8 +195,10 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind: "exactly-one-of",
-				Fields: []string{"cidr-ipv4", "cidr-ipv6", "prefix-list-id",
-					"referenced-security-group-id"},
+				Fields: []string{
+					"var.cidr-ipv4", "var.cidr-ipv6", "var.prefix-list-id",
+					"var.referenced-security-group-id",
+				},
 			},
 			{
 				Kind: "predicate",
@@ -216,7 +233,10 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 				"owner-id": typecheck.TString(),
 			},
 			Constraints: []lang.ConstraintSpec{
-				{Kind: "at-most-one-of", Fields: []string{"name", "name-prefix"}},
+				{
+					Kind:   "at-most-one-of",
+					Fields: []string{"var.name", "var.name-prefix"},
+				},
 			},
 		},
 		"ec2-security-group-ingress-rule": ruleSchema,
@@ -284,36 +304,53 @@ func TestEc2SubnetSchema(t *testing.T) {
 		},
 		Constraints: []lang.ConstraintSpec{
 			{
-				Kind:   "at-most-one-of",
-				Fields: []string{"availability-zone", "availability-zone-id"},
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"var.availability-zone", "var.availability-zone-id",
+				},
+			},
+			{
+				Kind: "forbidden-with",
+				Fields: []string{
+					"var.ipv4-netmask-length", "var.cidr-block",
+					"var.customer-owned-ipv4-pool",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"var.ipv4-netmask-length", "var.ipv4-ipam-pool-id",
+				},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"var.ipv4-ipam-pool-id", "var.customer-owned-ipv4-pool",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"var.customer-owned-ipv4-pool",
+					"var.map-customer-owned-ip-on-launch", "var.outpost-arn",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"var.map-customer-owned-ip-on-launch",
+					"var.customer-owned-ipv4-pool", "var.outpost-arn",
+				},
 			},
 			{
 				Kind:   "forbidden-with",
-				Fields: []string{"ipv4-netmask-length", "cidr-block", "customer-owned-ipv4-pool"},
+				Fields: []string{"var.ipv6-netmask-length", "var.ipv6-cidr-block"},
 			},
 			{
-				Kind:   "required-with",
-				Fields: []string{"ipv4-netmask-length", "ipv4-ipam-pool-id"},
-			},
-			{
-				Kind:   "at-most-one-of",
-				Fields: []string{"ipv4-ipam-pool-id", "customer-owned-ipv4-pool"},
-			},
-			{
-				Kind:   "required-with",
-				Fields: []string{"customer-owned-ipv4-pool", "map-customer-owned-ip-on-launch", "outpost-arn"},
-			},
-			{
-				Kind:   "required-with",
-				Fields: []string{"map-customer-owned-ip-on-launch", "customer-owned-ipv4-pool", "outpost-arn"},
-			},
-			{
-				Kind:   "forbidden-with",
-				Fields: []string{"ipv6-netmask-length", "ipv6-cidr-block"},
-			},
-			{
-				Kind:   "required-with",
-				Fields: []string{"ipv6-netmask-length", "ipv6-ipam-pool-id"},
+				Kind: "required-with",
+				Fields: []string{
+					"var.ipv6-netmask-length", "var.ipv6-ipam-pool-id",
+				},
 			},
 			{
 				Kind: "predicate",

@@ -104,7 +104,7 @@ func TestElbv2Schemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind:   "exactly-one-of",
-						Fields: []string{"subnets", "subnet-mappings"},
+						Fields: []string{"var.subnets", "var.subnet-mappings"},
 					},
 					{
 						Kind: "predicate",

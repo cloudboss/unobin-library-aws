@@ -63,7 +63,7 @@ func TestKmsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "required-with",
-					Fields: []string{"xks-key-id", "custom-key-store-id"},
+					Fields: []string{"var.xks-key-id", "var.custom-key-store-id"},
 				},
 				{
 					Kind: "predicate",
@@ -88,7 +88,7 @@ func TestKmsSchemas(t *testing.T) {
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"rotation-period-in-days", "enable-key-rotation"},
+					Fields: []string{"var.rotation-period-in-days", "var.enable-key-rotation"},
 				},
 				{
 					Kind: "predicate",

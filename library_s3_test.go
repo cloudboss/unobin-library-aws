@@ -240,8 +240,11 @@ func TestS3Schemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind:   "at-most-one-of",
-					Fields: []string{"body-content", "body-path", "body-base64"},
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.body-content", "var.body-path",
+						"var.body-base64",
+					},
 				},
 				{
 					Kind: "predicate",
