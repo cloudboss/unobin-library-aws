@@ -10,8 +10,9 @@ import (
 )
 
 // BucketVersioning is the bucket's versioning configuration. Status is
-// Enabled or Suspended; MfaDelete optionally requires the bucket owner's MFA to
-// delete a version or change versioning. A nil block leaves versioning as it is.
+// Enabled or Suspended; MfaDelete, Enabled or Disabled, requires the bucket
+// owner's MFA to delete a version or change versioning. A nil block leaves
+// versioning as it is.
 type BucketVersioning struct {
 	Status    string  `ub:"status"`
 	MfaDelete *string `ub:"mfa-delete"`

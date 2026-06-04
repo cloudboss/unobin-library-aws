@@ -30,13 +30,13 @@ type BucketLifecycle struct {
 	Rules []BucketLifecycleRule `ub:"rules"`
 }
 
-// BucketLifecycleRule is one lifecycle rule. ID and Status are required; Status is
-// Enabled or Disabled. A rule scopes its objects with Filter (an empty or
-// absent filter matches every object) and carries at least one action: an
+// BucketLifecycleRule is one lifecycle rule. ID and Status are required; Status
+// is Enabled or Disabled. A rule scopes its objects with Filter (an empty or
+// absent filter matches every object) and takes at least one action: an
 // expiration, a list of transitions, a noncurrent-version expiration or
-// transitions, or an incomplete-multipart-upload abort. (Both the >=1-action
-// rule and the filter rules are API-validated; nested-block fields cannot carry
-// unobin Constraints -- note them here, do not add a Constraints method.)
+// transitions, or an incomplete-multipart-upload abort. The rules inside the
+// transition lists are API-validated: a constraint cannot reach a list inside
+// a list element.
 type BucketLifecycleRule struct {
 	ID                             string                        `ub:"id"`
 	Status                         string                        `ub:"status"`

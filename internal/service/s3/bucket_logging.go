@@ -13,13 +13,9 @@ import (
 // TargetBucket and TargetPrefix name where access logs are delivered and the key
 // prefix S3 assigns them. TargetGrants optionally grant log-delivery permissions
 // to other grantees; they are unsupported on buckets that enforce bucket-owner
-// ownership. TargetObjectKeyFormat optionally chooses the log object key layout.
-// A nil block leaves logging as it is. (Valid values are API-validated and
-// nested-block fields cannot carry unobin Constraints, so they are noted here, not
-// in a Constraints method: permission is FULL_CONTROL, READ, or WRITE; grantee
-// type is CanonicalUser, AmazonCustomerByEmail, or Group; partition-date-source is
-// EventTime or DeliveryTime; under target-object-key-format exactly one of
-// partitioned-prefix or simple-prefix applies.)
+// ownership. TargetObjectKeyFormat optionally chooses the log object key layout:
+// exactly one of partitioned-prefix or simple-prefix applies. A nil block leaves
+// logging as it is.
 type BucketLogging struct {
 	TargetBucket          string                              `ub:"target-bucket"`
 	TargetPrefix          string                              `ub:"target-prefix"`

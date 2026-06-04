@@ -13,11 +13,10 @@ import (
 
 // BucketObjectLock is the bucket's Object Lock default retention
 // rule. It requires object lock to be enabled on the bucket at creation
-// (object-lock-enabled = true on the bucket); S3 rejects this otherwise. A nil
-// block leaves any existing rule in place -- object lock cannot be turned off
-// once enabled. (Mode is API-validated GOVERNANCE|COMPLIANCE; days and years are
-// mutually exclusive, exactly one; nested-block fields cannot carry unobin
-// Constraints -- noted here, no Constraints method.)
+// (object-lock-enabled = true on the bucket). A nil block leaves any existing
+// rule in place -- object lock cannot be turned off once enabled. Mode is
+// GOVERNANCE or COMPLIANCE, and the retention takes exactly one of days or
+// years.
 type BucketObjectLock struct {
 	Rule BucketObjectLockRule `ub:"rule"`
 }

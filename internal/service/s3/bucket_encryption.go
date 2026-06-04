@@ -21,9 +21,7 @@ var encryptionNotFoundCodes = []string{
 // BucketEncryption is the bucket's default server-side encryption. SSEAlgorithm
 // is AES256, aws:kms, or aws:kms:dsse. KMSMasterKeyID applies only with a KMS
 // algorithm. BucketKeyEnabled cuts KMS request cost. A nil block leaves
-// encryption as it is. (Valid values + the KMS-key-requires-KMS-algorithm rule
-// are API-validated; nested-block fields cannot carry unobin Constraints -- note
-// them in the doc, do not add a Constraints method.)
+// encryption as it is.
 type BucketEncryption struct {
 	SSEAlgorithm     string  `ub:"sse-algorithm"`
 	KMSMasterKeyID   *string `ub:"kms-master-key-id"`

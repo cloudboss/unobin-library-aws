@@ -15,6 +15,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
+	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -81,6 +82,137 @@ func (r *Bucket) SchemaVersion() int { return 1 }
 // not a replace trigger.
 func (r *Bucket) ReplaceFields() []string {
 	return []string{"bucket", "object-lock-enabled"}
+}
+
+// Constraints declares the rules S3 places on the bucket's configuration
+// blocks: each block's enums and cross-field requirements, the per-rule rules
+// of the cors, lifecycle, routing, and grant lists, and the object-lock block's
+// dependence on object-lock-enabled. The cors method values and the lifecycle
+// transition rules live where a constraint cannot reach (string-list elements
+// and lists inside list elements), so the API validates those.
+func (r Bucket) Constraints() []constraint.Constraint {
+	return []constraint.Constraint{
+		constraint.When(constraint.Present(r.Accelerate.Status)).
+			Require(constraint.OneOf(r.Accelerate.Status, "Enabled", "Suspended")).
+			Message("accelerate status must be Enabled or Suspended"),
+		constraint.When(constraint.Present(r.Versioning.Status)).
+			Require(constraint.OneOf(r.Versioning.Status, "Enabled", "Suspended")).
+			Message("versioning status must be Enabled or Suspended"),
+		constraint.When(constraint.Present(r.Versioning.MfaDelete)).
+			Require(constraint.OneOf(r.Versioning.MfaDelete, "Enabled", "Disabled")).
+			Message("versioning mfa-delete must be Enabled or Disabled"),
+		constraint.When(constraint.Present(r.Acl.Acl)).
+			Require(constraint.OneOf(r.Acl.Acl, "private", "public-read",
+				"public-read-write", "authenticated-read", "aws-exec-read",
+				"bucket-owner-read", "bucket-owner-full-control",
+				"log-delivery-write")).
+			Message("acl must be one of the S3 canned bucket ACLs"),
+		constraint.When(constraint.Present(r.OwnershipControls.ObjectOwnership)).
+			Require(constraint.OneOf(r.OwnershipControls.ObjectOwnership,
+				"BucketOwnerPreferred", "ObjectWriter", "BucketOwnerEnforced")).
+			Message("object-ownership must be BucketOwnerPreferred, ObjectWriter, or BucketOwnerEnforced"),
+		constraint.When(constraint.Present(r.Encryption.SSEAlgorithm)).
+			Require(constraint.OneOf(r.Encryption.SSEAlgorithm,
+				"AES256", "aws:kms", "aws:kms:dsse")).
+			Message("sse-algorithm must be AES256, aws:kms, or aws:kms:dsse"),
+		constraint.When(constraint.Present(r.Encryption.KMSMasterKeyID)).
+			Require(constraint.OneOf(r.Encryption.SSEAlgorithm,
+				"aws:kms", "aws:kms:dsse")).
+			Message("kms-master-key-id requires a KMS sse-algorithm"),
+		constraint.When(constraint.Present(r.ObjectLock)).
+			Require(constraint.IsTrue(r.ObjectLockEnabled)).
+			Message("object-lock requires object-lock-enabled to be true"),
+		constraint.When(constraint.Present(r.ObjectLock.Rule.DefaultRetention.Mode)).
+			Require(constraint.OneOf(r.ObjectLock.Rule.DefaultRetention.Mode,
+				"GOVERNANCE", "COMPLIANCE")).
+			Message("object-lock mode must be GOVERNANCE or COMPLIANCE"),
+		constraint.AtMostOneOf(r.ObjectLock.Rule.DefaultRetention.Days,
+			r.ObjectLock.Rule.DefaultRetention.Years),
+		constraint.When(constraint.Present(r.ObjectLock)).
+			Require(constraint.Any(
+				constraint.Present(r.ObjectLock.Rule.DefaultRetention.Days),
+				constraint.Present(r.ObjectLock.Rule.DefaultRetention.Years))).
+			Message("object-lock retention requires days or years"),
+		constraint.ForbiddenWith(r.Website.RedirectAllRequestsTo,
+			r.Website.IndexDocument, r.Website.ErrorDocument, r.Website.RoutingRules),
+		constraint.When(constraint.Present(r.Website)).
+			Require(constraint.Any(constraint.Present(r.Website.IndexDocument),
+				constraint.Present(r.Website.RedirectAllRequestsTo))).
+			Message("website requires index-document or redirect-all-requests-to"),
+		constraint.When(constraint.Present(r.Website.RedirectAllRequestsTo.Protocol)).
+			Require(constraint.OneOf(r.Website.RedirectAllRequestsTo.Protocol,
+				"http", "https")).
+			Message("redirect-all-requests-to protocol must be http or https"),
+		constraint.ForEach(r.Website.RoutingRules,
+			func(rule BucketWebsiteRoutingRule) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.Present(rule.Redirect)).
+						Message("a routing rule requires a redirect"),
+					constraint.When(constraint.Present(rule.Redirect.Protocol)).
+						Require(constraint.OneOf(rule.Redirect.Protocol, "http", "https")).
+						Message("a routing rule redirect protocol must be http or https"),
+					constraint.AtMostOneOf(rule.Redirect.ReplaceKeyPrefixWith,
+						rule.Redirect.ReplaceKeyWith),
+				}
+			}),
+		constraint.ForEach(r.Cors.Rules,
+			func(rule BucketCorsRule) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.Present(rule.AllowedMethods),
+						constraint.Present(rule.AllowedOrigins)).
+						Message("a cors rule requires allowed-methods and allowed-origins"),
+				}
+			}),
+		constraint.ForEach(r.Lifecycle.Rules,
+			func(rule BucketLifecycleRule) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(rule.Status, "Enabled", "Disabled")).
+						Message("a lifecycle rule status must be Enabled or Disabled"),
+					constraint.Must(constraint.Any(
+						constraint.Present(rule.Expiration),
+						constraint.Present(rule.Transitions),
+						constraint.Present(rule.NoncurrentVersionExpiration),
+						constraint.Present(rule.NoncurrentVersionTransitions),
+						constraint.Present(rule.AbortIncompleteMultipartUpload))).
+						Message("a lifecycle rule needs at least one action"),
+					constraint.AtMostOneOf(rule.Filter.Prefix, rule.Filter.Tag,
+						rule.Filter.ObjectSizeGreaterThan,
+						rule.Filter.ObjectSizeLessThan, rule.Filter.And),
+					constraint.AtMostOneOf(rule.Expiration.Date, rule.Expiration.Days,
+						rule.Expiration.ExpiredObjectDeleteMarker),
+					constraint.When(constraint.Present(rule.Expiration)).
+						Require(constraint.Any(constraint.Present(rule.Expiration.Date),
+							constraint.Present(rule.Expiration.Days),
+							constraint.Present(rule.Expiration.ExpiredObjectDeleteMarker))).
+						Message("an expiration needs date, days, or expired-object-delete-marker"),
+				}
+			}),
+		constraint.ForEach(r.Logging.TargetGrants,
+			func(grant BucketLoggingTargetGrant) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(grant.Permission,
+						"FULL_CONTROL", "READ", "WRITE")).
+						Message("a target grant permission must be FULL_CONTROL, READ, or WRITE"),
+					constraint.When(constraint.Present(grant.Grantee.Type)).
+						Require(constraint.OneOf(grant.Grantee.Type,
+							"CanonicalUser", "AmazonCustomerByEmail", "Group")).
+						Message("a grantee type must be CanonicalUser, AmazonCustomerByEmail, or Group"),
+				}
+			}),
+		constraint.AtMostOneOf(r.Logging.TargetObjectKeyFormat.PartitionedPrefix,
+			r.Logging.TargetObjectKeyFormat.SimplePrefix),
+		constraint.When(constraint.Present(r.Logging.TargetObjectKeyFormat)).
+			Require(constraint.Any(
+				constraint.Present(r.Logging.TargetObjectKeyFormat.PartitionedPrefix),
+				constraint.Present(r.Logging.TargetObjectKeyFormat.SimplePrefix))).
+			Message("target-object-key-format requires partitioned-prefix or simple-prefix"),
+		constraint.When(constraint.Present(
+			r.Logging.TargetObjectKeyFormat.PartitionedPrefix.PartitionDateSource)).
+			Require(constraint.OneOf(
+				r.Logging.TargetObjectKeyFormat.PartitionedPrefix.PartitionDateSource,
+				"EventTime", "DeliveryTime")).
+			Message("partition-date-source must be EventTime or DeliveryTime"),
+	}
 }
 
 func (r *Bucket) Create(ctx context.Context, cfg any) (*BucketOutput, error) {

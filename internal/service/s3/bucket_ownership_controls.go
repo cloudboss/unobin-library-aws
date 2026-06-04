@@ -16,9 +16,7 @@ var ownershipControlsNotFoundCodes = []string{"NoSuchBucket", "OwnershipControls
 
 // BucketOwnershipControls is the bucket's object-ownership setting.
 // ObjectOwnership is BucketOwnerPreferred, ObjectWriter, or BucketOwnerEnforced.
-// A nil block leaves ownership controls as they are. (Valid values are
-// API-validated; nested-block fields cannot carry unobin Constraints -- note the
-// values in the doc, do not add a Constraints method.)
+// A nil block leaves ownership controls as they are.
 type BucketOwnershipControls struct {
 	ObjectOwnership string `ub:"object-ownership"`
 }

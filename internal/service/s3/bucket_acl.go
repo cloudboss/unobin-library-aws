@@ -16,8 +16,7 @@ import (
 // does NOT reset the ACL -- S3 has no operation to un-set one. This block
 // requires ACLs to be enabled: if ownership-controls sets object-ownership to
 // BucketOwnerEnforced, ACLs are disabled and setting this fails with
-// AccessControlListNotSupported. (Canned values are API-validated; nested-block
-// fields cannot carry unobin Constraints -- note them here, no Constraints method.)
+// AccessControlListNotSupported.
 type BucketAcl struct {
 	Acl string `ub:"acl"`
 }

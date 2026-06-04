@@ -10,9 +10,7 @@ import (
 )
 
 // BucketAccelerate is the bucket's Transfer Acceleration configuration. Status
-// is Enabled or Suspended. A nil block leaves acceleration as it is. (Status is
-// API-validated as Enabled|Suspended; nested-block fields cannot carry unobin
-// Constraints, so note valid values in the doc, do not add a Constraints method.)
+// is Enabled or Suspended. A nil block leaves acceleration as it is.
 type BucketAccelerate struct {
 	Status string `ub:"status"`
 }

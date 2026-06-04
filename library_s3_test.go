@@ -188,6 +188,216 @@ func TestS3Schemas(t *testing.T) {
 				"bucket-domain-name":          typecheck.TString(),
 				"bucket-regional-domain-name": typecheck.TString(),
 			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "(var.accelerate.status != null)",
+					Require: "(var.accelerate.status == 'Enabled' || var.accelerate.status == 'Suspended')",
+					Message: "accelerate status must be Enabled or Suspended",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.versioning.status != null)",
+					Require: "(var.versioning.status == 'Enabled' || var.versioning.status == 'Suspended')",
+					Message: "versioning status must be Enabled or Suspended",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.versioning.mfa-delete != null)",
+					Require: "(var.versioning.mfa-delete == 'Enabled' || var.versioning.mfa-delete == 'Disabled')",
+					Message: "versioning mfa-delete must be Enabled or Disabled",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.acl.acl != null)",
+					Require: "(var.acl.acl == 'private' || var.acl.acl == 'public-read' || " +
+						"var.acl.acl == 'public-read-write' || var.acl.acl == 'authenticated-read' || " +
+						"var.acl.acl == 'aws-exec-read' || var.acl.acl == 'bucket-owner-read' || " +
+						"var.acl.acl == 'bucket-owner-full-control' || var.acl.acl == 'log-delivery-write')",
+					Message: "acl must be one of the S3 canned bucket ACLs",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.ownership-controls.object-ownership != null)",
+					Require: "(var.ownership-controls.object-ownership == 'BucketOwnerPreferred' || " +
+						"var.ownership-controls.object-ownership == 'ObjectWriter' || " +
+						"var.ownership-controls.object-ownership == 'BucketOwnerEnforced')",
+					Message: "object-ownership must be BucketOwnerPreferred, ObjectWriter, or BucketOwnerEnforced",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.encryption.sse-algorithm != null)",
+					Require: "(var.encryption.sse-algorithm == 'AES256' || " +
+						"var.encryption.sse-algorithm == 'aws:kms' || " +
+						"var.encryption.sse-algorithm == 'aws:kms:dsse')",
+					Message: "sse-algorithm must be AES256, aws:kms, or aws:kms:dsse",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.encryption.kms-master-key-id != null)",
+					Require: "(var.encryption.sse-algorithm == 'aws:kms' || " +
+						"var.encryption.sse-algorithm == 'aws:kms:dsse')",
+					Message: "kms-master-key-id requires a KMS sse-algorithm",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.object-lock != null)",
+					Require: "(var.object-lock-enabled == true)",
+					Message: "object-lock requires object-lock-enabled to be true",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.object-lock.rule.default-retention.mode != null)",
+					Require: "(var.object-lock.rule.default-retention.mode == 'GOVERNANCE' || " +
+						"var.object-lock.rule.default-retention.mode == 'COMPLIANCE')",
+					Message: "object-lock mode must be GOVERNANCE or COMPLIANCE",
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.object-lock.rule.default-retention.days", "var.object-lock.rule.default-retention.years",
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "(var.object-lock != null)",
+					Require: "((var.object-lock.rule.default-retention.days != null) || " +
+						"(var.object-lock.rule.default-retention.years != null))",
+					Message: "object-lock retention requires days or years",
+				},
+				{
+					Kind: "forbidden-with",
+					Fields: []string{
+						"var.website.redirect-all-requests-to", "var.website.index-document",
+						"var.website.error-document", "var.website.routing-rules",
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "(var.website != null)",
+					Require: "((var.website.index-document != null) || " +
+						"(var.website.redirect-all-requests-to != null))",
+					Message: "website requires index-document or redirect-all-requests-to",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.website.redirect-all-requests-to.protocol != null)",
+					Require: "(var.website.redirect-all-requests-to.protocol == 'http' || " +
+						"var.website.redirect-all-requests-to.protocol == 'https')",
+					Message: "redirect-all-requests-to protocol must be http or https",
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@each.value.redirect != null)",
+					Message: "a routing rule requires a redirect",
+					ForEach: "var.website.routing-rules",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.redirect.protocol != null)",
+					Require: "(@each.value.redirect.protocol == 'http' || " +
+						"@each.value.redirect.protocol == 'https')",
+					Message: "a routing rule redirect protocol must be http or https",
+					ForEach: "var.website.routing-rules",
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.website.routing-rules[*].redirect.replace-key-prefix-with",
+						"var.website.routing-rules[*].redirect.replace-key-with",
+					},
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@each.value.allowed-methods != null) && (@each.value.allowed-origins != null)",
+					Message: "a cors rule requires allowed-methods and allowed-origins",
+					ForEach: "var.cors.rules",
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@each.value.status == 'Enabled' || @each.value.status == 'Disabled')",
+					Message: "a lifecycle rule status must be Enabled or Disabled",
+					ForEach: "var.lifecycle.rules",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "((@each.value.expiration != null) || (@each.value.transitions != null) || " +
+						"(@each.value.noncurrent-version-expiration != null) || " +
+						"(@each.value.noncurrent-version-transitions != null) || " +
+						"(@each.value.abort-incomplete-multipart-upload != null))",
+					Message: "a lifecycle rule needs at least one action",
+					ForEach: "var.lifecycle.rules",
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.lifecycle.rules[*].filter.prefix", "var.lifecycle.rules[*].filter.tag",
+						"var.lifecycle.rules[*].filter.object-size-greater-than",
+						"var.lifecycle.rules[*].filter.object-size-less-than", "var.lifecycle.rules[*].filter.and",
+					},
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.lifecycle.rules[*].expiration.date", "var.lifecycle.rules[*].expiration.days",
+						"var.lifecycle.rules[*].expiration.expired-object-delete-marker",
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.expiration != null)",
+					Require: "((@each.value.expiration.date != null) || " +
+						"(@each.value.expiration.days != null) || " +
+						"(@each.value.expiration.expired-object-delete-marker != null))",
+					Message: "an expiration needs date, days, or expired-object-delete-marker",
+					ForEach: "var.lifecycle.rules",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value.permission == 'FULL_CONTROL' || @each.value.permission == 'READ' || " +
+						"@each.value.permission == 'WRITE')",
+					Message: "a target grant permission must be FULL_CONTROL, READ, or WRITE",
+					ForEach: "var.logging.target-grants",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.grantee.type != null)",
+					Require: "(@each.value.grantee.type == 'CanonicalUser' || " +
+						"@each.value.grantee.type == 'AmazonCustomerByEmail' || " +
+						"@each.value.grantee.type == 'Group')",
+					Message: "a grantee type must be CanonicalUser, AmazonCustomerByEmail, or Group",
+					ForEach: "var.logging.target-grants",
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.logging.target-object-key-format.partitioned-prefix",
+						"var.logging.target-object-key-format.simple-prefix",
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging.target-object-key-format != null)",
+					Require: "((var.logging.target-object-key-format.partitioned-prefix != null) || " +
+						"(var.logging.target-object-key-format.simple-prefix != null))",
+					Message: "target-object-key-format requires partitioned-prefix or simple-prefix",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging.target-object-key-format.partitioned-prefix.partition-date-source != " +
+						"null)",
+					Require: "(var.logging.target-object-key-format.partitioned-prefix.partition-date-source " +
+						"== 'EventTime' || " +
+						"var.logging.target-object-key-format.partitioned-prefix.partition-date-source == " +
+						"'DeliveryTime')",
+					Message: "partition-date-source must be EventTime or DeliveryTime",
+				},
+			},
 		},
 		"s3-bucket-policy": {
 			Inputs: map[string]typecheck.Type{

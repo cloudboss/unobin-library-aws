@@ -20,10 +20,8 @@ var websiteNotFoundCodes = []string{
 // BucketWebsite is the bucket's static-website hosting configuration. A valid
 // configuration is either a single redirect-all-requests-to, or an
 // index-document with optional error-document and routing-rules; the two forms
-// are mutually exclusive. A nil block leaves the website configuration as it is.
-// (The exactly-one-form rule, the redirect-all exclusivity, and the http|https
-// protocol values are all API-validated; nested-block fields cannot carry unobin
-// Constraints -- note them here, do not add a Constraints method.)
+// are mutually exclusive. A nil block leaves the website configuration as it
+// is.
 type BucketWebsite struct {
 	IndexDocument         *BucketWebsiteIndexDocument `ub:"index-document"`
 	ErrorDocument         *BucketWebsiteErrorDocument `ub:"error-document"`
