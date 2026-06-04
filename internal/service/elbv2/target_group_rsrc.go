@@ -34,31 +34,40 @@ const elbv2PropagationTimeout = 5 * time.Minute
 // port, protocol, protocol version, VPC, target type, IP address type, and
 // target control port are fixed at creation, so a change to any of them
 // replaces the group; the health check, stickiness, the scalar attributes, and
-// tags reconcile in place. CreateTargetGroup takes the create-time fields and
-// the whole health check; the remaining attributes are reconciled by a
-// follow-on ModifyTargetGroupAttributes, and a health-check change on update by
-// ModifyTargetGroup. A nil health-check or stickiness block leaves ELBv2's
-// defaults in place.
+// tags reconcile in place. The health-check fields are flat, the form
+// CreateTargetGroup takes them in, with the success-code matcher as its own
+// block; a health-check field left unset keeps ELBv2's per-protocol default,
+// and a change on update goes through ModifyTargetGroup. The remaining
+// attributes are reconciled by a follow-on ModifyTargetGroupAttributes. A nil
+// stickiness block leaves stickiness disabled.
 type TargetGroup struct {
-	Name                           string                  `ub:"name"`
-	TargetType                     *string                 `ub:"target-type"`
-	Port                           *int64                  `ub:"port"`
-	Protocol                       *string                 `ub:"protocol"`
-	ProtocolVersion                *string                 `ub:"protocol-version"`
-	VpcId                          *string                 `ub:"vpc-id"`
-	IpAddressType                  *string                 `ub:"ip-address-type"`
-	TargetControlPort              *int64                  `ub:"target-control-port"`
-	HealthCheck                    *TargetGroupHealthCheck `ub:"health-check"`
-	Stickiness                     *TargetGroupStickiness  `ub:"stickiness"`
-	DeregistrationDelay            *int64                  `ub:"deregistration-delay"`
-	SlowStart                      *int64                  `ub:"slow-start"`
-	LoadBalancingAlgorithmType     *string                 `ub:"load-balancing-algorithm-type"`
-	LoadBalancingCrossZoneEnabled  *string                 `ub:"load-balancing-cross-zone-enabled"`
-	PreserveClientIp               *bool                   `ub:"preserve-client-ip"`
-	ProxyProtocolV2                *bool                   `ub:"proxy-protocol-v2"`
-	ConnectionTermination          *bool                   `ub:"connection-termination"`
-	LambdaMultiValueHeadersEnabled *bool                   `ub:"lambda-multi-value-headers-enabled"`
-	Tags                           map[string]string       `ub:"tags"`
+	Name                           string                 `ub:"name"`
+	TargetType                     *string                `ub:"target-type"`
+	Port                           *int64                 `ub:"port"`
+	Protocol                       *string                `ub:"protocol"`
+	ProtocolVersion                *string                `ub:"protocol-version"`
+	VpcId                          *string                `ub:"vpc-id"`
+	IpAddressType                  *string                `ub:"ip-address-type"`
+	TargetControlPort              *int64                 `ub:"target-control-port"`
+	HealthCheckEnabled             *bool                  `ub:"health-check-enabled"`
+	HealthCheckProtocol            *string                `ub:"health-check-protocol"`
+	HealthCheckPort                *string                `ub:"health-check-port"`
+	HealthCheckPath                *string                `ub:"health-check-path"`
+	HealthCheckIntervalSeconds     *int64                 `ub:"health-check-interval-seconds"`
+	HealthCheckTimeoutSeconds      *int64                 `ub:"health-check-timeout-seconds"`
+	HealthyThresholdCount          *int64                 `ub:"healthy-threshold-count"`
+	UnhealthyThresholdCount        *int64                 `ub:"unhealthy-threshold-count"`
+	Matcher                        *TargetGroupMatcher    `ub:"matcher"`
+	Stickiness                     *TargetGroupStickiness `ub:"stickiness"`
+	DeregistrationDelay            *int64                 `ub:"deregistration-delay"`
+	SlowStart                      *int64                 `ub:"slow-start"`
+	LoadBalancingAlgorithmType     *string                `ub:"load-balancing-algorithm-type"`
+	LoadBalancingCrossZoneEnabled  *string                `ub:"load-balancing-cross-zone-enabled"`
+	PreserveClientIp               *bool                  `ub:"preserve-client-ip"`
+	ProxyProtocolV2                *bool                  `ub:"proxy-protocol-v2"`
+	ConnectionTermination          *bool                  `ub:"connection-termination"`
+	LambdaMultiValueHeadersEnabled *bool                  `ub:"lambda-multi-value-headers-enabled"`
+	Tags                           map[string]string      `ub:"tags"`
 }
 
 // TargetGroupOutput holds the values ELBv2 computes for a target group. The ARN
@@ -96,12 +105,14 @@ func (r *TargetGroup) ReplaceFields() []string {
 // Constraints declares the cross-field rules ELBv2 places on a target group's
 // inputs. A lambda target takes no port, protocol, protocol version, or VPC,
 // while every other target type requires a port, protocol, and VPC. The
-// protocol version applies only to an HTTP or HTTPS group. The numeric ranges
-// match ELBv2's accepted bounds.
-//
-// The health-check and stickiness blocks have their own enums and bounds,
-// enforced in the resource code and documented on those types, since a nested
-// block's fields do not derive unobin constraints.
+// protocol version applies only to an HTTP or HTTPS group. A TCP health check
+// is rejected for an HTTP/HTTPS group and for a lambda target, and takes no
+// path or matcher. The matcher names exactly one success-code form, and a gRPC
+// code applies only to a gRPC group. A stickiness block names its type, and
+// its cookie name rides only an app_cookie type. The numeric ranges match
+// ELBv2's accepted bounds. The health-check port, the literal traffic-port or
+// a port number, is validated by the API: a constraint cannot parse a number
+// out of a string.
 func (r TargetGroup) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Equals(r.TargetType, "lambda")).
@@ -124,13 +135,11 @@ func (r TargetGroup) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.LoadBalancingAlgorithmType)).
 			Require(constraint.OneOf(r.LoadBalancingAlgorithmType,
 				"round_robin", "least_outstanding_requests", "weighted_random")).
-			Message("load-balancing-algorithm-type must be round_robin, " +
-				"least_outstanding_requests, or weighted_random"),
+			Message("algorithm type must be round_robin, least_outstanding_requests, or weighted_random"),
 		constraint.When(constraint.Present(r.LoadBalancingCrossZoneEnabled)).
 			Require(constraint.OneOf(r.LoadBalancingCrossZoneEnabled,
 				"true", "false", "use_load_balancer_configuration")).
-			Message("load-balancing-cross-zone-enabled must be true, false, or " +
-				"use_load_balancer_configuration"),
+			Message("cross-zone-enabled must be true, false, or use_load_balancer_configuration"),
 		constraint.When(constraint.Present(r.Port)).
 			Require(constraint.AtLeast(r.Port, 1), constraint.AtMost(r.Port, 65535)).
 			Message("port must be between 1 and 65535"),
@@ -145,15 +154,60 @@ func (r TargetGroup) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.SlowStart)).
 			Require(constraint.AtLeast(r.SlowStart, 0), constraint.AtMost(r.SlowStart, 900)).
 			Message("slow-start must be 0 or between 30 and 900"),
+		constraint.When(constraint.Present(r.HealthCheckProtocol)).
+			Require(constraint.OneOf(r.HealthCheckProtocol, "HTTP", "HTTPS", "TCP")).
+			Message("health-check-protocol must be HTTP, HTTPS, or TCP"),
+		constraint.When(constraint.Equals(r.HealthCheckProtocol, "TCP")).
+			Require(constraint.Absent(r.HealthCheckPath), constraint.Absent(r.Matcher)).
+			Message("a TCP health check takes no path or matcher"),
+		constraint.When(constraint.Equals(r.HealthCheckProtocol, "TCP")).
+			Require(constraint.Not(constraint.OneOf(r.Protocol, "HTTP", "HTTPS")),
+				constraint.NotEquals(r.TargetType, "lambda")).
+			Message("a TCP health check is not valid for an HTTP/HTTPS or lambda group"),
+		constraint.When(constraint.Present(r.HealthCheckIntervalSeconds)).
+			Require(constraint.AtLeast(r.HealthCheckIntervalSeconds, 5),
+				constraint.AtMost(r.HealthCheckIntervalSeconds, 300)).
+			Message("health-check-interval-seconds must be between 5 and 300"),
+		constraint.When(constraint.Present(r.HealthCheckTimeoutSeconds)).
+			Require(constraint.AtLeast(r.HealthCheckTimeoutSeconds, 2),
+				constraint.AtMost(r.HealthCheckTimeoutSeconds, 120)).
+			Message("health-check-timeout-seconds must be between 2 and 120"),
+		constraint.When(constraint.Present(r.HealthyThresholdCount)).
+			Require(constraint.AtLeast(r.HealthyThresholdCount, 2),
+				constraint.AtMost(r.HealthyThresholdCount, 10)).
+			Message("healthy-threshold-count must be between 2 and 10"),
+		constraint.When(constraint.Present(r.UnhealthyThresholdCount)).
+			Require(constraint.AtLeast(r.UnhealthyThresholdCount, 2),
+				constraint.AtMost(r.UnhealthyThresholdCount, 10)).
+			Message("unhealthy-threshold-count must be between 2 and 10"),
+		constraint.AtMostOneOf(r.Matcher.HttpCode, r.Matcher.GrpcCode),
+		constraint.When(constraint.Present(r.Matcher)).
+			Require(constraint.Any(constraint.Present(r.Matcher.HttpCode),
+				constraint.Present(r.Matcher.GrpcCode))).
+			Message("matcher requires http-code or grpc-code"),
+		constraint.When(constraint.Present(r.Matcher.GrpcCode)).
+			Require(constraint.Equals(r.ProtocolVersion, "GRPC")).
+			Message("grpc-code applies only when protocol-version is GRPC"),
+		constraint.When(constraint.Present(r.Stickiness)).
+			Require(constraint.Present(r.Stickiness.Type)).
+			Message("stickiness requires a type"),
+		constraint.When(constraint.Present(r.Stickiness.Type)).
+			Require(constraint.OneOf(r.Stickiness.Type, "lb_cookie", "app_cookie",
+				"source_ip", "source_ip_dest_ip", "source_ip_dest_ip_proto")).
+			Message("stickiness type must be one of the ELBv2 stickiness types"),
+		constraint.When(constraint.Present(r.Stickiness.CookieDuration)).
+			Require(constraint.AtLeast(r.Stickiness.CookieDuration, 0),
+				constraint.AtMost(r.Stickiness.CookieDuration, 604800)).
+			Message("stickiness cookie-duration must be between 0 and 604800"),
+		constraint.When(constraint.Present(r.Stickiness.CookieName)).
+			Require(constraint.Equals(r.Stickiness.Type, "app_cookie")).
+			Message("cookie-name applies only to app_cookie stickiness"),
 	}
 }
 
 func (r *TargetGroup) Create(ctx context.Context, cfg any) (*TargetGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
-		return nil, err
-	}
-	if err := r.validate(); err != nil {
 		return nil, err
 	}
 	in := r.createInput()
@@ -236,15 +290,12 @@ func (r *TargetGroup) Update(
 	if err != nil {
 		return nil, err
 	}
-	if err := r.validate(); err != nil {
-		return nil, err
-	}
 	arn := prior.Outputs.Arn
 	// ModifyTargetGroup reconciles the health check, so it runs only when a
-	// health-check field changed; ELBv2 has no separate call for it. A block
-	// removed entirely is left alone, since ELBv2 has no way to clear a health
+	// health-check field changed; ELBv2 has no separate call for it. Fields
+	// removed entirely are left alone, since ELBv2 has no way to clear a health
 	// check, only to change its fields.
-	if r.HealthCheck != nil && runtime.Changed(prior.Inputs.HealthCheck, r.HealthCheck) {
+	if r.hasHealthCheck() && r.healthCheckChanged(prior.Inputs) {
 		if err := r.modifyHealthCheck(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -289,32 +340,10 @@ func (r *TargetGroup) Delete(ctx context.Context, cfg any, prior *TargetGroupOut
 	return nil
 }
 
-// validate enforces the cross-field rules on the nested health-check and
-// stickiness blocks that those blocks' fields cannot express as unobin
-// constraints: the health-check protocol must be one ELBv2 accepts, a TCP
-// health check is rejected for an HTTP/HTTPS group or a lambda target, and a
-// stickiness block must name its type.
-func (r *TargetGroup) validate() error {
-	if hc := r.HealthCheck; hc != nil && hc.Protocol != nil {
-		switch upperProtocol(*hc.Protocol) {
-		case "HTTP", "HTTPS", "TCP":
-		default:
-			return fmt.Errorf("health-check protocol must be HTTP, HTTPS, or TCP")
-		}
-		if hc.usesTCP() && (r.isHTTP() || r.isLambda()) {
-			return fmt.Errorf("a TCP health check is not valid for an HTTP/HTTPS or lambda group")
-		}
-	}
-	if r.Stickiness != nil && r.Stickiness.Type == nil {
-		return fmt.Errorf("stickiness requires a type")
-	}
-	return nil
-}
-
 // createInput builds the CreateTargetGroup request from the create-time inputs
-// and the health-check block. The port, protocol, protocol version, and VPC are
-// left off for a lambda target, which does not accept them, even though the
-// constraints already forbid setting them there.
+// and the health-check fields. The port, protocol, protocol version, and VPC
+// are left off for a lambda target, which does not accept them, even though
+// the constraints already forbid setting them there.
 func (r *TargetGroup) createInput() *elbv2.CreateTargetGroupInput {
 	in := &elbv2.CreateTargetGroupInput{
 		Name:              aws.String(r.Name),
@@ -337,7 +366,17 @@ func (r *TargetGroup) createInput() *elbv2.CreateTargetGroupInput {
 			in.ProtocolVersion = aws.String(upperProtocol(*r.ProtocolVersion))
 		}
 	}
-	r.HealthCheck.applyToCreate(in, r.isGRPC())
+	in.HealthCheckEnabled = r.HealthCheckEnabled
+	in.HealthCheckPort = r.HealthCheckPort
+	in.HealthCheckPath = r.HealthCheckPath
+	in.HealthCheckIntervalSeconds = ptr.Int32(r.HealthCheckIntervalSeconds)
+	in.HealthCheckTimeoutSeconds = ptr.Int32(r.HealthCheckTimeoutSeconds)
+	in.HealthyThresholdCount = ptr.Int32(r.HealthyThresholdCount)
+	in.UnhealthyThresholdCount = ptr.Int32(r.UnhealthyThresholdCount)
+	if r.HealthCheckProtocol != nil {
+		in.HealthCheckProtocol = elbv2types.ProtocolEnum(*r.HealthCheckProtocol)
+	}
+	in.Matcher = r.Matcher.to()
 	return in
 }
 
@@ -358,16 +397,51 @@ func (r *TargetGroup) create(
 }
 
 // modifyHealthCheck reconciles the health-check fields on an existing group
-// with ModifyTargetGroup, the only call that updates them.
+// with ModifyTargetGroup, the only call that updates them. A field that is
+// unset is sent as nil, which ELBv2 reads as leave-unchanged.
 func (r *TargetGroup) modifyHealthCheck(
 	ctx context.Context, client *elbv2.Client, arn string,
 ) error {
 	in := &elbv2.ModifyTargetGroupInput{TargetGroupArn: aws.String(arn)}
-	r.HealthCheck.applyToModify(in, r.isGRPC())
+	in.HealthCheckEnabled = r.HealthCheckEnabled
+	in.HealthCheckPort = r.HealthCheckPort
+	in.HealthCheckPath = r.HealthCheckPath
+	in.HealthCheckIntervalSeconds = ptr.Int32(r.HealthCheckIntervalSeconds)
+	in.HealthCheckTimeoutSeconds = ptr.Int32(r.HealthCheckTimeoutSeconds)
+	in.HealthyThresholdCount = ptr.Int32(r.HealthyThresholdCount)
+	in.UnhealthyThresholdCount = ptr.Int32(r.UnhealthyThresholdCount)
+	if r.HealthCheckProtocol != nil {
+		in.HealthCheckProtocol = elbv2types.ProtocolEnum(*r.HealthCheckProtocol)
+	}
+	in.Matcher = r.Matcher.to()
 	if _, err := client.ModifyTargetGroup(ctx, in); err != nil {
 		return fmt.Errorf("modify target group: %w", err)
 	}
 	return nil
+}
+
+// hasHealthCheck reports whether any health-check input is set. With none set
+// there is nothing for ModifyTargetGroup to write.
+func (r *TargetGroup) hasHealthCheck() bool {
+	return r.HealthCheckEnabled != nil || r.HealthCheckProtocol != nil ||
+		r.HealthCheckPort != nil || r.HealthCheckPath != nil ||
+		r.HealthCheckIntervalSeconds != nil || r.HealthCheckTimeoutSeconds != nil ||
+		r.HealthyThresholdCount != nil || r.UnhealthyThresholdCount != nil ||
+		r.Matcher != nil
+}
+
+// healthCheckChanged reports whether any health-check input differs from the
+// prior inputs.
+func (r *TargetGroup) healthCheckChanged(prior TargetGroup) bool {
+	return runtime.Changed(prior.HealthCheckEnabled, r.HealthCheckEnabled) ||
+		runtime.Changed(prior.HealthCheckProtocol, r.HealthCheckProtocol) ||
+		runtime.Changed(prior.HealthCheckPort, r.HealthCheckPort) ||
+		runtime.Changed(prior.HealthCheckPath, r.HealthCheckPath) ||
+		runtime.Changed(prior.HealthCheckIntervalSeconds, r.HealthCheckIntervalSeconds) ||
+		runtime.Changed(prior.HealthCheckTimeoutSeconds, r.HealthCheckTimeoutSeconds) ||
+		runtime.Changed(prior.HealthyThresholdCount, r.HealthyThresholdCount) ||
+		runtime.Changed(prior.UnhealthyThresholdCount, r.UnhealthyThresholdCount) ||
+		runtime.Changed(prior.Matcher, r.Matcher)
 }
 
 // modifyAttributes applies the given target group attributes with
@@ -554,12 +628,6 @@ func (r *TargetGroup) isHTTP() bool {
 	default:
 		return false
 	}
-}
-
-// isGRPC reports whether the group's protocol version is gRPC, which decides
-// whether a health-check matcher holds a gRPC code or an HTTP code.
-func (r *TargetGroup) isGRPC() bool {
-	return r.ProtocolVersion != nil && upperProtocol(*r.ProtocolVersion) == "GRPC"
 }
 
 // findTargetGroupByARN reads a single target group by ARN through the paginated

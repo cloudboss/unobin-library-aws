@@ -35,25 +35,23 @@ resources: {
     }
     elbv2-target-group: {
       it: {
-        name:                 'unobin-it-alb-tg'
-        target-type:          'instance'
-        port:                 80
-        protocol:             'HTTP'
-        vpc-id:               resource.aws.ec2-vpc.it.vpc-id
-        deregistration-delay: 120
-        health-check: {
-          enabled:             true
-          protocol:            'HTTP'
-          path:                '/healthz'
-          port:                'traffic-port'
-          interval-seconds:    15
-          timeout-seconds:     5
-          healthy-threshold:   3
-          unhealthy-threshold: 3
-          matcher:             '200-299'
-        }
-        stickiness: { enabled: true, type: 'lb_cookie', cookie-duration: 600 }
-        tags:       { unobin: 'alb-it' }
+        name:                          'unobin-it-alb-tg'
+        target-type:                   'instance'
+        port:                          80
+        protocol:                      'HTTP'
+        vpc-id:                        resource.aws.ec2-vpc.it.vpc-id
+        deregistration-delay:          120
+        health-check-enabled:          true
+        health-check-protocol:         'HTTP'
+        health-check-path:             '/healthz'
+        health-check-port:             'traffic-port'
+        health-check-interval-seconds: 15
+        health-check-timeout-seconds:  5
+        healthy-threshold-count:       3
+        unhealthy-threshold-count:     3
+        matcher:                       { http-code: '200-299' }
+        stickiness:                    { enabled: true, type: 'lb_cookie', cookie-duration: 600 }
+        tags:                          { unobin: 'alb-it' }
       }
     }
     elbv2-load-balancer: {

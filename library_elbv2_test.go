@@ -156,41 +156,41 @@ func TestElbv2Schemas(t *testing.T) {
 			key: "elbv2-target-group",
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
-					"connection-termination": typecheck.TOptional(typecheck.TBoolean()),
-					"deregistration-delay":   typecheck.TOptional(typecheck.TInteger()),
-					"health-check": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
-						{Name: "grpc-matcher", Type: typecheck.TString(), Optional: true},
-						{Name: "healthy-threshold", Type: typecheck.TInteger(), Optional: true},
-						{Name: "interval-seconds", Type: typecheck.TInteger(), Optional: true},
-						{Name: "matcher", Type: typecheck.TString(), Optional: true},
-						{Name: "path", Type: typecheck.TString(), Optional: true},
-						{Name: "port", Type: typecheck.TString(), Optional: true},
-						{Name: "protocol", Type: typecheck.TString(), Optional: true},
-						{Name: "timeout-seconds", Type: typecheck.TInteger(), Optional: true},
-						{Name: "unhealthy-threshold", Type: typecheck.TInteger(), Optional: true},
-					})),
+					"connection-termination":             typecheck.TOptional(typecheck.TBoolean()),
+					"deregistration-delay":               typecheck.TOptional(typecheck.TInteger()),
+					"health-check-enabled":               typecheck.TOptional(typecheck.TBoolean()),
+					"health-check-interval-seconds":      typecheck.TOptional(typecheck.TInteger()),
+					"health-check-path":                  typecheck.TOptional(typecheck.TString()),
+					"health-check-port":                  typecheck.TOptional(typecheck.TString()),
+					"health-check-protocol":              typecheck.TOptional(typecheck.TString()),
+					"health-check-timeout-seconds":       typecheck.TOptional(typecheck.TInteger()),
+					"healthy-threshold-count":            typecheck.TOptional(typecheck.TInteger()),
 					"ip-address-type":                    typecheck.TOptional(typecheck.TString()),
 					"lambda-multi-value-headers-enabled": typecheck.TOptional(typecheck.TBoolean()),
 					"load-balancing-algorithm-type":      typecheck.TOptional(typecheck.TString()),
 					"load-balancing-cross-zone-enabled":  typecheck.TOptional(typecheck.TString()),
-					"name":                               typecheck.TString(),
-					"port":                               typecheck.TOptional(typecheck.TInteger()),
-					"preserve-client-ip":                 typecheck.TOptional(typecheck.TBoolean()),
-					"protocol":                           typecheck.TOptional(typecheck.TString()),
-					"protocol-version":                   typecheck.TOptional(typecheck.TString()),
-					"proxy-protocol-v2":                  typecheck.TOptional(typecheck.TBoolean()),
-					"slow-start":                         typecheck.TOptional(typecheck.TInteger()),
+					"matcher": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+						{Name: "grpc-code", Type: typecheck.TString(), Optional: true},
+						{Name: "http-code", Type: typecheck.TString(), Optional: true},
+					})),
+					"name":               typecheck.TString(),
+					"port":               typecheck.TOptional(typecheck.TInteger()),
+					"preserve-client-ip": typecheck.TOptional(typecheck.TBoolean()),
+					"protocol":           typecheck.TOptional(typecheck.TString()),
+					"protocol-version":   typecheck.TOptional(typecheck.TString()),
+					"proxy-protocol-v2":  typecheck.TOptional(typecheck.TBoolean()),
+					"slow-start":         typecheck.TOptional(typecheck.TInteger()),
 					"stickiness": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "cookie-duration", Type: typecheck.TInteger(), Optional: true},
 						{Name: "cookie-name", Type: typecheck.TString(), Optional: true},
 						{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
 						{Name: "type", Type: typecheck.TString(), Optional: true},
 					})),
-					"tags":                typecheck.TMap(typecheck.TString()),
-					"target-control-port": typecheck.TOptional(typecheck.TInteger()),
-					"target-type":         typecheck.TOptional(typecheck.TString()),
-					"vpc-id":              typecheck.TOptional(typecheck.TString()),
+					"tags":                      typecheck.TMap(typecheck.TString()),
+					"target-control-port":       typecheck.TOptional(typecheck.TInteger()),
+					"target-type":               typecheck.TOptional(typecheck.TString()),
+					"unhealthy-threshold-count": typecheck.TOptional(typecheck.TInteger()),
+					"vpc-id":                    typecheck.TOptional(typecheck.TString()),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn":                typecheck.TString(),
@@ -203,14 +203,12 @@ func TestElbv2Schemas(t *testing.T) {
 						When: "(var.target-type == 'lambda')",
 						Require: "(var.port == null) && (var.protocol == null) && " +
 							"(var.protocol-version == null) && (var.vpc-id == null)",
-						Message: "a lambda target group takes no port, protocol, " +
-							"protocol-version, or vpc-id",
+						Message: "a lambda target group takes no port, protocol, protocol-version, or vpc-id",
 					},
 					{
-						Kind: "predicate",
-						When: "(var.target-type != 'lambda')",
-						Require: "(var.port != null) && (var.protocol != null) && " +
-							"(var.vpc-id != null)",
+						Kind:    "predicate",
+						When:    "(var.target-type != 'lambda')",
+						Require: "(var.port != null) && (var.protocol != null) && (var.vpc-id != null)",
 						Message: "a non-lambda target group requires port, protocol, and vpc-id",
 					},
 					{
@@ -236,31 +234,30 @@ func TestElbv2Schemas(t *testing.T) {
 						Kind: "predicate",
 						When: "(var.load-balancing-algorithm-type != null)",
 						Require: "(var.load-balancing-algorithm-type == 'round_robin' || " +
-							"var.load-balancing-algorithm-type == " +
-							"'least_outstanding_requests' || " +
+							"var.load-balancing-algorithm-type == 'least_outstanding_requests' || " +
 							"var.load-balancing-algorithm-type == 'weighted_random')",
+						Message: "algorithm type must be round_robin, least_outstanding_requests, or " +
+							"weighted_random",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.load-balancing-cross-zone-enabled != null)",
 						Require: "(var.load-balancing-cross-zone-enabled == 'true' || " +
 							"var.load-balancing-cross-zone-enabled == 'false' || " +
-							"var.load-balancing-cross-zone-enabled == " +
-							"'use_load_balancer_configuration')",
+							"var.load-balancing-cross-zone-enabled == 'use_load_balancer_configuration')",
+						Message: "cross-zone-enabled must be true, false, or use_load_balancer_configuration",
 					},
 					{
-						Kind: "predicate",
-						When: "(var.port != null)",
-						Require: "(var.port == null || var.port >= 1) && (var.port == null || " +
-							"var.port <= 65535)",
+						Kind:    "predicate",
+						When:    "(var.port != null)",
+						Require: "(var.port == null || var.port >= 1) && (var.port == null || var.port <= 65535)",
 						Message: "port must be between 1 and 65535",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.target-control-port != null)",
 						Require: "(var.target-control-port == null || " +
-							"var.target-control-port >= 1) && " +
-							"(var.target-control-port == null || " +
+							"var.target-control-port >= 1) && (var.target-control-port == null || " +
 							"var.target-control-port <= 65535)",
 						Message: "target-control-port must be between 1 and 65535",
 					},
@@ -268,17 +265,112 @@ func TestElbv2Schemas(t *testing.T) {
 						Kind: "predicate",
 						When: "(var.deregistration-delay != null)",
 						Require: "(var.deregistration-delay == null || " +
-							"var.deregistration-delay >= 0) && " +
-							"(var.deregistration-delay == null || " +
+							"var.deregistration-delay >= 0) && (var.deregistration-delay == null || " +
 							"var.deregistration-delay <= 3600)",
 						Message: "deregistration-delay must be between 0 and 3600",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.slow-start != null)",
-						Require: "(var.slow-start == null || var.slow-start >= 0) && " +
-							"(var.slow-start == null || var.slow-start <= 900)",
+						Require: "(var.slow-start == null || var.slow-start >= 0) && (var.slow-start == null || " +
+							"var.slow-start <= 900)",
 						Message: "slow-start must be 0 or between 30 and 900",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.health-check-protocol != null)",
+						Require: "(var.health-check-protocol == 'HTTP' || " +
+							"var.health-check-protocol == 'HTTPS' || var.health-check-protocol == 'TCP')",
+						Message: "health-check-protocol must be HTTP, HTTPS, or TCP",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.health-check-protocol == 'TCP')",
+						Require: "(var.health-check-path == null) && (var.matcher == null)",
+						Message: "a TCP health check takes no path or matcher",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.health-check-protocol == 'TCP')",
+						Require: "!(var.protocol == 'HTTP' || " +
+							"var.protocol == 'HTTPS') && (var.target-type != 'lambda')",
+						Message: "a TCP health check is not valid for an HTTP/HTTPS or lambda group",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.health-check-interval-seconds != null)",
+						Require: "(var.health-check-interval-seconds == null || " +
+							"var.health-check-interval-seconds >= 5) && " +
+							"(var.health-check-interval-seconds == null || var.health-check-interval-seconds <= 300)",
+						Message: "health-check-interval-seconds must be between 5 and 300",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.health-check-timeout-seconds != null)",
+						Require: "(var.health-check-timeout-seconds == null || " +
+							"var.health-check-timeout-seconds >= 2) && (var.health-check-timeout-seconds == null || " +
+							"var.health-check-timeout-seconds <= 120)",
+						Message: "health-check-timeout-seconds must be between 2 and 120",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.healthy-threshold-count != null)",
+						Require: "(var.healthy-threshold-count == null || " +
+							"var.healthy-threshold-count >= 2) && (var.healthy-threshold-count == null || " +
+							"var.healthy-threshold-count <= 10)",
+						Message: "healthy-threshold-count must be between 2 and 10",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.unhealthy-threshold-count != null)",
+						Require: "(var.unhealthy-threshold-count == null || " +
+							"var.unhealthy-threshold-count >= 2) && (var.unhealthy-threshold-count == null || " +
+							"var.unhealthy-threshold-count <= 10)",
+						Message: "unhealthy-threshold-count must be between 2 and 10",
+					},
+					{
+						Kind:   "at-most-one-of",
+						Fields: []string{"var.matcher.http-code", "var.matcher.grpc-code"},
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.matcher != null)",
+						Require: "((var.matcher.http-code != null) || (var.matcher.grpc-code != null))",
+						Message: "matcher requires http-code or grpc-code",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.matcher.grpc-code != null)",
+						Require: "(var.protocol-version == 'GRPC')",
+						Message: "grpc-code applies only when protocol-version is GRPC",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.stickiness != null)",
+						Require: "(var.stickiness.type != null)",
+						Message: "stickiness requires a type",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.stickiness.type != null)",
+						Require: "(var.stickiness.type == 'lb_cookie' || var.stickiness.type == 'app_cookie' || " +
+							"var.stickiness.type == 'source_ip' || var.stickiness.type == 'source_ip_dest_ip' || " +
+							"var.stickiness.type == 'source_ip_dest_ip_proto')",
+						Message: "stickiness type must be one of the ELBv2 stickiness types",
+					},
+					{
+						Kind: "predicate",
+						When: "(var.stickiness.cookie-duration != null)",
+						Require: "(var.stickiness.cookie-duration == null || " +
+							"var.stickiness.cookie-duration >= 0) && (var.stickiness.cookie-duration == null || " +
+							"var.stickiness.cookie-duration <= 604800)",
+						Message: "stickiness cookie-duration must be between 0 and 604800",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.stickiness.cookie-name != null)",
+						Require: "(var.stickiness.type == 'app_cookie')",
+						Message: "cookie-name applies only to app_cookie stickiness",
 					},
 				},
 			},
