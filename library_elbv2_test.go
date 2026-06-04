@@ -110,25 +110,21 @@ func TestElbv2Schemas(t *testing.T) {
 						Kind: "predicate",
 						When: "(var.load-balancer-type != null)",
 						Require: "(var.load-balancer-type == 'application' || " +
-							"var.load-balancer-type == 'network' || " +
-							"var.load-balancer-type == 'gateway')",
+							"var.load-balancer-type == 'network' || var.load-balancer-type == 'gateway')",
 						Message: "load-balancer-type must be application, network, or gateway",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.ip-address-type != null)",
-						Require: "(var.ip-address-type == 'ipv4' || " +
-							"var.ip-address-type == 'dualstack' || " +
+						Require: "(var.ip-address-type == 'ipv4' || var.ip-address-type == 'dualstack' || " +
 							"var.ip-address-type == 'dualstack-without-public-ipv4')",
-						Message: "ip-address-type must be ipv4, dualstack, or " +
-							"dualstack-without-public-ipv4",
+						Message: "ip-address-type must be ipv4, dualstack, or dualstack-without-public-ipv4",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.desync-mitigation-mode != null)",
 						Require: "(var.desync-mitigation-mode == 'monitor' || " +
-							"var.desync-mitigation-mode == 'defensive' || " +
-							"var.desync-mitigation-mode == 'strictest')",
+							"var.desync-mitigation-mode == 'defensive' || var.desync-mitigation-mode == 'strictest')",
 						Message: "desync-mitigation-mode must be monitor, defensive, or strictest",
 					},
 					{
@@ -142,12 +138,22 @@ func TestElbv2Schemas(t *testing.T) {
 					{
 						Kind: "predicate",
 						When: "(var.dns-record-client-routing-policy != null)",
-						Require: "(var.dns-record-client-routing-policy == " +
-							"'availability_zone_affinity' || " +
-							"var.dns-record-client-routing-policy == " +
-							"'partial_availability_zone_affinity' || " +
+						Require: "(var.dns-record-client-routing-policy == 'availability_zone_affinity' || " +
+							"var.dns-record-client-routing-policy == 'partial_availability_zone_affinity' || " +
 							"var.dns-record-client-routing-policy == 'any_availability_zone')",
 						Message: "dns-record-client-routing-policy must be a valid routing policy",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.access-logs.enabled == true)",
+						Require: "(var.access-logs.bucket != null)",
+						Message: "enabled access-logs require a bucket",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(var.connection-logs.enabled == true)",
+						Require: "(var.connection-logs.bucket != null)",
+						Message: "enabled connection-logs require a bucket",
 					},
 				},
 			},
@@ -429,25 +435,111 @@ func TestElbv2Schemas(t *testing.T) {
 					},
 					{
 						Kind: "predicate",
-						When: "(var.protocol == 'HTTP' || var.protocol == 'TCP' || " +
-							"var.protocol == 'UDP' || var.protocol == 'TCP_UDP' || " +
-							"var.protocol == 'GENEVE' || var.protocol == 'QUIC' || " +
+						When: "(var.protocol == 'HTTP' || var.protocol == 'TCP' || var.protocol == 'UDP' || " +
+							"var.protocol == 'TCP_UDP' || var.protocol == 'GENEVE' || var.protocol == 'QUIC' || " +
 							"var.protocol == 'TCP_QUIC')",
 						Require: "(var.ssl-policy == null) && (var.certificate-arn == null) && " +
 							"(var.alpn-policy == null)",
-						Message: "only an HTTPS or TLS listener accepts ssl-policy, " +
-							"certificate-arn, or alpn-policy",
+						Message: "only an HTTPS or TLS listener accepts ssl-policy, certificate-arn, or alpn-policy",
 					},
 					{
 						Kind: "predicate",
 						When: "(var.alpn-policy != null)",
-						Require: "(var.alpn-policy == 'HTTP1Only' || " +
-							"var.alpn-policy == 'HTTP2Only' || " +
-							"var.alpn-policy == 'HTTP2Optional' || " +
-							"var.alpn-policy == 'HTTP2Preferred' || " +
+						Require: "(var.alpn-policy == 'HTTP1Only' || var.alpn-policy == 'HTTP2Only' || " +
+							"var.alpn-policy == 'HTTP2Optional' || var.alpn-policy == 'HTTP2Preferred' || " +
 							"var.alpn-policy == 'None')",
-						Message: "alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, " +
-							"HTTP2Preferred, or None",
+						Message: "alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, HTTP2Preferred, or None",
+					},
+					{
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(var.default-action != null)",
+						Message: "default-action must list at least one action",
+					},
+					{
+						Kind: "predicate",
+						When: "true",
+						Require: "(@each.value.type == 'forward' || @each.value.type == 'redirect' || " +
+							"@each.value.type == 'fixed-response')",
+						Message: "an action type must be forward, redirect, or fixed-response",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'forward')",
+						Require: "((@each.value.target-group-arn != null) || " +
+							"(@each.value.forward != null)) && (@each.value.redirect == null) && " +
+							"(@each.value.fixed-response == null)",
+						Message: "a forward action takes target-group-arn or a forward block only",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'redirect')",
+						Require: "(@each.value.redirect != null) && (@each.value.target-group-arn == null) && " +
+							"(@each.value.forward == null) && (@each.value.fixed-response == null)",
+						Message: "a redirect action takes a redirect block only",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'fixed-response')",
+						Require: "(@each.value.fixed-response != null) && " +
+							"(@each.value.target-group-arn == null) && (@each.value.forward == null) && " +
+							"(@each.value.redirect == null)",
+						Message: "a fixed-response action takes a fixed-response block only",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.redirect.status-code != null)",
+						Require: "(@each.value.redirect.status-code == 'HTTP_301' || " +
+							"@each.value.redirect.status-code == 'HTTP_302')",
+						Message: "a redirect status-code must be HTTP_301 or HTTP_302",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.redirect.protocol != null)",
+						Require: "(@each.value.redirect.protocol == '#{protocol}' || " +
+							"@each.value.redirect.protocol == 'HTTP' || @each.value.redirect.protocol == 'HTTPS')",
+						Message: "a redirect protocol must be HTTP, HTTPS, or #{protocol}",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.fixed-response.content-type != null)",
+						Require: "(@each.value.fixed-response.content-type == 'text/plain' || " +
+							"@each.value.fixed-response.content-type == 'text/css' || " +
+							"@each.value.fixed-response.content-type == 'text/html' || " +
+							"@each.value.fixed-response.content-type == 'application/javascript' || " +
+							"@each.value.fixed-response.content-type == 'application/json')",
+						Message: "a fixed-response content-type must be one of the accepted types",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.forward != null)",
+						Require: "(@each.value.forward.target-groups != null)",
+						Message: "a forward block requires target-groups",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.forward.stickiness.enabled == true)",
+						Require: "(@each.value.forward.stickiness.duration-seconds != null)",
+						Message: "enabled forward stickiness requires duration-seconds",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.forward.stickiness.duration-seconds != null)",
+						Require: "(@each.value.forward.stickiness.duration-seconds == null || " +
+							"@each.value.forward.stickiness.duration-seconds >= 1) && " +
+							"(@each.value.forward.stickiness.duration-seconds == null || " +
+							"@each.value.forward.stickiness.duration-seconds <= 604800)",
+						Message: "stickiness duration-seconds must be between 1 and 604800",
+						ForEach: "var.default-action",
 					},
 				},
 			},
@@ -519,9 +611,173 @@ func TestElbv2Schemas(t *testing.T) {
 					{
 						Kind: "predicate",
 						When: "(var.priority != null)",
-						Require: "(var.priority == null || var.priority >= 1) && " +
-							"(var.priority == null || var.priority <= 50000)",
+						Require: "(var.priority == null || var.priority >= 1) && (var.priority == null || " +
+							"var.priority <= 50000)",
 						Message: "priority must be between 1 and 50000",
+					},
+					{
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(var.actions != null)",
+						Message: "a rule requires at least one action",
+					},
+					{
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(var.conditions != null)",
+						Message: "a rule requires at least one condition",
+					},
+					{
+						Kind: "predicate",
+						When: "true",
+						Require: "(@each.value.type == 'forward' || @each.value.type == 'redirect' || " +
+							"@each.value.type == 'fixed-response')",
+						Message: "an action type must be forward, redirect, or fixed-response",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'forward')",
+						Require: "(((@each.value.target-group-arn != null) && (@each.value.forward == null)) || " +
+							"((@each.value.target-group-arn == null) && (@each.value.forward != null))) && " +
+							"(@each.value.redirect == null) && (@each.value.fixed-response == null)",
+						Message: "a forward action takes exactly one of target-group-arn or forward",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'redirect')",
+						Require: "(@each.value.redirect != null) && (@each.value.target-group-arn == null) && " +
+							"(@each.value.forward == null) && (@each.value.fixed-response == null)",
+						Message: "a redirect action takes a redirect block only",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.type == 'fixed-response')",
+						Require: "(@each.value.fixed-response != null) && " +
+							"(@each.value.target-group-arn == null) && (@each.value.forward == null) && " +
+							"(@each.value.redirect == null)",
+						Message: "a fixed-response action takes a fixed-response block only",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.order != null)",
+						Require: "(@each.value.order == null || " +
+							"@each.value.order >= 1) && (@each.value.order == null || @each.value.order <= 50000)",
+						Message: "an action order must be between 1 and 50000",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.redirect.status-code != null)",
+						Require: "(@each.value.redirect.status-code == 'HTTP_301' || " +
+							"@each.value.redirect.status-code == 'HTTP_302')",
+						Message: "a redirect status-code must be HTTP_301 or HTTP_302",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.redirect.protocol != null)",
+						Require: "(@each.value.redirect.protocol == '#{protocol}' || " +
+							"@each.value.redirect.protocol == 'HTTP' || @each.value.redirect.protocol == 'HTTPS')",
+						Message: "a redirect protocol must be HTTP, HTTPS, or #{protocol}",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.fixed-response.content-type != null)",
+						Require: "(@each.value.fixed-response.content-type == 'text/plain' || " +
+							"@each.value.fixed-response.content-type == 'text/css' || " +
+							"@each.value.fixed-response.content-type == 'text/html' || " +
+							"@each.value.fixed-response.content-type == 'application/javascript' || " +
+							"@each.value.fixed-response.content-type == 'application/json')",
+						Message: "a fixed-response content-type must be one of the accepted types",
+						ForEach: "var.actions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.forward != null)",
+						Require: "(@each.value.forward.target-groups != null)",
+						Message: "a forward block requires target-groups",
+						ForEach: "var.actions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.forward.stickiness.enabled == true)",
+						Require: "(@each.value.forward.stickiness.duration-seconds != null)",
+						Message: "enabled forward stickiness requires duration-seconds",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "predicate",
+						When: "(@each.value.forward.stickiness.duration-seconds != null)",
+						Require: "(@each.value.forward.stickiness.duration-seconds == null || " +
+							"@each.value.forward.stickiness.duration-seconds >= 1) && " +
+							"(@each.value.forward.stickiness.duration-seconds == null || " +
+							"@each.value.forward.stickiness.duration-seconds <= 604800)",
+						Message: "stickiness duration-seconds must be between 1 and 604800",
+						ForEach: "var.actions",
+					},
+					{
+						Kind: "at-most-one-of",
+						Fields: []string{
+							"var.conditions[*].host-header", "var.conditions[*].http-header",
+							"var.conditions[*].http-request-method", "var.conditions[*].path-pattern",
+							"var.conditions[*].query-string", "var.conditions[*].source-ip",
+						},
+					},
+					{
+						Kind: "predicate",
+						When: "true",
+						Require: "((@each.value.host-header != null) || (@each.value.http-header != null) || " +
+							"(@each.value.http-request-method != null) || (@each.value.path-pattern != null) || " +
+							"(@each.value.query-string != null) || (@each.value.source-ip != null))",
+						Message: "a condition requires exactly one matcher",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.host-header != null)",
+						Require: "(@each.value.host-header.values != null)",
+						Message: "host-header requires values",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.http-header != null)",
+						Require: "(@each.value.http-header.values != null)",
+						Message: "http-header requires values",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.http-request-method != null)",
+						Require: "(@each.value.http-request-method.values != null)",
+						Message: "http-request-method requires values",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.path-pattern != null)",
+						Require: "(@each.value.path-pattern.values != null)",
+						Message: "path-pattern requires values",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.query-string != null)",
+						Require: "(@each.value.query-string.values != null)",
+						Message: "query-string requires values",
+						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@each.value.source-ip != null)",
+						Require: "(@each.value.source-ip.values != null)",
+						Message: "source-ip requires values",
+						ForEach: "var.conditions",
 					},
 				},
 			},

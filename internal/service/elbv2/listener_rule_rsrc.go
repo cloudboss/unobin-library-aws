@@ -44,17 +44,11 @@ const rulePropagationTimeout = 5 * time.Minute
 // slot above the listener's highest non-default rule, retrying if another rule
 // claims that slot first.
 //
-// The cross-field rules on actions and conditions are enforced in Create and
-// Update before the SDK call, because they reference fields inside repeated
-// nested blocks, which cannot be expressed as Constraints (goschema derives
-// constraints only from top-level fields):
-//   - At least one action and at least one condition are required.
-//   - Each action's type fixes which sub-block it takes: a forward action sets
-//     either target-group-arn or a forward block; a redirect action sets a
-//     redirect block; a fixed-response action sets a fixed-response block. A
-//     sub-block that does not match the action type is rejected.
-//   - Each condition sets exactly one matcher of host-header, http-header,
-//     http-request-method, path-pattern, query-string, or source-ip.
+// The cross-field rules on actions and conditions are declared as constraints:
+// each action's type fixes which sub-block it takes, each condition sets
+// exactly one matcher, and at least one of each is given. Create and Update
+// check only what a constraint cannot express: an explicitly empty list, and
+// the query-string pairs, a list inside a list element.
 type ListenerRule struct {
 	ListenerArn string                  `ub:"listener-arn"`
 	Priority    *int64                  `ub:"priority"`
@@ -80,17 +74,107 @@ func (r *ListenerRule) ReplaceFields() []string {
 	return []string{"listener-arn"}
 }
 
-// Constraints declares the only rule that derives from a top-level scalar: when
-// a priority is given it must be 1..50000. The default-rule sentinel 99999 is a
-// read-back value, never a user input, so it is not part of the allowed range.
-// The action and condition cross-field rules cannot derive here because they
-// reference fields inside repeated nested blocks; Create and Update enforce
-// them in code.
+// Constraints declares the rules ELBv2 places on a rule's inputs: a priority
+// in 1..50000 when given (the default-rule sentinel 99999 is a read-back
+// value, never a user input), at least one action and one condition, each
+// action's type fixing which sub-block it takes along with the redirect and
+// fixed-response enums and the forward stickiness rules, and each condition
+// setting exactly one matcher with its values. The query-string pair rules and
+// the forward target-group rules live in a list inside a list element, out of
+// a constraint's reach, and stay with the code and the API.
 func (r ListenerRule) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Priority)).
 			Require(constraint.AtLeast(r.Priority, 1), constraint.AtMost(r.Priority, 50000)).
 			Message("priority must be between 1 and 50000"),
+		constraint.Must(constraint.Present(r.Actions)).
+			Message("a rule requires at least one action"),
+		constraint.Must(constraint.Present(r.Conditions)).
+			Message("a rule requires at least one condition"),
+		constraint.ForEach(r.Actions,
+			func(a ListenerRuleAction) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(a.Type,
+						"forward", "redirect", "fixed-response")).
+						Message("an action type must be forward, redirect, or fixed-response"),
+					constraint.When(constraint.Equals(a.Type, "forward")).
+						Require(constraint.Any(
+							constraint.All(constraint.Present(a.TargetGroupArn),
+								constraint.Absent(a.Forward)),
+							constraint.All(constraint.Absent(a.TargetGroupArn),
+								constraint.Present(a.Forward))),
+							constraint.Absent(a.Redirect), constraint.Absent(a.FixedResponse)).
+						Message("a forward action takes exactly one of target-group-arn or forward"),
+					constraint.When(constraint.Equals(a.Type, "redirect")).
+						Require(constraint.Present(a.Redirect),
+							constraint.Absent(a.TargetGroupArn), constraint.Absent(a.Forward),
+							constraint.Absent(a.FixedResponse)).
+						Message("a redirect action takes a redirect block only"),
+					constraint.When(constraint.Equals(a.Type, "fixed-response")).
+						Require(constraint.Present(a.FixedResponse),
+							constraint.Absent(a.TargetGroupArn), constraint.Absent(a.Forward),
+							constraint.Absent(a.Redirect)).
+						Message("a fixed-response action takes a fixed-response block only"),
+					constraint.When(constraint.Present(a.Order)).
+						Require(constraint.AtLeast(a.Order, 1),
+							constraint.AtMost(a.Order, 50000)).
+						Message("an action order must be between 1 and 50000"),
+					constraint.When(constraint.Present(a.Redirect.StatusCode)).
+						Require(constraint.OneOf(a.Redirect.StatusCode,
+							"HTTP_301", "HTTP_302")).
+						Message("a redirect status-code must be HTTP_301 or HTTP_302"),
+					constraint.When(constraint.Present(a.Redirect.Protocol)).
+						Require(constraint.OneOf(a.Redirect.Protocol,
+							"#{protocol}", "HTTP", "HTTPS")).
+						Message("a redirect protocol must be HTTP, HTTPS, or #{protocol}"),
+					constraint.When(constraint.Present(a.FixedResponse.ContentType)).
+						Require(constraint.OneOf(a.FixedResponse.ContentType, "text/plain",
+							"text/css", "text/html", "application/javascript",
+							"application/json")).
+						Message("a fixed-response content-type must be one of the accepted types"),
+					constraint.When(constraint.Present(a.Forward)).
+						Require(constraint.Present(a.Forward.TargetGroups)).
+						Message("a forward block requires target-groups"),
+					constraint.When(constraint.IsTrue(a.Forward.Stickiness.Enabled)).
+						Require(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
+						Message("enabled forward stickiness requires duration-seconds"),
+					constraint.When(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
+						Require(constraint.AtLeast(a.Forward.Stickiness.DurationSeconds, 1),
+							constraint.AtMost(a.Forward.Stickiness.DurationSeconds, 604800)).
+						Message("stickiness duration-seconds must be between 1 and 604800"),
+				}
+			}),
+		constraint.ForEach(r.Conditions,
+			func(c ListenerRuleCondition) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.AtMostOneOf(c.HostHeader, c.HttpHeader, c.HttpRequestMethod,
+						c.PathPattern, c.QueryString, c.SourceIp),
+					constraint.Must(constraint.Any(constraint.Present(c.HostHeader),
+						constraint.Present(c.HttpHeader),
+						constraint.Present(c.HttpRequestMethod),
+						constraint.Present(c.PathPattern), constraint.Present(c.QueryString),
+						constraint.Present(c.SourceIp))).
+						Message("a condition requires exactly one matcher"),
+					constraint.When(constraint.Present(c.HostHeader)).
+						Require(constraint.Present(c.HostHeader.Values)).
+						Message("host-header requires values"),
+					constraint.When(constraint.Present(c.HttpHeader)).
+						Require(constraint.Present(c.HttpHeader.Values)).
+						Message("http-header requires values"),
+					constraint.When(constraint.Present(c.HttpRequestMethod)).
+						Require(constraint.Present(c.HttpRequestMethod.Values)).
+						Message("http-request-method requires values"),
+					constraint.When(constraint.Present(c.PathPattern)).
+						Require(constraint.Present(c.PathPattern.Values)).
+						Message("path-pattern requires values"),
+					constraint.When(constraint.Present(c.QueryString)).
+						Require(constraint.Present(c.QueryString.Values)).
+						Message("query-string requires values"),
+					constraint.When(constraint.Present(c.SourceIp)).
+						Require(constraint.Present(c.SourceIp.Values)).
+						Message("source-ip requires values"),
+				}
+			}),
 	}
 }
 
@@ -319,10 +403,10 @@ func (r *ListenerRule) read(
 	return &ListenerRuleOutput{Arn: aws.ToString(resp.Rules[0].RuleArn)}, nil
 }
 
-// validate enforces the cross-field rules on actions and conditions that cannot
-// be expressed as Constraints, returning a descriptive error before any SDK
-// call. It checks that there is at least one action and one condition, and
-// defers each block's own type and matcher checks to its validate method.
+// validate checks what a constraint cannot express, returning a descriptive
+// error before any SDK call: an explicitly empty action or condition list (a
+// constraint sees an empty list, unlike an omitted one, as present), and the
+// query-string pairs, a list inside a list element.
 func (r *ListenerRule) validate() error {
 	if len(r.Actions) == 0 {
 		return fmt.Errorf("listener rule requires at least one action")
@@ -330,14 +414,11 @@ func (r *ListenerRule) validate() error {
 	if len(r.Conditions) == 0 {
 		return fmt.Errorf("listener rule requires at least one condition")
 	}
-	for i := range r.Actions {
-		if err := r.Actions[i].validate(); err != nil {
-			return fmt.Errorf("action %d: %w", i, err)
-		}
-	}
 	for i := range r.Conditions {
-		if err := r.Conditions[i].validate(); err != nil {
-			return fmt.Errorf("condition %d: %w", i, err)
+		if q := r.Conditions[i].QueryString; q != nil {
+			if err := q.validate(); err != nil {
+				return fmt.Errorf("condition %d: %w", i, err)
+			}
 		}
 	}
 	return nil

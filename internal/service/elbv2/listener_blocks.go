@@ -2,7 +2,6 @@ package elbv2
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
@@ -10,37 +9,14 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// listenerActionTypes are the default-action types this resource handles. ELBv2
-// also defines authenticate-cognito, authenticate-oidc, and jwt-validation, but
-// those need secrets and extra configuration that is out of scope here.
-var listenerActionTypes = []string{"forward", "redirect", "fixed-response"}
-
-// redirectStatusCodes are the two HTTP redirect codes ELBv2 accepts on a
-// redirect action: a permanent 301 or a temporary 302.
-var redirectStatusCodes = []string{"HTTP_301", "HTTP_302"}
-
-// redirectProtocols are the protocols a redirect action may target. The
-// reserved keyword keeps the request's own protocol; the other two redirect to
-// plain HTTP or to HTTPS.
-var redirectProtocols = []string{"#{protocol}", "HTTP", "HTTPS"}
-
-// fixedResponseContentTypes are the content types a fixed-response action may
-// set on its body.
-var fixedResponseContentTypes = []string{
-	"text/plain",
-	"text/css",
-	"text/html",
-	"application/javascript",
-	"application/json",
-}
-
 // ListenerDefaultAction is one action in a listener's default rule, a tagged
-// union keyed by Type. Exactly one of the per-type members must be set and it
-// must match Type: a forward names a single TargetGroupArn or a Forward block,
-// a redirect names a Redirect block, a fixed-response names a FixedResponse
-// block. Those rules and the type enum live inside list elements, which unobin
-// cannot compile-check today, so Create and Update validate each action before
-// the SDK call. Order ranks the actions; when omitted the listener sends the
+// union keyed by Type. Type is forward, redirect, or fixed-response (ELBv2
+// also defines authentication and jwt-validation types, which need secrets and
+// extra configuration that is out of scope here). Exactly one of the per-type
+// members is set and it must match Type: a forward names a single
+// TargetGroupArn or a Forward block, a redirect names a Redirect block, a
+// fixed-response names a FixedResponse block; Listener's Constraints declare
+// those rules. Order ranks the actions; when omitted the listener sends the
 // one-based position so the cloud assigns a stable order.
 type ListenerDefaultAction struct {
 	Type           string                 `ub:"type"`
@@ -54,14 +30,16 @@ type ListenerDefaultAction struct {
 // ListenerForward distributes requests across one to five target groups, with
 // optional weighting and target-group stickiness. When a forward action also
 // names a top-level target-group-arn, that ARN must match the single group
-// listed here. These rules are API-validated and checked in Create and Update.
+// listed here; Create and Update check the match, which needs a count inside a
+// nested list that a constraint cannot take.
 type ListenerForward struct {
 	TargetGroups []ListenerForwardTargetGroup `ub:"target-groups"`
 	Stickiness   *ListenerForwardStickiness   `ub:"stickiness"`
 }
 
 // ListenerForwardTargetGroup is one target group in a forward action and its
-// relative weight. The weight ranges from 0 to 999; ELBv2 enforces the bound.
+// relative weight. The weight ranges from 0 to 999; ELBv2 enforces the bound,
+// which sits in a list inside a list element where a constraint cannot reach.
 type ListenerForwardTargetGroup struct {
 	Arn    string `ub:"arn"`
 	Weight *int64 `ub:"weight"`
@@ -69,16 +47,15 @@ type ListenerForwardTargetGroup struct {
 
 // ListenerForwardStickiness keeps a client's requests on the same target group
 // for a period. The duration ranges from 1 to 604800 seconds and is required
-// when stickiness is enabled; ELBv2 enforces both rules.
+// when stickiness is enabled.
 type ListenerForwardStickiness struct {
 	Enabled         *bool  `ub:"enabled"`
 	DurationSeconds *int64 `ub:"duration-seconds"`
 }
 
 // ListenerRedirect redirects the request to a new URI, reusing any component it
-// does not set. StatusCode is required and must be HTTP_301 or HTTP_302;
-// Protocol, when set, must be HTTP, HTTPS, or the reserved #{protocol}. These
-// rules are API-validated and checked in Create and Update.
+// does not set. StatusCode is required and is HTTP_301 or HTTP_302; Protocol,
+// when set, is HTTP, HTTPS, or the reserved #{protocol}.
 type ListenerRedirect struct {
 	Host       *string `ub:"host"`
 	Path       *string `ub:"path"`
@@ -89,9 +66,9 @@ type ListenerRedirect struct {
 }
 
 // ListenerFixedResponse returns a canned HTTP response without reaching a
-// target. StatusCode is required and must match ^[245]\d\d$; ContentType, when
-// set, must be one of the five accepted types. These rules are API-validated
-// and checked in Create and Update.
+// target. StatusCode is required and must match ^[245]\d\d$, checked in Create
+// and Update since a constraint cannot take a pattern; ContentType, when set,
+// is one of the five accepted types.
 type ListenerFixedResponse struct {
 	ContentType *string `ub:"content-type"`
 	MessageBody *string `ub:"message-body"`
@@ -170,10 +147,12 @@ func fixedResponseConfig(f *ListenerFixedResponse) *elbv2types.FixedResponseActi
 	}
 }
 
-// validateDefaultActions checks every action's type enum and its per-type
-// required sub-block before the listener is sent to ELBv2. These rules live
-// inside a list, which unobin's compile-time constraints cannot reach, so the
-// resource enforces them here and returns a descriptive error for a bad action.
+// validateDefaultActions checks the action rules a constraint cannot express:
+// the list must not be explicitly empty (a constraint sees an empty list,
+// unlike an omitted one, as present), a fixed-response status code must match
+// a pattern, and a forward that sets both target-group-arn and a forward block
+// must name exactly that one group, a count inside a nested list. Every other
+// action rule is declared in the resource's Constraints.
 func validateDefaultActions(actions []ListenerDefaultAction) error {
 	if len(actions) == 0 {
 		return fmt.Errorf("default-action must list at least one action")
@@ -186,54 +165,15 @@ func validateDefaultActions(actions []ListenerDefaultAction) error {
 	return nil
 }
 
-// validateDefaultAction checks one action: its type is in scope, exactly the
-// sub-block its type requires is present, no sub-block for a different type is
-// set, and a forward's top-level target-group-arn matches the single group its
-// forward block names.
+// validateDefaultAction checks one action's residual rules: the fixed-response
+// status pattern and the forward arn-match.
 func validateDefaultAction(action ListenerDefaultAction) error {
-	if !slices.Contains(listenerActionTypes, action.Type) {
-		return fmt.Errorf("type must be one of %v, got %q",
-			listenerActionTypes, action.Type)
-	}
-	switch action.Type {
-	case "forward":
-		return validateForwardAction(action)
-	case "redirect":
-		if action.Redirect == nil {
-			return fmt.Errorf("a redirect action requires a redirect block")
-		}
-		if err := validateRedirect(action.Redirect); err != nil {
-			return err
-		}
-		return forbidActionBlocks(action, "redirect")
-	case "fixed-response":
-		if action.FixedResponse == nil {
-			return fmt.Errorf("a fixed-response action requires a fixed-response block")
-		}
-		if err := validateFixedResponse(action.FixedResponse); err != nil {
-			return err
-		}
-		return forbidActionBlocks(action, "fixed-response")
-	}
-	return nil
-}
-
-// validateForwardAction checks a forward action: it routes through either a
-// top-level target-group-arn or a forward block, and when both are set the
-// forward block names exactly that one group. No redirect or fixed-response
-// block may be set on a forward.
-func validateForwardAction(action ListenerDefaultAction) error {
-	hasArn := action.TargetGroupArn != nil
-	hasForward := action.Forward != nil
-	if !hasArn && !hasForward {
+	if action.FixedResponse != nil && !validFixedResponseStatus(action.FixedResponse.StatusCode) {
 		return fmt.Errorf(
-			"a forward action requires target-group-arn or a forward block")
+			"fixed-response status-code must be a 2xx, 4xx, or 5xx code, got %q",
+			action.FixedResponse.StatusCode)
 	}
-	if action.Redirect != nil || action.FixedResponse != nil {
-		return fmt.Errorf(
-			"a forward action cannot set a redirect or fixed-response block")
-	}
-	if hasArn && hasForward {
+	if action.TargetGroupArn != nil && action.Forward != nil {
 		if len(action.Forward.TargetGroups) != 1 {
 			return fmt.Errorf(
 				"with target-group-arn set, the forward block must name exactly one " +
@@ -243,51 +183,6 @@ func validateForwardAction(action ListenerDefaultAction) error {
 			return fmt.Errorf(
 				"target-group-arn must match the forward block's target group")
 		}
-	}
-	return nil
-}
-
-// validateRedirect checks a redirect block's required status code and its
-// optional protocol against the values ELBv2 accepts.
-func validateRedirect(r *ListenerRedirect) error {
-	if !slices.Contains(redirectStatusCodes, r.StatusCode) {
-		return fmt.Errorf("redirect status-code must be one of %v, got %q",
-			redirectStatusCodes, r.StatusCode)
-	}
-	if r.Protocol != nil && !slices.Contains(redirectProtocols, *r.Protocol) {
-		return fmt.Errorf("redirect protocol must be one of %v, got %q",
-			redirectProtocols, *r.Protocol)
-	}
-	return nil
-}
-
-// validateFixedResponse checks a fixed-response block's required status code
-// against ^[245]\d\d$ and its optional content type against the accepted set.
-func validateFixedResponse(f *ListenerFixedResponse) error {
-	if !validFixedResponseStatus(f.StatusCode) {
-		return fmt.Errorf(
-			"fixed-response status-code must be a 2xx, 4xx, or 5xx code, got %q",
-			f.StatusCode)
-	}
-	if f.ContentType != nil && !slices.Contains(fixedResponseContentTypes, *f.ContentType) {
-		return fmt.Errorf("fixed-response content-type must be one of %v, got %q",
-			fixedResponseContentTypes, *f.ContentType)
-	}
-	return nil
-}
-
-// forbidActionBlocks reports an error when an action of the named type sets a
-// sub-block meant for a different action type.
-func forbidActionBlocks(action ListenerDefaultAction, kind string) error {
-	if kind != "forward" && (action.TargetGroupArn != nil || action.Forward != nil) {
-		return fmt.Errorf(
-			"a %s action cannot set target-group-arn or a forward block", kind)
-	}
-	if kind != "redirect" && action.Redirect != nil {
-		return fmt.Errorf("a %s action cannot set a redirect block", kind)
-	}
-	if kind != "fixed-response" && action.FixedResponse != nil {
-		return fmt.Errorf("a %s action cannot set a fixed-response block", kind)
 	}
 	return nil
 }

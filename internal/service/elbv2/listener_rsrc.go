@@ -37,12 +37,10 @@ const listenerWriteTimeout = 5 * time.Minute
 // from the SNI certificates an HTTPS or TLS listener offers beyond its default,
 // which are the separate elbv2-listener-certificate resource.
 //
-// The cross-field rules on protocol are declared as constraints. The per-type
-// rules inside each default action -- a forward needs a target group, a
-// redirect needs a redirect block, a fixed-response needs a fixed-response
-// block, and no action may set a block meant for another type -- live inside a
-// list, which unobin cannot compile-check today, so Create and Update validate
-// them before the SDK call.
+// The cross-field rules on protocol and the per-action rules are declared as
+// constraints; Create and Update check only the residue a constraint cannot
+// express (the fixed-response status pattern, the forward arn-match, and an
+// explicitly empty action list).
 type Listener struct {
 	LoadBalancerArn string                  `ub:"load-balancer-arn"`
 	Port            *int64                  `ub:"port"`
@@ -75,14 +73,16 @@ func (r *Listener) ReplaceFields() []string {
 	return []string{"load-balancer-arn"}
 }
 
-// Constraints declares the cross-field rules on a listener's protocol. An HTTPS
-// or TLS listener terminates TLS, so it needs a security policy and a default
-// certificate; the other protocols do not terminate TLS, so they reject a
-// security policy, certificate, or ALPN policy. ALPN applies only to a TLS
-// listener. ELBv2 rejects a violating combination itself, and an Application
-// Load Balancer even defaults the protocol from certificate presence, so these
-// declare the unambiguous direction and the optional ALPN enum; the per-action
-// rules are validated in code.
+// Constraints declares the cross-field rules on a listener's protocol and the
+// per-action rules of the default-action list. An HTTPS or TLS listener
+// terminates TLS, so it needs a security policy and a default certificate; the
+// other protocols do not terminate TLS, so they reject a security policy,
+// certificate, or ALPN policy, and ALPN applies only to a TLS listener. Each
+// default action's type fixes which sub-block it takes, a redirect and a
+// fixed-response have their enums, and an enabled forward stickiness needs a
+// bounded duration. The fixed-response status pattern, the forward arn-match,
+// and the inner target-group rules stay in code: a constraint cannot take a
+// pattern or reach a list inside a list element.
 func (r Listener) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.OneOf(r.Protocol, "HTTPS", "TLS")).
@@ -97,6 +97,54 @@ func (r Listener) Constraints() []constraint.Constraint {
 			Require(constraint.OneOf(r.AlpnPolicy,
 				"HTTP1Only", "HTTP2Only", "HTTP2Optional", "HTTP2Preferred", "None")).
 			Message("alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, HTTP2Preferred, or None"),
+		constraint.Must(constraint.Present(r.DefaultAction)).
+			Message("default-action must list at least one action"),
+		constraint.ForEach(r.DefaultAction,
+			func(a ListenerDefaultAction) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(a.Type,
+						"forward", "redirect", "fixed-response")).
+						Message("an action type must be forward, redirect, or fixed-response"),
+					constraint.When(constraint.Equals(a.Type, "forward")).
+						Require(constraint.Any(constraint.Present(a.TargetGroupArn),
+							constraint.Present(a.Forward)),
+							constraint.Absent(a.Redirect), constraint.Absent(a.FixedResponse)).
+						Message("a forward action takes target-group-arn or a forward block only"),
+					constraint.When(constraint.Equals(a.Type, "redirect")).
+						Require(constraint.Present(a.Redirect),
+							constraint.Absent(a.TargetGroupArn), constraint.Absent(a.Forward),
+							constraint.Absent(a.FixedResponse)).
+						Message("a redirect action takes a redirect block only"),
+					constraint.When(constraint.Equals(a.Type, "fixed-response")).
+						Require(constraint.Present(a.FixedResponse),
+							constraint.Absent(a.TargetGroupArn), constraint.Absent(a.Forward),
+							constraint.Absent(a.Redirect)).
+						Message("a fixed-response action takes a fixed-response block only"),
+					constraint.When(constraint.Present(a.Redirect.StatusCode)).
+						Require(constraint.OneOf(a.Redirect.StatusCode,
+							"HTTP_301", "HTTP_302")).
+						Message("a redirect status-code must be HTTP_301 or HTTP_302"),
+					constraint.When(constraint.Present(a.Redirect.Protocol)).
+						Require(constraint.OneOf(a.Redirect.Protocol,
+							"#{protocol}", "HTTP", "HTTPS")).
+						Message("a redirect protocol must be HTTP, HTTPS, or #{protocol}"),
+					constraint.When(constraint.Present(a.FixedResponse.ContentType)).
+						Require(constraint.OneOf(a.FixedResponse.ContentType, "text/plain",
+							"text/css", "text/html", "application/javascript",
+							"application/json")).
+						Message("a fixed-response content-type must be one of the accepted types"),
+					constraint.When(constraint.Present(a.Forward)).
+						Require(constraint.Present(a.Forward.TargetGroups)).
+						Message("a forward block requires target-groups"),
+					constraint.When(constraint.IsTrue(a.Forward.Stickiness.Enabled)).
+						Require(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
+						Message("enabled forward stickiness requires duration-seconds"),
+					constraint.When(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
+						Require(constraint.AtLeast(a.Forward.Stickiness.DurationSeconds, 1),
+							constraint.AtMost(a.Forward.Stickiness.DurationSeconds, 604800)).
+						Message("stickiness duration-seconds must be between 1 and 604800"),
+				}
+			}),
 	}
 }
 

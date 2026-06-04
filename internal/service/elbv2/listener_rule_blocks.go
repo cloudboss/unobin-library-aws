@@ -12,12 +12,12 @@ import (
 // The blocks below model the structured members ELBv2 accepts on a rule's
 // actions and conditions. Each is converted to its SDK type and assembled into
 // the CreateRule or ModifyRule request rather than written by its own call. A
-// nil sub-block leaves that member unset. The inner enum, range, length, and
-// pattern rules each block notes are enforced by the ELBv2 API and are not
-// declared as Constraints, because goschema derives constraints only from
-// top-level fields, not nested ones. The per-type required-sub-block and the
-// exactly-one-matcher rules are enforced in each block's validate method,
-// called before the SDK request.
+// nil sub-block leaves that member unset. The per-type required-sub-block
+// rules, the exactly-one-matcher rule, and the enums and bounds each block
+// notes are declared in ListenerRule's Constraints; string length and pattern
+// rules, and the rules inside a list within a list element (the forward target
+// groups, the query-string pairs), are enforced by the ELBv2 API or checked in
+// code before the SDK request.
 
 // Action type strings, the ELBv2 ActionTypeEnum values in scope. They are
 // lowercase-hyphenated and name which sub-block an action takes.
@@ -42,46 +42,6 @@ type ListenerRuleAction struct {
 	Forward        *ListenerRuleForward       `ub:"forward"`
 	Redirect       *ListenerRuleRedirect      `ub:"redirect"`
 	FixedResponse  *ListenerRuleFixedResponse `ub:"fixed-response"`
-}
-
-// validate enforces that the action's type matches the sub-block it takes: a
-// forward action sets exactly one of TargetGroupArn or Forward; a redirect
-// action sets a Redirect block and nothing else; a fixed-response action sets a
-// FixedResponse block and nothing else. A sub-block that does not match the type
-// is rejected before the SDK call.
-func (a *ListenerRuleAction) validate() error {
-	switch a.Type {
-	case actionTypeForward:
-		if a.Redirect != nil || a.FixedResponse != nil {
-			return fmt.Errorf("forward action cannot set redirect or fixed-response")
-		}
-		hasArn := a.TargetGroupArn != nil
-		hasForward := a.Forward != nil
-		if hasArn == hasForward {
-			return fmt.Errorf(
-				"forward action requires exactly one of target-group-arn or forward")
-		}
-	case actionTypeRedirect:
-		if a.Redirect == nil {
-			return fmt.Errorf("redirect action requires a redirect block")
-		}
-		if a.TargetGroupArn != nil || a.Forward != nil || a.FixedResponse != nil {
-			return fmt.Errorf("redirect action cannot set target-group-arn, forward, or " +
-				"fixed-response")
-		}
-	case actionTypeFixedResponse:
-		if a.FixedResponse == nil {
-			return fmt.Errorf("fixed-response action requires a fixed-response block")
-		}
-		if a.TargetGroupArn != nil || a.Forward != nil || a.Redirect != nil {
-			return fmt.Errorf("fixed-response action cannot set target-group-arn, forward, " +
-				"or redirect")
-		}
-	default:
-		return fmt.Errorf(
-			"type must be forward, redirect, or fixed-response, got %q", a.Type)
-	}
-	return nil
 }
 
 // to converts the action to the SDK type, setting only the sub-block its type
@@ -217,8 +177,8 @@ func (fr *ListenerRuleFixedResponse) to() *elbv2types.FixedResponseActionConfig 
 
 // ListenerRuleCondition is one matcher a rule applies to a request. Exactly one
 // of the six matcher sub-blocks is set: HostHeader, HttpHeader,
-// HttpRequestMethod, PathPattern, QueryString, or SourceIp. Setting zero or more
-// than one is rejected before the SDK call.
+// HttpRequestMethod, PathPattern, QueryString, or SourceIp; ListenerRule's
+// Constraints declare the rule.
 type ListenerRuleCondition struct {
 	HostHeader        *ListenerRuleHostHeader        `ub:"host-header"`
 	HttpHeader        *ListenerRuleHttpHeader        `ub:"http-header"`
@@ -226,38 +186,6 @@ type ListenerRuleCondition struct {
 	PathPattern       *ListenerRulePathPattern       `ub:"path-pattern"`
 	QueryString       *ListenerRuleQueryString       `ub:"query-string"`
 	SourceIp          *ListenerRuleSourceIp          `ub:"source-ip"`
-}
-
-// validate enforces that the condition sets exactly one matcher. A condition
-// with no matcher or with more than one is rejected before the SDK call.
-func (c *ListenerRuleCondition) validate() error {
-	set := 0
-	if c.HostHeader != nil {
-		set++
-	}
-	if c.HttpHeader != nil {
-		set++
-	}
-	if c.HttpRequestMethod != nil {
-		set++
-	}
-	if c.PathPattern != nil {
-		set++
-	}
-	if c.QueryString != nil {
-		set++
-	}
-	if c.SourceIp != nil {
-		set++
-	}
-	if set != 1 {
-		return fmt.Errorf("condition must set exactly one of host-header, http-header, " +
-			"http-request-method, path-pattern, query-string, or source-ip")
-	}
-	if c.QueryString != nil {
-		return c.QueryString.validate()
-	}
-	return nil
 }
 
 // to converts the condition to the SDK type, setting the matching Field string

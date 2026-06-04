@@ -116,13 +116,13 @@ func (r *LoadBalancer) ReplaceFields() []string {
 	}
 }
 
-// Constraints declares the rules ELBv2 places on a load balancer's inputs that
-// goschema can derive. A load balancer's subnets are given as either a plain
-// subnet list or a list of subnet mappings, never both. The type and the
-// several enum-valued attributes each accept a fixed set of values; an unset
-// one lets ELBv2 apply its own default. The remaining bounds, such as the idle
-// timeout range and the per-type applicability of each attribute, are enforced
-// by the API and in code.
+// Constraints declares the rules ELBv2 places on a load balancer's inputs. A
+// load balancer's subnets are given as either a plain subnet list or a list of
+// subnet mappings, never both. The type and the several enum-valued attributes
+// each accept a fixed set of values; an unset one lets ELBv2 apply its own
+// default. Enabled access or connection logs need a bucket. The remaining
+// bounds, such as the idle timeout range and the per-type applicability of
+// each attribute, are enforced by the API and in code.
 func (r LoadBalancer) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Subnets, r.SubnetMappings),
@@ -145,6 +145,12 @@ func (r LoadBalancer) Constraints() []constraint.Constraint {
 				"partial_availability_zone_affinity",
 				"any_availability_zone")).
 			Message("dns-record-client-routing-policy must be a valid routing policy"),
+		constraint.When(constraint.IsTrue(r.AccessLogs.Enabled)).
+			Require(constraint.Present(r.AccessLogs.Bucket)).
+			Message("enabled access-logs require a bucket"),
+		constraint.When(constraint.IsTrue(r.ConnectionLogs.Enabled)).
+			Require(constraint.Present(r.ConnectionLogs.Bucket)).
+			Message("enabled connection-logs require a bucket"),
 	}
 }
 
