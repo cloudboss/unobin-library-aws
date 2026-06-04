@@ -11,10 +11,9 @@ import (
 // types.Target. Each is a field on the single target PutTargets writes, so a
 // block is converted to its SDK type and assembled into the target rather than
 // written by its own call. A nil block leaves that member unset, so AWS applies
-// its own behavior. The inner enum, range, and length rules each block notes
-// are enforced by the EventBridge API; they are not declared as Constraints
-// because goschema derives constraints only from top-level fields, not nested
-// ones.
+// its own behavior. The enum, range, and required-member rules each block notes
+// are declared in Target's Constraints; string and collection length limits are
+// enforced by the EventBridge API.
 
 // TargetInputTransformer builds custom input for the target from pieces of the
 // matched event. InputTemplate is required, 1..8192 characters, and may
@@ -69,10 +68,8 @@ func (b *TargetDeadLetterConfig) to() *eventbridgetypes.DeadLetterConfig {
 }
 
 // TargetBatchParameters runs the target as an Batch job. JobDefinition and
-// JobName are required. ArraySize turns the job into an array job and applies
-// only in 2..10000; JobAttempts overrides the job definition's retry count and
-// applies only in 1..10. A value outside its range is left unset rather than
-// sent.
+// JobName are required. ArraySize turns the job into an array job, 2..10000;
+// JobAttempts overrides the job definition's retry count, 1..10.
 type TargetBatchParameters struct {
 	JobDefinition string `ub:"job-definition"`
 	JobName       string `ub:"job-name"`
@@ -88,12 +85,12 @@ func (b *TargetBatchParameters) to() *eventbridgetypes.BatchParameters {
 		JobDefinition: aws.String(b.JobDefinition),
 		JobName:       aws.String(b.JobName),
 	}
-	if b.ArraySize != nil && *b.ArraySize > 1 && *b.ArraySize <= 10000 {
+	if b.ArraySize != nil {
 		params.ArrayProperties = &eventbridgetypes.BatchArrayProperties{
 			Size: int32(*b.ArraySize),
 		}
 	}
-	if b.JobAttempts != nil && *b.JobAttempts > 0 && *b.JobAttempts <= 10 {
+	if b.JobAttempts != nil {
 		params.RetryStrategy = &eventbridgetypes.BatchRetryStrategy{
 			Attempts: int32(*b.JobAttempts),
 		}

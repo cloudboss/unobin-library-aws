@@ -74,14 +74,79 @@ func (r *Target) ReplaceFields() []string {
 	return []string{"event-bus-name", "rule", "target-id"}
 }
 
-// Constraints declares the one rule goschema can derive for a target: the input
-// passed to the destination comes from at most one of the three mutually
-// exclusive forms, a static JSON input, a JSONPath into the event, or an input
-// transformer. Each form's own length and content limits, and the bounds inside
-// every parameter block, are enforced by the EventBridge API.
+// Constraints declares the rules EventBridge places on a target's inputs: the
+// input passed to the destination comes from at most one of the three mutually
+// exclusive forms (a static JSON input, a JSONPath into the event, or an input
+// transformer), and the parameter blocks have the enums, bounds, and required
+// members their doc comments state. String and collection length limits are
+// left to the EventBridge API, which constraints cannot express.
 func (r Target) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.Input, r.InputPath, r.InputTransformer),
+		constraint.When(constraint.Present(r.RetryPolicy.MaximumEventAgeInSeconds)).
+			Require(constraint.AtLeast(r.RetryPolicy.MaximumEventAgeInSeconds, 0),
+				constraint.AtMost(r.RetryPolicy.MaximumEventAgeInSeconds, 86400)).
+			Message("maximum-event-age-in-seconds must be between 0 and 86400"),
+		constraint.When(constraint.Present(r.RetryPolicy.MaximumRetryAttempts)).
+			Require(constraint.AtLeast(r.RetryPolicy.MaximumRetryAttempts, 0),
+				constraint.AtMost(r.RetryPolicy.MaximumRetryAttempts, 185)).
+			Message("maximum-retry-attempts must be between 0 and 185"),
+		constraint.When(constraint.Present(r.BatchParameters.ArraySize)).
+			Require(constraint.AtLeast(r.BatchParameters.ArraySize, 2),
+				constraint.AtMost(r.BatchParameters.ArraySize, 10000)).
+			Message("array-size must be between 2 and 10000"),
+		constraint.When(constraint.Present(r.BatchParameters.JobAttempts)).
+			Require(constraint.AtLeast(r.BatchParameters.JobAttempts, 1),
+				constraint.AtMost(r.BatchParameters.JobAttempts, 10)).
+			Message("job-attempts must be between 1 and 10"),
+		constraint.When(constraint.Present(r.EcsParameters.LaunchType)).
+			Require(constraint.OneOf(r.EcsParameters.LaunchType,
+				"EC2", "FARGATE", "EXTERNAL")).
+			Message("launch-type must be EC2, FARGATE, or EXTERNAL"),
+		constraint.When(constraint.Present(r.EcsParameters.PropagateTags)).
+			Require(constraint.OneOf(r.EcsParameters.PropagateTags, "TASK_DEFINITION")).
+			Message("propagate-tags must be TASK_DEFINITION"),
+		constraint.When(constraint.Present(r.EcsParameters.NetworkConfiguration)).
+			Require(constraint.Present(r.EcsParameters.NetworkConfiguration.Subnets)).
+			Message("an ECS network configuration requires subnets"),
+		constraint.ForEach(r.EcsParameters.CapacityProviderStrategy,
+			func(s TargetEcsParametersCapacityProviderStrategy) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.When(constraint.Present(s.Base)).
+						Require(constraint.AtLeast(s.Base, 0),
+							constraint.AtMost(s.Base, 100000)).
+						Message("a capacity provider base must be between 0 and 100000"),
+					constraint.When(constraint.Present(s.Weight)).
+						Require(constraint.AtLeast(s.Weight, 0),
+							constraint.AtMost(s.Weight, 1000)).
+						Message("a capacity provider weight must be between 0 and 1000"),
+				}
+			}),
+		constraint.ForEach(r.EcsParameters.PlacementConstraints,
+			func(c TargetEcsParametersPlacementConstraint) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(c.Type,
+						"distinctInstance", "memberOf")).
+						Message("a placement constraint type must be distinctInstance or memberOf"),
+					constraint.When(constraint.Equals(c.Type, "memberOf")).
+						Require(constraint.Present(c.Expression)).
+						Message("a memberOf placement constraint requires an expression"),
+				}
+			}),
+		constraint.ForEach(r.EcsParameters.PlacementStrategy,
+			func(s TargetEcsParametersPlacementStrategy) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.OneOf(s.Type, "random", "spread", "binpack")).
+						Message("a placement strategy type must be random, spread, or binpack"),
+				}
+			}),
+		constraint.ForEach(r.RunCommandParameters.RunCommandTargets,
+			func(t TargetRunCommandParametersTarget) []constraint.Constraint {
+				return []constraint.Constraint{
+					constraint.Must(constraint.Present(t.Values)).
+						Message("a run command target requires values"),
+				}
+			}),
 	}
 }
 

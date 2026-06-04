@@ -37,7 +37,7 @@ resources: {
         role:          resource.aws.iam-role.it.arn
         runtime:       'python3.12'
         handler:       'index.handler'
-        zip-file-path: '/tmp/unobin-it-eventbridge.zip'
+        code:          { zip-file-path: '/tmp/unobin-it-eventbridge.zip' }
         tags:          { unobin: 'eventbridge-it' }
       }
     }
