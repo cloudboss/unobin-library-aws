@@ -12,9 +12,24 @@ import (
 // configuration, none is a separate operation: each is a field on the function
 // request, so a block is converted to its SDK type and assembled into the input
 // rather than written by its own call. A nil block leaves that member unset, so
-// AWS applies its own default. The inner enum and range rules each block notes
-// are enforced by the Lambda API; they are not declared as Constraints because
-// goschema derives constraints only from top-level fields, not nested ones.
+// AWS applies its own default. The enum and range rules on a block's fields are
+// declared in Function's Constraints.
+
+// FunctionCode is the function's deployment package source, the Code member of
+// CreateFunction. Exactly one source is given: an inline zip, an on-disk zip,
+// an object in S3 (a bucket and key, optionally pinned to a version), or a
+// container image. SourceKMSKeyArn names the KMS key the package is encrypted
+// with and applies only to a zip, not an image. The cross-field rules are
+// declared in Function's Constraints.
+type FunctionCode struct {
+	ZipFileContent  *string `ub:"zip-file-content"`
+	ZipFilePath     *string `ub:"zip-file-path"`
+	S3Bucket        *string `ub:"s3-bucket"`
+	S3Key           *string `ub:"s3-key"`
+	S3ObjectVersion *string `ub:"s3-object-version"`
+	ImageUri        *string `ub:"image-uri"`
+	SourceKMSKeyArn *string `ub:"source-kms-key-arn"`
+}
 
 // FunctionEnvironment holds the environment variables the function sees at
 // runtime. The variables are not marked sensitive, matching how Lambda and the
@@ -65,7 +80,7 @@ func (b *FunctionDeadLetterConfig) to() *lambdatypes.DeadLetterConfig {
 
 // FunctionTracingConfig sets the function's X-Ray tracing mode. Mode is Active
 // to sample and trace incoming requests, or PassThrough to trace only when the
-// caller already is; the Lambda API rejects any other value.
+// caller already is.
 type FunctionTracingConfig struct {
 	Mode *string `ub:"mode"`
 }
@@ -103,8 +118,7 @@ func (b *FunctionImageConfig) to() *lambdatypes.ImageConfig {
 
 // FunctionLoggingConfig directs where and how the function's logs go to
 // CloudWatch. LogFormat is Text or JSON; the two log levels apply only under
-// JSON. LogGroup names a group other than the default per-function one. The
-// Lambda API validates each enum.
+// JSON. LogGroup names a group other than the default per-function one.
 type FunctionLoggingConfig struct {
 	LogFormat           *string `ub:"log-format"`
 	LogGroup            *string `ub:"log-group"`
@@ -131,7 +145,7 @@ func (b *FunctionLoggingConfig) to() *lambdatypes.LoggingConfig {
 
 // FunctionSnapStart turns on SnapStart, which snapshots the initialized
 // execution environment when a version is published so later invocations start
-// from it. ApplyOn is None or PublishedVersions; the Lambda API validates it.
+// from it. ApplyOn is None or PublishedVersions.
 type FunctionSnapStart struct {
 	ApplyOn *string `ub:"apply-on"`
 }
@@ -148,7 +162,7 @@ func (b *FunctionSnapStart) to() *lambdatypes.SnapStart {
 }
 
 // FunctionEphemeralStorage sets the size in MB of the function's /tmp
-// directory. The Lambda API requires it between 512 and 10240.
+// directory, between 512 and 10240.
 type FunctionEphemeralStorage struct {
 	Size *int64 `ub:"size"`
 }

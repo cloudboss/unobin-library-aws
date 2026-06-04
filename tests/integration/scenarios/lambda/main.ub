@@ -37,7 +37,7 @@ resources: {
         role:          resource.aws.iam-role.it.arn
         runtime:       'python3.12'
         handler:       'index.handler'
-        zip-file-path: '/tmp/unobin-it-lambda.zip'
+        code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
         environment:   { variables: { GREETING: 'hello from unobin' } }
         tags:          { unobin: 'lambda-it' }
       }

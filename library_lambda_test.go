@@ -40,10 +40,10 @@ func TestLibraryRegistersLambda(t *testing.T) {
 // TestLambdaSchemas asserts the whole TypeSchema goschema reads from this
 // library's source for each Lambda construct: the input and output field types,
 // that nothing is marked sensitive, and the cross-field constraints derived from
-// each Constraints method. The deployment package source is flat top-level
-// fields so its exactly-one-source rules derive as constraints. normalizeSchema
-// (in library_s3_test.go) sorts nested object fields so the comparison is stable
-// despite goschema's varying field order.
+// each Constraints method, including the dotted rules on the code block and the
+// other nested blocks. normalizeSchema (in library_s3_test.go) sorts nested
+// object fields so the comparison is stable despite goschema's varying field
+// order.
 func TestLambdaSchemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -52,7 +52,16 @@ func TestLambdaSchemas(t *testing.T) {
 	resources := map[string]*runtime.TypeSchema{
 		"lambda-function": {
 			Inputs: map[string]typecheck.Type{
-				"architectures":           typecheck.TList(typecheck.TString()),
+				"architectures": typecheck.TList(typecheck.TString()),
+				"code": typecheck.TObject([]typecheck.ObjectField{
+					{Name: "image-uri", Type: typecheck.TString(), Optional: true},
+					{Name: "s3-bucket", Type: typecheck.TString(), Optional: true},
+					{Name: "s3-key", Type: typecheck.TString(), Optional: true},
+					{Name: "s3-object-version", Type: typecheck.TString(), Optional: true},
+					{Name: "source-kms-key-arn", Type: typecheck.TString(), Optional: true},
+					{Name: "zip-file-content", Type: typecheck.TString(), Optional: true},
+					{Name: "zip-file-path", Type: typecheck.TString(), Optional: true},
+				}),
 				"code-signing-config-arn": typecheck.TOptional(typecheck.TString()),
 				"dead-letter-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "target-arn", Type: typecheck.TString(), Optional: true},
@@ -75,7 +84,6 @@ func TestLambdaSchemas(t *testing.T) {
 					{Name: "working-directory", Type: typecheck.TString(), Optional: true},
 					{Name: "command", Type: typecheck.TList(typecheck.TString())},
 				})),
-				"image-uri":   typecheck.TOptional(typecheck.TString()),
 				"kms-key-arn": typecheck.TOptional(typecheck.TString()),
 				"layers":      typecheck.TList(typecheck.TString()),
 				"logging-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
@@ -90,16 +98,12 @@ func TestLambdaSchemas(t *testing.T) {
 				"reserved-concurrent-executions": typecheck.TOptional(typecheck.TInteger()),
 				"role":                           typecheck.TString(),
 				"runtime":                        typecheck.TOptional(typecheck.TString()),
-				"s3-bucket":                      typecheck.TOptional(typecheck.TString()),
-				"s3-key":                         typecheck.TOptional(typecheck.TString()),
-				"s3-object-version":              typecheck.TOptional(typecheck.TString()),
 				"skip-destroy":                   typecheck.TOptional(typecheck.TBoolean()),
 				"snap-start": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "apply-on", Type: typecheck.TString(), Optional: true},
 				})),
-				"source-kms-key-arn": typecheck.TOptional(typecheck.TString()),
-				"tags":               typecheck.TMap(typecheck.TString()),
-				"timeout":            typecheck.TOptional(typecheck.TInteger()),
+				"tags":    typecheck.TMap(typecheck.TString()),
+				"timeout": typecheck.TOptional(typecheck.TInteger()),
 				"tracing-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "mode", Type: typecheck.TString(), Optional: true},
 				})),
@@ -108,8 +112,6 @@ func TestLambdaSchemas(t *testing.T) {
 					{Name: "security-group-ids", Type: typecheck.TList(typecheck.TString())},
 					{Name: "ipv6-allowed-for-dual-stack", Type: typecheck.TBoolean(), Optional: true},
 				})),
-				"zip-file-content": typecheck.TOptional(typecheck.TString()),
-				"zip-file-path":    typecheck.TOptional(typecheck.TString()),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                            typecheck.TString(),
@@ -126,41 +128,48 @@ func TestLambdaSchemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind: "exactly-one-of", Fields: []string{
-						"var.zip-file-content", "var.zip-file-path",
-						"var.s3-bucket", "var.image-uri",
+					Kind: "exactly-one-of",
+					Fields: []string{
+						"var.code.zip-file-content", "var.code.zip-file-path",
+						"var.code.s3-bucket", "var.code.image-uri",
 					},
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.zip-file-content", "var.zip-file-path",
+						"var.code.zip-file-content", "var.code.zip-file-path",
 					},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.s3-bucket", "var.s3-key"},
+					Fields: []string{"var.code.s3-bucket", "var.code.s3-key"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.s3-key", "var.s3-bucket"},
+					Fields: []string{"var.code.s3-key", "var.code.s3-bucket"},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.s3-object-version", "var.zip-file-content",
-						"var.zip-file-path", "var.image-uri",
+						"var.code.s3-object-version", "var.code.zip-file-content",
+						"var.code.zip-file-path", "var.code.image-uri",
 					},
 				},
 				{
 					Kind:   "forbidden-with",
-					Fields: []string{"var.source-kms-key-arn", "var.image-uri"},
+					Fields: []string{"var.code.source-kms-key-arn", "var.code.image-uri"},
 				},
 				{
 					Kind:    "predicate",
 					When:    "!(var.package-type == 'Image')",
 					Require: "(var.handler != null) && (var.runtime != null)",
 					Message: "handler and runtime are required for a Zip package",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.package-type == 'Image')",
+					Require: "(var.code.image-uri != null)",
+					Message: "an Image package requires code.image-uri",
 				},
 				{
 					Kind:    "predicate",
@@ -188,6 +197,73 @@ func TestLambdaSchemas(t *testing.T) {
 					Require: "(var.reserved-concurrent-executions == null || " +
 						"var.reserved-concurrent-executions >= 0)",
 					Message: "reserved-concurrent-executions must be zero or greater",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.image-config != null)",
+					Require: "(var.package-type == 'Image')",
+					Message: "image-config applies only to an Image package",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.tracing-config.mode != null)",
+					Require: "(var.tracing-config.mode == 'Active' || " +
+						"var.tracing-config.mode == 'PassThrough')",
+					Message: "tracing-config mode must be Active or PassThrough",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging-config.log-format != null)",
+					Require: "(var.logging-config.log-format == 'Text' || " +
+						"var.logging-config.log-format == 'JSON')",
+					Message: "logging-config log-format must be Text or JSON",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging-config.application-log-level != null)",
+					Require: "(var.logging-config.application-log-level == 'TRACE' || " +
+						"var.logging-config.application-log-level == 'DEBUG' || " +
+						"var.logging-config.application-log-level == 'INFO' || " +
+						"var.logging-config.application-log-level == 'WARN' || " +
+						"var.logging-config.application-log-level == 'ERROR' || " +
+						"var.logging-config.application-log-level == 'FATAL')",
+					Message: "application-log-level must be TRACE, DEBUG, INFO, WARN, ERROR, or FATAL",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.logging-config.application-log-level != null)",
+					Require: "(var.logging-config.log-format == 'JSON')",
+					Message: "application-log-level requires log-format JSON",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging-config.system-log-level != null)",
+					Require: "(var.logging-config.system-log-level == 'DEBUG' || " +
+						"var.logging-config.system-log-level == 'INFO' || " +
+						"var.logging-config.system-log-level == 'WARN')",
+					Message: "system-log-level must be DEBUG, INFO, or WARN",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(var.logging-config.system-log-level != null)",
+					Require: "(var.logging-config.log-format == 'JSON')",
+					Message: "system-log-level requires log-format JSON",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.snap-start.apply-on != null)",
+					Require: "(var.snap-start.apply-on == 'None' || " +
+						"var.snap-start.apply-on == 'PublishedVersions')",
+					Message: "snap-start apply-on must be None or PublishedVersions",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.ephemeral-storage.size != null)",
+					Require: "(var.ephemeral-storage.size == null || " +
+						"var.ephemeral-storage.size >= 512) && " +
+						"(var.ephemeral-storage.size == null || " +
+						"var.ephemeral-storage.size <= 10240)",
+					Message: "ephemeral-storage size must be between 512 and 10240",
 				},
 			},
 		},

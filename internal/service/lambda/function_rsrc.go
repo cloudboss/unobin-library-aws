@@ -34,22 +34,16 @@ const functionStateTimeout = 10 * time.Minute
 // around it, the way CloudFormation models AWS::Lambda::Function. The function
 // name and package type are fixed at creation, so a change to either replaces
 // the function; every other input reconciles in place. The deployment package
-// is given through exactly one source: an inline or on-disk zip, an object in
-// S3, or a container image. Most settings ride CreateFunction, but reserved
-// concurrency and code signing are separate calls reconciled after the function
-// exists, and a published version is a further call. SkipDestroy retains the
-// function on delete rather than removing it; it is a delete-time switch, not a
-// property of the live function.
+// is given in the code block through exactly one source: an inline or on-disk
+// zip, an object in S3, or a container image. Most settings ride
+// CreateFunction, but reserved concurrency and code signing are separate calls
+// reconciled after the function exists, and a published version is a further
+// call. SkipDestroy retains the function on delete rather than removing it; it
+// is a delete-time switch, not a property of the live function.
 type Function struct {
 	FunctionName                 string                     `ub:"function-name"`
 	Role                         string                     `ub:"role"`
-	ZipFileContent               *string                    `ub:"zip-file-content"`
-	ZipFilePath                  *string                    `ub:"zip-file-path"`
-	S3Bucket                     *string                    `ub:"s3-bucket"`
-	S3Key                        *string                    `ub:"s3-key"`
-	S3ObjectVersion              *string                    `ub:"s3-object-version"`
-	ImageUri                     *string                    `ub:"image-uri"`
-	SourceKMSKeyArn              *string                    `ub:"source-kms-key-arn"`
+	Code                         FunctionCode               `ub:"code"`
 	PackageType                  *string                    `ub:"package-type"`
 	Handler                      *string                    `ub:"handler"`
 	Runtime                      *string                    `ub:"runtime"`
@@ -107,27 +101,33 @@ func (r *Function) ReplaceFields() []string {
 }
 
 // Constraints declares the rules Lambda places on a function's inputs. The
-// deployment package comes from exactly one source, so exactly one of the four
-// primary source handles is set; the inline and on-disk zip forms are mutually
-// exclusive, an S3 source needs both bucket and key, an S3 object version
-// belongs only to the S3 source, and a source KMS key applies only to a zip,
-// not an image. A zip package, which is the default when no package type is
-// given, requires a handler and a runtime. The architectures and package type
-// each accept a fixed set of values, and the memory, timeout, and reserved
-// concurrency have bounds. The runtime's own large value set is left to the
-// Lambda API to validate.
+// deployment package comes from exactly one source, so exactly one of the
+// code block's four primary source handles is set; the inline and on-disk zip
+// forms are mutually exclusive, an S3 source needs both bucket and key, an S3
+// object version belongs only to the S3 source, and a source KMS key applies
+// only to a zip, not an image. A zip package, which is the default when no
+// package type is given, requires a handler and a runtime; an Image package
+// requires an image source, and the image config rides only an Image package.
+// The package type, tracing mode, logging enums, and snap-start mode each
+// accept a fixed set of values, and the memory, timeout, reserved concurrency,
+// and ephemeral storage have bounds. The architectures' values and the
+// runtime's own large value set are left to the Lambda API to validate.
 func (r Function) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.ExactlyOneOf(r.ZipFileContent, r.ZipFilePath, r.S3Bucket, r.ImageUri),
-		constraint.AtMostOneOf(r.ZipFileContent, r.ZipFilePath),
-		constraint.RequiredWith(r.S3Bucket, r.S3Key),
-		constraint.RequiredWith(r.S3Key, r.S3Bucket),
-		constraint.ForbiddenWith(r.S3ObjectVersion,
-			r.ZipFileContent, r.ZipFilePath, r.ImageUri),
-		constraint.ForbiddenWith(r.SourceKMSKeyArn, r.ImageUri),
+		constraint.ExactlyOneOf(r.Code.ZipFileContent, r.Code.ZipFilePath,
+			r.Code.S3Bucket, r.Code.ImageUri),
+		constraint.AtMostOneOf(r.Code.ZipFileContent, r.Code.ZipFilePath),
+		constraint.RequiredWith(r.Code.S3Bucket, r.Code.S3Key),
+		constraint.RequiredWith(r.Code.S3Key, r.Code.S3Bucket),
+		constraint.ForbiddenWith(r.Code.S3ObjectVersion,
+			r.Code.ZipFileContent, r.Code.ZipFilePath, r.Code.ImageUri),
+		constraint.ForbiddenWith(r.Code.SourceKMSKeyArn, r.Code.ImageUri),
 		constraint.When(constraint.Not(constraint.Equals(r.PackageType, "Image"))).
 			Require(constraint.Present(r.Handler), constraint.Present(r.Runtime)).
 			Message("handler and runtime are required for a Zip package"),
+		constraint.When(constraint.Equals(r.PackageType, "Image")).
+			Require(constraint.Present(r.Code.ImageUri)).
+			Message("an Image package requires code.image-uri"),
 		constraint.When(constraint.Present(r.PackageType)).
 			Require(constraint.OneOf(r.PackageType, "Zip", "Image")).
 			Message("package-type must be Zip or Image"),
@@ -141,6 +141,36 @@ func (r Function) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.ReservedConcurrentExecutions)).
 			Require(constraint.AtLeast(r.ReservedConcurrentExecutions, 0)).
 			Message("reserved-concurrent-executions must be zero or greater"),
+		constraint.When(constraint.Present(r.ImageConfig)).
+			Require(constraint.Equals(r.PackageType, "Image")).
+			Message("image-config applies only to an Image package"),
+		constraint.When(constraint.Present(r.TracingConfig.Mode)).
+			Require(constraint.OneOf(r.TracingConfig.Mode, "Active", "PassThrough")).
+			Message("tracing-config mode must be Active or PassThrough"),
+		constraint.When(constraint.Present(r.LoggingConfig.LogFormat)).
+			Require(constraint.OneOf(r.LoggingConfig.LogFormat, "Text", "JSON")).
+			Message("logging-config log-format must be Text or JSON"),
+		constraint.When(constraint.Present(r.LoggingConfig.ApplicationLogLevel)).
+			Require(constraint.OneOf(r.LoggingConfig.ApplicationLogLevel,
+				"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")).
+			Message("application-log-level must be TRACE, DEBUG, INFO, WARN, ERROR, or FATAL"),
+		constraint.When(constraint.Present(r.LoggingConfig.ApplicationLogLevel)).
+			Require(constraint.Equals(r.LoggingConfig.LogFormat, "JSON")).
+			Message("application-log-level requires log-format JSON"),
+		constraint.When(constraint.Present(r.LoggingConfig.SystemLogLevel)).
+			Require(constraint.OneOf(r.LoggingConfig.SystemLogLevel,
+				"DEBUG", "INFO", "WARN")).
+			Message("system-log-level must be DEBUG, INFO, or WARN"),
+		constraint.When(constraint.Present(r.LoggingConfig.SystemLogLevel)).
+			Require(constraint.Equals(r.LoggingConfig.LogFormat, "JSON")).
+			Message("system-log-level requires log-format JSON"),
+		constraint.When(constraint.Present(r.SnapStart.ApplyOn)).
+			Require(constraint.OneOf(r.SnapStart.ApplyOn, "None", "PublishedVersions")).
+			Message("snap-start apply-on must be None or PublishedVersions"),
+		constraint.When(constraint.Present(r.EphemeralStorage.Size)).
+			Require(constraint.AtLeast(r.EphemeralStorage.Size, 512),
+				constraint.AtMost(r.EphemeralStorage.Size, 10240)).
+			Message("ephemeral-storage size must be between 512 and 10240"),
 	}
 }
 
@@ -350,25 +380,25 @@ func (r *Function) createInput() (*lambda.CreateFunctionInput, error) {
 	return in, nil
 }
 
-// functionCode assembles the deployment package source from whichever set of
-// source fields is present. The constraints guarantee exactly one source, so at
-// most one branch contributes. An on-disk zip is read into memory here, the one
-// place a source touches the filesystem.
+// functionCode assembles the deployment package source from whichever of the
+// code block's source fields is present. The constraints guarantee exactly one
+// source, so at most one branch contributes. An on-disk zip is read into
+// memory here, the one place a source touches the filesystem.
 func (r *Function) functionCode() (*lambdatypes.FunctionCode, error) {
 	code := &lambdatypes.FunctionCode{
-		S3Bucket:        r.S3Bucket,
-		S3Key:           r.S3Key,
-		S3ObjectVersion: r.S3ObjectVersion,
-		ImageUri:        r.ImageUri,
-		SourceKMSKeyArn: r.SourceKMSKeyArn,
+		S3Bucket:        r.Code.S3Bucket,
+		S3Key:           r.Code.S3Key,
+		S3ObjectVersion: r.Code.S3ObjectVersion,
+		ImageUri:        r.Code.ImageUri,
+		SourceKMSKeyArn: r.Code.SourceKMSKeyArn,
 	}
 	switch {
-	case r.ZipFileContent != nil:
-		code.ZipFile = []byte(*r.ZipFileContent)
-	case r.ZipFilePath != nil:
-		data, err := os.ReadFile(*r.ZipFilePath)
+	case r.Code.ZipFileContent != nil:
+		code.ZipFile = []byte(*r.Code.ZipFileContent)
+	case r.Code.ZipFilePath != nil:
+		data, err := os.ReadFile(*r.Code.ZipFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("read zip file %s: %w", *r.ZipFilePath, err)
+			return nil, fmt.Errorf("read zip file %s: %w", *r.Code.ZipFilePath, err)
 		}
 		code.ZipFile = data
 	}
@@ -595,16 +625,9 @@ func (r *Function) configChanged(prior Function) bool {
 }
 
 // codeChanged reports whether any input that UpdateFunctionCode sends differs
-// from the prior inputs: a deployment package source, the architectures, or the
-// source KMS key.
+// from the prior inputs: the code block or the architectures.
 func (r *Function) codeChanged(prior Function) bool {
-	return runtime.Changed(prior.ZipFileContent, r.ZipFileContent) ||
-		runtime.Changed(prior.ZipFilePath, r.ZipFilePath) ||
-		runtime.Changed(prior.S3Bucket, r.S3Bucket) ||
-		runtime.Changed(prior.S3Key, r.S3Key) ||
-		runtime.Changed(prior.S3ObjectVersion, r.S3ObjectVersion) ||
-		runtime.Changed(prior.ImageUri, r.ImageUri) ||
-		runtime.Changed(prior.SourceKMSKeyArn, r.SourceKMSKeyArn) ||
+	return runtime.Changed(prior.Code, r.Code) ||
 		runtime.Changed(prior.Architectures, r.Architectures)
 }
 
