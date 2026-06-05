@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -74,23 +73,6 @@ func tagSpecifications(
 		ResourceType: resourceType,
 		Tags:         mapToTags(tags),
 	}}
-}
-
-// tagsToMap converts a tag list read back from AWS into a map, skipping
-// the aws: reserved tags AWS attaches itself so they never read as drift.
-func tagsToMap(tags []ec2types.Tag) map[string]string {
-	out := make(map[string]string, len(tags))
-	for _, t := range tags {
-		key := aws.ToString(t.Key)
-		if strings.HasPrefix(key, "aws:") {
-			continue
-		}
-		out[key] = aws.ToString(t.Value)
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
 }
 
 // syncTags reconciles the tags on resourceID with desired. The comparison and
