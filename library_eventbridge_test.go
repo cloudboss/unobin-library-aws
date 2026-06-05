@@ -189,6 +189,13 @@ func TestEventbridgeSchemas(t *testing.T) {
 				},
 				{
 					Kind: "predicate",
+					When: "true",
+					Require: "(var.input-transformer.input-paths == null || " +
+						"@core.length(var.input-transformer.input-paths) <= 100)",
+					Message: "input-paths holds at most 100 entries",
+				},
+				{
+					Kind: "predicate",
 					When: "(var.retry-policy.maximum-event-age-in-seconds != null)",
 					Require: "(var.retry-policy.maximum-event-age-in-seconds == null || " +
 						"var.retry-policy.maximum-event-age-in-seconds >= 0) && " +
@@ -280,11 +287,27 @@ func TestEventbridgeSchemas(t *testing.T) {
 					ForEach: "var.ecs-parameters.placement-strategy",
 				},
 				{
-					Kind:    "predicate",
-					When:    "true",
-					Require: "(@each.value.values != null)",
-					Message: "a run command target requires values",
+					Kind: "predicate",
+					When: "true",
+					Require: "(var.run-command-parameters.run-command-targets == null || " +
+						"@core.length(var.run-command-parameters.run-command-targets) <= 5)",
+					Message: "run-command-targets holds at most 5 entries",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "((@each.value.values != null) && " +
+						"(@core.length(@each.value.values) >= 1)) && " +
+						"(@each.value.values == null || @core.length(@each.value.values) <= 50)",
+					Message: "a run command target takes 1 to 50 values",
 					ForEach: "var.run-command-parameters.run-command-targets",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(var.sage-maker-pipeline-parameters.pipeline-parameter-list == null || " +
+						"@core.length(var.sage-maker-pipeline-parameters.pipeline-parameter-list) <= 200)",
+					Message: "pipeline-parameter-list holds at most 200 entries",
 				},
 			},
 		},

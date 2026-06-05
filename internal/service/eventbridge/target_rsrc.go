@@ -77,12 +77,15 @@ func (r *Target) ReplaceFields() []string {
 // Constraints declares the rules EventBridge places on a target's inputs: the
 // input passed to the destination comes from at most one of the three mutually
 // exclusive forms (a static JSON input, a JSONPath into the event, or an input
-// transformer), and the parameter blocks have the enums, bounds, and required
-// members their doc comments state. String and collection length limits are
-// left to the EventBridge API, which constraints cannot express.
+// transformer), and the parameter blocks have the enums, bounds, required
+// members, and collection counts their doc comments state. String length
+// limits and the reserved AWS input-path key prefix are left to the
+// EventBridge API.
 func (r Target) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.Input, r.InputPath, r.InputTransformer),
+		constraint.Must(constraint.MaxItems(r.InputTransformer.InputPaths, 100)).
+			Message("input-paths holds at most 100 entries"),
 		constraint.When(constraint.Present(r.RetryPolicy.MaximumEventAgeInSeconds)).
 			Require(constraint.AtLeast(r.RetryPolicy.MaximumEventAgeInSeconds, 0),
 				constraint.AtMost(r.RetryPolicy.MaximumEventAgeInSeconds, 86400)).
@@ -140,13 +143,20 @@ func (r Target) Constraints() []constraint.Constraint {
 						Message("a placement strategy type must be random, spread, or binpack"),
 				}
 			}),
+		constraint.Must(
+			constraint.MaxItems(r.RunCommandParameters.RunCommandTargets, 5)).
+			Message("run-command-targets holds at most 5 entries"),
 		constraint.ForEach(r.RunCommandParameters.RunCommandTargets,
 			func(t TargetRunCommandParametersTarget) []constraint.Constraint {
 				return []constraint.Constraint{
-					constraint.Must(constraint.Present(t.Values)).
-						Message("a run command target requires values"),
+					constraint.Must(constraint.NotEmpty(t.Values),
+						constraint.MaxItems(t.Values, 50)).
+						Message("a run command target takes 1 to 50 values"),
 				}
 			}),
+		constraint.Must(constraint.MaxItems(
+			r.SageMakerPipelineParameters.PipelineParameterList, 200)).
+			Message("pipeline-parameter-list holds at most 200 entries"),
 	}
 }
 

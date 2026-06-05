@@ -11,9 +11,10 @@ import (
 // types.Target. Each is a field on the single target PutTargets writes, so a
 // block is converted to its SDK type and assembled into the target rather than
 // written by its own call. A nil block leaves that member unset, so AWS applies
-// its own behavior. The enum, range, and required-member rules each block notes
-// are declared in Target's Constraints; string and collection length limits are
-// enforced by the EventBridge API.
+// its own behavior. The enum, range, required-member, and collection-count
+// rules each block notes are declared in Target's Constraints; string length
+// limits and the reserved AWS input-path key prefix are enforced by the
+// EventBridge API.
 
 // TargetInputTransformer builds custom input for the target from pieces of the
 // matched event. InputTemplate is required, 1..8192 characters, and may
