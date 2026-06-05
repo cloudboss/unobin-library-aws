@@ -9,6 +9,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
 	"github.com/cloudboss/unobin-library-aws/internal/config"
+	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
@@ -75,6 +76,8 @@ func Library() *runtime.Library {
 				elbv2.ListenerRule, *elbv2.ListenerRuleOutput](),
 			"elbv2-listener-certificate": runtime.MakeResource[
 				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
+			"autoscaling-group": runtime.MakeResource[
+				autoscaling.Group, *autoscaling.GroupOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),

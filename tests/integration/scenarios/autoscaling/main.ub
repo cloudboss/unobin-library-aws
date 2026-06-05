@@ -1,0 +1,77 @@
+description: '''>-
+  Manages an Auto Scaling group and its dependencies: a VPC with a subnet, the latest
+  Amazon Linux 2023 AMI resolved through the ec2-ami data source, a launch template built
+  from it, and a group held at zero capacity so no instance launches. A standalone gp3
+  volume exercises the EBS volume resource in the same availability zone. Exercises the
+  data-source read, the launch-template version lifecycle, and the group create and delete.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+data: {
+  aws: {
+    ec2-ami: {
+      al2023: {
+        owners:      ['amazon']
+        most-recent: true
+        filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
+      }
+    }
+  }
+}
+
+resources: {
+  aws: {
+    ec2-vpc: { it: { cidr-block: '10.30.0.0/16' } }
+    ec2-subnet: {
+      a: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.30.1.0/24'
+        availability-zone: 'us-east-1a'
+        tags:              { unobin: 'autoscaling-it' }
+      }
+    }
+    ec2-launch-template: {
+      it: {
+        name: 'unobin-it-asg-lt'
+        data: {
+          image-id:           data.aws.ec2-ami.al2023.image-id
+          instance-type:      't3.micro'
+          metadata-options:   { http-tokens: 'required' }
+          tag-specifications: [{ resource-type: 'instance', tags: { unobin: 'autoscaling-it' } }]
+        }
+        tags: { unobin: 'autoscaling-it' }
+      }
+    }
+    autoscaling-group: {
+      it: {
+        name:                'unobin-it-asg'
+        min-size:            0
+        max-size:            1
+        desired-capacity:    0
+        vpc-zone-identifier: [resource.aws.ec2-subnet.a.id]
+        launch-template: {
+          id:      resource.aws.ec2-launch-template.it.launch-template-id
+          version: '$Latest'
+        }
+        health-check-type: 'EC2'
+        tags:              [{ key: 'unobin', value: 'autoscaling-it', propagate-at-launch: true }]
+      }
+    }
+    ec2-volume: {
+      it: {
+        availability-zone: 'us-east-1a'
+        size:              1
+        type:              'gp3'
+        tags:              { unobin: 'autoscaling-it' }
+      }
+    }
+  }
+}
+
+outputs: {
+  image-id:           { value: data.aws.ec2-ami.al2023.image-id }
+  launch-template-id: { value: resource.aws.ec2-launch-template.it.launch-template-id }
+  group-arn:          { value: resource.aws.autoscaling-group.it.arn }
+  volume-id:          { value: resource.aws.ec2-volume.it.volume-id }
+}
