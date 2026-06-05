@@ -10,6 +10,7 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -71,6 +72,13 @@ func (r *Listener) SchemaVersion() int { return 1 }
 // ModifyListener.
 func (r *Listener) ReplaceFields() []string {
 	return []string{"load-balancer-arn"}
+}
+
+// Defaults marks the collection inputs a listener may omit.
+func (r Listener) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
+	}
 }
 
 // Constraints declares the cross-field rules on a listener's protocol and the

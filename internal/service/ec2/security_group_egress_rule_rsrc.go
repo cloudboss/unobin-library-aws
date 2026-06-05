@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -63,6 +64,13 @@ func (r *SecurityGroupEgressRule) ReplaceFields() []string {
 		"cidr-ipv6",
 		"prefix-list-id",
 		"referenced-security-group-id",
+	}
+}
+
+// Defaults marks the collection inputs an egress rule may omit.
+func (r SecurityGroupEgressRule) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

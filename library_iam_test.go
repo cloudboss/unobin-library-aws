@@ -68,6 +68,9 @@ func TestIamSchemas(t *testing.T) {
 					Message: "max-session-duration must be between 3600 and 43200 seconds",
 				},
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"iam-policy": {
 			Inputs: map[string]typecheck.Type{
@@ -84,6 +87,9 @@ func TestIamSchemas(t *testing.T) {
 				"attachment-count":   typecheck.TInteger(),
 				"create-date":        typecheck.TString(),
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"iam-instance-profile": {
 			Inputs: map[string]typecheck.Type{
@@ -97,6 +103,9 @@ func TestIamSchemas(t *testing.T) {
 				"instance-profile-id": typecheck.TString(),
 				"create-date":         typecheck.TString(),
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"iam-openid-connect-provider": {
 			Inputs: map[string]typecheck.Type{
@@ -109,6 +118,11 @@ func TestIamSchemas(t *testing.T) {
 				"arn":             typecheck.TString(),
 				"create-date":     typecheck.TString(),
 				"thumbprint-list": typecheck.TList(typecheck.TString()),
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.client-id-list", Optional: true},
+				{Field: "var.thumbprint-list", Optional: true},
+				{Field: "var.tags", Optional: true},
 			},
 		},
 		"iam-role-policy-attachment": {

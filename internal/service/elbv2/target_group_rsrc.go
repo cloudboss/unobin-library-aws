@@ -11,6 +11,7 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -99,6 +100,13 @@ func (r *TargetGroup) ReplaceFields() []string {
 		"target-type",
 		"ip-address-type",
 		"target-control-port",
+	}
+}
+
+// Defaults marks the collection inputs a target group may omit.
+func (r TargetGroup) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

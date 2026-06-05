@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -56,6 +57,13 @@ func (r *Policy) ReplaceFields() []string {
 		"policy-name",
 		"path",
 		"description",
+	}
+}
+
+// Defaults marks the collection inputs a policy may omit.
+func (r Policy) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

@@ -99,6 +99,9 @@ func TestKmsSchemas(t *testing.T) {
 					Message: "rotation-period-in-days must be between 90 and 2560",
 				},
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"kms-alias": {
 			Inputs: map[string]typecheck.Type{

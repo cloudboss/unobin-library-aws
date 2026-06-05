@@ -10,6 +10,7 @@ import (
 	lambda "github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -98,6 +99,16 @@ func (r *Function) SchemaVersion() int { return 1 }
 // a new function. Every other input is reconciled in place by Update.
 func (r *Function) ReplaceFields() []string {
 	return []string{"function-name", "package-type"}
+}
+
+// Defaults marks the collection inputs a function may omit.
+func (r Function) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Architectures),
+		defaults.Optional(r.Layers),
+		defaults.Optional(r.FileSystemConfigs),
+		defaults.Optional(r.Tags),
+	}
 }
 
 // Constraints declares the rules Lambda places on a function's inputs. The

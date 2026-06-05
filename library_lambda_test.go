@@ -266,6 +266,12 @@ func TestLambdaSchemas(t *testing.T) {
 					Message: "ephemeral-storage size must be between 512 and 10240",
 				},
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.architectures", Optional: true},
+				{Field: "var.layers", Optional: true},
+				{Field: "var.file-system-configs", Optional: true},
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"lambda-permission": {
 			Inputs: map[string]typecheck.Type{

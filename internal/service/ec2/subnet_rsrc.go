@@ -9,6 +9,7 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -89,6 +90,13 @@ func (r *Subnet) ReplaceFields() []string {
 		"ipv6-native",
 		"ipv6-netmask-length",
 		"ipv6-cidr-block",
+	}
+}
+
+// Defaults marks the collection inputs a subnet may omit.
+func (r Subnet) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

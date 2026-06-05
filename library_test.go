@@ -215,6 +215,9 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 				Message: "to-port must be between -1 and 65535",
 			},
 		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+		},
 	}
 
 	cases := map[string]*runtime.TypeSchema{
@@ -237,6 +240,9 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 					Kind:   "at-most-one-of",
 					Fields: []string{"var.name", "var.name-prefix"},
 				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
 			},
 		},
 		"ec2-security-group-ingress-rule": ruleSchema,
@@ -367,6 +373,9 @@ func TestEc2SubnetSchema(t *testing.T) {
 					"var.enable-lni-at-device-index > 0)",
 				Message: "enable-lni-at-device-index must be a positive device position",
 			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-subnet"]))

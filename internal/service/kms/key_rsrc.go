@@ -10,6 +10,7 @@ import (
 	kms "github.com/aws/aws-sdk-go-v2/service/kms"
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -69,6 +70,13 @@ func (r *Key) ReplaceFields() []string {
 		"custom-key-store-id",
 		"xks-key-id",
 		"multi-region",
+	}
+}
+
+// Defaults marks the collection inputs a key may omit.
+func (r Key) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

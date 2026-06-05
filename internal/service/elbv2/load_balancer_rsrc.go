@@ -13,6 +13,7 @@ import (
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -113,6 +114,16 @@ func (r *LoadBalancer) ReplaceFields() []string {
 		"internal",
 		"load-balancer-type",
 		"customer-owned-ipv4-pool",
+	}
+}
+
+// Defaults marks the collection inputs a load balancer may omit.
+func (r LoadBalancer) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.SecurityGroups),
+		defaults.Optional(r.Subnets),
+		defaults.Optional(r.SubnetMappings),
+		defaults.Optional(r.Tags),
 	}
 }
 

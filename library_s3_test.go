@@ -398,6 +398,9 @@ func TestS3Schemas(t *testing.T) {
 					Message: "partition-date-source must be EventTime or DeliveryTime",
 				},
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"s3-bucket-policy": {
 			Inputs: map[string]typecheck.Type{
@@ -514,6 +517,10 @@ func TestS3Schemas(t *testing.T) {
 						"var.object-lock-legal-hold-status == 'OFF')",
 					Message: "object-lock-legal-hold-status must be ON or OFF",
 				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.metadata", Optional: true},
+				{Field: "var.tags", Optional: true},
 			},
 		},
 	}

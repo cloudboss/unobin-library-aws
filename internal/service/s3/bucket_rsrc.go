@@ -16,6 +16,7 @@ import (
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -82,6 +83,13 @@ func (r *Bucket) SchemaVersion() int { return 1 }
 // not a replace trigger.
 func (r *Bucket) ReplaceFields() []string {
 	return []string{"bucket", "object-lock-enabled"}
+}
+
+// Defaults marks the collection inputs a bucket may omit.
+func (r Bucket) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
+	}
 }
 
 // Constraints declares the rules S3 places on the bucket's configuration

@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -44,6 +45,15 @@ func (r *OpenIDConnectProvider) SchemaVersion() int {
 // change in place.
 func (r *OpenIDConnectProvider) ReplaceFields() []string {
 	return []string{"url"}
+}
+
+// Defaults marks the collection inputs a provider may omit.
+func (r OpenIDConnectProvider) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.ClientIDList),
+		defaults.Optional(r.ThumbprintList),
+		defaults.Optional(r.Tags),
+	}
 }
 
 // Create provisions a new IAM OIDC provider. When the thumbprint list is

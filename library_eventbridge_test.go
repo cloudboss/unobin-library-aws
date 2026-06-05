@@ -75,6 +75,9 @@ func TestEventbridgeSchemas(t *testing.T) {
 						"ENABLED_WITH_ALL_CLOUDTRAIL_MANAGEMENT_EVENTS",
 				},
 			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.tags", Optional: true},
+			},
 		},
 		"eventbridge-target": {
 			Inputs: map[string]typecheck.Type{

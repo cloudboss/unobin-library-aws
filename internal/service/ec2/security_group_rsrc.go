@@ -11,6 +11,7 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -60,6 +61,13 @@ func (r *SecurityGroup) ReplaceFields() []string {
 		"name-prefix",
 		"description",
 		"vpc-id",
+	}
+}
+
+// Defaults marks the collection inputs a security group may omit.
+func (r SecurityGroup) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	eventbridgetypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -67,6 +68,13 @@ func (r *Rule) ReplaceFields() []string {
 	return []string{
 		"name",
 		"event-bus-name",
+	}
+}
+
+// Defaults marks the collection inputs a rule may omit.
+func (r Rule) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
 	}
 }
 

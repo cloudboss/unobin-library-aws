@@ -156,6 +156,12 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "enabled connection-logs require a bucket",
 					},
 				},
+				Defaults: []lang.DefaultSpec{
+					{Field: "var.security-groups", Optional: true},
+					{Field: "var.subnets", Optional: true},
+					{Field: "var.subnet-mappings", Optional: true},
+					{Field: "var.tags", Optional: true},
+				},
 			},
 		},
 		{
@@ -379,6 +385,9 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "cookie-name applies only to app_cookie stickiness",
 					},
 				},
+				Defaults: []lang.DefaultSpec{
+					{Field: "var.tags", Optional: true},
+				},
 			},
 		},
 		{
@@ -541,6 +550,9 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "stickiness duration-seconds must be between 1 and 604800",
 						ForEach: "var.default-action",
 					},
+				},
+				Defaults: []lang.DefaultSpec{
+					{Field: "var.tags", Optional: true},
 				},
 			},
 		},
@@ -779,6 +791,9 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "source-ip requires values",
 						ForEach: "var.conditions",
 					},
+				},
+				Defaults: []lang.DefaultSpec{
+					{Field: "var.tags", Optional: true},
 				},
 			},
 		},

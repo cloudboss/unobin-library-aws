@@ -9,6 +9,7 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
+	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -72,6 +73,13 @@ func (r *ListenerRule) SchemaVersion() int { return 1 }
 // modifiable in place through SetRulePriorities.
 func (r *ListenerRule) ReplaceFields() []string {
 	return []string{"listener-arn"}
+}
+
+// Defaults marks the collection inputs a rule may omit.
+func (r ListenerRule) Defaults() []defaults.Default {
+	return []defaults.Default{
+		defaults.Optional(r.Tags),
+	}
 }
 
 // Constraints declares the rules ELBv2 places on a rule's inputs: a priority
