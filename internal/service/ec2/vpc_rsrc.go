@@ -2,6 +2,7 @@ package ec2
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -11,6 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 type Vpc struct {
@@ -93,13 +95,28 @@ func (r *Vpc) Create(ctx context.Context, cfg any) (*VpcOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := ec2.NewVpcAvailableWaiter(client).Wait(ctx, &ec2.DescribeVpcsInput{
-		VpcIds: []string{aws.ToString(resp.Vpc.VpcId)},
-	}, 5*time.Minute); err != nil {
+	id := aws.ToString(resp.Vpc.VpcId)
+	// A describe right after CreateVpc can answer InvalidVpcID.NotFound from a
+	// lagging replica. The SDK's VpcAvailable waiter fails on the first
+	// not-found rather than riding the window out, so poll through
+	// internal/wait instead, treating not-found as not ready, until the VPC
+	// reads as available.
+	what := fmt.Sprintf("vpc %s to become available", id)
+	err = wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
+		vpc, err := describeVpc(ctx, client, id)
+		if err != nil {
+			if err == runtime.ErrNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return vpc.State == ec2types.VpcStateAvailable, nil
+	}, wait.WithTimeout(5*time.Minute), wait.WithInterval(time.Second))
+	if err != nil {
 		return nil, err
 	}
 	return &VpcOutput{
-		VpcId:         aws.ToString(resp.Vpc.VpcId),
+		VpcId:         id,
 		DhcpOptionsId: aws.ToString(resp.Vpc.DhcpOptionsId),
 		OwnerId:       aws.ToString(resp.Vpc.OwnerId),
 	}, nil
@@ -110,23 +127,14 @@ func (r *Vpc) Read(ctx context.Context, cfg any, prior *VpcOutput) (*VpcOutput, 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
-		VpcIds: []string{prior.VpcId},
-	})
+	vpc, err := describeVpc(ctx, client, prior.VpcId)
 	if err != nil {
-		if isNotFound(err, "InvalidVpcID.NotFound") {
-			return nil, runtime.ErrNotFound
-		}
 		return nil, err
 	}
-	if len(resp.Vpcs) == 0 {
-		return nil, runtime.ErrNotFound
-	}
-	v := resp.Vpcs[0]
 	return &VpcOutput{
-		VpcId:         aws.ToString(v.VpcId),
-		DhcpOptionsId: aws.ToString(v.DhcpOptionsId),
-		OwnerId:       aws.ToString(v.OwnerId),
+		VpcId:         aws.ToString(vpc.VpcId),
+		DhcpOptionsId: aws.ToString(vpc.DhcpOptionsId),
+		OwnerId:       aws.ToString(vpc.OwnerId),
 	}, nil
 }
 
@@ -146,4 +154,27 @@ func (r *Vpc) Delete(ctx context.Context, cfg any, prior *VpcOutput) error {
 	}
 	_, err = client.DeleteVpc(ctx, in)
 	return err
+}
+
+// describeVpc fetches the VPC with the given id. EC2 reports a missing VPC by
+// service code on an HTTP 400, never a 404, so the not-found code maps to
+// runtime.ErrNotFound; an empty result or an id mismatch means the same.
+func describeVpc(ctx context.Context, client *ec2.Client, id string) (*ec2types.Vpc, error) {
+	resp, err := client.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
+		VpcIds: []string{id},
+	})
+	if err != nil {
+		if isNotFound(err, "InvalidVpcID.NotFound") {
+			return nil, runtime.ErrNotFound
+		}
+		return nil, fmt.Errorf("describe vpcs: %w", err)
+	}
+	if len(resp.Vpcs) == 0 {
+		return nil, runtime.ErrNotFound
+	}
+	vpc := resp.Vpcs[0]
+	if aws.ToString(vpc.VpcId) != id {
+		return nil, runtime.ErrNotFound
+	}
+	return &vpc, nil
 }
