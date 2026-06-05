@@ -18,9 +18,10 @@ var pabNotFoundCodes = []string{
 }
 
 // BucketPublicAccessBlock is the bucket's public-access block. The four
-// booleans each default to false and are always written together, since S3
-// requires every member present and reads an omitted one back as false. A nil
-// block leaves the public-access block as it is.
+// booleans each default to false: the put replaces the whole configuration
+// and S3 reads an omitted member back as false, so a nil member means false
+// rather than a kept prior value. A nil block leaves the public-access block
+// as it is.
 type BucketPublicAccessBlock struct {
 	BlockPublicAcls       *bool `ub:"block-public-acls"`
 	BlockPublicPolicy     *bool `ub:"block-public-policy"`
@@ -29,8 +30,8 @@ type BucketPublicAccessBlock struct {
 }
 
 // reconcilePublicAccessBlock writes the bucket's public-access block when desired
-// differs from prior, sending all four members since S3 requires every one
-// present. A removed block (desired nil) is deleted.
+// differs from prior, sending the members as given; S3 defaults an omitted one
+// to false. A removed block (desired nil) is deleted.
 func reconcilePublicAccessBlock(
 	ctx context.Context, client *s3.Client, bucket string,
 	desired, prior *BucketPublicAccessBlock,
@@ -51,10 +52,10 @@ func reconcilePublicAccessBlock(
 		_, err := client.PutPublicAccessBlock(ctx, &s3.PutPublicAccessBlockInput{
 			Bucket: aws.String(bucket),
 			PublicAccessBlockConfiguration: &s3types.PublicAccessBlockConfiguration{
-				BlockPublicAcls:       aws.Bool(aws.ToBool(desired.BlockPublicAcls)),
-				BlockPublicPolicy:     aws.Bool(aws.ToBool(desired.BlockPublicPolicy)),
-				IgnorePublicAcls:      aws.Bool(aws.ToBool(desired.IgnorePublicAcls)),
-				RestrictPublicBuckets: aws.Bool(aws.ToBool(desired.RestrictPublicBuckets)),
+				BlockPublicAcls:       desired.BlockPublicAcls,
+				BlockPublicPolicy:     desired.BlockPublicPolicy,
+				IgnorePublicAcls:      desired.IgnorePublicAcls,
+				RestrictPublicBuckets: desired.RestrictPublicBuckets,
 			},
 		})
 		return err
