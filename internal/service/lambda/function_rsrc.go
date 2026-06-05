@@ -428,9 +428,9 @@ func (r *Function) updateConfiguration(
 	in := &lambda.UpdateFunctionConfigurationInput{
 		FunctionName:      aws.String(r.FunctionName),
 		Role:              aws.String(r.Role),
-		Description:       clearableString(r.Description, prior.Description),
-		Handler:           clearableString(r.Handler, prior.Handler),
-		KMSKeyArn:         clearableString(r.KMSKeyArn, prior.KMSKeyArn),
+		Description:       r.Description,
+		Handler:           r.Handler,
+		KMSKeyArn:         r.KMSKeyArn,
 		Layers:            layersForUpdate(r.Layers, prior.Layers),
 		MemorySize:        ptr.Int32(r.MemorySize),
 		Timeout:           ptr.Int32(r.Timeout),

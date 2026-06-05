@@ -198,14 +198,16 @@ func fileSystemConfigs(blocks []FunctionFileSystemConfig) []lambdatypes.FileSyst
 	return out
 }
 
-// An update reconciles every configuration member, so a member that was set
-// before and is now absent has to be sent as the API's empty value, else
-// UpdateFunctionConfiguration reads a nil member as "leave unchanged" and the
-// old value stays live. The forUpdate helpers below encode that three-way
-// choice: the desired value when it is present, the empty value when the member
-// is being removed (it was in the prior inputs but not the desired), and nil
-// when it was never set, so an unmanaged member is left alone. Members Lambda
-// does not clear this way (ephemeral storage, tracing config) keep their plain
+// An update sends a removed block or list member as the API's empty value,
+// else UpdateFunctionConfiguration reads a nil member as "leave unchanged" and
+// the old value stays live. The forUpdate helpers below encode that three-way
+// choice: the desired value when it is present, the empty value when the
+// member is being removed (it was in the prior inputs but not the desired),
+// and nil when it was never set, so an unmanaged member is left alone. The
+// scalar members (the description, handler, and KMS key ARN) are not cleared
+// this way: a nil scalar is never sent, leaving the value to AWS, and an
+// explicit empty string is the way to clear one. Members Lambda does not
+// clear at all (ephemeral storage, tracing config) keep their plain
 // converters, which already send nil when absent.
 
 func environmentForUpdate(desired, prior *FunctionEnvironment) *lambdatypes.Environment {
@@ -292,19 +294,6 @@ func layersForUpdate(desired, prior []string) []string {
 	}
 	if len(prior) > 0 {
 		return []string{}
-	}
-	return nil
-}
-
-// clearableString returns the desired value of a scalar that Lambda clears with
-// an empty string, an empty string when it is being removed, or nil when it was
-// never set. Description, handler, and the KMS key ARN follow this rule.
-func clearableString(desired, prior *string) *string {
-	if desired != nil {
-		return desired
-	}
-	if prior != nil {
-		return aws.String("")
 	}
 	return nil
 }
