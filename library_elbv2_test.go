@@ -665,13 +665,13 @@ func TestElbv2Schemas(t *testing.T) {
 					{
 						Kind:    "predicate",
 						When:    "true",
-						Require: "(var.actions != null)",
+						Require: "((var.actions != null) && (@core.length(var.actions) >= 1))",
 						Message: "a rule requires at least one action",
 					},
 					{
 						Kind:    "predicate",
 						When:    "true",
-						Require: "(var.conditions != null)",
+						Require: "((var.conditions != null) && (@core.length(var.conditions) >= 1))",
 						Message: "a rule requires at least one condition",
 					},
 					{
@@ -744,11 +744,35 @@ func TestElbv2Schemas(t *testing.T) {
 						ForEach: "var.actions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.forward != null)",
-						Require: "(@each.value.forward.target-groups != null)",
-						Message: "a forward block requires target-groups",
+						Kind: "predicate",
+						When: "(@each.value.forward != null)",
+						Require: "((@each.value.forward.target-groups != null) && " +
+							"(@core.length(@each.value.forward.target-groups) >= 1)) && " +
+							"(@each.value.forward.target-groups == null || " +
+							"@core.length(@each.value.forward.target-groups) <= 5)",
+						Message: "a forward block takes one to five target-groups",
 						ForEach: "var.actions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(@g.value.arn != null)",
+						Message: "a forward target-group requires an arn",
+						ForEachLevels: []lang.ForEachSpecLevel{
+							{Name: "@a", In: "var.actions"},
+							{Name: "@g", In: "@a.value.forward.target-groups"},
+						},
+					},
+					{
+						Kind: "predicate",
+						When: "(@g.value.weight != null)",
+						Require: "(@g.value.weight == null || @g.value.weight >= 0) && " +
+							"(@g.value.weight == null || @g.value.weight <= 999)",
+						Message: "a target group weight must be between 0 and 999",
+						ForEachLevels: []lang.ForEachSpecLevel{
+							{Name: "@a", In: "var.actions"},
+							{Name: "@g", In: "@a.value.forward.target-groups"},
+						},
 					},
 					{
 						Kind:    "predicate",
@@ -785,46 +809,62 @@ func TestElbv2Schemas(t *testing.T) {
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.host-header != null)",
-						Require: "(@each.value.host-header.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.host-header != null)",
+						Require: "((@each.value.host-header.values != null) && " +
+							"(@core.length(@each.value.host-header.values) >= 1))",
 						Message: "host-header requires values",
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.http-header != null)",
-						Require: "(@each.value.http-header.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.http-header != null)",
+						Require: "((@each.value.http-header.values != null) && " +
+							"(@core.length(@each.value.http-header.values) >= 1))",
 						Message: "http-header requires values",
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.http-request-method != null)",
-						Require: "(@each.value.http-request-method.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.http-request-method != null)",
+						Require: "((@each.value.http-request-method.values != null) && " +
+							"(@core.length(@each.value.http-request-method.values) >= 1))",
 						Message: "http-request-method requires values",
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.path-pattern != null)",
-						Require: "(@each.value.path-pattern.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.path-pattern != null)",
+						Require: "((@each.value.path-pattern.values != null) && " +
+							"(@core.length(@each.value.path-pattern.values) >= 1))",
 						Message: "path-pattern requires values",
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.query-string != null)",
-						Require: "(@each.value.query-string.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.query-string != null)",
+						Require: "((@each.value.query-string.values != null) && " +
+							"(@core.length(@each.value.query-string.values) >= 1))",
 						Message: "query-string requires values",
 						ForEach: "var.conditions",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.source-ip != null)",
-						Require: "(@each.value.source-ip.values != null)",
+						Kind: "predicate",
+						When: "(@each.value.source-ip != null)",
+						Require: "((@each.value.source-ip.values != null) && " +
+							"(@core.length(@each.value.source-ip.values) >= 1))",
 						Message: "source-ip requires values",
 						ForEach: "var.conditions",
+					},
+					{
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(@p.value.value != null)",
+						Message: "a query-string pair requires a value",
+						ForEachLevels: []lang.ForEachSpecLevel{
+							{Name: "@c", In: "var.conditions"},
+							{Name: "@p", In: "@c.value.query-string.values"},
+						},
 					},
 				},
 				Defaults: []lang.DefaultSpec{

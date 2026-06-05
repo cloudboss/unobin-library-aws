@@ -1,8 +1,6 @@
 package elbv2
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 
@@ -13,11 +11,10 @@ import (
 // actions and conditions. Each is converted to its SDK type and assembled into
 // the CreateRule or ModifyRule request rather than written by its own call. A
 // nil sub-block leaves that member unset. The per-type required-sub-block
-// rules, the exactly-one-matcher rule, and the enums and bounds each block
-// notes are declared in ListenerRule's Constraints; string length and pattern
-// rules, and the rules inside a list within a list element (the forward target
-// groups, the query-string pairs), are enforced by the ELBv2 API or checked in
-// code before the SDK request.
+// rules, the exactly-one-matcher rule, the enums and bounds each block notes,
+// and the rules inside a list within a list element (the forward target
+// groups, the query-string pairs) are declared in ListenerRule's Constraints;
+// string length and pattern rules are enforced by the ELBv2 API.
 
 // Action type strings, the ELBv2 ActionTypeEnum values in scope. They are
 // lowercase-hyphenated and name which sub-block an action takes.
@@ -280,17 +277,6 @@ func (p *ListenerRulePathPattern) to() *elbv2types.PathPatternConditionConfig {
 // with the wildcards * and ?.
 type ListenerRuleQueryString struct {
 	Values []ListenerRuleQueryStringPair `ub:"values"`
-}
-
-// validate enforces that every query-string pair sets a value, which ELBv2
-// requires; the key may be omitted.
-func (q *ListenerRuleQueryString) validate() error {
-	for i := range q.Values {
-		if q.Values[i].Value == nil {
-			return fmt.Errorf("query-string pair %d requires a value", i)
-		}
-	}
-	return nil
 }
 
 func (q *ListenerRuleQueryString) to() *elbv2types.QueryStringConditionConfig {

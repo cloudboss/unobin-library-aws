@@ -45,11 +45,11 @@ const rulePropagationTimeout = 5 * time.Minute
 // slot above the listener's highest non-default rule, retrying if another rule
 // claims that slot first.
 //
-// The cross-field rules on actions and conditions are declared as constraints:
-// each action's type fixes which sub-block it takes, each condition sets
-// exactly one matcher, and at least one of each is given. Create and Update
-// check only what a constraint cannot express: an explicitly empty list, and
-// the query-string pairs, a list inside a list element.
+// The cross-field rules on actions and conditions are all declared as
+// constraints: each action's type fixes which sub-block it takes, each
+// condition sets exactly one matcher with non-empty values, a forward block
+// names one to five weighted target groups, and every query-string pair sets
+// a value.
 type ListenerRule struct {
 	ListenerArn string                  `ub:"listener-arn"`
 	Priority    *int64                  `ub:"priority"`
@@ -86,18 +86,17 @@ func (r ListenerRule) Defaults() []defaults.Default {
 // in 1..50000 when given (the default-rule sentinel 99999 is a read-back
 // value, never a user input), at least one action and one condition, each
 // action's type fixing which sub-block it takes along with the redirect and
-// fixed-response enums and the forward stickiness rules, and each condition
-// setting exactly one matcher with its values. The query-string pair rules and
-// the forward target-group rules live in a list inside a list element, out of
-// a constraint's reach, and stay with the code and the API.
+// fixed-response enums, the forward target-group and stickiness rules, and
+// each condition setting exactly one matcher with non-empty values, a
+// query-string matcher's pairs each setting a value.
 func (r ListenerRule) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Priority)).
 			Require(constraint.AtLeast(r.Priority, 1), constraint.AtMost(r.Priority, 50000)).
 			Message("priority must be between 1 and 50000"),
-		constraint.Must(constraint.Present(r.Actions)).
+		constraint.Must(constraint.NotEmpty(r.Actions)).
 			Message("a rule requires at least one action"),
-		constraint.Must(constraint.Present(r.Conditions)).
+		constraint.Must(constraint.NotEmpty(r.Conditions)).
 			Message("a rule requires at least one condition"),
 		constraint.ForEach(r.Actions,
 			func(a ListenerRuleAction) []constraint.Constraint {
@@ -141,8 +140,20 @@ func (r ListenerRule) Constraints() []constraint.Constraint {
 							"application/json")).
 						Message("a fixed-response content-type must be one of the accepted types"),
 					constraint.When(constraint.Present(a.Forward)).
-						Require(constraint.Present(a.Forward.TargetGroups)).
-						Message("a forward block requires target-groups"),
+						Require(constraint.NotEmpty(a.Forward.TargetGroups),
+							constraint.MaxItems(a.Forward.TargetGroups, 5)).
+						Message("a forward block takes one to five target-groups"),
+					constraint.ForEach(a.Forward.TargetGroups,
+						func(g ListenerRuleForwardTargetGroup) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.Must(constraint.Present(g.Arn)).
+									Message("a forward target-group requires an arn"),
+								constraint.When(constraint.Present(g.Weight)).
+									Require(constraint.AtLeast(g.Weight, 0),
+										constraint.AtMost(g.Weight, 999)).
+									Message("a target group weight must be between 0 and 999"),
+							}
+						}),
 					constraint.When(constraint.IsTrue(a.Forward.Stickiness.Enabled)).
 						Require(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
 						Message("enabled forward stickiness requires duration-seconds"),
@@ -164,32 +175,36 @@ func (r ListenerRule) Constraints() []constraint.Constraint {
 						constraint.Present(c.SourceIp))).
 						Message("a condition requires exactly one matcher"),
 					constraint.When(constraint.Present(c.HostHeader)).
-						Require(constraint.Present(c.HostHeader.Values)).
+						Require(constraint.NotEmpty(c.HostHeader.Values)).
 						Message("host-header requires values"),
 					constraint.When(constraint.Present(c.HttpHeader)).
-						Require(constraint.Present(c.HttpHeader.Values)).
+						Require(constraint.NotEmpty(c.HttpHeader.Values)).
 						Message("http-header requires values"),
 					constraint.When(constraint.Present(c.HttpRequestMethod)).
-						Require(constraint.Present(c.HttpRequestMethod.Values)).
+						Require(constraint.NotEmpty(c.HttpRequestMethod.Values)).
 						Message("http-request-method requires values"),
 					constraint.When(constraint.Present(c.PathPattern)).
-						Require(constraint.Present(c.PathPattern.Values)).
+						Require(constraint.NotEmpty(c.PathPattern.Values)).
 						Message("path-pattern requires values"),
 					constraint.When(constraint.Present(c.QueryString)).
-						Require(constraint.Present(c.QueryString.Values)).
+						Require(constraint.NotEmpty(c.QueryString.Values)).
 						Message("query-string requires values"),
 					constraint.When(constraint.Present(c.SourceIp)).
-						Require(constraint.Present(c.SourceIp.Values)).
+						Require(constraint.NotEmpty(c.SourceIp.Values)).
 						Message("source-ip requires values"),
+					constraint.ForEach(c.QueryString.Values,
+						func(p ListenerRuleQueryStringPair) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.Must(constraint.Present(p.Value)).
+									Message("a query-string pair requires a value"),
+							}
+						}),
 				}
 			}),
 	}
 }
 
 func (r *ListenerRule) Create(ctx context.Context, cfg any) (*ListenerRuleOutput, error) {
-	if err := r.validate(); err != nil {
-		return nil, err
-	}
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -231,9 +246,6 @@ func (r *ListenerRule) Read(
 func (r *ListenerRule) Update(
 	ctx context.Context, cfg any, prior runtime.Prior[ListenerRule, *ListenerRuleOutput],
 ) (*ListenerRuleOutput, error) {
-	if err := r.validate(); err != nil {
-		return nil, err
-	}
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -409,27 +421,6 @@ func (r *ListenerRule) read(
 		return nil, runtime.ErrNotFound
 	}
 	return &ListenerRuleOutput{Arn: aws.ToString(resp.Rules[0].RuleArn)}, nil
-}
-
-// validate checks what a constraint cannot express, returning a descriptive
-// error before any SDK call: an explicitly empty action or condition list (a
-// constraint sees an empty list, unlike an omitted one, as present), and the
-// query-string pairs, a list inside a list element.
-func (r *ListenerRule) validate() error {
-	if len(r.Actions) == 0 {
-		return fmt.Errorf("listener rule requires at least one action")
-	}
-	if len(r.Conditions) == 0 {
-		return fmt.Errorf("listener rule requires at least one condition")
-	}
-	for i := range r.Conditions {
-		if q := r.Conditions[i].QueryString; q != nil {
-			if err := q.validate(); err != nil {
-				return fmt.Errorf("condition %d: %w", i, err)
-			}
-		}
-	}
-	return nil
 }
 
 // actions expands the rule's actions into the SDK type. When an action omits
