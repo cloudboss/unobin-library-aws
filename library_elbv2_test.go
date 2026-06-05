@@ -460,9 +460,10 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, HTTP2Preferred, or None",
 					},
 					{
-						Kind:    "predicate",
-						When:    "true",
-						Require: "(var.default-action != null)",
+						Kind: "predicate",
+						When: "true",
+						Require: "((var.default-action != null) && " +
+							"(@core.length(var.default-action) >= 1))",
 						Message: "default-action must list at least one action",
 					},
 					{
@@ -527,11 +528,45 @@ func TestElbv2Schemas(t *testing.T) {
 						ForEach: "var.default-action",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(@each.value.forward != null)",
-						Require: "(@each.value.forward.target-groups != null)",
-						Message: "a forward block requires target-groups",
+						Kind: "predicate",
+						When: "(@each.value.forward != null)",
+						Require: "((@each.value.forward.target-groups != null) && " +
+							"(@core.length(@each.value.forward.target-groups) >= 1)) && " +
+							"(@each.value.forward.target-groups == null || " +
+							"@core.length(@each.value.forward.target-groups) <= 5)",
+						Message: "a forward block takes one to five target-groups",
 						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "((@each.value.target-group-arn != null) && " +
+							"(@each.value.forward != null))",
+						Require: "(@each.value.forward.target-groups == null || " +
+							"@core.length(@each.value.forward.target-groups) <= 1)",
+						Message: "with target-group-arn set, the forward block must name " +
+							"exactly one target group",
+						ForEach: "var.default-action",
+					},
+					{
+						Kind: "predicate",
+						When: "(@g.value.weight != null)",
+						Require: "(@g.value.weight == null || @g.value.weight >= 0) && " +
+							"(@g.value.weight == null || @g.value.weight <= 999)",
+						Message: "a target group weight must be between 0 and 999",
+						ForEachLevels: []lang.ForEachSpecLevel{
+							{Name: "@a", In: "var.default-action"},
+							{Name: "@g", In: "@a.value.forward.target-groups"},
+						},
+					},
+					{
+						Kind:    "predicate",
+						When:    "(@a.value.target-group-arn != null)",
+						Require: "(@g.value.arn == @a.value.target-group-arn)",
+						Message: "target-group-arn must match the forward block's target group",
+						ForEachLevels: []lang.ForEachSpecLevel{
+							{Name: "@a", In: "var.default-action"},
+							{Name: "@g", In: "@a.value.forward.target-groups"},
+						},
 					},
 					{
 						Kind:    "predicate",

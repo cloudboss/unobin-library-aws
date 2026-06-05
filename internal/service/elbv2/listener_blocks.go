@@ -30,16 +30,15 @@ type ListenerDefaultAction struct {
 // ListenerForward distributes requests across one to five target groups, with
 // optional weighting and target-group stickiness. When a forward action also
 // names a top-level target-group-arn, that ARN must match the single group
-// listed here; Create and Update check the match, which needs a count inside a
-// nested list that a constraint cannot take.
+// listed here; Listener's Constraints declare the match.
 type ListenerForward struct {
 	TargetGroups []ListenerForwardTargetGroup `ub:"target-groups"`
 	Stickiness   *ListenerForwardStickiness   `ub:"stickiness"`
 }
 
 // ListenerForwardTargetGroup is one target group in a forward action and its
-// relative weight. The weight ranges from 0 to 999; ELBv2 enforces the bound,
-// which sits in a list inside a list element where a constraint cannot reach.
+// relative weight. The weight ranges from 0 to 999; Listener's Constraints
+// declare the bound.
 type ListenerForwardTargetGroup struct {
 	Arn    string `ub:"arn"`
 	Weight *int64 `ub:"weight"`
@@ -147,41 +146,17 @@ func fixedResponseConfig(f *ListenerFixedResponse) *elbv2types.FixedResponseActi
 	}
 }
 
-// validateDefaultActions checks the action rules a constraint cannot express:
-// the list must not be explicitly empty (a constraint sees an empty list,
-// unlike an omitted one, as present), a fixed-response status code must match
-// a pattern, and a forward that sets both target-group-arn and a forward block
-// must name exactly that one group, a count inside a nested list. Every other
-// action rule is declared in the resource's Constraints.
+// validateDefaultActions checks the one action rule a constraint cannot
+// express, since a constraint cannot take a pattern: a fixed-response status
+// code must be a three-digit 2xx, 4xx, or 5xx code. Every other action rule is
+// declared in the resource's Constraints.
 func validateDefaultActions(actions []ListenerDefaultAction) error {
-	if len(actions) == 0 {
-		return fmt.Errorf("default-action must list at least one action")
-	}
 	for i, action := range actions {
-		if err := validateDefaultAction(action); err != nil {
-			return fmt.Errorf("default-action %d: %w", i, err)
-		}
-	}
-	return nil
-}
-
-// validateDefaultAction checks one action's residual rules: the fixed-response
-// status pattern and the forward arn-match.
-func validateDefaultAction(action ListenerDefaultAction) error {
-	if action.FixedResponse != nil && !validFixedResponseStatus(action.FixedResponse.StatusCode) {
-		return fmt.Errorf(
-			"fixed-response status-code must be a 2xx, 4xx, or 5xx code, got %q",
-			action.FixedResponse.StatusCode)
-	}
-	if action.TargetGroupArn != nil && action.Forward != nil {
-		if len(action.Forward.TargetGroups) != 1 {
+		if action.FixedResponse != nil &&
+			!validFixedResponseStatus(action.FixedResponse.StatusCode) {
 			return fmt.Errorf(
-				"with target-group-arn set, the forward block must name exactly one " +
-					"target group matching it")
-		}
-		if action.Forward.TargetGroups[0].Arn != *action.TargetGroupArn {
-			return fmt.Errorf(
-				"target-group-arn must match the forward block's target group")
+				"default-action %d: fixed-response status-code must be a 2xx, 4xx, or 5xx code, got %q",
+				i, action.FixedResponse.StatusCode)
 		}
 	}
 	return nil

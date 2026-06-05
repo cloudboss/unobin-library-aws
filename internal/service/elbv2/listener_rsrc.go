@@ -88,9 +88,10 @@ func (r Listener) Defaults() []defaults.Default {
 // certificate, or ALPN policy, and ALPN applies only to a TLS listener. Each
 // default action's type fixes which sub-block it takes, a redirect and a
 // fixed-response have their enums, and an enabled forward stickiness needs a
-// bounded duration. The fixed-response status pattern, the forward arn-match,
-// and the inner target-group rules stay in code: a constraint cannot take a
-// pattern or reach a list inside a list element.
+// bounded duration. A forward block names one to five target groups, each
+// weighted 0..999, and a forward that also sets target-group-arn names exactly
+// the one group matching it. Only the fixed-response status pattern stays in
+// code, since a constraint cannot take a pattern.
 func (r Listener) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.OneOf(r.Protocol, "HTTPS", "TLS")).
@@ -105,7 +106,7 @@ func (r Listener) Constraints() []constraint.Constraint {
 			Require(constraint.OneOf(r.AlpnPolicy,
 				"HTTP1Only", "HTTP2Only", "HTTP2Optional", "HTTP2Preferred", "None")).
 			Message("alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, HTTP2Preferred, or None"),
-		constraint.Must(constraint.Present(r.DefaultAction)).
+		constraint.Must(constraint.NotEmpty(r.DefaultAction)).
 			Message("default-action must list at least one action"),
 		constraint.ForEach(r.DefaultAction,
 			func(a ListenerDefaultAction) []constraint.Constraint {
@@ -142,8 +143,27 @@ func (r Listener) Constraints() []constraint.Constraint {
 							"application/json")).
 						Message("a fixed-response content-type must be one of the accepted types"),
 					constraint.When(constraint.Present(a.Forward)).
-						Require(constraint.Present(a.Forward.TargetGroups)).
-						Message("a forward block requires target-groups"),
+						Require(constraint.NotEmpty(a.Forward.TargetGroups),
+							constraint.MaxItems(a.Forward.TargetGroups, 5)).
+						Message("a forward block takes one to five target-groups"),
+					constraint.When(constraint.All(constraint.Present(a.TargetGroupArn),
+						constraint.Present(a.Forward))).
+						Require(constraint.MaxItems(a.Forward.TargetGroups, 1)).
+						Message("with target-group-arn set, the forward block " +
+							"must name exactly one target group"),
+					constraint.ForEach(a.Forward.TargetGroups,
+						func(g ListenerForwardTargetGroup) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.When(constraint.Present(g.Weight)).
+									Require(constraint.AtLeast(g.Weight, 0),
+										constraint.AtMost(g.Weight, 999)).
+									Message("a target group weight must be between 0 and 999"),
+								constraint.When(constraint.Present(a.TargetGroupArn)).
+									Require(constraint.Equals(g.Arn, a.TargetGroupArn)).
+									Message("target-group-arn must match the forward " +
+										"block's target group"),
+							}
+						}),
 					constraint.When(constraint.IsTrue(a.Forward.Stickiness.Enabled)).
 						Require(constraint.Present(a.Forward.Stickiness.DurationSeconds)).
 						Message("enabled forward stickiness requires duration-seconds"),
