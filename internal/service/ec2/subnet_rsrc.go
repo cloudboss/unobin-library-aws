@@ -367,7 +367,11 @@ func (r *Subnet) reconcileOnCreate(
 
 // reconcileOnUpdate applies the launch-time options that changed since the last
 // apply, gating each call on a real change to its field and following the same
-// order around the IPv6 CIDR as create.
+// order around the IPv6 CIDR as create. The device-index and hostname-type
+// options are also gated on being present: their request fields serialize
+// nothing when the desired value is nil, so a modify reacting to their removal
+// would name no attribute at all. Removing them keeps their last applied
+// values.
 func (r *Subnet) reconcileOnUpdate(
 	ctx context.Context, client *ec2.Client, id string, prior runtime.Prior[Subnet, *SubnetOutput],
 ) error {
@@ -393,7 +397,8 @@ func (r *Subnet) reconcileOnUpdate(
 			return err
 		}
 	}
-	if runtime.Changed(prior.Inputs.EnableLniAtDeviceIndex, r.EnableLniAtDeviceIndex) {
+	if runtime.Changed(prior.Inputs.EnableLniAtDeviceIndex, r.EnableLniAtDeviceIndex) &&
+		r.EnableLniAtDeviceIndex != nil {
 		if err := r.modifyEnableLni(ctx, client, id); err != nil {
 			return err
 		}
@@ -416,7 +421,7 @@ func (r *Subnet) reconcileOnUpdate(
 		}
 	}
 	if runtime.Changed(prior.Inputs.PrivateDnsHostnameTypeOnLaunch,
-		r.PrivateDnsHostnameTypeOnLaunch) {
+		r.PrivateDnsHostnameTypeOnLaunch) && r.PrivateDnsHostnameTypeOnLaunch != nil {
 		if err := r.modifyHostnameType(ctx, client, id); err != nil {
 			return err
 		}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -85,4 +86,73 @@ func TestSubnetCreateReturnsExplicitIpv6BlockOnceAssociated(t *testing.T) {
 		"Create must return the IPv6 block once it has associated")
 	assert.Equal(t, "subnet-cidr-assoc-0123456789abcdef0", out.Ipv6CidrBlockAssociationId,
 		"Create must return the IPv6 block's association id")
+}
+
+const modifySubnetAttributeResponseXML = `
+<ModifySubnetAttributeResponse xmlns="http://ec2.amazonaws.com/doc/2016-11-15/">
+  <requestId>req-3</requestId>
+  <return>true</return>
+</ModifySubnetAttributeResponse>`
+
+// TestSubnetUpdateSendsNoAttributelessModify removes one launch-time option
+// between applies and checks every ModifySubnetAttribute call still names an
+// attribute. The integer and enum options serialize nothing when their desired
+// value is nil, so an update that reacts to their removal with a modify call
+// sends a request that holds only the subnet id, which reconciles nothing.
+func TestSubnetUpdateSendsNoAttributelessModify(t *testing.T) {
+	base := Subnet{
+		VpcId:     "vpc-0123456789abcdef0",
+		CidrBlock: aws.String("10.0.0.0/24"),
+	}
+	tests := []struct {
+		name  string
+		prior func(s *Subnet)
+	}{
+		{
+			name:  "enable-lni-at-device-index removed",
+			prior: func(s *Subnet) { s.EnableLniAtDeviceIndex = aws.Int64(1) },
+		},
+		{
+			name:  "private-dns-hostname-type-on-launch removed",
+			prior: func(s *Subnet) { s.PrivateDnsHostnameTypeOnLaunch = aws.String("ip-name") },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := newFakeEC2(t)
+			fake.on("DescribeSubnets", func(int, url.Values) (int, string) {
+				return 200, describeSubnetsXML("")
+			})
+			fake.on("ModifySubnetAttribute", func(int, url.Values) (int, string) {
+				return 200, modifySubnetAttributeResponseXML
+			})
+			cfg := fake.configuration()
+
+			priorInputs := base
+			tt.prior(&priorInputs)
+			current := base
+			prior := runtime.Prior[Subnet, *SubnetOutput]{
+				Inputs: priorInputs,
+				Outputs: &SubnetOutput{
+					Id:        "subnet-0123456789abcdef0",
+					CidrBlock: "10.0.0.0/24",
+				},
+			}
+			_, err := current.Update(context.Background(), cfg, prior)
+			require.NoError(t, err)
+			for _, form := range fake.sent("ModifySubnetAttribute") {
+				attrs := 0
+				for key := range form {
+					switch key {
+					case "Action", "Version", "SubnetId":
+					default:
+						attrs++
+					}
+				}
+				assert.NotZero(t, attrs,
+					"ModifySubnetAttribute must name the attribute it modifies, got only %v",
+					form)
+			}
+		})
+	}
 }
