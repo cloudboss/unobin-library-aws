@@ -162,11 +162,12 @@ func (r *Subnet) Create(ctx context.Context, cfg any) (*SubnetOutput, error) {
 	if err := r.reconcileOnCreate(ctx, client, id, subnet); err != nil {
 		return nil, err
 	}
-	// An IPv6-only or IPAM-pool subnet gets a computed IPv6 block that can still
-	// be associating when the subnet reaches available; wait for it to settle so
-	// the post-create read returns the block and its association id.
-	if r.computedIpv6Block() {
-		if err := r.waitComputedIpv6(ctx, client, id); err != nil {
+	// The subnet's IPv6 block -- computed for an IPv6-only or IPAM-pool subnet,
+	// or given explicitly to CreateSubnet -- can still be associating when the
+	// subnet reaches available; wait for it to settle so the post-create read
+	// returns the block and its association id.
+	if r.Ipv6CidrBlock != nil || r.computedIpv6Block() {
+		if err := r.waitIpv6Block(ctx, client, id); err != nil {
 			return nil, err
 		}
 	}
@@ -575,12 +576,13 @@ func (r *Subnet) waitIpv6Associated(
 	}, wait.WithTimeout(3*time.Minute))
 }
 
-// waitComputedIpv6 waits for the IPv6 block EC2 assigns to an IPv6-only or
-// IPAM-pool subnet to finish associating. EC2 can report the subnet available
-// while its computed block is still associating, so without this wait the
-// post-create read can return an empty IPv6 block and association id.
-func (r *Subnet) waitComputedIpv6(ctx context.Context, client *ec2.Client, id string) error {
-	what := fmt.Sprintf("subnet %s computed ipv6 block", id)
+// waitIpv6Block waits for the subnet's IPv6 block to finish associating,
+// whether EC2 computed it for an IPv6-only or IPAM-pool subnet or it was given
+// explicitly at create. EC2 can report the subnet available while the block is
+// still associating, so without this wait the post-create read can return an
+// empty IPv6 block and association id.
+func (r *Subnet) waitIpv6Block(ctx context.Context, client *ec2.Client, id string) error {
+	what := fmt.Sprintf("subnet %s ipv6 block", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		subnet, err := describeSubnet(ctx, client, id)
 		if err != nil {
