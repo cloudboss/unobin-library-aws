@@ -198,16 +198,22 @@ func (r *Role) Update(
 			return nil, fmt.Errorf("update assume role policy: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.Description, r.Description) {
+	// The description and session limit are reconciled only when present: a nil
+	// value is never sent, so a removed one keeps its last applied value, and an
+	// explicit empty description is the way to clear one. The permissions
+	// boundary differs because IAM gives it its own delete call, so its removal
+	// below is a real detach.
+	if runtime.Changed(prior.Inputs.Description, r.Description) && r.Description != nil {
 		_, err := client.UpdateRole(ctx, &iam.UpdateRoleInput{
 			RoleName:    aws.String(r.RoleName),
-			Description: aws.String(aws.ToString(r.Description)),
+			Description: r.Description,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("update role description: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.MaxSessionDuration, r.MaxSessionDuration) {
+	if runtime.Changed(prior.Inputs.MaxSessionDuration, r.MaxSessionDuration) &&
+		r.MaxSessionDuration != nil {
 		_, err := client.UpdateRole(ctx, &iam.UpdateRoleInput{
 			RoleName:           aws.String(r.RoleName),
 			MaxSessionDuration: ptr.Int32(r.MaxSessionDuration),
