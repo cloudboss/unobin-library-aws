@@ -12,6 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
+	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -149,11 +150,23 @@ func (r *Vpc) Delete(ctx context.Context, cfg any, prior *VpcOutput) error {
 	if err != nil {
 		return err
 	}
-	in := &ec2.DeleteVpcInput{
-		VpcId: aws.String(prior.VpcId),
+	// A subnet, gateway, or network interface still in the VPC blocks the
+	// delete; EC2 reports that as DependencyViolation, which clears once the
+	// dependency is gone, so retry the delete through it. A VPC that is
+	// already gone is a successful delete with nothing to do.
+	err = retry.OnError(ctx, isDependencyViolation, func(ctx context.Context) error {
+		_, err := client.DeleteVpc(ctx, &ec2.DeleteVpcInput{
+			VpcId: aws.String(prior.VpcId),
+		})
+		return err
+	}, retry.WithTimeout(15*time.Minute))
+	if err != nil {
+		if isNotFound(err, "InvalidVpcID.NotFound") {
+			return nil
+		}
+		return fmt.Errorf("delete vpc: %w", err)
 	}
-	_, err = client.DeleteVpc(ctx, in)
-	return err
+	return nil
 }
 
 // describeVpc fetches the VPC with the given id. EC2 reports a missing VPC by

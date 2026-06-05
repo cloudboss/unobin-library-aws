@@ -63,3 +63,20 @@ func TestVpcCreateSucceedsThroughPostCreatePropagation(t *testing.T) {
 	assert.Equal(t, "dopt-0123456789abcdef0", out.DhcpOptionsId)
 	assert.Equal(t, "123456789012", out.OwnerId)
 }
+
+// TestVpcDeleteSucceedsWhenVpcAlreadyGone checks that deleting a VPC that no
+// longer exists is a successful delete with nothing to do, the same contract
+// the security group, subnet, and security group rule deletes in this package
+// keep when their APIs answer a not-found code.
+func TestVpcDeleteSucceedsWhenVpcAlreadyGone(t *testing.T) {
+	fake := newFakeEC2(t)
+	fake.on("DeleteVpc", func(int, url.Values) (int, string) {
+		return 400, ec2ErrorXML("InvalidVpcID.NotFound",
+			"The vpc ID 'vpc-0123456789abcdef0' does not exist")
+	})
+	cfg := fake.configuration()
+
+	r := &Vpc{}
+	err := r.Delete(context.Background(), cfg, &VpcOutput{VpcId: "vpc-0123456789abcdef0"})
+	assert.NoError(t, err, "deleting an already-deleted VPC must succeed")
+}
