@@ -35,6 +35,9 @@ func Library() *runtime.Library {
 			"ec2-security-group-egress-rule": runtime.MakeResource[
 				ec2.SecurityGroupEgressRule, *ec2.SecurityGroupEgressRuleOutput](),
 			"ec2-subnet": runtime.MakeResource[ec2.Subnet, *ec2.SubnetOutput](),
+			"ec2-volume": runtime.MakeResource[ec2.Volume, *ec2.VolumeOutput](),
+			"ec2-launch-template": runtime.MakeResource[
+				ec2.LaunchTemplate, *ec2.LaunchTemplateOutput](),
 			"iam-role": runtime.MakeResource[
 				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[
@@ -73,7 +76,9 @@ func Library() *runtime.Library {
 			"elbv2-listener-certificate": runtime.MakeResource[
 				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
 		},
-		DataSources: map[string]runtime.DataSourceRegistration{},
+		DataSources: map[string]runtime.DataSourceRegistration{
+			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),
+		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": runtime.MakeAction[
 				lambda.Invoke, *lambda.InvokeOutput](),

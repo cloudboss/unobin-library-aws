@@ -380,3 +380,513 @@ func TestEc2SubnetSchema(t *testing.T) {
 	}
 	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-subnet"]))
 }
+
+// TestLibraryRegistersEc2Volume checks the runtime registration: ec2-volume
+// is in the resource map with the Volume output type.
+func TestLibraryRegistersEc2Volume(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.Resources, "ec2-volume")
+	assert.Equal(t, reflect.TypeFor[*ec2.VolumeOutput](),
+		lib.Resources["ec2-volume"].OutputType())
+}
+
+// TestEc2VolumeSchema asserts the whole derived TypeSchema for ec2-volume:
+// the input and output field types, that nothing is sensitive, the
+// cross-field constraints derived from the Constraints method, and the
+// declared optional defaults.
+func TestEc2VolumeSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.Resources, "ec2-volume")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"availability-zone":          typecheck.TString(),
+			"encrypted":                  typecheck.TOptional(typecheck.TBoolean()),
+			"final-snapshot":             typecheck.TOptional(typecheck.TBoolean()),
+			"iops":                       typecheck.TOptional(typecheck.TInteger()),
+			"kms-key-id":                 typecheck.TOptional(typecheck.TString()),
+			"multi-attach-enabled":       typecheck.TOptional(typecheck.TBoolean()),
+			"outpost-arn":                typecheck.TOptional(typecheck.TString()),
+			"size":                       typecheck.TOptional(typecheck.TInteger()),
+			"snapshot-id":                typecheck.TOptional(typecheck.TString()),
+			"tags":                       typecheck.TMap(typecheck.TString()),
+			"throughput":                 typecheck.TOptional(typecheck.TInteger()),
+			"type":                       typecheck.TOptional(typecheck.TString()),
+			"volume-initialization-rate": typecheck.TOptional(typecheck.TInteger()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"create-time": typecheck.TString(),
+			"encrypted":   typecheck.TBoolean(),
+			"iops":        typecheck.TInteger(),
+			"kms-key-id":  typecheck.TString(),
+			"size":        typecheck.TInteger(),
+			"throughput":  typecheck.TInteger(),
+			"type":        typecheck.TString(),
+			"volume-id":   typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-least-one-of",
+				Fields: []string{"var.size", "var.snapshot-id"},
+			},
+			{
+				Kind: "predicate",
+				When: "(var.type != null)",
+				Require: "(var.type == 'standard' || var.type == 'gp2' || var.type == 'gp3' || " +
+					"var.type == 'io1' || var.type == 'io2' || var.type == 'sc1' || var.type == 'st1')",
+				Message: "type must be standard, gp2, gp3, io1, io2, sc1, or st1",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.type == 'io1')",
+				Require: "(var.iops != null)",
+				Message: "iops is required when type is io1",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.type == 'io2')",
+				Require: "(var.iops != null)",
+				Message: "iops is required when type is io2",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.iops != null)",
+				Require: "(var.type == 'gp3' || var.type == 'io1' || var.type == 'io2')",
+				Message: "iops is valid only for gp3, io1, or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.throughput != null)",
+				Require: "(var.type == 'gp3') && (var.throughput == null || var.throughput >= 125) && " +
+					"(var.throughput == null || var.throughput <= 2000)",
+				Message: "throughput is valid only for gp3 volumes and must be 125 to 2000",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.multi-attach-enabled == true)",
+				Require: "(var.type == 'io1' || var.type == 'io2')",
+				Message: "multi-attach-enabled is valid only for io1 or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.volume-initialization-rate != null)",
+				Require: "(var.snapshot-id != null) && (var.volume-initialization-rate == null || " +
+					"var.volume-initialization-rate >= 100) && (var.volume-initialization-rate == null || " +
+					"var.volume-initialization-rate <= 300)",
+				Message: "volume-initialization-rate requires snapshot-id and must be 100 to 300",
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+		},
+	}
+	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-volume"]))
+}
+
+// TestLibraryRegistersEc2LaunchTemplate checks the runtime registration:
+// ec2-launch-template is in the resource map with the LaunchTemplate output
+// type.
+func TestLibraryRegistersEc2LaunchTemplate(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.Resources, "ec2-launch-template")
+	assert.Equal(t, reflect.TypeFor[*ec2.LaunchTemplateOutput](),
+		lib.Resources["ec2-launch-template"].OutputType())
+}
+
+// TestEc2LaunchTemplateSchema asserts the whole derived TypeSchema for
+// ec2-launch-template: the nested data block's field types, the outputs,
+// that nothing is sensitive, the constraints including the per-element
+// ForEach rules, and the declared optional defaults.
+func TestEc2LaunchTemplateSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.Resources, "ec2-launch-template")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"data": typecheck.TObject([]typecheck.ObjectField{
+				{Name: "image-id", Type: typecheck.TString(), Optional: true},
+				{Name: "instance-type", Type: typecheck.TString(), Optional: true},
+				{Name: "key-name", Type: typecheck.TString(), Optional: true},
+				{Name: "user-data", Type: typecheck.TString(), Optional: true},
+				{Name: "ebs-optimized", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "disable-api-stop", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "disable-api-termination", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "instance-initiated-shutdown-behavior", Type: typecheck.TString(), Optional: true},
+				{Name: "security-group-ids", Type: typecheck.TList(typecheck.TString()), Optional: true},
+				{Name: "security-groups", Type: typecheck.TList(typecheck.TString()), Optional: true},
+				{Name: "block-device-mappings", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString(), Optional: true},
+					{Name: "no-device", Type: typecheck.TString(), Optional: true},
+					{Name: "virtual-name", Type: typecheck.TString(), Optional: true},
+					{Name: "ebs", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "delete-on-termination", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+						{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+						{Name: "snapshot-id", Type: typecheck.TString(), Optional: true},
+						{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-initialization-rate", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				})), Optional: true},
+				{Name: "network-interfaces", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "associate-carrier-ip-address", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "associate-public-ip-address", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "delete-on-termination", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "description", Type: typecheck.TString(), Optional: true},
+					{Name: "device-index", Type: typecheck.TInteger(), Optional: true},
+					{Name: "interface-type", Type: typecheck.TString(), Optional: true},
+					{Name: "ipv4-prefix-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv4-prefixes", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv6-address-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv6-addresses", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv6-prefix-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv6-prefixes", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "network-card-index", Type: typecheck.TInteger(), Optional: true},
+					{Name: "network-interface-id", Type: typecheck.TString(), Optional: true},
+					{Name: "primary-ipv6", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "private-ip-address", Type: typecheck.TString(), Optional: true},
+					{Name: "ipv4-addresses", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv4-address-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "subnet-id", Type: typecheck.TString(), Optional: true},
+					{Name: "groups", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ena-srd-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "ena-srd-enabled", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "ena-srd-udp-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "ena-srd-udp-enabled", Type: typecheck.TBoolean(), Optional: true},
+						}), Optional: true},
+					}), Optional: true},
+					{Name: "connection-tracking-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "tcp-established-timeout", Type: typecheck.TInteger(), Optional: true},
+						{Name: "udp-stream-timeout", Type: typecheck.TInteger(), Optional: true},
+						{Name: "udp-timeout", Type: typecheck.TInteger(), Optional: true},
+					}), Optional: true},
+				})), Optional: true},
+				{Name: "iam-instance-profile", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "arn", Type: typecheck.TString(), Optional: true},
+					{Name: "name", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "monitoring", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "metadata-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "http-endpoint", Type: typecheck.TString(), Optional: true},
+					{Name: "http-protocol-ipv6", Type: typecheck.TString(), Optional: true},
+					{Name: "http-put-response-hop-limit", Type: typecheck.TInteger(), Optional: true},
+					{Name: "http-tokens", Type: typecheck.TString(), Optional: true},
+					{Name: "instance-metadata-tags", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "placement", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "affinity", Type: typecheck.TString(), Optional: true},
+					{Name: "availability-zone", Type: typecheck.TString(), Optional: true},
+					{Name: "availability-zone-id", Type: typecheck.TString(), Optional: true},
+					{Name: "group-id", Type: typecheck.TString(), Optional: true},
+					{Name: "group-name", Type: typecheck.TString(), Optional: true},
+					{Name: "host-id", Type: typecheck.TString(), Optional: true},
+					{Name: "host-resource-group-arn", Type: typecheck.TString(), Optional: true},
+					{Name: "partition-number", Type: typecheck.TInteger(), Optional: true},
+					{Name: "spread-domain", Type: typecheck.TString(), Optional: true},
+					{Name: "tenancy", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "tag-specifications", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "resource-type", Type: typecheck.TString(), Optional: true},
+					{Name: "tags", Type: typecheck.TMap(typecheck.TString())},
+				})), Optional: true},
+				{Name: "credit-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "cpu-credits", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "cpu-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "amd-sev-snp", Type: typecheck.TString(), Optional: true},
+					{Name: "core-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "nested-virtualization", Type: typecheck.TString(), Optional: true},
+					{Name: "threads-per-core", Type: typecheck.TInteger(), Optional: true},
+				}), Optional: true},
+				{Name: "enclave-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "hibernation-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "configured", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "private-dns-name-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enable-resource-name-dns-aaaa-record", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "enable-resource-name-dns-a-record", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "hostname-type", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "maintenance-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "auto-recovery", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "license-specifications",
+					Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+						{Name: "license-configuration-arn", Type: typecheck.TString(), Optional: true},
+					})), Optional: true},
+				{Name: "instance-market-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "market-type", Type: typecheck.TString(), Optional: true},
+					{Name: "spot-options", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "block-duration-minutes", Type: typecheck.TInteger(), Optional: true},
+						{Name: "instance-interruption-behavior", Type: typecheck.TString(), Optional: true},
+						{Name: "max-price", Type: typecheck.TString(), Optional: true},
+						{Name: "spot-instance-type", Type: typecheck.TString(), Optional: true},
+						{Name: "valid-until", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				}), Optional: true},
+				{Name: "capacity-reservation-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "capacity-reservation-preference", Type: typecheck.TString(), Optional: true},
+					{Name: "capacity-reservation-target", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "capacity-reservation-id", Type: typecheck.TString(), Optional: true},
+						{Name: "capacity-reservation-resource-group-arn", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				}), Optional: true},
+				{Name: "network-performance-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "bandwidth-weighting", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+			}),
+			"default-version":        typecheck.TOptional(typecheck.TInteger()),
+			"name":                   typecheck.TString(),
+			"tags":                   typecheck.TMap(typecheck.TString()),
+			"update-default-version": typecheck.TOptional(typecheck.TBoolean()),
+			"version-description":    typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"default-version":    typecheck.TInteger(),
+			"latest-version":     typecheck.TInteger(),
+			"launch-template-id": typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.default-version", "var.update-default-version"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.data.security-groups", "var.data.security-group-ids"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.data.iam-instance-profile.arn", "var.data.iam-instance-profile.name"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.data.placement.group-id", "var.data.placement.group-name"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.data.placement.host-resource-group-arn", "var.data.placement.host-id"},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"var.data.capacity-reservation-specification.capacity-reservation-target." +
+						"capacity-reservation-id",
+					"var.data.capacity-reservation-specification.capacity-reservation-target." +
+						"capacity-reservation-resource-group-arn",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.capacity-reservation-specification.capacity-reservation-preference != null)",
+				Require: "(var.data.capacity-reservation-specification.capacity-reservation-preference == " +
+					"'capacity-reservations-only' || " +
+					"var.data.capacity-reservation-specification.capacity-reservation-preference == 'open' || " +
+					"var.data.capacity-reservation-specification.capacity-reservation-preference == 'none')",
+				Message: "capacity-reservation-preference must be capacity-reservations-only, open, or none",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.version-description != null)",
+				Require: "(var.version-description == null || var.version-description <= 255)",
+				Message: "version-description must be at most 255 characters",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.instance-initiated-shutdown-behavior != null)",
+				Require: "(var.data.instance-initiated-shutdown-behavior == 'stop' || " +
+					"var.data.instance-initiated-shutdown-behavior == 'terminate')",
+				Message: "instance-initiated-shutdown-behavior must be stop or terminate",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.credit-specification.cpu-credits != null)",
+				Require: "(var.data.credit-specification.cpu-credits == 'standard' || " +
+					"var.data.credit-specification.cpu-credits == 'unlimited')",
+				Message: "credit-specification cpu-credits must be standard or unlimited",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.cpu-options.amd-sev-snp != null)",
+				Require: "(var.data.cpu-options.amd-sev-snp == 'enabled' || " +
+					"var.data.cpu-options.amd-sev-snp == 'disabled')",
+				Message: "cpu-options amd-sev-snp must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.cpu-options.nested-virtualization != null)",
+				Require: "(var.data.cpu-options.nested-virtualization == 'enabled' || " +
+					"var.data.cpu-options.nested-virtualization == 'disabled')",
+				Message: "cpu-options nested-virtualization must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.placement.tenancy != null)",
+				Require: "(var.data.placement.tenancy == 'default' || " +
+					"var.data.placement.tenancy == 'dedicated' || var.data.placement.tenancy == 'host')",
+				Message: "placement tenancy must be default, dedicated, or host",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.private-dns-name-options.hostname-type != null)",
+				Require: "(var.data.private-dns-name-options.hostname-type == 'ip-name' || " +
+					"var.data.private-dns-name-options.hostname-type == 'resource-name')",
+				Message: "private-dns-name-options hostname-type must be ip-name or resource-name",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.maintenance-options.auto-recovery != null)",
+				Require: "(var.data.maintenance-options.auto-recovery == 'default' || " +
+					"var.data.maintenance-options.auto-recovery == 'disabled')",
+				Message: "maintenance-options auto-recovery must be default or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.network-performance-options.bandwidth-weighting != null)",
+				Require: "(var.data.network-performance-options.bandwidth-weighting == 'default' || " +
+					"var.data.network-performance-options.bandwidth-weighting == 'vpc-1' || " +
+					"var.data.network-performance-options.bandwidth-weighting == 'ebs-1')",
+				Message: "network-performance-options bandwidth-weighting must be default, vpc-1, or ebs-1",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.instance-market-options.market-type != null)",
+				Require: "(var.data.instance-market-options.market-type == 'spot' || " +
+					"var.data.instance-market-options.market-type == 'capacity-block' || " +
+					"var.data.instance-market-options.market-type == 'interruptible-capacity-reservation')",
+				Message: "instance-market-options market-type must be a valid market type",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.instance-market-options.spot-options.instance-interruption-behavior != null)",
+				Require: "(var.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+					"'hibernate' || " +
+					"var.data.instance-market-options.spot-options.instance-interruption-behavior == 'stop' || " +
+					"var.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+					"'terminate')",
+				Message: "spot-options instance-interruption-behavior must be hibernate, stop, or terminate",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.instance-market-options.spot-options.spot-instance-type != null)",
+				Require: "(var.data.instance-market-options.spot-options.spot-instance-type == 'one-time' " +
+					"|| var.data.instance-market-options.spot-options.spot-instance-type == 'persistent')",
+				Message: "spot-options spot-instance-type must be one-time or persistent",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.metadata-options.http-endpoint != null)",
+				Require: "(var.data.metadata-options.http-endpoint == 'enabled' || " +
+					"var.data.metadata-options.http-endpoint == 'disabled')",
+				Message: "metadata-options http-endpoint must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.metadata-options.http-tokens != null)",
+				Require: "(var.data.metadata-options.http-tokens == 'optional' || " +
+					"var.data.metadata-options.http-tokens == 'required')",
+				Message: "metadata-options http-tokens must be optional or required",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(var.data.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"var.data.metadata-options.http-protocol-ipv6 == 'disabled')",
+				Message: "metadata-options http-protocol-ipv6 must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.metadata-options.instance-metadata-tags != null)",
+				Require: "(var.data.metadata-options.instance-metadata-tags == 'enabled' || " +
+					"var.data.metadata-options.instance-metadata-tags == 'disabled')",
+				Message: "metadata-options instance-metadata-tags must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.data.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(var.data.metadata-options.http-put-response-hop-limit == null || " +
+					"var.data.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(var.data.metadata-options.http-put-response-hop-limit == null || " +
+					"var.data.metadata-options.http-put-response-hop-limit <= 64)",
+				Message: "metadata-options http-put-response-hop-limit must be between 1 and 64",
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+		},
+	}
+	assert.Equal(t, normalizeSchema(want),
+		normalizeSchema(schema.Resources["ec2-launch-template"]))
+}
+
+// TestLibraryRegistersEc2Ami checks the runtime registration: ec2-ami is in
+// the data source map, the library's first, with the AMI output type.
+func TestLibraryRegistersEc2Ami(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-ami")
+	assert.Equal(t, reflect.TypeFor[*ec2.AMIOutput](),
+		lib.DataSources["ec2-ami"].OutputType())
+}
+
+// TestEc2AmiSchema asserts the whole derived TypeSchema for the ec2-ami data
+// source: the query inputs, the selected image's outputs, that nothing is
+// sensitive, the owners constraint, and the declared optional defaults.
+func TestEc2AmiSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.DataSources, "ec2-ami")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"allow-unsafe-filter": typecheck.TOptional(typecheck.TBoolean()),
+			"executable-users":    typecheck.TList(typecheck.TString()),
+			"filters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			})),
+			"image-ids":          typecheck.TList(typecheck.TString()),
+			"include-deprecated": typecheck.TOptional(typecheck.TBoolean()),
+			"most-recent":        typecheck.TOptional(typecheck.TBoolean()),
+			"name-regex":         typecheck.TOptional(typecheck.TString()),
+			"owners":             typecheck.TList(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"architecture":        typecheck.TString(),
+			"arn":                 typecheck.TString(),
+			"creation-date":       typecheck.TString(),
+			"ena-support":         typecheck.TBoolean(),
+			"image-id":            typecheck.TString(),
+			"name":                typecheck.TString(),
+			"owner-id":            typecheck.TString(),
+			"root-device-name":    typecheck.TString(),
+			"root-device-type":    typecheck.TString(),
+			"root-snapshot-id":    typecheck.TString(),
+			"sriov-net-support":   typecheck.TString(),
+			"state":               typecheck.TString(),
+			"virtualization-type": typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:    "predicate",
+				When:    "(var.owners != null)",
+				Require: "(var.owners == null || @core.length(var.owners) >= 1)",
+				Message: "owners must list at least one owner when given",
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.owners", Optional: true},
+			{Field: "var.executable-users", Optional: true},
+			{Field: "var.filters", Optional: true},
+			{Field: "var.image-ids", Optional: true},
+		},
+	}
+	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.DataSources["ec2-ami"]))
+}
