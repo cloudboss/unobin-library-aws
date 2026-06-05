@@ -23,7 +23,10 @@ import (
 // subnet; the launch-time options are reconciled in place. CreateSubnet accepts
 // only the address and placement fields. The launch-time options each have no
 // create-time setting and are applied after the subnet exists, one
-// ModifySubnetAttribute call per option; an unset option leaves the AWS default.
+// ModifySubnetAttribute call per option. A nil option is never sent: the value
+// is AWS's to decide, the default for a new subnet or whatever an earlier
+// apply set. EC2 has no reset call, so restoring a default after an apply set
+// the option means setting the default explicitly.
 type Subnet struct {
 	VpcId              string            `ub:"vpc-id"`
 	AvailabilityZone   *string           `ub:"availability-zone"`
@@ -366,12 +369,12 @@ func (r *Subnet) reconcileOnCreate(
 }
 
 // reconcileOnUpdate applies the launch-time options that changed since the last
-// apply, gating each call on a real change to its field and following the same
-// order around the IPv6 CIDR as create. The device-index and hostname-type
-// options are also gated on being present: their request fields serialize
-// nothing when the desired value is nil, so a modify reacting to their removal
-// would name no attribute at all. Removing them keeps their last applied
-// values.
+// apply, gating each call on a real change to its field and on the field being
+// present, and following the same order around the IPv6 CIDR as create. A nil
+// option is never sent -- the value is AWS's to decide -- so a removed option
+// produces no call at all: not an explicit false for the bools, and not the
+// attribute-less request the device-index and hostname-type fields would
+// otherwise serialize.
 func (r *Subnet) reconcileOnUpdate(
 	ctx context.Context, client *ec2.Client, id string, prior runtime.Prior[Subnet, *SubnetOutput],
 ) error {
@@ -392,7 +395,7 @@ func (r *Subnet) reconcileOnUpdate(
 			return err
 		}
 	}
-	if runtime.Changed(prior.Inputs.EnableDns64, r.EnableDns64) {
+	if runtime.Changed(prior.Inputs.EnableDns64, r.EnableDns64) && r.EnableDns64 != nil {
 		if err := r.modifyEnableDns64(ctx, client, id); err != nil {
 			return err
 		}
@@ -404,18 +407,21 @@ func (r *Subnet) reconcileOnUpdate(
 		}
 	}
 	if runtime.Changed(prior.Inputs.EnableResourceNameDnsAAAARecordOnLaunch,
-		r.EnableResourceNameDnsAAAARecordOnLaunch) {
+		r.EnableResourceNameDnsAAAARecordOnLaunch) &&
+		r.EnableResourceNameDnsAAAARecordOnLaunch != nil {
 		if err := r.modifyDnsAAAA(ctx, client, id); err != nil {
 			return err
 		}
 	}
 	if runtime.Changed(prior.Inputs.EnableResourceNameDnsARecordOnLaunch,
-		r.EnableResourceNameDnsARecordOnLaunch) {
+		r.EnableResourceNameDnsARecordOnLaunch) &&
+		r.EnableResourceNameDnsARecordOnLaunch != nil {
 		if err := r.modifyDnsA(ctx, client, id); err != nil {
 			return err
 		}
 	}
-	if runtime.Changed(prior.Inputs.MapPublicIpOnLaunch, r.MapPublicIpOnLaunch) {
+	if runtime.Changed(prior.Inputs.MapPublicIpOnLaunch, r.MapPublicIpOnLaunch) &&
+		r.MapPublicIpOnLaunch != nil {
 		if err := r.modifyMapPublicIp(ctx, client, id); err != nil {
 			return err
 		}
@@ -426,8 +432,10 @@ func (r *Subnet) reconcileOnUpdate(
 			return err
 		}
 	}
-	if runtime.Changed(prior.Inputs.CustomerOwnedIpv4Pool, r.CustomerOwnedIpv4Pool) ||
-		runtime.Changed(prior.Inputs.MapCustomerOwnedIpOnLaunch, r.MapCustomerOwnedIpOnLaunch) {
+	if (runtime.Changed(prior.Inputs.CustomerOwnedIpv4Pool, r.CustomerOwnedIpv4Pool) &&
+		r.CustomerOwnedIpv4Pool != nil) ||
+		(runtime.Changed(prior.Inputs.MapCustomerOwnedIpOnLaunch, r.MapCustomerOwnedIpOnLaunch) &&
+			r.MapCustomerOwnedIpOnLaunch != nil) {
 		if err := r.modifyOutpostPair(ctx, client, id); err != nil {
 			return err
 		}

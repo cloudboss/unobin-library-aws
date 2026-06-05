@@ -94,6 +94,50 @@ const modifySubnetAttributeResponseXML = `
   <return>true</return>
 </ModifySubnetAttributeResponse>`
 
+// TestSubnetUpdateLeavesRemovedOptionsToAWS removes every launch-time option
+// between applies and checks the update sends no ModifySubnetAttribute at all.
+// A nil option means the value is AWS's to decide, so an update must not turn
+// a removed bool into an explicit false, or half-send the Outpost pair.
+func TestSubnetUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
+	fake := newFakeEC2(t)
+	fake.on("DescribeSubnets", func(int, url.Values) (int, string) {
+		return 200, describeSubnetsXML("")
+	})
+	fake.on("ModifySubnetAttribute", func(int, url.Values) (int, string) {
+		return 200, modifySubnetAttributeResponseXML
+	})
+	cfg := fake.configuration()
+
+	base := Subnet{
+		VpcId:      "vpc-0123456789abcdef0",
+		CidrBlock:  aws.String("10.0.0.0/24"),
+		OutpostArn: aws.String("arn:aws:outposts:us-east-1:123456789012:outpost/op-0"),
+	}
+	priorInputs := base
+	priorInputs.AssignIpv6AddressOnCreation = aws.Bool(true)
+	priorInputs.EnableDns64 = aws.Bool(true)
+	priorInputs.EnableLniAtDeviceIndex = aws.Int64(1)
+	priorInputs.EnableResourceNameDnsAAAARecordOnLaunch = aws.Bool(true)
+	priorInputs.EnableResourceNameDnsARecordOnLaunch = aws.Bool(true)
+	priorInputs.MapPublicIpOnLaunch = aws.Bool(true)
+	priorInputs.PrivateDnsHostnameTypeOnLaunch = aws.String("resource-name")
+	priorInputs.CustomerOwnedIpv4Pool = aws.String("ipv4pool-coip-0123456789abcdef0")
+	priorInputs.MapCustomerOwnedIpOnLaunch = aws.Bool(true)
+
+	current := base
+	prior := runtime.Prior[Subnet, *SubnetOutput]{
+		Inputs: priorInputs,
+		Outputs: &SubnetOutput{
+			Id:        "subnet-0123456789abcdef0",
+			CidrBlock: "10.0.0.0/24",
+		},
+	}
+	_, err := current.Update(context.Background(), cfg, prior)
+	require.NoError(t, err)
+	assert.Empty(t, fake.sent("ModifySubnetAttribute"),
+		"removing a launch-time option must not send any ModifySubnetAttribute")
+}
+
 // TestSubnetUpdateSendsNoAttributelessModify removes one launch-time option
 // between applies and checks every ModifySubnetAttribute call still names an
 // attribute. The integer and enum options serialize nothing when their desired
