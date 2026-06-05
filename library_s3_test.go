@@ -311,9 +311,29 @@ func TestS3Schemas(t *testing.T) {
 				{
 					Kind:    "predicate",
 					When:    "true",
-					Require: "(@each.value.allowed-methods != null) && (@each.value.allowed-origins != null)",
+					Require: "(var.cors.rules == null || @core.length(var.cors.rules) <= 100)",
+					Message: "cors holds at most 100 rules",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "((@each.value.allowed-methods != null) && " +
+						"(@core.length(@each.value.allowed-methods) >= 1)) && " +
+						"((@each.value.allowed-origins != null) && " +
+						"(@core.length(@each.value.allowed-origins) >= 1))",
 					Message: "a cors rule requires allowed-methods and allowed-origins",
 					ForEach: "var.cors.rules",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@m.value == 'GET' || @m.value == 'PUT' || @m.value == 'POST' || " +
+						"@m.value == 'DELETE' || @m.value == 'HEAD')",
+					Message: "an allowed method must be GET, PUT, POST, DELETE, or HEAD",
+					ForEachLevels: []lang.ForEachSpecLevel{
+						{Name: "@rule", In: "var.cors.rules"},
+						{Name: "@m", In: "@rule.value.allowed-methods"},
+					},
 				},
 				{
 					Kind:    "predicate",
@@ -355,6 +375,55 @@ func TestS3Schemas(t *testing.T) {
 						"(@each.value.expiration.expired-object-delete-marker != null))",
 					Message: "an expiration needs date, days, or expired-object-delete-marker",
 					ForEach: "var.lifecycle.rules",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@tr.value.storage-class == 'GLACIER' || " +
+						"@tr.value.storage-class == 'STANDARD_IA' || " +
+						"@tr.value.storage-class == 'ONEZONE_IA' || " +
+						"@tr.value.storage-class == 'INTELLIGENT_TIERING' || " +
+						"@tr.value.storage-class == 'DEEP_ARCHIVE' || " +
+						"@tr.value.storage-class == 'GLACIER_IR')",
+					Message: "a transition storage-class must be GLACIER, STANDARD_IA, " +
+						"ONEZONE_IA, INTELLIGENT_TIERING, DEEP_ARCHIVE, or GLACIER_IR",
+					ForEachLevels: []lang.ForEachSpecLevel{
+						{Name: "@rule", In: "var.lifecycle.rules"},
+						{Name: "@tr", In: "@rule.value.transitions"},
+					},
+				},
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.lifecycle.rules[*].transitions[*].date",
+						"var.lifecycle.rules[*].transitions[*].days",
+					},
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "((@tr.value.date != null) || (@tr.value.days != null))",
+					Message: "a transition needs date or days",
+					ForEachLevels: []lang.ForEachSpecLevel{
+						{Name: "@rule", In: "var.lifecycle.rules"},
+						{Name: "@tr", In: "@rule.value.transitions"},
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@tr.value.storage-class == 'GLACIER' || " +
+						"@tr.value.storage-class == 'STANDARD_IA' || " +
+						"@tr.value.storage-class == 'ONEZONE_IA' || " +
+						"@tr.value.storage-class == 'INTELLIGENT_TIERING' || " +
+						"@tr.value.storage-class == 'DEEP_ARCHIVE' || " +
+						"@tr.value.storage-class == 'GLACIER_IR')",
+					Message: "a transition storage-class must be GLACIER, STANDARD_IA, " +
+						"ONEZONE_IA, INTELLIGENT_TIERING, DEEP_ARCHIVE, or GLACIER_IR",
+					ForEachLevels: []lang.ForEachSpecLevel{
+						{Name: "@rule", In: "var.lifecycle.rules"},
+						{Name: "@tr", In: "@rule.value.noncurrent-version-transitions"},
+					},
 				},
 				{
 					Kind: "predicate",

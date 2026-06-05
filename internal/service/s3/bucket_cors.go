@@ -27,8 +27,7 @@ type BucketCors struct {
 
 // BucketCorsRule is one cross-origin access rule. AllowedMethods and
 // AllowedOrigins are required. AllowedMethods values are GET, PUT, POST,
-// DELETE, and HEAD, validated by the API: a constraint cannot reach the
-// elements of a string list.
+// DELETE, and HEAD; Bucket's Constraints declare the rule.
 type BucketCorsRule struct {
 	ID             *string  `ub:"id"`
 	AllowedHeaders []string `ub:"allowed-headers"`

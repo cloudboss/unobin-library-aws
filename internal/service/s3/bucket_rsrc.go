@@ -94,10 +94,9 @@ func (r Bucket) Defaults() []defaults.Default {
 
 // Constraints declares the rules S3 places on the bucket's configuration
 // blocks: each block's enums and cross-field requirements, the per-rule rules
-// of the cors, lifecycle, routing, and grant lists, and the object-lock block's
-// dependence on object-lock-enabled. The cors method values and the lifecycle
-// transition rules live where a constraint cannot reach (string-list elements
-// and lists inside list elements), so the API validates those.
+// of the cors, lifecycle, routing, and grant lists, the cors method values and
+// rule count, the per-transition rules of a lifecycle rule, and the
+// object-lock block's dependence on object-lock-enabled.
 func (r Bucket) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Accelerate.Status)).
@@ -163,12 +162,23 @@ func (r Bucket) Constraints() []constraint.Constraint {
 						rule.Redirect.ReplaceKeyWith),
 				}
 			}),
+		constraint.Must(constraint.MaxItems(r.Cors.Rules, 100)).
+			Message("cors holds at most 100 rules"),
 		constraint.ForEach(r.Cors.Rules,
 			func(rule BucketCorsRule) []constraint.Constraint {
 				return []constraint.Constraint{
-					constraint.Must(constraint.Present(rule.AllowedMethods),
-						constraint.Present(rule.AllowedOrigins)).
+					constraint.Must(constraint.NotEmpty(rule.AllowedMethods),
+						constraint.NotEmpty(rule.AllowedOrigins)).
 						Message("a cors rule requires allowed-methods and allowed-origins"),
+					constraint.ForEach(rule.AllowedMethods,
+						func(m string) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.Must(constraint.OneOf(m,
+									"GET", "PUT", "POST", "DELETE", "HEAD")).
+									Message("an allowed method must be GET, PUT, " +
+										"POST, DELETE, or HEAD"),
+							}
+						}),
 				}
 			}),
 		constraint.ForEach(r.Lifecycle.Rules,
@@ -193,6 +203,32 @@ func (r Bucket) Constraints() []constraint.Constraint {
 							constraint.Present(rule.Expiration.Days),
 							constraint.Present(rule.Expiration.ExpiredObjectDeleteMarker))).
 						Message("an expiration needs date, days, or expired-object-delete-marker"),
+					constraint.ForEach(rule.Transitions,
+						func(tr BucketLifecycleTransition) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.Must(constraint.OneOf(tr.StorageClass,
+									"GLACIER", "STANDARD_IA", "ONEZONE_IA",
+									"INTELLIGENT_TIERING", "DEEP_ARCHIVE", "GLACIER_IR")).
+									Message("a transition storage-class must be GLACIER, " +
+										"STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, " +
+										"DEEP_ARCHIVE, or GLACIER_IR"),
+								constraint.AtMostOneOf(tr.Date, tr.Days),
+								constraint.Must(constraint.Any(constraint.Present(tr.Date),
+									constraint.Present(tr.Days))).
+									Message("a transition needs date or days"),
+							}
+						}),
+					constraint.ForEach(rule.NoncurrentVersionTransitions,
+						func(tr BucketLifecycleNCTransition) []constraint.Constraint {
+							return []constraint.Constraint{
+								constraint.Must(constraint.OneOf(tr.StorageClass,
+									"GLACIER", "STANDARD_IA", "ONEZONE_IA",
+									"INTELLIGENT_TIERING", "DEEP_ARCHIVE", "GLACIER_IR")).
+									Message("a transition storage-class must be GLACIER, " +
+										"STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, " +
+										"DEEP_ARCHIVE, or GLACIER_IR"),
+							}
+						}),
 				}
 			}),
 		constraint.ForEach(r.Logging.TargetGrants,
