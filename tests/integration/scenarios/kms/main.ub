@@ -3,7 +3,6 @@ description: '''>-
   '''
 
 imports: {
-  core: 'github.com/cloudboss/unobin//pkg/libraries/core'
   aws:  'github.com/cloudboss/unobin-library-aws'
 }
 

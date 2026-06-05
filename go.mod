@@ -14,7 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.90.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/aws/smithy-go v1.25.1
-	github.com/cloudboss/unobin v0.6.0-6a
+	github.com/cloudboss/unobin v0.6.0-7a
 	github.com/stretchr/testify v1.11.1
 )
 

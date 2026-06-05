@@ -153,7 +153,6 @@ for sdir in "${@}"; do
             ${UNOBIN} compile \
                 -p "${sdir}/main.ub" \
                 -o "${build_dir}" \
-                --unobin-version="${UNOBIN_VERSION}" \
                 --build
         ) || failed_step="compile"
     fi
