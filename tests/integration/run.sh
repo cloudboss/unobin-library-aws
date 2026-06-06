@@ -129,11 +129,6 @@ for sdir in "${@}"; do
         FAILED="${FAILED} ${name}"
         continue
     fi
-    if [ -f "${sdir}/.env-${TIER}" ]; then
-        set -a
-        . "${sdir}/.env-${TIER}"
-        set +a
-    fi
 
     build_dir="${tmp_dir}/${name}"
     rel="${sdir#${REPO_DIR}/}"
@@ -172,6 +167,7 @@ for sdir in "${@}"; do
 
     if [ -z "${failed_step}" ]; then
         (
+            [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${build_dir}"
             ./${name} plan \
                 -c ./config.ub \
@@ -191,6 +187,7 @@ for sdir in "${@}"; do
 
     if [ -z "${failed_step}" ] && [ -d "${sdir}/verify" ]; then
         (
+            [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${REPO_DIR}"
             VERIFY_PHASE=applied go run "./${rel}/verify"
         ) || failed_step="verify-applied"
@@ -202,6 +199,7 @@ for sdir in "${@}"; do
     # error as the reason.
     if [ -n "${applied}" ]; then
         if (
+            [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${build_dir}"
             ./${name} plan --destroy \
                 -c ./config.ub \
@@ -210,6 +208,7 @@ for sdir in "${@}"; do
         ); then
             if [ -z "${failed_step}" ] && [ -d "${sdir}/verify" ]; then
                 (
+                    [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
                     cd "${REPO_DIR}"
                     VERIFY_PHASE=destroyed go run "./${rel}/verify"
                 ) || failed_step="verify-destroyed"
