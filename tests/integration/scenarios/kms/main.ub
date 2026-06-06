@@ -2,9 +2,7 @@ description: '''>-
   Manages a KMS key with tags and an alias that points at it, with automatic key rotation turned on.
   '''
 
-imports: {
-  aws:  'github.com/cloudboss/unobin-library-aws'
-}
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {

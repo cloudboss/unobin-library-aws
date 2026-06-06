@@ -3,9 +3,7 @@ description: '''>-
   attachment, an instance profile, and an OIDC provider.
   '''
 
-imports: {
-  aws:  'github.com/cloudboss/unobin-library-aws'
-}
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {

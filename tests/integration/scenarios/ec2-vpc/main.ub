@@ -2,9 +2,7 @@ description: 'Manages a VPC with a security group and ingress and egress rules.'
 
 inputs: { cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' } }
 
-imports: {
-  aws:  'github.com/cloudboss/unobin-library-aws'
-}
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
 resources: {
   aws: {
@@ -43,10 +41,6 @@ resources: {
 outputs: {
   vpc-id:            { value: resource.aws.ec2-vpc.it.vpc-id }
   security-group-id: { value: resource.aws.ec2-security-group.it.id }
-  ingress-rule-id: {
-    value: resource.aws.ec2-security-group-ingress-rule.it.security-group-rule-id
-  }
-  egress-rule-id: {
-    value: resource.aws.ec2-security-group-egress-rule.it.security-group-rule-id
-  }
+  ingress-rule-id: { value: resource.aws.ec2-security-group-ingress-rule.it.security-group-rule-id }
+  egress-rule-id:  { value: resource.aws.ec2-security-group-egress-rule.it.security-group-rule-id }
 }
