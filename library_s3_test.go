@@ -53,73 +53,74 @@ func TestS3Schemas(t *testing.T) {
 				"bucket": typecheck.TString(),
 				"cors": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "rules", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+						{Name: "id", Type: typecheck.TString(), Optional: true},
 						{Name: "allowed-headers", Type: typecheck.TList(typecheck.TString())},
 						{Name: "allowed-methods", Type: typecheck.TList(typecheck.TString())},
 						{Name: "allowed-origins", Type: typecheck.TList(typecheck.TString())},
 						{Name: "expose-headers", Type: typecheck.TList(typecheck.TString())},
-						{Name: "id", Type: typecheck.TString(), Optional: true},
 						{Name: "max-age-seconds", Type: typecheck.TInteger(), Optional: true},
 					}))},
 				})),
 				"empty-on-destroy": typecheck.TOptional(typecheck.TBoolean()),
 				"encryption": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-					{Name: "bucket-key-enabled", Type: typecheck.TBoolean(), Optional: true},
-					{Name: "kms-master-key-id", Type: typecheck.TString(), Optional: true},
 					{Name: "sse-algorithm", Type: typecheck.TString()},
+					{Name: "kms-master-key-id", Type: typecheck.TString(), Optional: true},
+					{Name: "bucket-key-enabled", Type: typecheck.TBoolean(), Optional: true},
 				})),
 				"lifecycle": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "rules", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "abort-incomplete-multipart-upload", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "days-after-initiation", Type: typecheck.TInteger(), Optional: true},
+						{Name: "id", Type: typecheck.TString()},
+						{Name: "status", Type: typecheck.TString()},
+						{Name: "filter", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "prefix", Type: typecheck.TString(), Optional: true},
+							{Name: "tag", Type: typecheck.TObject([]typecheck.ObjectField{
+								{Name: "key", Type: typecheck.TString()},
+								{Name: "value", Type: typecheck.TString()},
+							}), Optional: true},
+							{Name: "object-size-greater-than", Type: typecheck.TInteger(), Optional: true},
+							{Name: "object-size-less-than", Type: typecheck.TInteger(), Optional: true},
+							{Name: "and", Type: typecheck.TObject([]typecheck.ObjectField{
+								{Name: "prefix", Type: typecheck.TString(), Optional: true},
+								{Name: "tags", Type: typecheck.TMap(typecheck.TString())},
+								{Name: "object-size-greater-than", Type: typecheck.TInteger(), Optional: true},
+								{Name: "object-size-less-than", Type: typecheck.TInteger(), Optional: true},
+							}), Optional: true},
 						}), Optional: true},
 						{Name: "expiration", Type: typecheck.TObject([]typecheck.ObjectField{
 							{Name: "date", Type: typecheck.TString(), Optional: true},
 							{Name: "days", Type: typecheck.TInteger(), Optional: true},
 							{Name: "expired-object-delete-marker", Type: typecheck.TBoolean(), Optional: true},
 						}), Optional: true},
-						{Name: "filter", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "and", Type: typecheck.TObject([]typecheck.ObjectField{
-								{Name: "object-size-greater-than", Type: typecheck.TInteger(), Optional: true},
-								{Name: "object-size-less-than", Type: typecheck.TInteger(), Optional: true},
-								{Name: "prefix", Type: typecheck.TString(), Optional: true},
-								{Name: "tags", Type: typecheck.TMap(typecheck.TString())},
-							}), Optional: true},
-							{Name: "object-size-greater-than", Type: typecheck.TInteger(), Optional: true},
-							{Name: "object-size-less-than", Type: typecheck.TInteger(), Optional: true},
-							{Name: "prefix", Type: typecheck.TString(), Optional: true},
-							{Name: "tag", Type: typecheck.TObject([]typecheck.ObjectField{
-								{Name: "key", Type: typecheck.TString()},
-								{Name: "value", Type: typecheck.TString()},
-							}), Optional: true},
-						}), Optional: true},
-						{Name: "id", Type: typecheck.TString()},
-						{Name: "noncurrent-version-expiration", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "newer-noncurrent-versions", Type: typecheck.TInteger(), Optional: true},
-							{Name: "noncurrent-days", Type: typecheck.TInteger(), Optional: true},
-						}), Optional: true},
-						{
-							Name: "noncurrent-version-transitions",
-							Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-								{Name: "newer-noncurrent-versions", Type: typecheck.TInteger(), Optional: true},
-								{Name: "noncurrent-days", Type: typecheck.TInteger(), Optional: true},
-								{Name: "storage-class", Type: typecheck.TString()},
-							})),
-						},
-						{Name: "status", Type: typecheck.TString()},
 						{Name: "transitions", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 							{Name: "date", Type: typecheck.TString(), Optional: true},
 							{Name: "days", Type: typecheck.TInteger(), Optional: true},
 							{Name: "storage-class", Type: typecheck.TString()},
 						}))},
+						{Name: "noncurrent-version-expiration", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "noncurrent-days", Type: typecheck.TInteger(), Optional: true},
+							{Name: "newer-noncurrent-versions", Type: typecheck.TInteger(), Optional: true},
+						}), Optional: true},
+						{
+							Name: "noncurrent-version-transitions",
+							Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+								{Name: "noncurrent-days", Type: typecheck.TInteger(), Optional: true},
+								{Name: "newer-noncurrent-versions", Type: typecheck.TInteger(), Optional: true},
+								{Name: "storage-class", Type: typecheck.TString()},
+							})),
+						},
+						{Name: "abort-incomplete-multipart-upload", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "days-after-initiation", Type: typecheck.TInteger(), Optional: true},
+						}), Optional: true},
 					}))},
 				})),
 				"logging": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "target-bucket", Type: typecheck.TString()},
+					{Name: "target-prefix", Type: typecheck.TString()},
 					{Name: "target-grants", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "grantee", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "type", Type: typecheck.TString()},
 							{Name: "email-address", Type: typecheck.TString(), Optional: true},
 							{Name: "id", Type: typecheck.TString(), Optional: true},
-							{Name: "type", Type: typecheck.TString()},
 							{Name: "uri", Type: typecheck.TString(), Optional: true},
 						}), Optional: true},
 						{Name: "permission", Type: typecheck.TString()},
@@ -130,13 +131,12 @@ func TestS3Schemas(t *testing.T) {
 						}), Optional: true},
 						{Name: "simple-prefix", Type: typecheck.TBoolean(), Optional: true},
 					}), Optional: true},
-					{Name: "target-prefix", Type: typecheck.TString()},
 				})),
 				"object-lock": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "rule", Type: typecheck.TObject([]typecheck.ObjectField{
 						{Name: "default-retention", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "days", Type: typecheck.TInteger(), Optional: true},
 							{Name: "mode", Type: typecheck.TString()},
+							{Name: "days", Type: typecheck.TInteger(), Optional: true},
 							{Name: "years", Type: typecheck.TInteger(), Optional: true},
 						})},
 					})},
@@ -153,15 +153,15 @@ func TestS3Schemas(t *testing.T) {
 				})),
 				"tags": typecheck.TMap(typecheck.TString()),
 				"versioning": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-					{Name: "mfa-delete", Type: typecheck.TString(), Optional: true},
 					{Name: "status", Type: typecheck.TString()},
+					{Name: "mfa-delete", Type: typecheck.TString(), Optional: true},
 				})),
 				"website": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-					{Name: "error-document", Type: typecheck.TObject([]typecheck.ObjectField{
-						{Name: "key", Type: typecheck.TString()},
-					}), Optional: true},
 					{Name: "index-document", Type: typecheck.TObject([]typecheck.ObjectField{
 						{Name: "suffix", Type: typecheck.TString()},
+					}), Optional: true},
+					{Name: "error-document", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "key", Type: typecheck.TString()},
 					}), Optional: true},
 					{Name: "redirect-all-requests-to", Type: typecheck.TObject([]typecheck.ObjectField{
 						{Name: "host-name", Type: typecheck.TString()},
@@ -597,7 +597,7 @@ func TestS3Schemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources[key]))
+			assert.Equal(t, want, schema.Resources[key])
 		})
 	}
 }

@@ -38,8 +38,8 @@ func TestLibraryRegistersEventbridge(t *testing.T) {
 // each Constraints method. A target's parameter blocks are nested objects, and
 // the only rule goschema can derive over them is the top-level at-most-one-of on
 // the three input forms; every inner bound is enforced by the EventBridge API.
-// normalizeSchema sorts nested object fields so the comparison is stable despite
-// goschema's varying field order.
+// Nested object fields are listed in goschema's declaration order, which the
+// comparison checks directly.
 func TestEventbridgeSchemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -108,7 +108,6 @@ func TestEventbridgeSchemas(t *testing.T) {
 					{Name: "enable-ecs-managed-tags", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "enable-execute-command", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "propagate-tags", Type: typecheck.TString(), Optional: true},
-					{Name: "tags", Type: typecheck.TMap(typecheck.TString()), Optional: false},
 					{Name: "network-configuration", Type: typecheck.TObject([]typecheck.ObjectField{
 						{Name: "subnets", Type: typecheck.TList(typecheck.TString()), Optional: false},
 						{Name: "security-groups", Type: typecheck.TList(typecheck.TString()),
@@ -131,6 +130,7 @@ func TestEventbridgeSchemas(t *testing.T) {
 							{Name: "type", Type: typecheck.TString(), Optional: false},
 							{Name: "field", Type: typecheck.TString(), Optional: true},
 						})), Optional: false},
+					{Name: "tags", Type: typecheck.TMap(typecheck.TString()), Optional: false},
 				})),
 				"batch-parameters": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "job-definition", Type: typecheck.TString(), Optional: false},
@@ -316,7 +316,7 @@ func TestEventbridgeSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources[key]))
+			assert.Equal(t, want, schema.Resources[key])
 		})
 	}
 }

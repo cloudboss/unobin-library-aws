@@ -41,8 +41,8 @@ func TestLibraryRegistersRds(t *testing.T) {
 
 // TestRdsSchemas asserts the whole derived TypeSchema -- input and output field
 // types, sensitivity, the cross-field constraints, and the declared optional
-// defaults -- for each RDS resource. normalizeSchema sorts nested object fields
-// so the comparison is stable despite goschema varying their order.
+// defaults -- for each RDS resource. The comparison is direct: goschema emits
+// object fields in declaration order, and the fixtures match that order.
 func TestRdsSchemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -87,9 +87,9 @@ func TestRdsSchemas(t *testing.T) {
 					"family":      typecheck.TString(),
 					"name":        typecheck.TString(),
 					"parameters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
 						{Name: "name", Type: typecheck.TString()},
 						{Name: "value", Type: typecheck.TString()},
+						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
 					})),
 					"tags": typecheck.TMap(typecheck.TString()),
 				},
@@ -120,9 +120,9 @@ func TestRdsSchemas(t *testing.T) {
 					"family":      typecheck.TString(),
 					"name":        typecheck.TString(),
 					"parameters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
 						{Name: "name", Type: typecheck.TString()},
 						{Name: "value", Type: typecheck.TString()},
+						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
 					})),
 					"tags": typecheck.TMap(typecheck.TString()),
 				},
@@ -212,8 +212,8 @@ func TestRdsSchemas(t *testing.T) {
 						typecheck.TObject([]typecheck.ObjectField{
 							{Name: "restore-time", Type: typecheck.TString(), Optional: true},
 							{
-								Name:     "source-db-instance-automated-backups-arn",
-								Type:     typecheck.TString(),
+								Name:     "use-latest-restorable-time",
+								Type:     typecheck.TBoolean(),
 								Optional: true,
 							},
 							{
@@ -227,8 +227,8 @@ func TestRdsSchemas(t *testing.T) {
 								Optional: true,
 							},
 							{
-								Name:     "use-latest-restorable-time",
-								Type:     typecheck.TBoolean(),
+								Name:     "source-db-instance-automated-backups-arn",
+								Type:     typecheck.TString(),
 								Optional: true,
 							},
 						})),
@@ -265,13 +265,13 @@ func TestRdsSchemas(t *testing.T) {
 					"listener-endpoint": typecheck.TOptional(
 						typecheck.TObject([]typecheck.ObjectField{
 							{Name: "address", Type: typecheck.TString()},
-							{Name: "hosted-zone-id", Type: typecheck.TString()},
 							{Name: "port", Type: typecheck.TInteger()},
+							{Name: "hosted-zone-id", Type: typecheck.TString()},
 						})),
 					"master-user-secret": typecheck.TOptional(
 						typecheck.TObject([]typecheck.ObjectField{
-							{Name: "kms-key-id", Type: typecheck.TString()},
 							{Name: "secret-arn", Type: typecheck.TString()},
+							{Name: "kms-key-id", Type: typecheck.TString()},
 							{Name: "secret-status", Type: typecheck.TString()},
 						})),
 					"port":        typecheck.TInteger(),
@@ -474,8 +474,6 @@ func TestRdsSchemas(t *testing.T) {
 					"replication-source-identifier": typecheck.TOptional(typecheck.TString()),
 					"restore-to-point-in-time": typecheck.TOptional(
 						typecheck.TObject([]typecheck.ObjectField{
-							{Name: "restore-to-time", Type: typecheck.TString(), Optional: true},
-							{Name: "restore-type", Type: typecheck.TString(), Optional: true},
 							{
 								Name:     "source-cluster-identifier",
 								Type:     typecheck.TString(),
@@ -486,11 +484,13 @@ func TestRdsSchemas(t *testing.T) {
 								Type:     typecheck.TString(),
 								Optional: true,
 							},
+							{Name: "restore-to-time", Type: typecheck.TString(), Optional: true},
 							{
 								Name:     "use-latest-restorable-time",
 								Type:     typecheck.TBoolean(),
 								Optional: true,
 							},
+							{Name: "restore-type", Type: typecheck.TString(), Optional: true},
 						})),
 					"s3-import": typecheck.TOptional(
 						typecheck.TObject([]typecheck.ObjectField{
@@ -545,8 +545,8 @@ func TestRdsSchemas(t *testing.T) {
 					"hosted-zone-id":            typecheck.TString(),
 					"master-user-secret": typecheck.TOptional(
 						typecheck.TObject([]typecheck.ObjectField{
-							{Name: "kms-key-id", Type: typecheck.TString()},
 							{Name: "secret-arn", Type: typecheck.TString()},
+							{Name: "kms-key-id", Type: typecheck.TString()},
 							{Name: "secret-status", Type: typecheck.TString()},
 						})),
 					"port":            typecheck.TInteger(),
@@ -717,7 +717,7 @@ func TestRdsSchemas(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.Contains(t, schema.Resources, tt.key)
-		assert.Equal(t, normalizeSchema(tt.want), normalizeSchema(schema.Resources[tt.key]),
+		assert.Equal(t, tt.want, schema.Resources[tt.key],
 			"schema mismatch for %s", tt.key)
 	}
 }

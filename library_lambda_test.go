@@ -39,11 +39,10 @@ func TestLibraryRegistersLambda(t *testing.T) {
 
 // TestLambdaSchemas asserts the whole TypeSchema goschema reads from this
 // library's source for each Lambda construct: the input and output field types,
-// that nothing is marked sensitive, and the cross-field constraints derived from
-// each Constraints method, including the dotted rules on the code block and the
-// other nested blocks. normalizeSchema (in library_s3_test.go) sorts nested
-// object fields so the comparison is stable despite goschema's varying field
-// order.
+// that nothing is marked sensitive, the optional defaults, and the cross-field
+// constraints derived from each Constraints method, including the dotted rules on
+// the code block and the other nested blocks. The comparison is direct, so each
+// nested object's fields are listed in goschema's declaration order.
 func TestLambdaSchemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -54,13 +53,13 @@ func TestLambdaSchemas(t *testing.T) {
 			Inputs: map[string]typecheck.Type{
 				"architectures": typecheck.TList(typecheck.TString()),
 				"code": typecheck.TObject([]typecheck.ObjectField{
-					{Name: "image-uri", Type: typecheck.TString(), Optional: true},
+					{Name: "zip-file-content", Type: typecheck.TString(), Optional: true},
+					{Name: "zip-file-path", Type: typecheck.TString(), Optional: true},
 					{Name: "s3-bucket", Type: typecheck.TString(), Optional: true},
 					{Name: "s3-key", Type: typecheck.TString(), Optional: true},
 					{Name: "s3-object-version", Type: typecheck.TString(), Optional: true},
+					{Name: "image-uri", Type: typecheck.TString(), Optional: true},
 					{Name: "source-kms-key-arn", Type: typecheck.TString(), Optional: true},
-					{Name: "zip-file-content", Type: typecheck.TString(), Optional: true},
-					{Name: "zip-file-path", Type: typecheck.TString(), Optional: true},
 				}),
 				"code-signing-config-arn": typecheck.TOptional(typecheck.TString()),
 				"dead-letter-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
@@ -80,17 +79,17 @@ func TestLambdaSchemas(t *testing.T) {
 				"function-name": typecheck.TString(),
 				"handler":       typecheck.TOptional(typecheck.TString()),
 				"image-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "command", Type: typecheck.TList(typecheck.TString())},
 					{Name: "entry-point", Type: typecheck.TList(typecheck.TString())},
 					{Name: "working-directory", Type: typecheck.TString(), Optional: true},
-					{Name: "command", Type: typecheck.TList(typecheck.TString())},
 				})),
 				"kms-key-arn": typecheck.TOptional(typecheck.TString()),
 				"layers":      typecheck.TList(typecheck.TString()),
 				"logging-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "log-format", Type: typecheck.TString(), Optional: true},
 					{Name: "log-group", Type: typecheck.TString(), Optional: true},
 					{Name: "application-log-level", Type: typecheck.TString(), Optional: true},
 					{Name: "system-log-level", Type: typecheck.TString(), Optional: true},
-					{Name: "log-format", Type: typecheck.TString(), Optional: true},
 				})),
 				"memory-size":                    typecheck.TOptional(typecheck.TInteger()),
 				"package-type":                   typecheck.TOptional(typecheck.TString()),
@@ -304,7 +303,7 @@ func TestLambdaSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources[key]))
+			assert.Equal(t, want, schema.Resources[key])
 		})
 	}
 
@@ -350,7 +349,7 @@ func TestLambdaSchemas(t *testing.T) {
 	for key, want := range actions {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Actions, key)
-			assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Actions[key]))
+			assert.Equal(t, want, schema.Actions[key])
 		})
 	}
 }

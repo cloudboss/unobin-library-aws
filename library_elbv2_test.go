@@ -39,8 +39,8 @@ func TestLibraryRegistersElbv2(t *testing.T) {
 
 // TestElbv2Schemas asserts the whole derived TypeSchema -- input and output
 // field types, sensitivity, and the cross-field constraints -- for each
-// load-balancing resource. normalizeSchema sorts nested object fields so the
-// comparison is stable despite goschema varying their order.
+// load-balancing resource. The comparison is direct: nested object fields
+// follow goschema's declaration order.
 func TestElbv2Schemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -54,14 +54,14 @@ func TestElbv2Schemas(t *testing.T) {
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
 					"access-logs": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "bucket", Type: typecheck.TString(), Optional: true},
 						{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "bucket", Type: typecheck.TString(), Optional: true},
 						{Name: "prefix", Type: typecheck.TString(), Optional: true},
 					})),
 					"client-keep-alive": typecheck.TOptional(typecheck.TInteger()),
 					"connection-logs": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "bucket", Type: typecheck.TString(), Optional: true},
 						{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "bucket", Type: typecheck.TString(), Optional: true},
 						{Name: "prefix", Type: typecheck.TString(), Optional: true},
 					})),
 					"customer-owned-ipv4-pool":                    typecheck.TOptional(typecheck.TString()),
@@ -81,11 +81,11 @@ func TestElbv2Schemas(t *testing.T) {
 					"preserve-host-header":                        typecheck.TOptional(typecheck.TBoolean()),
 					"security-groups":                             typecheck.TList(typecheck.TString()),
 					"subnet-mappings": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "allocation-id", Type: typecheck.TString(), Optional: true},
-						{Name: "ipv6-address", Type: typecheck.TString(), Optional: true},
-						{Name: "private-ipv4-address", Type: typecheck.TString(), Optional: true},
-						{Name: "source-nat-ipv6-prefix", Type: typecheck.TString(), Optional: true},
 						{Name: "subnet-id", Type: typecheck.TString(), Optional: false},
+						{Name: "allocation-id", Type: typecheck.TString(), Optional: true},
+						{Name: "private-ipv4-address", Type: typecheck.TString(), Optional: true},
+						{Name: "ipv6-address", Type: typecheck.TString(), Optional: true},
+						{Name: "source-nat-ipv6-prefix", Type: typecheck.TString(), Optional: true},
 					})),
 					"subnets":                    typecheck.TList(typecheck.TString()),
 					"tags":                       typecheck.TMap(typecheck.TString()),
@@ -182,8 +182,8 @@ func TestElbv2Schemas(t *testing.T) {
 					"load-balancing-algorithm-type":      typecheck.TOptional(typecheck.TString()),
 					"load-balancing-cross-zone-enabled":  typecheck.TOptional(typecheck.TString()),
 					"matcher": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "grpc-code", Type: typecheck.TString(), Optional: true},
 						{Name: "http-code", Type: typecheck.TString(), Optional: true},
+						{Name: "grpc-code", Type: typecheck.TString(), Optional: true},
 					})),
 					"name":               typecheck.TString(),
 					"port":               typecheck.TOptional(typecheck.TInteger()),
@@ -193,10 +193,10 @@ func TestElbv2Schemas(t *testing.T) {
 					"proxy-protocol-v2":  typecheck.TOptional(typecheck.TBoolean()),
 					"slow-start":         typecheck.TOptional(typecheck.TInteger()),
 					"stickiness": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "cookie-duration", Type: typecheck.TInteger(), Optional: true},
-						{Name: "cookie-name", Type: typecheck.TString(), Optional: true},
 						{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
 						{Name: "type", Type: typecheck.TString(), Optional: true},
+						{Name: "cookie-duration", Type: typecheck.TInteger(), Optional: true},
+						{Name: "cookie-name", Type: typecheck.TString(), Optional: true},
 					})),
 					"tags":                      typecheck.TMap(typecheck.TString()),
 					"target-control-port":       typecheck.TOptional(typecheck.TInteger()),
@@ -397,22 +397,19 @@ func TestElbv2Schemas(t *testing.T) {
 					"alpn-policy":     typecheck.TOptional(typecheck.TString()),
 					"certificate-arn": typecheck.TOptional(typecheck.TString()),
 					"default-action": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "fixed-response", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "content-type", Type: typecheck.TString(), Optional: true},
-							{Name: "message-body", Type: typecheck.TString(), Optional: true},
-							{Name: "status-code", Type: typecheck.TString(), Optional: false},
-						}), Optional: true},
+						{Name: "type", Type: typecheck.TString(), Optional: false},
+						{Name: "order", Type: typecheck.TInteger(), Optional: true},
+						{Name: "target-group-arn", Type: typecheck.TString(), Optional: true},
 						{Name: "forward", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "stickiness", Type: typecheck.TObject([]typecheck.ObjectField{
-								{Name: "duration-seconds", Type: typecheck.TInteger(), Optional: true},
-								{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
-							}), Optional: true},
 							{Name: "target-groups", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 								{Name: "arn", Type: typecheck.TString(), Optional: false},
 								{Name: "weight", Type: typecheck.TInteger(), Optional: true},
 							})), Optional: false},
+							{Name: "stickiness", Type: typecheck.TObject([]typecheck.ObjectField{
+								{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+								{Name: "duration-seconds", Type: typecheck.TInteger(), Optional: true},
+							}), Optional: true},
 						}), Optional: true},
-						{Name: "order", Type: typecheck.TInteger(), Optional: true},
 						{Name: "redirect", Type: typecheck.TObject([]typecheck.ObjectField{
 							{Name: "host", Type: typecheck.TString(), Optional: true},
 							{Name: "path", Type: typecheck.TString(), Optional: true},
@@ -421,8 +418,11 @@ func TestElbv2Schemas(t *testing.T) {
 							{Name: "query", Type: typecheck.TString(), Optional: true},
 							{Name: "status-code", Type: typecheck.TString(), Optional: false},
 						}), Optional: true},
-						{Name: "target-group-arn", Type: typecheck.TString(), Optional: true},
-						{Name: "type", Type: typecheck.TString(), Optional: false},
+						{Name: "fixed-response", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "content-type", Type: typecheck.TString(), Optional: true},
+							{Name: "message-body", Type: typecheck.TString(), Optional: true},
+							{Name: "status-code", Type: typecheck.TString(), Optional: false},
+						}), Optional: true},
 					})),
 					"load-balancer-arn": typecheck.TString(),
 					"port":              typecheck.TOptional(typecheck.TInteger()),
@@ -596,32 +596,32 @@ func TestElbv2Schemas(t *testing.T) {
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
 					"actions": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-						{Name: "fixed-response", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "content-type", Type: typecheck.TString(), Optional: false},
-							{Name: "message-body", Type: typecheck.TString(), Optional: true},
-							{Name: "status-code", Type: typecheck.TString(), Optional: true},
-						}), Optional: true},
+						{Name: "type", Type: typecheck.TString(), Optional: false},
+						{Name: "order", Type: typecheck.TInteger(), Optional: true},
+						{Name: "target-group-arn", Type: typecheck.TString(), Optional: true},
 						{Name: "forward", Type: typecheck.TObject([]typecheck.ObjectField{
-							{Name: "stickiness", Type: typecheck.TObject([]typecheck.ObjectField{
-								{Name: "duration-seconds", Type: typecheck.TInteger(), Optional: true},
-								{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
-							}), Optional: true},
 							{Name: "target-groups", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 								{Name: "arn", Type: typecheck.TString(), Optional: true},
 								{Name: "weight", Type: typecheck.TInteger(), Optional: true},
 							})), Optional: false},
+							{Name: "stickiness", Type: typecheck.TObject([]typecheck.ObjectField{
+								{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+								{Name: "duration-seconds", Type: typecheck.TInteger(), Optional: true},
+							}), Optional: true},
 						}), Optional: true},
-						{Name: "order", Type: typecheck.TInteger(), Optional: true},
 						{Name: "redirect", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "status-code", Type: typecheck.TString(), Optional: false},
 							{Name: "host", Type: typecheck.TString(), Optional: true},
 							{Name: "path", Type: typecheck.TString(), Optional: true},
 							{Name: "port", Type: typecheck.TString(), Optional: true},
 							{Name: "protocol", Type: typecheck.TString(), Optional: true},
 							{Name: "query", Type: typecheck.TString(), Optional: true},
-							{Name: "status-code", Type: typecheck.TString(), Optional: false},
 						}), Optional: true},
-						{Name: "target-group-arn", Type: typecheck.TString(), Optional: true},
-						{Name: "type", Type: typecheck.TString(), Optional: false},
+						{Name: "fixed-response", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "content-type", Type: typecheck.TString(), Optional: false},
+							{Name: "status-code", Type: typecheck.TString(), Optional: true},
+							{Name: "message-body", Type: typecheck.TString(), Optional: true},
+						}), Optional: true},
 					})),
 					"conditions": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "host-header", Type: typecheck.TObject([]typecheck.ObjectField{
@@ -885,7 +885,7 @@ func TestElbv2Schemas(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.Contains(t, schema.Resources, tt.key)
-		assert.Equal(t, normalizeSchema(tt.want), normalizeSchema(schema.Resources[tt.key]),
+		assert.Equal(t, tt.want, schema.Resources[tt.key],
 			"schema mismatch for %s", tt.key)
 	}
 }

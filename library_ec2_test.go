@@ -326,7 +326,7 @@ func TestEc2SubnetSchema(t *testing.T) {
 			{Field: "var.tags", Optional: true},
 		},
 	}
-	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-subnet"]))
+	assert.Equal(t, want, schema.Resources["ec2-subnet"])
 }
 
 // TestLibraryRegistersEc2Volume checks the runtime registration: ec2-volume
@@ -429,7 +429,7 @@ func TestEc2VolumeSchema(t *testing.T) {
 			{Field: "var.tags", Optional: true},
 		},
 	}
-	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.Resources["ec2-volume"]))
+	assert.Equal(t, want, schema.Resources["ec2-volume"])
 }
 
 // TestLibraryRegistersEc2LaunchTemplate checks the runtime registration:
@@ -771,8 +771,8 @@ func TestEc2LaunchTemplateSchema(t *testing.T) {
 			{Field: "var.tags", Optional: true},
 		},
 	}
-	assert.Equal(t, normalizeSchema(want),
-		normalizeSchema(schema.Resources["ec2-launch-template"]))
+	assert.Equal(t, want,
+		schema.Resources["ec2-launch-template"])
 }
 
 // TestLibraryRegistersEc2Ami checks the runtime registration: ec2-ami is in
@@ -836,7 +836,7 @@ func TestEc2AmiSchema(t *testing.T) {
 			{Field: "var.image-ids", Optional: true},
 		},
 	}
-	assert.Equal(t, normalizeSchema(want), normalizeSchema(schema.DataSources["ec2-ami"]))
+	assert.Equal(t, want, schema.DataSources["ec2-ami"])
 }
 // TestLibraryRegistersEc2Routing checks the runtime registration: the seven
 // VPC-routing resources are present under Resources and dispatch to their
@@ -868,9 +868,7 @@ func TestLibraryRegistersEc2Routing(t *testing.T) {
 
 // TestEc2RoutingSchemas asserts the whole derived TypeSchema -- input and
 // output field types, the cross-field constraints, and the declared optional
-// defaults -- for each VPC-routing resource. normalizeSchema sorts nested
-// object fields so the comparison is stable despite goschema varying their
-// order.
+// defaults -- for each VPC-routing resource.
 func TestEc2RoutingSchemas(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -1186,7 +1184,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, tt.key)
-			assert.Equal(t, normalizeSchema(tt.want), normalizeSchema(schema.Resources[tt.key]),
+			assert.Equal(t, tt.want, schema.Resources[tt.key],
 				tt.key)
 		})
 	}

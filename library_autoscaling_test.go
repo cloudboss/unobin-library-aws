@@ -27,9 +27,7 @@ func TestLibraryRegistersAutoscalingGroup(t *testing.T) {
 // TestAutoscalingGroupSchema asserts the whole derived TypeSchema for
 // autoscaling-group: the input and output field types, that nothing is
 // sensitive, the cross-field constraints derived from the Constraints
-// method, and the declared optional defaults. normalizeSchema sorts nested
-// object fields so the comparison is stable despite goschema varying their
-// order.
+// method, and the declared optional defaults.
 func TestAutoscalingGroupSchema(t *testing.T) {
 	schema, warnings, err := goschema.Read(".")
 	require.NoError(t, err)
@@ -148,6 +146,6 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 			{Field: "var.target-group-arns", Optional: true},
 		},
 	}
-	assert.Equal(t, normalizeSchema(want),
-		normalizeSchema(schema.Resources["autoscaling-group"]))
+	assert.Equal(t, want,
+		schema.Resources["autoscaling-group"])
 }
