@@ -195,6 +195,9 @@ func (r Instance) Constraints() []constraint.Constraint {
 			constraint.Present(r.RootBlockDevice.VolumeType))).
 			Require(constraint.Equals(r.RootBlockDevice.VolumeType, "gp3")).
 			Message("root-block-device throughput is valid only for gp3 volumes"),
+		constraint.When(constraint.Present(r.RootBlockDevice.Tags)).
+			Require(constraint.Absent(r.VolumeTags)).
+			Message("root-block-device tags cannot combine with volume-tags"),
 		constraint.ForEach(r.EbsBlockDevice,
 			func(b InstanceEbsBlockDevice) []constraint.Constraint {
 				return []constraint.Constraint{
@@ -494,6 +497,21 @@ func (r *Instance) applyCreateFollowOns(
 ) error {
 	if r.SourceDestCheck != nil && !*r.SourceDestCheck {
 		if err := r.setSourceDestCheck(ctx, client, id, false); err != nil {
+			return err
+		}
+	}
+	// Root-volume tags differ per device, so they cannot ride the create-time
+	// volume tag specification; they are applied to the settled root volume.
+	if tags := rootBlockDeviceTags(r.RootBlockDevice); len(tags) > 0 {
+		instance, err := describeInstance(ctx, client, id)
+		if err != nil {
+			return err
+		}
+		volumeID := rootVolumeId(instance)
+		if volumeID == "" {
+			return fmt.Errorf("instance %s has no root volume to tag", id)
+		}
+		if err := syncTags(ctx, client, volumeID, tags); err != nil {
 			return err
 		}
 	}
@@ -1045,7 +1063,21 @@ func (r *Instance) reconcileRootBlockDevice(
 			return err
 		}
 	}
+	if runtime.Changed(rootBlockDeviceTags(priorRoot), rootBlockDeviceTags(desired)) {
+		if err := syncTags(ctx, client, volumeID, rootBlockDeviceTags(desired)); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// rootBlockDeviceTags returns the block's root-volume tag map, or nil when the
+// block or its tags are absent.
+func rootBlockDeviceTags(b *InstanceRootBlockDevice) map[string]string {
+	if b == nil || b.Tags == nil {
+		return nil
+	}
+	return *b.Tags
 }
 
 // modifyRootVolume applies the root volume's size, type, IOPS, and throughput in

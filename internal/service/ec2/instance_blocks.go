@@ -58,18 +58,21 @@ func metadataOptionsRequest(
 
 // InstanceRootBlockDevice configures the instance's root EBS volume. The root
 // device name is fixed by the AMI and reported as the root-device-name output,
-// so it is not an input here. The size, type, IOPS, throughput, and
-// delete-on-termination flag are reconciled in place after create; encrypted and
-// kms-key-id are fixed when the volume is created, so a change to either returns
-// a clear error rather than silently replacing the instance's root volume.
+// so it is not an input here. The size, type, IOPS, throughput,
+// delete-on-termination flag, and tags are reconciled in place after create;
+// encrypted and kms-key-id are fixed when the volume is created, so a change to
+// either returns a clear error rather than silently replacing the instance's
+// root volume. The tags apply to the root volume only and cannot combine with
+// the instance-wide volume-tags map.
 type InstanceRootBlockDevice struct {
-	DeleteOnTermination *bool   `ub:"delete-on-termination"`
-	Encrypted           *bool   `ub:"encrypted"`
-	Iops                *int64  `ub:"iops"`
-	KmsKeyId            *string `ub:"kms-key-id"`
-	Throughput          *int64  `ub:"throughput"`
-	VolumeSize          *int64  `ub:"volume-size"`
-	VolumeType          *string `ub:"volume-type"`
+	DeleteOnTermination *bool              `ub:"delete-on-termination"`
+	Encrypted           *bool              `ub:"encrypted"`
+	Iops                *int64             `ub:"iops"`
+	KmsKeyId            *string            `ub:"kms-key-id"`
+	Tags                *map[string]string `ub:"tags"`
+	Throughput          *int64             `ub:"throughput"`
+	VolumeSize          *int64             `ub:"volume-size"`
+	VolumeType          *string            `ub:"volume-type"`
 }
 
 // rootBlockDeviceMapping builds the run-instances block device mapping that

@@ -1328,6 +1328,11 @@ func TestEc2InstanceSchema(t *testing.T) {
 					{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "iops", Type: typecheck.TInteger(), Optional: true},
 					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "tags",
+						Type:     typecheck.TMap(typecheck.TString()),
+						Optional: true,
+					},
 					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
 					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
 					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
@@ -1456,6 +1461,12 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"(var.root-block-device.volume-type != null))",
 				Require: "(var.root-block-device.volume-type == 'gp3')",
 				Message: "root-block-device throughput is valid only for gp3 volumes",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(var.root-block-device.tags != null)",
+				Require: "(var.volume-tags == null)",
+				Message: "root-block-device tags cannot combine with volume-tags",
 			},
 			{
 				Kind: "predicate",
