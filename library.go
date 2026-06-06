@@ -16,6 +16,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
+	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
 )
 
@@ -78,6 +79,18 @@ func Library() *runtime.Library {
 				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
 			"autoscaling-group": runtime.MakeResource[
 				autoscaling.Group, *autoscaling.GroupOutput](),
+			"rds-subnet-group": runtime.MakeResource[
+				rds.SubnetGroup, *rds.SubnetGroupOutput](),
+			"rds-parameter-group": runtime.MakeResource[
+				rds.ParameterGroup, *rds.ParameterGroupOutput](),
+			"rds-cluster-parameter-group": runtime.MakeResource[
+				rds.ClusterParameterGroup, *rds.ClusterParameterGroupOutput](),
+			"rds-instance": runtime.MakeResource[
+				rds.Instance, *rds.InstanceOutput](),
+			"rds-cluster": runtime.MakeResource[
+				rds.Cluster, *rds.ClusterOutput](),
+			"rds-cluster-instance": runtime.MakeResource[
+				rds.ClusterInstance, *rds.ClusterInstanceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),

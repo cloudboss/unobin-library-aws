@@ -1,0 +1,101 @@
+description: '''>-
+  Manages an RDS estate: a VPC with two subnets backing a DB subnet group, a DB
+  parameter group and a cluster parameter group with declared parameters, an Aurora
+  PostgreSQL cluster scaled by Serverless v2 with one cluster instance, and a
+  standalone PostgreSQL instance. Exercises the create waits, the chunked parameter
+  reconcile, the follow-on modifies, and the tag sync across apply and destroy.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+resources: {
+  aws: {
+    ec2-vpc: { it: { cidr-block: '10.61.0.0/16' } }
+    ec2-subnet: {
+      a: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.61.1.0/24'
+        availability-zone: 'us-east-1a'
+        tags:              { unobin: 'rds-it' }
+      }
+      b: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.61.2.0/24'
+        availability-zone: 'us-east-1b'
+        tags:              { unobin: 'rds-it' }
+      }
+    }
+    rds-subnet-group: {
+      it: {
+        name:        'unobin-it-rds'
+        description: 'unobin rds integration test subnet group'
+        subnet-ids:  [resource.aws.ec2-subnet.a.id, resource.aws.ec2-subnet.b.id]
+        tags:        { unobin: 'rds-it' }
+      }
+    }
+    rds-parameter-group: {
+      it: {
+        name:        'unobin-it-rds-pg'
+        family:      'postgres16'
+        description: 'unobin rds integration test parameter group'
+        parameters: [
+          { name: 'log_connections', value: '1' },
+          { name: 'log_disconnections', value: '1' },
+        ]
+        tags: { unobin: 'rds-it' }
+      }
+    }
+    rds-cluster-parameter-group: {
+      it: {
+        name:        'unobin-it-rds-cpg'
+        family:      'aurora-postgresql16'
+        description: 'unobin rds integration test cluster parameter group'
+        parameters:  [{ name: 'log_connections', value: '1' }]
+        tags:        { unobin: 'rds-it' }
+      }
+    }
+    rds-cluster: {
+      it: {
+        cluster-identifier:   'unobin-it-aurora'
+        engine:               'aurora-postgresql'
+        master-username:      'unobin'
+        master-password:      'unobin-it-password-1'
+        db-subnet-group-name: resource.aws.rds-subnet-group.it.name
+        serverlessv2-scaling: { min-capacity: 0.5, max-capacity: 1.0 }
+        skip-final-snapshot:  true
+        tags:                 { unobin: 'rds-it' }
+      }
+    }
+    rds-cluster-instance: {
+      one: {
+        identifier:         'unobin-it-aurora-one'
+        cluster-identifier: resource.aws.rds-cluster.it.cluster-identifier
+        engine:             'aurora-postgresql'
+        instance-class:     'db.serverless'
+        tags:               { unobin: 'rds-it' }
+      }
+    }
+    rds-instance: {
+      it: {
+        identifier:           'unobin-it-db'
+        engine:               'postgres'
+        instance-class:       'db.t4g.micro'
+        allocated-storage:    20
+        username:             'unobin'
+        password:             'unobin-it-password-1'
+        db-subnet-group-name: resource.aws.rds-subnet-group.it.name
+        skip-final-snapshot:  true
+        tags:                 { unobin: 'rds-it' }
+      }
+    }
+  }
+}
+
+outputs: {
+  subnet-group-arn:            { value: resource.aws.rds-subnet-group.it.arn }
+  parameter-group-arn:         { value: resource.aws.rds-parameter-group.it.arn }
+  cluster-parameter-group-arn: { value: resource.aws.rds-cluster-parameter-group.it.arn }
+  cluster-endpoint:            { value: resource.aws.rds-cluster.it.endpoint }
+  cluster-instance-endpoint:   { value: resource.aws.rds-cluster-instance.one.endpoint }
+  instance-endpoint:           { value: resource.aws.rds-instance.it.endpoint }
+}
