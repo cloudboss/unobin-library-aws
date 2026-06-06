@@ -40,6 +40,19 @@ func Library() *runtime.Library {
 			"ec2-volume": runtime.MakeResource[ec2.Volume, *ec2.VolumeOutput](),
 			"ec2-launch-template": runtime.MakeResource[
 				ec2.LaunchTemplate, *ec2.LaunchTemplateOutput](),
+			"ec2-internet-gateway": runtime.MakeResource[
+				ec2.InternetGateway, *ec2.InternetGatewayOutput](),
+			"ec2-route-table": runtime.MakeResource[
+				ec2.RouteTable, *ec2.RouteTableOutput](),
+			"ec2-route": runtime.MakeResource[ec2.Route, *ec2.RouteOutput](),
+			"ec2-route-table-association": runtime.MakeResource[
+				ec2.RouteTableAssociation,
+				*ec2.RouteTableAssociationOutput](),
+			"ec2-eip": runtime.MakeResource[ec2.Eip, *ec2.EipOutput](),
+			"ec2-nat-gateway": runtime.MakeResource[
+				ec2.NatGateway, *ec2.NatGatewayOutput](),
+			"ec2-vpc-endpoint": runtime.MakeResource[
+				ec2.VpcEndpoint, *ec2.VpcEndpointOutput](),
 			"iam-role": runtime.MakeResource[
 				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[
