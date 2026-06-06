@@ -7,6 +7,8 @@ description: '''>-
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
+
 resources: {
   aws: {
     ec2-vpc: { it: { cidr-block: '10.30.0.0/16' } }
@@ -14,13 +16,13 @@ resources: {
       a: {
         vpc-id:            resource.aws.ec2-vpc.it.vpc-id
         cidr-block:        '10.30.1.0/24'
-        availability-zone: 'us-east-1a'
+        availability-zone: data.aws.ec2-availability-zones.available.names[0]
         tags:              { unobin: 'nlb-it' }
       }
       b: {
         vpc-id:            resource.aws.ec2-vpc.it.vpc-id
         cidr-block:        '10.30.2.0/24'
-        availability-zone: 'us-east-1b'
+        availability-zone: data.aws.ec2-availability-zones.available.names[1]
         tags:              { unobin: 'nlb-it' }
       }
     }
