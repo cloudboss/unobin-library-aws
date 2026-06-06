@@ -37,11 +37,6 @@ func isNotFound(err error) bool {
 	return errors.As(err, &notFound)
 }
 
-// region returns the region the client is configured for.
-func region(client *kms.Client) string {
-	return client.Options().Region
-}
-
 // isMalformedPolicy reports whether err is the malformed-policy error KMS
 // returns when a key policy names a principal that was created moments
 // earlier and has not propagated. KMS is eventually consistent about the

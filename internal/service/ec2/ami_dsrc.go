@@ -134,13 +134,13 @@ func (r *AMI) Read(ctx context.Context, cfg any) (*AMIOutput, error) {
 	images = filterByNameRegex(images, nameRegex)
 	if len(images) < 1 {
 		return nil, errors.New(
-			"Your query returned no results. " +
-				"Please change your search criteria and try again.")
+			"query returned no results; " +
+				"please change your search criteria and try again")
 	}
 	if len(images) > 1 && !aws.ToBool(r.MostRecent) {
 		return nil, errors.New(
-			"Your query returned more than one result. Please try a more specific " +
-				"search criteria, or set the most-recent input to true.")
+			"query returned more than one result; please try a more specific " +
+				"search criteria, or set the most-recent input to true")
 	}
 	image := newestImage(images)
 	return r.output(client, image), nil
