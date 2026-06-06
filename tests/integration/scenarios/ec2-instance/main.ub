@@ -1,0 +1,76 @@
+description: '''>-
+  Launches an EC2 instance with its dependencies: a VPC with a subnet, a security group,
+  an imported key pair, and the latest Amazon Linux 2023 AMI resolved through the ec2-ami
+  data source. The instance sets user data, a gp3 root volume, and required IMDSv2 tokens,
+  exercising the run wait and the follow-on attribute calls across apply and destroy. The
+  availability-zones and caller-identity data sources are read into stack outputs.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+data: {
+  aws: {
+    ec2-ami: {
+      al2023: {
+        owners:      ['amazon']
+        most-recent: true
+        filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
+      }
+    }
+    ec2-availability-zones: { available: { state: 'available' } }
+    sts-caller-identity:    { it: {} }
+  }
+}
+
+resources: {
+  aws: {
+    ec2-vpc: { it: { cidr-block: '10.63.0.0/16' } }
+    ec2-subnet: {
+      a: {
+        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:        '10.63.1.0/24'
+        availability-zone: data.aws.ec2-availability-zones.available.names[0]
+        tags:              { unobin: 'instance-it' }
+      }
+    }
+    ec2-security-group: {
+      it: {
+        name:        'unobin-it-instance'
+        description: 'unobin instance integration test security group'
+        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+        tags:        { unobin: 'instance-it' }
+      }
+    }
+    ec2-key-pair: {
+      it: {
+        key-name: 'unobin-it-instance'
+        public-key: '''>-
+          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN8Epl+b+PuQeE0tmbfPGaBNoGtTh1rR4MpfC0g4NhEt unobin-it
+          '''
+        tags: { unobin: 'instance-it' }
+      }
+    }
+    ec2-instance: {
+      it: {
+        ami:                    data.aws.ec2-ami.al2023.image-id
+        instance-type:          't3.micro'
+        subnet-id:              resource.aws.ec2-subnet.a.id
+        vpc-security-group-ids: [resource.aws.ec2-security-group.it.id]
+        key-name:               resource.aws.ec2-key-pair.it.key-name
+        user-data:              'echo unobin'
+        root-block-device:      { volume-size: 8, volume-type: 'gp3' }
+        metadata-options:       { http-tokens: 'required' }
+        tags:                   { unobin: 'instance-it' }
+      }
+    }
+  }
+}
+
+outputs: {
+  instance-id:    { value: resource.aws.ec2-instance.it.instance-id }
+  instance-state: { value: resource.aws.ec2-instance.it.instance-state }
+  private-ip:     { value: resource.aws.ec2-instance.it.private-ip }
+  key-pair-id:    { value: resource.aws.ec2-key-pair.it.key-pair-id }
+  account:        { value: data.aws.sts-caller-identity.it.account }
+  zone-names:     { value: data.aws.ec2-availability-zones.available.names }
+}

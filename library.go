@@ -18,6 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
 	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
+	"github.com/cloudboss/unobin-library-aws/internal/service/sts"
 )
 
 func Library() *runtime.Library {
@@ -53,6 +54,10 @@ func Library() *runtime.Library {
 				ec2.NatGateway, *ec2.NatGatewayOutput](),
 			"ec2-vpc-endpoint": runtime.MakeResource[
 				ec2.VpcEndpoint, *ec2.VpcEndpointOutput](),
+			"ec2-key-pair": runtime.MakeResource[
+				ec2.KeyPair, *ec2.KeyPairOutput](),
+			"ec2-instance": runtime.MakeResource[
+				ec2.Instance, *ec2.InstanceOutput](),
 			"iam-role": runtime.MakeResource[
 				iam.Role, *iam.RoleOutput](),
 			"iam-policy": runtime.MakeResource[
@@ -107,6 +112,10 @@ func Library() *runtime.Library {
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),
+			"ec2-availability-zones": runtime.MakeDataSource[
+				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
+			"sts-caller-identity": runtime.MakeDataSource[
+				sts.CallerIdentity, *sts.CallerIdentityOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": runtime.MakeAction[

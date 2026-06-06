@@ -838,6 +838,7 @@ func TestEc2AmiSchema(t *testing.T) {
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-ami"])
 }
+
 // TestLibraryRegistersEc2Routing checks the runtime registration: the seven
 // VPC-routing resources are present under Resources and dispatch to their
 // output types.
@@ -1188,4 +1189,361 @@ func TestEc2RoutingSchemas(t *testing.T) {
 				tt.key)
 		})
 	}
+}
+
+// TestLibraryRegistersEc2KeyPair checks the runtime registration: ec2-key-pair
+// is present under Resources and dispatches to the KeyPairOutput type.
+func TestLibraryRegistersEc2KeyPair(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.Resources, "ec2-key-pair")
+	assert.Equal(t, reflect.TypeFor[*ec2.KeyPairOutput](),
+		lib.Resources["ec2-key-pair"].OutputType())
+}
+
+// TestEc2KeyPairSchema asserts the whole derived TypeSchema for ec2-key-pair:
+// the input and output field types and the declared optional defaults.
+func TestEc2KeyPairSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.Resources, "ec2-key-pair")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"key-name":   typecheck.TString(),
+			"public-key": typecheck.TString(),
+			"tags":       typecheck.TMap(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"fingerprint": typecheck.TString(),
+			"key-pair-id": typecheck.TString(),
+			"key-type":    typecheck.TString(),
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.Resources["ec2-key-pair"])
+}
+
+// TestLibraryRegistersEc2Instance checks the runtime registration: ec2-instance
+// is present under Resources and dispatches to the InstanceOutput type.
+func TestLibraryRegistersEc2Instance(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.Resources, "ec2-instance")
+	assert.Equal(t, reflect.TypeFor[*ec2.InstanceOutput](),
+		lib.Resources["ec2-instance"].OutputType())
+}
+
+// TestEc2InstanceSchema asserts the whole derived TypeSchema for ec2-instance:
+// the input and output field types, the cross-field constraints -- including
+// the nested-selector rules on the launch-template, metadata-options, and
+// root-block-device blocks and the ForEach rules on the volume lists -- and
+// the declared optional defaults.
+func TestEc2InstanceSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.Resources, "ec2-instance")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"ami":                         typecheck.TOptional(typecheck.TString()),
+			"associate-public-ip-address": typecheck.TOptional(typecheck.TBoolean()),
+			"availability-zone":           typecheck.TOptional(typecheck.TString()),
+			"disable-api-stop":            typecheck.TOptional(typecheck.TBoolean()),
+			"disable-api-termination":     typecheck.TOptional(typecheck.TBoolean()),
+			"ebs-block-device": typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString()},
+					{
+						Name:     "delete-on-termination",
+						Type:     typecheck.TBoolean(),
+						Optional: true,
+					},
+					{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					{Name: "snapshot-id", Type: typecheck.TString(), Optional: true},
+					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+				})),
+			"ebs-optimized": typecheck.TOptional(typecheck.TBoolean()),
+			"ephemeral-block-device": typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString()},
+					{Name: "no-device", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "virtual-name", Type: typecheck.TString(), Optional: true},
+				})),
+			"force-destroy":        typecheck.TOptional(typecheck.TBoolean()),
+			"iam-instance-profile": typecheck.TOptional(typecheck.TString()),
+			"instance-initiated-shutdown-behavior": typecheck.TOptional(
+				typecheck.TString()),
+			"instance-type": typecheck.TOptional(typecheck.TString()),
+			"key-name":      typecheck.TOptional(typecheck.TString()),
+			"launch-template": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "id", Type: typecheck.TString(), Optional: true},
+					{Name: "name", Type: typecheck.TString(), Optional: true},
+					{Name: "version", Type: typecheck.TString(), Optional: true},
+				})),
+			"metadata-options": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "http-endpoint", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "http-protocol-ipv6",
+						Type:     typecheck.TString(),
+						Optional: true,
+					},
+					{
+						Name:     "http-put-response-hop-limit",
+						Type:     typecheck.TInteger(),
+						Optional: true,
+					},
+					{Name: "http-tokens", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "instance-metadata-tags",
+						Type:     typecheck.TString(),
+						Optional: true,
+					},
+				})),
+			"monitoring": typecheck.TOptional(typecheck.TBoolean()),
+			"private-ip": typecheck.TOptional(typecheck.TString()),
+			"root-block-device": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{
+						Name:     "delete-on-termination",
+						Type:     typecheck.TBoolean(),
+						Optional: true,
+					},
+					{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+				})),
+			"source-dest-check":      typecheck.TOptional(typecheck.TBoolean()),
+			"subnet-id":              typecheck.TOptional(typecheck.TString()),
+			"tags":                   typecheck.TMap(typecheck.TString()),
+			"tenancy":                typecheck.TOptional(typecheck.TString()),
+			"user-data":              typecheck.TOptional(typecheck.TString()),
+			"user-data-base64":       typecheck.TOptional(typecheck.TString()),
+			"volume-tags":            typecheck.TMap(typecheck.TString()),
+			"vpc-security-group-ids": typecheck.TList(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"availability-zone":            typecheck.TString(),
+			"instance-id":                  typecheck.TString(),
+			"instance-state":               typecheck.TString(),
+			"primary-network-interface-id": typecheck.TString(),
+			"private-dns":                  typecheck.TString(),
+			"private-ip":                   typecheck.TString(),
+			"public-dns":                   typecheck.TString(),
+			"public-ip":                    typecheck.TString(),
+			"root-device-name":             typecheck.TString(),
+			"root-volume-id":               typecheck.TString(),
+			"subnet-id":                    typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "at-least-one-of",
+				Fields: []string{
+					"var.ami",
+					"var.launch-template",
+				},
+			},
+			{
+				Kind: "at-least-one-of",
+				Fields: []string{
+					"var.instance-type",
+					"var.launch-template",
+				},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"var.user-data",
+					"var.user-data-base64",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(var.tenancy != null)",
+				Require: "(var.tenancy == 'default' || var.tenancy == 'dedicated' || " +
+					"var.tenancy == 'host')",
+				Message: "tenancy must be default, dedicated, or host",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.launch-template != null)",
+				Require: "(((var.launch-template.id != null) && " +
+					"(var.launch-template.name == null)) || " +
+					"((var.launch-template.id == null) && " +
+					"(var.launch-template.name != null)))",
+				Message: "launch-template requires exactly one of id and name",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.metadata-options.http-endpoint != null)",
+				Require: "(var.metadata-options.http-endpoint == 'enabled' || " +
+					"var.metadata-options.http-endpoint == 'disabled')",
+				Message: "metadata-options http-endpoint must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.metadata-options.http-tokens != null)",
+				Require: "(var.metadata-options.http-tokens == 'optional' || " +
+					"var.metadata-options.http-tokens == 'required')",
+				Message: "metadata-options http-tokens must be optional or required",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(var.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"var.metadata-options.http-protocol-ipv6 == 'disabled')",
+				Message: "metadata-options http-protocol-ipv6 must be enabled " +
+					"or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.metadata-options.instance-metadata-tags != null)",
+				Require: "(var.metadata-options.instance-metadata-tags == 'enabled' " +
+					"|| var.metadata-options.instance-metadata-tags == 'disabled')",
+				Message: "metadata-options instance-metadata-tags must be enabled " +
+					"or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(var.metadata-options.http-put-response-hop-limit == null " +
+					"|| var.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(var.metadata-options.http-put-response-hop-limit == null || " +
+					"var.metadata-options.http-put-response-hop-limit <= 64)",
+				Message: "metadata-options http-put-response-hop-limit must be " +
+					"1 to 64",
+			},
+			{
+				Kind: "predicate",
+				When: "((var.root-block-device.iops != null) && " +
+					"(var.root-block-device.volume-type != null))",
+				Require: "(var.root-block-device.volume-type == 'gp3' || " +
+					"var.root-block-device.volume-type == 'io1' || " +
+					"var.root-block-device.volume-type == 'io2')",
+				Message: "root-block-device iops is valid only for gp3, io1, " +
+					"or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(var.root-block-device.volume-type == 'io1' || " +
+					"var.root-block-device.volume-type == 'io2')",
+				Require: "(var.root-block-device.iops != null)",
+				Message: "root-block-device iops is required when volume-type " +
+					"is io1 or io2",
+			},
+			{
+				Kind: "predicate",
+				When: "((var.root-block-device.throughput != null) && " +
+					"(var.root-block-device.volume-type != null))",
+				Require: "(var.root-block-device.volume-type == 'gp3')",
+				Message: "root-block-device throughput is valid only for gp3 volumes",
+			},
+			{
+				Kind: "predicate",
+				When: "((@each.value.iops != null) && " +
+					"(@each.value.volume-type != null))",
+				Require: "(@each.value.volume-type == 'gp3' || " +
+					"@each.value.volume-type == 'io1' || " +
+					"@each.value.volume-type == 'io2')",
+				Message: "iops is valid only for gp3, io1, or io2 volume types",
+				ForEach: "var.ebs-block-device",
+			},
+			{
+				Kind: "predicate",
+				When: "(@each.value.volume-type == 'io1' || " +
+					"@each.value.volume-type == 'io2')",
+				Require: "(@each.value.iops != null)",
+				Message: "iops is required when volume-type is io1 or io2",
+				ForEach: "var.ebs-block-device",
+			},
+			{
+				Kind: "predicate",
+				When: "((@each.value.throughput != null) && " +
+					"(@each.value.volume-type != null))",
+				Require: "(@each.value.volume-type == 'gp3')",
+				Message: "throughput is valid only for gp3 volumes",
+				ForEach: "var.ebs-block-device",
+			},
+			{
+				Kind: "predicate",
+				When: "!(@each.value.no-device == true)",
+				Require: "((@each.value.virtual-name != null) && " +
+					"(@core.length(@each.value.virtual-name) >= 1))",
+				Message: "virtual-name is required unless no-device is true",
+				ForEach: "var.ephemeral-block-device",
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.vpc-security-group-ids", Optional: true},
+			{Field: "var.ebs-block-device", Optional: true},
+			{Field: "var.ephemeral-block-device", Optional: true},
+			{Field: "var.volume-tags", Optional: true},
+			{Field: "var.tags", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.Resources["ec2-instance"])
+}
+
+// TestLibraryRegistersEc2AvailabilityZones checks the runtime registration:
+// ec2-availability-zones is present under DataSources and dispatches to the
+// AvailabilityZonesOutput type.
+func TestLibraryRegistersEc2AvailabilityZones(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-availability-zones")
+	assert.Equal(t, reflect.TypeFor[*ec2.AvailabilityZonesOutput](),
+		lib.DataSources["ec2-availability-zones"].OutputType())
+}
+
+// TestEc2AvailabilityZonesSchema asserts the whole derived TypeSchema for the
+// ec2-availability-zones data source: the query inputs, the three list
+// outputs, the state enum constraint, and the declared optional defaults.
+func TestEc2AvailabilityZonesSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.DataSources, "ec2-availability-zones")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"all-availability-zones": typecheck.TOptional(typecheck.TBoolean()),
+			"exclude-names":          typecheck.TList(typecheck.TString()),
+			"exclude-zone-ids":       typecheck.TList(typecheck.TString()),
+			"filters": typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "name", Type: typecheck.TString()},
+					{Name: "values", Type: typecheck.TList(typecheck.TString())},
+				})),
+			"state": typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"group-names": typecheck.TList(typecheck.TString()),
+			"names":       typecheck.TList(typecheck.TString()),
+			"zone-ids":    typecheck.TList(typecheck.TString()),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "predicate",
+				When: "(var.state != null)",
+				Require: "(var.state == 'available' || var.state == 'information' || " +
+					"var.state == 'impaired' || var.state == 'unavailable' || " +
+					"var.state == 'constrained')",
+				Message: "state must be one of available, information, impaired, " +
+					"unavailable, or constrained",
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.filters", Optional: true},
+			{Field: "var.exclude-names", Optional: true},
+			{Field: "var.exclude-zone-ids", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["ec2-availability-zones"])
 }
