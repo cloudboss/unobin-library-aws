@@ -129,6 +129,11 @@ for sdir in "${@}"; do
         FAILED="${FAILED} ${name}"
         continue
     fi
+    if [ -f "${sdir}/.env-${TIER}" ]; then
+        set -a
+        . "${sdir}/.env-${TIER}"
+        set +a
+    fi
 
     build_dir="${tmp_dir}/${name}"
     rel="${sdir#${REPO_DIR}/}"

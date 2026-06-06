@@ -1,12 +1,15 @@
 description: '''>-
   Manages an Auto Scaling group and its dependencies: a VPC with a subnet, the latest
   Amazon Linux 2023 AMI resolved through the ec2-ami data source, a launch template built
-  from it, and a group held at zero capacity so no instance launches. A standalone gp3
-  volume exercises the EBS volume resource in the same availability zone. Exercises the
-  data-source read, the launch-template version lifecycle, and the group create and delete.
+  from it, and a group whose size comes from the desired-capacity input. The default of
+  zero launches no instance, which suits emulators that cannot simulate one; a live run can
+  raise it to launch an instance and exercise the capacity wait and the drain on destroy. A
+  standalone gp3 volume exercises the EBS volume resource in the same availability zone.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: { desired-capacity: { type: optional(integer, 0) } }
 
 data: {
   aws: {
@@ -48,7 +51,7 @@ resources: {
         name:                'unobin-it-asg'
         min-size:            0
         max-size:            1
-        desired-capacity:    0
+        desired-capacity:    var.desired-capacity
         vpc-zone-identifier: [resource.aws.ec2-subnet.a.id]
         launch-template: {
           id:      resource.aws.ec2-launch-template.it.launch-template-id

@@ -2,11 +2,14 @@
 // named in the VERIFY_PHASE environment variable. It looks resources up by
 // their stable names because the driver passes no plan outputs into verify,
 // and it reads only cloud state: applied requires the group to exist with the
-// scenario's sizes and no instances, since the group is held at zero capacity,
-// the launch template to exist with a t3.micro default version, and the tagged
-// gp3 volume to be available; destroyed requires the group, the template, and
-// the volume to be gone. Tearing the group down is the destroy plan's job, not
-// the verifier's.
+// scenario's sizes and capacity, the launch template to exist with a t3.micro
+// default version, and the tagged gp3 volume to be available; destroyed
+// requires the group, the template, and the volume to be gone. The expected
+// capacity follows the same UB_VAR_desired_capacity variable that overrides
+// the scenario's desired-capacity input, zero when unset: at zero the group
+// must have no instances, above zero it must hold that many healthy in-service
+// instances, which the resource's capacity wait settles before apply returns.
+// Tearing the group down is the destroy plan's job, not the verifier's.
 package main
 
 import (
@@ -15,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -69,14 +73,22 @@ func verifyApplied(
 	if group == nil {
 		return fmt.Errorf("auto scaling group %s not found", groupName)
 	}
+	want, err := desiredCapacity()
+	if err != nil {
+		return err
+	}
 	if got := aws.ToInt32(group.MaxSize); got != 1 {
 		return fmt.Errorf("group max size is %d, want 1", got)
 	}
-	if got := aws.ToInt32(group.DesiredCapacity); got != 0 {
-		return fmt.Errorf("group desired capacity is %d, want 0", got)
+	if got := int(aws.ToInt32(group.DesiredCapacity)); got != want {
+		return fmt.Errorf("group desired capacity is %d, want %d", got, want)
 	}
-	if n := len(group.Instances); n != 0 {
-		return fmt.Errorf("group has %d instances, want 0", n)
+	if want == 0 {
+		if n := len(group.Instances); n != 0 {
+			return fmt.Errorf("group has %d instances, want 0", n)
+		}
+	} else if n := inServiceCount(group); n != want {
+		return fmt.Errorf("group has %d in-service instances, want %d", n, want)
 	}
 	if group.LaunchTemplate == nil {
 		return errors.New("group has no launch template")
@@ -127,6 +139,34 @@ func verifyDestroyed(
 		return fmt.Errorf("volume %s still exists", aws.ToString(volume.VolumeId))
 	}
 	return nil
+}
+
+// desiredCapacity returns the capacity the run was applied with: the value of
+// UB_VAR_desired_capacity, the same variable that overrides the scenario's
+// desired-capacity input, or zero when it is unset or empty.
+func desiredCapacity() (int, error) {
+	raw := os.Getenv("UB_VAR_desired_capacity")
+	if raw == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parse UB_VAR_desired_capacity %q: %w", raw, err)
+	}
+	return n, nil
+}
+
+// inServiceCount counts the group's instances that are healthy and in
+// service, the same readiness the resource's capacity wait settles on.
+func inServiceCount(group *autoscalingtypes.AutoScalingGroup) int {
+	n := 0
+	for _, instance := range group.Instances {
+		if aws.ToString(instance.HealthStatus) == "Healthy" &&
+			instance.LifecycleState == autoscalingtypes.LifecycleStateInService {
+			n++
+		}
+	}
+	return n
 }
 
 // findGroup returns the scenario's Auto Scaling group, or nil when the
