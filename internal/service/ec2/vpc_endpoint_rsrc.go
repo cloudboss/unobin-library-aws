@@ -96,11 +96,10 @@ func (r VpcEndpoint) Defaults() []defaults.Default {
 }
 
 // Constraints declares the value rules EC2 enforces on an endpoint's inputs. The
-// endpoint type is one of the three supported kinds, and the IP address type is
-// one of the three address families; both are optional, so each rule applies
-// only when the field is set. The DNS-options record-ip-type enum is a rule on a
-// nested block field, which does not derive, so it is checked in code at create
-// and update instead. The structural exclusivity among service-name and the
+// endpoint type is one of the three supported kinds, the IP address type is one
+// of the three address families, and the DNS-options record-ip type is one of
+// the four record forms; all are optional, so each rule applies only when its
+// field is set. The structural exclusivity among service-name and the
 // VPC Lattice arn fields does not apply here: this resource targets only a named
 // service, so service-name is required and the arn fields are out of scope.
 func (r VpcEndpoint) Constraints() []constraint.Constraint {
@@ -112,15 +111,17 @@ func (r VpcEndpoint) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.IpAddressType)).
 			Require(constraint.OneOf(r.IpAddressType, "ipv4", "dualstack", "ipv6")).
 			Message("ip-address-type must be ipv4, dualstack, or ipv6"),
+		constraint.When(constraint.Present(r.DnsOptions.DnsRecordIpType)).
+			Require(constraint.OneOf(r.DnsOptions.DnsRecordIpType,
+				"ipv4", "dualstack", "ipv6", "service-defined")).
+			Message("dns-options dns-record-ip-type must be ipv4, dualstack, ipv6, " +
+				"or service-defined"),
 	}
 }
 
 func (r *VpcEndpoint) Create(ctx context.Context, cfg any) (*VpcEndpointOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
-		return nil, err
-	}
-	if err := r.validateDnsOptions(); err != nil {
 		return nil, err
 	}
 	// An omitted private-dns-enabled is sent as an explicit false: the
@@ -191,9 +192,6 @@ func (r *VpcEndpoint) Update(
 ) (*VpcEndpointOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
-		return nil, err
-	}
-	if err := r.validateDnsOptions(); err != nil {
 		return nil, err
 	}
 	id := prior.Outputs.VpcEndpointId
@@ -395,23 +393,6 @@ func (r *VpcEndpoint) waitDeleted(ctx context.Context, client *ec2.Client, id st
 		}
 		return false, nil
 	}, wait.WithTimeout(10*time.Minute), wait.WithInterval(5*time.Second))
-}
-
-// validateDnsOptions checks the dns-record-ip-type enum on the DNS-options
-// block. The rule cannot be a derived constraint because it sits on a nested
-// block field, so it is enforced here at create and update. An absent block or
-// an absent record-ip type passes.
-func (r *VpcEndpoint) validateDnsOptions() error {
-	if r.DnsOptions == nil || r.DnsOptions.DnsRecordIpType == nil {
-		return nil
-	}
-	switch *r.DnsOptions.DnsRecordIpType {
-	case "ipv4", "dualstack", "ipv6", "service-defined":
-		return nil
-	default:
-		return fmt.Errorf(
-			"dns-options.dns-record-ip-type must be ipv4, dualstack, ipv6, or service-defined")
-	}
 }
 
 // vpcEndpointFailure builds the error for an endpoint that reached the failed

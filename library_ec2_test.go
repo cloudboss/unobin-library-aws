@@ -1172,6 +1172,16 @@ func TestEc2RoutingSchemas(t *testing.T) {
 							"var.ip-address-type == 'ipv6')",
 						Message: "ip-address-type must be ipv4, dualstack, or ipv6",
 					},
+					{
+						Kind: "predicate",
+						When: "(var.dns-options.dns-record-ip-type != null)",
+						Require: "(var.dns-options.dns-record-ip-type == 'ipv4' || " +
+							"var.dns-options.dns-record-ip-type == 'dualstack' || " +
+							"var.dns-options.dns-record-ip-type == 'ipv6' || " +
+							"var.dns-options.dns-record-ip-type == 'service-defined')",
+						Message: "dns-options dns-record-ip-type must be ipv4, " +
+							"dualstack, ipv6, or service-defined",
+					},
 				},
 				Defaults: []lang.DefaultSpec{
 					{Field: "var.route-table-ids", Optional: true},
