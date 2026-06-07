@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -295,7 +296,10 @@ func filterByNameRegex(images []ec2types.Image, re *regexp.Regexp) []ec2types.Im
 // single image, returning it.
 func newestImage(images []ec2types.Image) ec2types.Image {
 	return slices.MaxFunc(images, func(a, b ec2types.Image) int {
-		return creationTime(a).Compare(creationTime(b))
+		if c := creationTime(a).Compare(creationTime(b)); c != 0 {
+			return c
+		}
+		return strings.Compare(aws.ToString(a.ImageId), aws.ToString(b.ImageId))
 	})
 }
 
