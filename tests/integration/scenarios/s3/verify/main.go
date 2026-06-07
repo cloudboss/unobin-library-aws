@@ -1,9 +1,10 @@
 // verify checks the S3 group the scenario applied against the phase named in
 // the VERIFY_PHASE environment variable. It only reads cloud state: applied
-// requires the bucket present with versioning enabled, the public access block
-// fully on, a bucket policy in place, and the object readable; destroyed
-// requires the bucket gone, which takes the whole group with it. Tearing the
-// group down is the destroy plan's job, not the verifier's.
+// requires the bucket present and still unversioned (the update pass is what
+// enables versioning), the public access block fully on, a bucket policy in
+// place, and the object readable; destroyed requires the bucket gone, which
+// takes the whole group with it. Tearing the group down is the destroy plan's
+// job, not the verifier's.
 package main
 
 import (
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
@@ -71,8 +71,10 @@ func verifyApplied(ctx context.Context, client *s3.Client) error {
 	if err != nil {
 		return fmt.Errorf("get bucket versioning %s: %w", bucketName, err)
 	}
-	if versioning.Status != s3types.BucketVersioningStatusEnabled {
-		return fmt.Errorf("bucket %s versioning is %q, want Enabled",
+	// The first config leaves versioning unset; a bucket never versioned
+	// reports an empty status. The update pass is what enables it.
+	if versioning.Status != "" {
+		return fmt.Errorf("bucket %s versioning is %q, want unset before the update",
 			bucketName, versioning.Status)
 	}
 
