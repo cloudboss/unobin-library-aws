@@ -1,12 +1,28 @@
 description: '''>-
-  Manages an RDS estate: a VPC with two subnets backing a DB subnet group, a DB
-  parameter group and a cluster parameter group with declared parameters, an Aurora
-  PostgreSQL cluster scaled by Serverless v2 with one cluster instance, and a
-  standalone PostgreSQL instance. Exercises the create waits, the chunked parameter
-  reconcile, the follow-on modifies, and the tag sync across apply and destroy.
+  Manages an RDS estate: a VPC with two subnets backing a DB subnet group, a DB parameter group and
+  a cluster parameter group with declared parameters, an Aurora PostgreSQL cluster scaled by
+  Serverless v2 with one cluster instance, and a standalone PostgreSQL instance. Exercises the
+  create waits, the chunked parameter reconcile, the follow-on modifies, and the tag sync across
+  apply and destroy. The instance parameters, scaling bound, and backup retention come from inputs
+  so the update pass can change them in place through the parameter reconcile and the modify calls.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  instance-parameters: {
+    type:        list(object({ name: string, value: string }))
+    description: 'Engine parameters of the DB parameter group'
+  }
+  aurora-max-capacity: {
+    type:        optional(number, 1.0)
+    description: 'Maximum ACUs of the Serverless v2 cluster'
+  }
+  backup-retention: {
+    type:        optional(integer)
+    description: 'Backup retention days of the standalone instance; omitted, the API default'
+  }
+}
 
 data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
 
@@ -40,11 +56,8 @@ resources: {
         name:        'unobin-it-rds-pg'
         family:      'postgres16'
         description: 'unobin rds integration test parameter group'
-        parameters: [
-          { name: 'log_connections', value: '1' },
-          { name: 'log_disconnections', value: '1' },
-        ]
-        tags: { unobin: 'rds-it' }
+        parameters:  var.instance-parameters
+        tags:        { unobin: 'rds-it' }
       }
     }
     rds-cluster-parameter-group: {
@@ -63,7 +76,7 @@ resources: {
         master-username:      'unobin'
         master-password:      'unobin-it-password-1'
         db-subnet-group-name: resource.aws.rds-subnet-group.it.name
-        serverlessv2-scaling: { min-capacity: 0.5, max-capacity: 1.0 }
+        serverlessv2-scaling: { min-capacity: 0.5, max-capacity: var.aurora-max-capacity }
         skip-final-snapshot:  true
         tags:                 { unobin: 'rds-it' }
       }
@@ -79,15 +92,17 @@ resources: {
     }
     rds-instance: {
       it: {
-        identifier:           'unobin-it-db'
-        engine:               'postgres'
-        instance-class:       'db.t4g.micro'
-        allocated-storage:    20
-        username:             'unobin'
-        password:             'unobin-it-password-1'
-        db-subnet-group-name: resource.aws.rds-subnet-group.it.name
-        skip-final-snapshot:  true
-        tags:                 { unobin: 'rds-it' }
+        identifier:              'unobin-it-db'
+        engine:                  'postgres'
+        instance-class:          'db.t4g.micro'
+        allocated-storage:       20
+        username:                'unobin'
+        password:                'unobin-it-password-1'
+        db-subnet-group-name:    resource.aws.rds-subnet-group.it.name
+        # The slot is optional, so the possibly-null input needs no discharge.
+        backup-retention-period: var.backup-retention
+        skip-final-snapshot:     true
+        tags:                    { unobin: 'rds-it' }
       }
     }
   }

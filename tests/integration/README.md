@@ -1,7 +1,7 @@
 # Integration tests
 
-Integration tests that compile, plan, apply, verify, and destroy real
-unobin stacks using the `unobin-library-aws` module. Both `emulator` and
+Integration tests that compile, plan, apply, verify, update, and destroy
+real unobin stacks using the `unobin-library-aws` module. Both `emulator` and
 `live` tiers run the same scenarios:
 
 - `emulator`: Runs against AWS emulators in containers. Each scenario runs
@@ -19,8 +19,8 @@ The tier only changes which environment variables `run.sh` exports before
 invoking the scenarios. For the emulator tier, dummy credentials, region, and
 a per-scenario endpoint URL are defined with environment variables. For live
 tests, the environment must already contain the credentials and region. Each
-scenario's `config.ub` leaves the AWS configuration empty so the SDK's config
-loader reads everything from the environment.
+scenario's `config.ub` and `config-update.ub` leave the AWS configuration
+empty so the SDK's config loader reads everything from the environment.
 
 Layout:
 
@@ -29,6 +29,7 @@ scenarios/
   <scenario>/
     main.ub           # unobin stack -- imports aws and uses one resource
     config.ub         # operator config; AWS block is `default: {}` so env wins
+    config-update.ub  # same config with changed inputs for the update pass
     .backend          # optional; pins the scenario's emulator (default is
                       #   ministack)
     verify/main.go    # `go run`-able Go program that reads AWS state and
@@ -57,13 +58,28 @@ SCENARIO=ec2-vpc ./tests/integration/run.sh emulator
    `--replace-go-module=github.com/cloudboss/unobin-library-aws=<repo>` so the
    compiled binary uses the in-tree code.
 2. `go build` the compiled stack into `factory`.
-3. `./factory plan -c config.ub -o plan.json`, then `./factory apply plan.json`.
-4. `VERIFY_PHASE=applied go run ./<scenario>/verify` -- assert the resources
+3. `./factory pin` both configs. The stack name is the config file's
+   basename and the state is scoped by stack, so the update config is staged
+   as `update/config.ub`: both passes then address the same stack and state.
+4. `./factory plan -c config.ub -o plan.json`, then `./factory apply plan.json`.
+5. `VERIFY_PHASE=applied go run ./<scenario>/verify` -- assert the resources
    are present.
-5. `./factory plan --destroy -c config.ub -o destroy.json`, then
-   `./factory apply destroy.json` to tear everything down.
-6. `VERIFY_PHASE=destroyed go run ./<scenario>/verify` -- assert nothing is
+6. `./factory plan -c update/config.ub -o plan-update.json`, then
+   `./factory apply plan-update.json` -- exercise the in-place update paths
+   with the changed inputs.
+7. `./factory plan --destroy -c <config> -o destroy.json`, then
+   `./factory apply destroy.json` to tear everything down. The destroy plans
+   from the config of the most recent apply attempt, so a run that failed
+   before the update pass still tears down with the inputs that built it.
+   Destroy runs even after an earlier failure; if the destroy itself also
+   fails, the run reports both, since resources are left behind.
+8. `VERIFY_PHASE=destroyed go run ./<scenario>/verify` -- assert nothing is
    left behind.
+
+The driver builds and runs everything in a work directory under
+`_output/integration/`. A clean run removes it; a failed or interrupted run
+keeps it and prints the path, since each scenario's `.unobin/state` inside is
+what a manual teardown works from.
 
 The verifier only reads cloud state; it never creates or deletes. It loads
 AWS config with `config.LoadDefaultConfig`, so the one program serves both

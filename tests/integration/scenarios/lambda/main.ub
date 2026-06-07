@@ -1,9 +1,19 @@
 description: '''>-
-  Manages a Lambda function with its execution role, a
-  resource-policy permission, and a one-shot invocation.
+  Manages a Lambda function with its execution role, a resource-policy permission, and a
+  one-shot invocation. The memory size, timeout, and environment greeting come from
+  inputs so the update pass can change them in place through UpdateFunctionConfiguration.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  memory-size: { type: optional(integer, 128), description: 'Memory of the function in MiB' }
+  timeout:     { type: optional(integer, 3), description: 'Timeout of the function in seconds' }
+  greeting: {
+    type:        optional(string, 'hello from unobin')
+    description: 'Value of the GREETING environment variable'
+  }
+}
 
 resources: {
   aws: {
@@ -38,7 +48,9 @@ resources: {
         runtime:       'python3.12'
         handler:       'index.handler'
         code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
-        environment:   { variables: { GREETING: 'hello from unobin' } }
+        memory-size:   var.memory-size
+        timeout:       var.timeout
+        environment:   { variables: { GREETING: var.greeting } }
         tags:          { unobin: 'lambda-it' }
       }
     }

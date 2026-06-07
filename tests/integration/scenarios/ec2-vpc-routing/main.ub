@@ -1,15 +1,38 @@
 description: '''>-
-  Builds a routed VPC: an internet gateway attached to the VPC, a public route table
-  sending 0.0.0.0/0 to the gateway and associated with a public subnet, an Elastic IP
-  feeding a NAT gateway in that subnet, a private route table sending 0.0.0.0/0 to the
-  NAT gateway and associated with a private subnet, and an S3 gateway endpoint on the
-  private route table. Exercises the attachment fold, the route and association waits,
-  the NAT create wait, and the endpoint route-table reconcile across apply and destroy.
+  Builds a routed VPC: an internet gateway attached to the VPC, a public route table sending
+  0.0.0.0/0 to the gateway and associated with a public subnet, an Elastic IP feeding a NAT
+  gateway in that subnet, a private route table sending 0.0.0.0/0 to the NAT gateway and
+  associated with a private subnet, and an S3 gateway endpoint on the private route table.
+  Exercises the attachment fold, the route and association waits, the NAT create wait, and the
+  endpoint route-table reconcile across apply and destroy. The stage tag and the endpoint's route
+  tables come from inputs so the update pass can change them in place: tags through the tag sync,
+  and the endpoint through ModifyVpcEndpoint when the update extends it to the public route table.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+inputs: {
+  stage: {
+    type:        optional(string)
+    description: 'Stage tag value; omitted, the resources are tagged initial'
+  }
+  endpoint-on-public: {
+    type:        optional(boolean, false)
+    description: 'Whether the S3 endpoint also rides the public route table'
+  }
+}
+
 data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
+
+locals: {
+  tags: { unobin: 'vpc-routing-it', stage: var.stage ?? 'initial' }
+  endpoint-route-table-ids: if var.endpoint-on-public
+    then [
+      resource.aws.ec2-route-table.private.route-table-id,
+      resource.aws.ec2-route-table.public.route-table-id,
+    ]
+    else [resource.aws.ec2-route-table.private.route-table-id]
+}
 
 resources: {
   aws: {
@@ -19,26 +42,24 @@ resources: {
         vpc-id:            resource.aws.ec2-vpc.it.vpc-id
         cidr-block:        '10.62.1.0/24'
         availability-zone: data.aws.ec2-availability-zones.available.names[0]
-        tags:              { unobin: 'vpc-routing-it' }
+        tags:              local.tags
       }
       private: {
         vpc-id:            resource.aws.ec2-vpc.it.vpc-id
         cidr-block:        '10.62.2.0/24'
         availability-zone: data.aws.ec2-availability-zones.available.names[1]
-        tags:              { unobin: 'vpc-routing-it' }
+        tags:              local.tags
       }
     }
-    ec2-internet-gateway: {
-      it: { vpc-id: resource.aws.ec2-vpc.it.vpc-id, tags: { unobin: 'vpc-routing-it' } }
-    }
+    ec2-internet-gateway: { it: { vpc-id: resource.aws.ec2-vpc.it.vpc-id, tags: local.tags } }
     ec2-route-table: {
       public: {
         vpc-id: resource.aws.ec2-vpc.it.vpc-id
-        tags:   { unobin: 'vpc-routing-it', tier: 'public' }
+        tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: var.stage ?? 'initial' }
       }
       private: {
         vpc-id: resource.aws.ec2-vpc.it.vpc-id
-        tags:   { unobin: 'vpc-routing-it', tier: 'private' }
+        tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: var.stage ?? 'initial' }
       }
     }
     ec2-route: {
@@ -63,20 +84,23 @@ resources: {
         subnet-id:      resource.aws.ec2-subnet.private.id
       }
     }
+    # The EIP keeps literal tags: ministack accepts AllocateAddress without
+    # recording its tags, so an input-driven change would chase a value the
+    # emulator never stores.
     ec2-eip: { nat: { tags: { unobin: 'vpc-routing-it' } } }
     ec2-nat-gateway: {
       it: {
         subnet-id:     resource.aws.ec2-subnet.public.id
         allocation-id: resource.aws.ec2-eip.nat.allocation-id
-        tags:          { unobin: 'vpc-routing-it' }
+        tags:          local.tags
       }
     }
     ec2-vpc-endpoint: {
       s3: {
         vpc-id:          resource.aws.ec2-vpc.it.vpc-id
         service-name:    'com.amazonaws.us-east-1.s3'
-        route-table-ids: [resource.aws.ec2-route-table.private.route-table-id]
-        tags:            { unobin: 'vpc-routing-it' }
+        route-table-ids: local.endpoint-route-table-ids
+        tags:            local.tags
       }
     }
   }

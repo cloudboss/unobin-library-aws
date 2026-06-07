@@ -1,4 +1,4 @@
-inputs: { bucket: 'unobin-it-bucket' }
+inputs: { idle-timeout: 180, health-check-path: '/health', rule-paths: ['/api/*', '/v2/*'] }
 
 configurations: { aws: { default: {} } }
 

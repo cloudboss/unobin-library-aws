@@ -95,10 +95,24 @@ fi
 go install github.com/cloudboss/unobin/cmd/unobin@${UNOBIN_VERSION}
 UNOBIN=${GOPATH}/bin/unobin
 
-tmp_dir=$(mktemp -d "/tmp/unobin-library-aws-XXXXXX")
-trap "rm -rf ${tmp_dir}" EXIT
+# The work directory lives under _output so it survives the test
+# container, which mounts the repo and removes itself on exit. A clean
+# run removes the directory; a failed or interrupted one keeps it, since
+# each scenario's .unobin/state inside is the only record of what a
+# manual teardown still has to remove.
+mkdir -p "${REPO_DIR}/_output/integration"
+tmp_dir=$(mktemp -d "${REPO_DIR}/_output/integration/run-XXXXXX")
+cleanup() {
+    if [ -z "${FAILED}" ] && [ -n "${RUN_COMPLETE}" ]; then
+        rm -rf "${tmp_dir}"
+    else
+        echo "keeping ${tmp_dir} with the state of the incomplete run" >&2
+    fi
+}
+trap cleanup EXIT
 
 FAILED=""
+RUN_COMPLETE=""
 COUNT=0
 for sdir in "${@}"; do
     COUNT=$((COUNT + 1))
@@ -124,8 +138,14 @@ for sdir in "${@}"; do
     else
         echo "==> ${TIER}/${name}"
     fi
-    if [ ! -f "${sdir}/main.ub" ]; then
-        echo "missing main.ub" >&2
+    missing=""
+    for f in main.ub config.ub config-update.ub; do
+        if [ ! -f "${sdir}/${f}" ]; then
+            echo "missing ${f}" >&2
+            missing="true"
+        fi
+    done
+    if [ -n "${missing}" ]; then
         FAILED="${FAILED} ${name}"
         continue
     fi
@@ -137,9 +157,11 @@ for sdir in "${@}"; do
     # matter what fails after it. Once apply is attempted, the scenario may have
     # created cloud resources, so destroy runs even after an earlier failure to
     # tear them down; a destroy failure is reported only when nothing failed
-    # before it.
+    # before it. destroy_config names the config of the most recent apply
+    # attempt, so destroy plans from the same inputs that produced the state.
     failed_step=""
     applied=""
+    destroy_config="config.ub"
 
     if [ -d "${sdir}/prepare" ]; then
         (
@@ -157,11 +179,18 @@ for sdir in "${@}"; do
         ) || failed_step="compile"
     fi
 
+    # The stack name is the config file's basename, and the state is scoped
+    # by stack, so both passes must plan under the same basename or the
+    # update would address an empty state and recreate everything. The
+    # update config is staged as update/config.ub to keep the name.
     if [ -z "${failed_step}" ]; then
         (
             cd "${build_dir}"
             cp "${sdir}/config.ub" .
+            mkdir -p update
+            cp "${sdir}/config-update.ub" update/config.ub
             ./${name} pin -c config.ub
+            ./${name} pin -c update/config.ub
         ) || failed_step="pin"
     fi
 
@@ -193,16 +222,37 @@ for sdir in "${@}"; do
         ) || failed_step="verify-applied"
     fi
 
+    # The update pass replans from the staged update config and applies the
+    # difference, exercising each resource's in-place update path.
+    if [ -z "${failed_step}" ]; then
+        (
+            [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
+            cd "${build_dir}"
+            ./${name} plan \
+                -c ./update/config.ub \
+                -o "${build_dir}/plan-update.json"
+        ) || failed_step="plan-update"
+    fi
+
+    if [ -z "${failed_step}" ]; then
+        destroy_config="update/config.ub"
+        (
+            cd "${build_dir}"
+            ./${name} apply "${build_dir}/plan-update.json"
+        ) || failed_step="apply-update"
+    fi
+
     # Destroy runs whenever apply was attempted, even after an earlier failure,
     # so a failed run still cleans up what it created. verify-destroyed runs only
     # on an otherwise-clean run, since a run that already failed keeps its first
-    # error as the reason.
+    # error as the reason; a destroy failure after an earlier failure is appended
+    # to it, since it means resources are left behind for manual cleanup.
     if [ -n "${applied}" ]; then
         if (
             [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${build_dir}"
             ./${name} plan --destroy \
-                -c ./config.ub \
+                -c "./${destroy_config}" \
                 -o "${build_dir}/destroy.json"
             ./${name} apply "${build_dir}/destroy.json"
         ); then
@@ -215,6 +265,8 @@ for sdir in "${@}"; do
             fi
         elif [ -z "${failed_step}" ]; then
             failed_step="destroy"
+        else
+            failed_step="${failed_step}+destroy"
         fi
     fi
 
@@ -223,6 +275,7 @@ for sdir in "${@}"; do
     fi
 done
 
+RUN_COMPLETE="true"
 if [ -n "${FAILED}" ]; then
     echo "FAIL:${FAILED}" >&2
     exit 1

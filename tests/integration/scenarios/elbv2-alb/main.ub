@@ -1,12 +1,29 @@
 description: '''>-
   Manages an internal Application Load Balancer and its dependencies: a VPC with two
   subnets and a security group, an HTTP target group, the load balancer across both
-  subnets, an HTTP listener that forwards to the target group, and a path-based
-  listener rule. Exercises subnet create and the load-balancing create, active wait,
-  and follow-on attribute, action, and tag reconcile across apply and destroy.
+  subnets, an HTTP listener that forwards to the target group, and a path-based listener
+  rule. Exercises subnet create and the load-balancing create, active wait, and follow-on
+  attribute, action, and tag reconcile across apply and destroy. The idle timeout, health
+  check path, and rule paths come from inputs so the update pass can change them in place
+  through the modify and attribute calls the create already exercises.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  idle-timeout: {
+    type:        optional(integer, 120)
+    description: 'Idle timeout of the load balancer in seconds'
+  }
+  health-check-path: {
+    type:        optional(string, '/healthz')
+    description: 'Path the target group health check requests'
+  }
+  rule-paths: {
+    type:        optional(list(string), ['/api/*'])
+    description: 'Path patterns the listener rule matches'
+  }
+}
 
 data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
 
@@ -45,7 +62,7 @@ resources: {
         deregistration-delay:          120
         health-check-enabled:          true
         health-check-protocol:         'HTTP'
-        health-check-path:             '/healthz'
+        health-check-path:             var.health-check-path
         health-check-port:             'traffic-port'
         health-check-interval-seconds: 15
         health-check-timeout-seconds:  5
@@ -63,7 +80,7 @@ resources: {
         load-balancer-type:         'application'
         security-groups:            [resource.aws.ec2-security-group.it.id]
         subnets:                    [resource.aws.ec2-subnet.a.id, resource.aws.ec2-subnet.b.id]
-        idle-timeout:               120
+        idle-timeout:               var.idle-timeout
         enable-deletion-protection: false
         enable-http2:               true
         tags:                       { unobin: 'alb-it' }
@@ -85,7 +102,7 @@ resources: {
         listener-arn: resource.aws.elbv2-listener.it.arn
         priority:     100
         actions:    [{ type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn }]
-        conditions: [{ path-pattern: { values: ['/api/*'] } }]
+        conditions: [{ path-pattern: { values: var.rule-paths } }]
         tags:       { unobin: 'alb-it' }
       }
     }

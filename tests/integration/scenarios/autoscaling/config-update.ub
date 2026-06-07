@@ -1,4 +1,4 @@
-inputs: { bucket: 'unobin-it-bucket' }
+inputs: { max-size: 2, lt-instance-type: 't3.small', stage: 'updated' }
 
 configurations: { aws: { default: {} } }
 

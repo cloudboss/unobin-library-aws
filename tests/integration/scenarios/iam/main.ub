@@ -1,9 +1,23 @@
 description: '''>-
-  Manages an IAM role with a managed policy, an
-  attachment, an instance profile, and an OIDC provider.
+  Manages an IAM role with a managed policy, an attachment, an instance profile, and an
+  OIDC provider. The session duration, policy document, and provider thumbprints come from
+  inputs so the update pass can change them in place: the role through UpdateRole, the
+  policy through a new default version, and the thumbprints through the rotation call.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  max-session-duration: {
+    type:        optional(integer, 3600)
+    description: 'Maximum session duration of the role in seconds'
+  }
+  policy-document: { type: string, description: 'JSON document of the managed policy' }
+  oidc-thumbprints: {
+    type:        optional(list(string), ['990f4193972f2becf12ddeda5237f9c952f20d9e'])
+    description: 'Server certificate thumbprints of the OIDC provider'
+  }
+}
 
 resources: {
   aws: {
@@ -14,17 +28,10 @@ resources: {
           {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
           {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
           '''
+        max-session-duration: var.max-session-duration
       }
     }
-    iam-policy: {
-      it: {
-        policy-name: 'unobin-it-policy'
-        policy-document: '''\-
-          {"Version":"2012-10-17","Statement":[{"Effect":
-          "Allow","Action":["s3:GetObject"],"Resource":"*"}]}
-          '''
-      }
-    }
+    iam-policy: { it: { policy-name: 'unobin-it-policy', policy-document: var.policy-document } }
     iam-role-policy-attachment: {
       it: {
         role-name:  resource.aws.iam-role.it.role-name
@@ -38,7 +45,7 @@ resources: {
       it: {
         url:             'https://oidc.unobin-it.example.com'
         client-id-list:  ['sts.amazonaws.com']
-        thumbprint-list: ['990f4193972f2becf12ddeda5237f9c952f20d9e']
+        thumbprint-list: var.oidc-thumbprints
       }
     }
   }

@@ -1,18 +1,34 @@
 description: '''>-
-  Manages an S3 bucket with versioning, a public access
-  block, a non-public bucket policy, and an object.
+  Manages an S3 bucket with versioning, a public access block, a non-public bucket
+  policy, and an object. The bucket name, versioning block, and object body come
+  from inputs so the update pass can change them in place: the bucket starts
+  unversioned and the update enables versioning and rewrites the object body.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  bucket: { type: string, description: 'Name of the bucket' }
+  versioning: {
+    type:        optional(object({ status: string }))
+    description: 'Versioning block for the bucket; omitted, the bucket is unversioned'
+  }
+  object-body: {
+    type:        optional(string)
+    description: 'Body of the object; omitted, the stack supplies one'
+  }
+}
 
 resources: {
   aws: {
     s3-bucket: {
       it: {
-        bucket:           'unobin-it-bucket'
+        bucket:           var.bucket
         tags:             { unobin: 's3-it' }
         empty-on-destroy: true
-        versioning:       { status: 'Enabled' }
+        # The slot is itself optional, so the possibly-null input passes
+        # through without a discharge.
+        versioning:       var.versioning
         public-access-block: {
           block-public-acls:       true
           block-public-policy:     true
@@ -35,7 +51,7 @@ resources: {
       it: {
         bucket:           resource.aws.s3-bucket.it.bucket
         key:              'hello.txt'
-        body-content:     'hello from unobin'
+        body-content:     var.object-body ?? 'hello from unobin'
         content-type:     'text/plain'
         purge-on-destroy: true
       }

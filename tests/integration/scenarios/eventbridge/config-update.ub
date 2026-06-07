@@ -1,4 +1,4 @@
-inputs: { bucket: 'unobin-it-bucket' }
+inputs: { schedule: 'rate(10 minutes)', rule-state: 'DISABLED' }
 
 configurations: { aws: { default: {} } }
 

@@ -1,9 +1,18 @@
 description: '''>-
-  Manages an EventBridge rule and a target that invokes a Lambda function, with the
-  function, its execution role, and the resource permission that lets EventBridge invoke it.
+  Manages an EventBridge rule and a target that invokes a Lambda function, with the function, its
+  execution role, and the resource permission that lets EventBridge invoke it. The rule schedule and
+  state come from inputs so the update pass can change them in place through the PutRule upsert.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  schedule: {
+    type:        optional(string, 'rate(5 minutes)')
+    description: 'Schedule expression of the rule'
+  }
+  rule-state: { type: optional(string, 'ENABLED'), description: 'Whether the rule is enabled' }
+}
 
 resources: {
   aws: {
@@ -44,9 +53,9 @@ resources: {
     eventbridge-rule: {
       it: {
         name:                'unobin-it-rule'
-        schedule-expression: 'rate(5 minutes)'
+        schedule-expression: var.schedule
         description:         'unobin eventbridge integration test rule'
-        state:               'ENABLED'
+        state:               var.rule-state
         tags:                { unobin: 'eventbridge-it' }
       }
     }

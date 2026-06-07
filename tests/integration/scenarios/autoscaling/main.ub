@@ -1,15 +1,28 @@
 description: '''>-
-  Manages an Auto Scaling group and its dependencies: a VPC with a subnet, the latest
-  Amazon Linux 2023 AMI resolved through the ec2-ami data source, a launch template built
-  from it, and a group whose size comes from the desired-capacity input. The default of
-  zero launches no instance, which suits emulators that cannot simulate one; a live run can
-  raise it to launch an instance and exercise the capacity wait and the drain on destroy. A
-  standalone gp3 volume exercises the EBS volume resource in the same availability zone.
+  Manages an Auto Scaling group and its dependencies: a VPC with a subnet, the latest Amazon Linux
+  2023 AMI resolved through the ec2-ami data source, a launch template built from it, and a group
+  whose size comes from the desired-capacity input. The default of zero launches no instance, which
+  suits emulators that cannot simulate one; a live run can raise it to launch an instance and
+  exercise the capacity wait and the drain on destroy. A standalone gp3 volume exercises the EBS
+  volume resource in the same availability zone. The group bounds, template instance type, and stage
+  tag come from inputs so the update pass can change them in place: the group through
+  UpdateAutoScalingGroup, the template through a new default version, and tags through the tag sync.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-inputs: { desired-capacity: { type: optional(integer, 0) } }
+inputs: {
+  desired-capacity: { type: optional(integer, 0) }
+  max-size:         { type: optional(integer, 1), description: 'Upper bound of the group' }
+  lt-instance-type: {
+    type:        optional(string, 't3.micro')
+    description: 'Instance type the launch template declares'
+  }
+  stage: {
+    type:        optional(string)
+    description: 'Stage tag value; omitted, the resources are tagged initial'
+  }
+}
 
 data: {
   aws: {
@@ -24,6 +37,8 @@ data: {
   }
 }
 
+locals: { tags: { unobin: 'autoscaling-it', stage: var.stage ?? 'initial' } }
+
 resources: {
   aws: {
     ec2-vpc: { it: { cidr-block: '10.30.0.0/16' } }
@@ -32,7 +47,7 @@ resources: {
         vpc-id:            resource.aws.ec2-vpc.it.vpc-id
         cidr-block:        '10.30.1.0/24'
         availability-zone: data.aws.ec2-availability-zones.available.names[0]
-        tags:              { unobin: 'autoscaling-it' }
+        tags:              local.tags
       }
     }
     ec2-launch-template: {
@@ -40,18 +55,18 @@ resources: {
         name: 'unobin-it-asg-lt'
         data: {
           image-id:           data.aws.ec2-ami.al2023.image-id
-          instance-type:      't3.micro'
+          instance-type:      var.lt-instance-type
           metadata-options:   { http-tokens: 'required' }
           tag-specifications: [{ resource-type: 'instance', tags: { unobin: 'autoscaling-it' } }]
         }
-        tags: { unobin: 'autoscaling-it' }
+        tags: local.tags
       }
     }
     autoscaling-group: {
       it: {
         name:                'unobin-it-asg'
         min-size:            0
-        max-size:            1
+        max-size:            var.max-size
         desired-capacity:    var.desired-capacity
         vpc-zone-identifier: [resource.aws.ec2-subnet.a.id]
         launch-template: {
@@ -67,7 +82,7 @@ resources: {
         availability-zone: data.aws.ec2-availability-zones.available.names[0]
         size:              1
         type:              'gp3'
-        tags:              { unobin: 'autoscaling-it' }
+        tags:              local.tags
       }
     }
   }

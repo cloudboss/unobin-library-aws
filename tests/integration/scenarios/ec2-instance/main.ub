@@ -1,12 +1,26 @@
 description: '''>-
-  Launches an EC2 instance with its dependencies: a VPC with a subnet, a security group,
-  an imported key pair, and the latest Amazon Linux 2023 AMI resolved through the ec2-ami
-  data source. The instance sets user data, a gp3 root volume, and required IMDSv2 tokens,
-  exercising the run wait and the follow-on attribute calls across apply and destroy. The
-  availability-zones and caller-identity data sources are read into stack outputs.
+  Launches an EC2 instance with its dependencies: a VPC with a subnet, a security group, an imported
+  key pair, and the latest Amazon Linux 2023 AMI resolved through the ec2-ami data source. The
+  instance sets user data, a gp3 root volume, and required IMDSv2 tokens, exercising the run wait
+  and the follow-on attribute calls across apply and destroy. The availability-zones and
+  caller-identity data sources are read into stack outputs. The instance type, source/dest check,
+  and stage tag come from inputs so the update pass can change them in place: the type through the
+  stop-modify-start path, the check through a plain attribute modify, and tags through the tag sync.
   '''
 
 imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  instance-type: { type: optional(string, 't3.micro'), description: 'Instance type to launch' }
+  source-dest-check: {
+    type:        optional(boolean)
+    description: 'Whether the source/destination check is on; omitted, EC2 defaults it'
+  }
+  stage: {
+    type:        optional(string)
+    description: 'Stage tag value; omitted, the resources are tagged initial'
+  }
+}
 
 data: {
   aws: {
@@ -22,15 +36,17 @@ data: {
   }
 }
 
+locals: { tags: { unobin: 'instance-it', stage: var.stage ?? 'initial' } }
+
 resources: {
   aws: {
     ec2-vpc: { it: { cidr-block: '10.63.0.0/16' } }
     ec2-subnet: {
       a: {
-        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:        '10.63.1.0/24'
-        availability-zone: data.aws.ec2-availability-zones.available.names[0]
-        tags:              { unobin: 'instance-it' }
+        vpc-id:               resource.aws.ec2-vpc.it.vpc-id
+        cidr-block:           '10.63.1.0/24'
+        availability-zone-id: data.aws.ec2-availability-zones.available.zone-ids[0]
+        tags:                 local.tags
       }
     }
     ec2-security-group: {
@@ -38,7 +54,7 @@ resources: {
         name:        'unobin-it-instance'
         description: 'unobin instance integration test security group'
         vpc-id:      resource.aws.ec2-vpc.it.vpc-id
-        tags:        { unobin: 'instance-it' }
+        tags:        local.tags
       }
     }
     ec2-key-pair: {
@@ -47,20 +63,22 @@ resources: {
         public-key: '''>-
           ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN8Epl+b+PuQeE0tmbfPGaBNoGtTh1rR4MpfC0g4NhEt unobin-it
           '''
-        tags: { unobin: 'instance-it' }
+        tags: local.tags
       }
     }
     ec2-instance: {
       it: {
         ami:                    data.aws.ec2-ami.al2023.image-id
-        instance-type:          't3.micro'
+        instance-type:          var.instance-type
         subnet-id:              resource.aws.ec2-subnet.a.id
         vpc-security-group-ids: [resource.aws.ec2-security-group.it.id]
         key-name:               resource.aws.ec2-key-pair.it.key-name
         user-data:              'echo unobin'
+        # The slot is optional, so the possibly-null input needs no discharge.
+        source-dest-check:      var.source-dest-check
         root-block-device:      { volume-size: 8, volume-type: 'gp3' }
         metadata-options:       { http-tokens: 'required' }
-        tags:                   { unobin: 'instance-it' }
+        tags:                   local.tags
       }
     }
   }
@@ -72,5 +90,6 @@ outputs: {
   private-ip:     { value: resource.aws.ec2-instance.it.private-ip }
   key-pair-id:    { value: resource.aws.ec2-key-pair.it.key-pair-id }
   account:        { value: data.aws.sts-caller-identity.it.account }
+  zone-ids:       { value: data.aws.ec2-availability-zones.available.zone-ids }
   zone-names:     { value: data.aws.ec2-availability-zones.available.names }
 }

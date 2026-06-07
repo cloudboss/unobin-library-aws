@@ -1,4 +1,4 @@
-inputs: { bucket: 'unobin-it-bucket' }
+inputs: { instance-type: 't3.small', source-dest-check: false, stage: 'updated' }
 
 configurations: { aws: { default: {} } }
 
