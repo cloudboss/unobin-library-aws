@@ -26,37 +26,29 @@ constraints: [
 ]
 
 resources: {
-  aws: {
-    ec2-vpc: { it: { cidr-block: var.cidr-block } }
-    ec2-security-group: {
-      it: {
-        name:        'unobin-it-sg'
-        description: 'unobin integration test security group'
-        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
-        tags:        { unobin: 'ec2-it' }
-      }
-    }
-    ec2-security-group-ingress-rule: {
-      it: {
-        security-group-id: resource.aws.ec2-security-group.it.id
-        ip-protocol:       'tcp'
-        # Each nullable level wears its own marker; ?? ends the chain.
-        from-port:         var.ssh-port?.from ?? 22
-        to-port:           var.ssh-port?.to ?? var.ssh-port?.from ?? 22
-        cidr-ipv4:         var.cidr-block
-        description:       'ssh from the vpc'
-      }
-    }
-    ec2-security-group-egress-rule: {
-      it: {
-        security-group-id: resource.aws.ec2-security-group.it.id
-        ip-protocol:       'tcp'
-        from-port:         443
-        to-port:           443
-        cidr-ipv4:         '0.0.0.0/0'
-        description:       'https outbound'
-      }
-    }
+  aws.ec2-vpc.it: { cidr-block: var.cidr-block }
+  aws.ec2-security-group.it: {
+    name:        'unobin-it-sg'
+    description: 'unobin integration test security group'
+    vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+    tags:        { unobin: 'ec2-it' }
+  }
+  aws.ec2-security-group-ingress-rule.it: {
+    security-group-id: resource.aws.ec2-security-group.it.id
+    ip-protocol:       'tcp'
+    # Each nullable level wears its own marker; ?? ends the chain.
+    from-port:         var.ssh-port?.from ?? 22
+    to-port:           var.ssh-port?.to ?? var.ssh-port?.from ?? 22
+    cidr-ipv4:         var.cidr-block
+    description:       'ssh from the vpc'
+  }
+  aws.ec2-security-group-egress-rule.it: {
+    security-group-id: resource.aws.ec2-security-group.it.id
+    ip-protocol:       'tcp'
+    from-port:         443
+    to-port:           443
+    cidr-ipv4:         '0.0.0.0/0'
+    description:       'https outbound'
   }
 }
 

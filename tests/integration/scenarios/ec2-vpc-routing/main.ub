@@ -22,7 +22,7 @@ inputs: {
   }
 }
 
-data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
+data: { aws.ec2-availability-zones.available: { state: 'available' } }
 
 locals: {
   tags: { unobin: 'vpc-routing-it', stage: var.stage ?? 'initial' }
@@ -35,74 +35,60 @@ locals: {
 }
 
 resources: {
-  aws: {
-    ec2-vpc: { it: { cidr-block: '10.62.0.0/16' } }
-    ec2-subnet: {
-      public: {
-        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:        '10.62.1.0/24'
-        availability-zone: data.aws.ec2-availability-zones.available.names[0]
-        tags:              local.tags
-      }
-      private: {
-        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:        '10.62.2.0/24'
-        availability-zone: data.aws.ec2-availability-zones.available.names[1]
-        tags:              local.tags
-      }
-    }
-    ec2-internet-gateway: { it: { vpc-id: resource.aws.ec2-vpc.it.vpc-id, tags: local.tags } }
-    ec2-route-table: {
-      public: {
-        vpc-id: resource.aws.ec2-vpc.it.vpc-id
-        tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: var.stage ?? 'initial' }
-      }
-      private: {
-        vpc-id: resource.aws.ec2-vpc.it.vpc-id
-        tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: var.stage ?? 'initial' }
-      }
-    }
-    ec2-route: {
-      public-default: {
-        route-table-id:         resource.aws.ec2-route-table.public.route-table-id
-        destination-cidr-block: '0.0.0.0/0'
-        gateway-id:             resource.aws.ec2-internet-gateway.it.internet-gateway-id
-      }
-      private-default: {
-        route-table-id:         resource.aws.ec2-route-table.private.route-table-id
-        destination-cidr-block: '0.0.0.0/0'
-        nat-gateway-id:         resource.aws.ec2-nat-gateway.it.nat-gateway-id
-      }
-    }
-    ec2-route-table-association: {
-      public: {
-        route-table-id: resource.aws.ec2-route-table.public.route-table-id
-        subnet-id:      resource.aws.ec2-subnet.public.id
-      }
-      private: {
-        route-table-id: resource.aws.ec2-route-table.private.route-table-id
-        subnet-id:      resource.aws.ec2-subnet.private.id
-      }
-    }
-    # The EIP keeps literal tags: ministack accepts AllocateAddress without
-    # recording its tags, so an input-driven change would chase a value the
-    # emulator never stores.
-    ec2-eip: { nat: { tags: { unobin: 'vpc-routing-it' } } }
-    ec2-nat-gateway: {
-      it: {
-        subnet-id:     resource.aws.ec2-subnet.public.id
-        allocation-id: resource.aws.ec2-eip.nat.allocation-id
-        tags:          local.tags
-      }
-    }
-    ec2-vpc-endpoint: {
-      s3: {
-        vpc-id:          resource.aws.ec2-vpc.it.vpc-id
-        service-name:    'com.amazonaws.us-east-1.s3'
-        route-table-ids: local.endpoint-route-table-ids
-        tags:            local.tags
-      }
-    }
+  aws.ec2-vpc.it: { cidr-block: '10.62.0.0/16' }
+  aws.ec2-subnet.public: {
+    vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:        '10.62.1.0/24'
+    availability-zone: data.aws.ec2-availability-zones.available.names[0]
+    tags:              local.tags
+  }
+  aws.ec2-subnet.private: {
+    vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:        '10.62.2.0/24'
+    availability-zone: data.aws.ec2-availability-zones.available.names[1]
+    tags:              local.tags
+  }
+  aws.ec2-internet-gateway.it: { vpc-id: resource.aws.ec2-vpc.it.vpc-id, tags: local.tags }
+  aws.ec2-route-table.public: {
+    vpc-id: resource.aws.ec2-vpc.it.vpc-id
+    tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: var.stage ?? 'initial' }
+  }
+  aws.ec2-route-table.private: {
+    vpc-id: resource.aws.ec2-vpc.it.vpc-id
+    tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: var.stage ?? 'initial' }
+  }
+  aws.ec2-route.public-default: {
+    route-table-id:         resource.aws.ec2-route-table.public.route-table-id
+    destination-cidr-block: '0.0.0.0/0'
+    gateway-id:             resource.aws.ec2-internet-gateway.it.internet-gateway-id
+  }
+  aws.ec2-route.private-default: {
+    route-table-id:         resource.aws.ec2-route-table.private.route-table-id
+    destination-cidr-block: '0.0.0.0/0'
+    nat-gateway-id:         resource.aws.ec2-nat-gateway.it.nat-gateway-id
+  }
+  aws.ec2-route-table-association.public: {
+    route-table-id: resource.aws.ec2-route-table.public.route-table-id
+    subnet-id:      resource.aws.ec2-subnet.public.id
+  }
+  aws.ec2-route-table-association.private: {
+    route-table-id: resource.aws.ec2-route-table.private.route-table-id
+    subnet-id:      resource.aws.ec2-subnet.private.id
+  }
+  # The EIP keeps literal tags: ministack accepts AllocateAddress without
+  # recording its tags, so an input-driven change would chase a value the
+  # emulator never stores.
+  aws.ec2-eip.nat: { tags: { unobin: 'vpc-routing-it' } }
+  aws.ec2-nat-gateway.it: {
+    subnet-id:     resource.aws.ec2-subnet.public.id
+    allocation-id: resource.aws.ec2-eip.nat.allocation-id
+    tags:          local.tags
+  }
+  aws.ec2-vpc-endpoint.s3: {
+    vpc-id:          resource.aws.ec2-vpc.it.vpc-id
+    service-name:    'com.amazonaws.us-east-1.s3'
+    route-table-ids: local.endpoint-route-table-ids
+    tags:            local.tags
   }
 }
 

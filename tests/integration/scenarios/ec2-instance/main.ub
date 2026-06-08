@@ -23,64 +23,50 @@ inputs: {
 }
 
 data: {
-  aws: {
-    ec2-ami: {
-      al2023: {
-        owners:      ['amazon']
-        most-recent: true
-        filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
-      }
-    }
-    ec2-availability-zones: { available: { state: 'available' } }
-    sts-caller-identity:    { it: {} }
+  aws.ec2-ami.al2023: {
+    owners:      ['amazon']
+    most-recent: true
+    filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
   }
+  aws.ec2-availability-zones.available: { state: 'available' }
+  aws.sts-caller-identity.it:           {}
 }
 
 locals: { tags: { unobin: 'instance-it', stage: var.stage ?? 'initial' } }
 
 resources: {
-  aws: {
-    ec2-vpc: { it: { cidr-block: '10.63.0.0/16' } }
-    ec2-subnet: {
-      a: {
-        vpc-id:               resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:           '10.63.1.0/24'
-        availability-zone-id: data.aws.ec2-availability-zones.available.zone-ids[0]
-        tags:                 local.tags
-      }
-    }
-    ec2-security-group: {
-      it: {
-        name:        'unobin-it-instance'
-        description: 'unobin instance integration test security group'
-        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
-        tags:        local.tags
-      }
-    }
-    ec2-key-pair: {
-      it: {
-        key-name: 'unobin-it-instance'
-        public-key: '''>-
-          ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN8Epl+b+PuQeE0tmbfPGaBNoGtTh1rR4MpfC0g4NhEt unobin-it
-          '''
-        tags: local.tags
-      }
-    }
-    ec2-instance: {
-      it: {
-        ami:                    data.aws.ec2-ami.al2023.image-id
-        instance-type:          var.instance-type
-        subnet-id:              resource.aws.ec2-subnet.a.id
-        vpc-security-group-ids: [resource.aws.ec2-security-group.it.id]
-        key-name:               resource.aws.ec2-key-pair.it.key-name
-        user-data:              'echo unobin'
-        # The slot is optional, so the possibly-null input needs no discharge.
-        source-dest-check:      var.source-dest-check
-        root-block-device:      { volume-size: 8, volume-type: 'gp3' }
-        metadata-options:       { http-tokens: 'required' }
-        tags:                   local.tags
-      }
-    }
+  aws.ec2-vpc.it: { cidr-block: '10.63.0.0/16' }
+  aws.ec2-subnet.a: {
+    vpc-id:               resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:           '10.63.1.0/24'
+    availability-zone-id: data.aws.ec2-availability-zones.available.zone-ids[0]
+    tags:                 local.tags
+  }
+  aws.ec2-security-group.it: {
+    name:        'unobin-it-instance'
+    description: 'unobin instance integration test security group'
+    vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+    tags:        local.tags
+  }
+  aws.ec2-key-pair.it: {
+    key-name: 'unobin-it-instance'
+    public-key: '''>-
+      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN8Epl+b+PuQeE0tmbfPGaBNoGtTh1rR4MpfC0g4NhEt unobin-it
+      '''
+    tags: local.tags
+  }
+  aws.ec2-instance.it: {
+    ami:                    data.aws.ec2-ami.al2023.image-id
+    instance-type:          var.instance-type
+    subnet-id:              resource.aws.ec2-subnet.a.id
+    vpc-security-group-ids: [resource.aws.ec2-security-group.it.id]
+    key-name:               resource.aws.ec2-key-pair.it.key-name
+    user-data:              'echo unobin'
+    # The slot is optional, so the possibly-null input needs no discharge.
+    source-dest-check:      var.source-dest-check
+    root-block-device:      { volume-size: 8, volume-type: 'gp3' }
+    metadata-options:       { http-tokens: 'required' }
+    tags:                   local.tags
   }
 }
 

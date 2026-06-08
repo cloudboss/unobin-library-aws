@@ -25,87 +25,71 @@ inputs: {
   }
 }
 
-data: { aws: { ec2-availability-zones: { available: { state: 'available' } } } }
+data: { aws.ec2-availability-zones.available: { state: 'available' } }
 
 resources: {
-  aws: {
-    ec2-vpc: { it: { cidr-block: '10.20.0.0/16' } }
-    ec2-subnet: {
-      a: {
-        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:        '10.20.1.0/24'
-        availability-zone: data.aws.ec2-availability-zones.available.names[0]
-        tags:              { unobin: 'alb-it' }
-      }
-      b: {
-        vpc-id:            resource.aws.ec2-vpc.it.vpc-id
-        cidr-block:        '10.20.2.0/24'
-        availability-zone: data.aws.ec2-availability-zones.available.names[1]
-        tags:              { unobin: 'alb-it' }
-      }
-    }
-    ec2-security-group: {
-      it: {
-        name:        'unobin-it-alb-sg'
-        description: 'unobin application load balancer integration test security group'
-        vpc-id:      resource.aws.ec2-vpc.it.vpc-id
-        tags:        { unobin: 'alb-it' }
-      }
-    }
-    elbv2-target-group: {
-      it: {
-        name:                          'unobin-it-alb-tg'
-        target-type:                   'instance'
-        port:                          80
-        protocol:                      'HTTP'
-        vpc-id:                        resource.aws.ec2-vpc.it.vpc-id
-        deregistration-delay:          120
-        health-check-enabled:          true
-        health-check-protocol:         'HTTP'
-        health-check-path:             var.health-check-path
-        health-check-port:             'traffic-port'
-        health-check-interval-seconds: 15
-        health-check-timeout-seconds:  5
-        healthy-threshold-count:       3
-        unhealthy-threshold-count:     3
-        matcher:                       { http-code: '200-299' }
-        stickiness:                    { enabled: true, type: 'lb_cookie', cookie-duration: 600 }
-        tags:                          { unobin: 'alb-it' }
-      }
-    }
-    elbv2-load-balancer: {
-      it: {
-        name:                       'unobin-it-alb'
-        internal:                   true
-        load-balancer-type:         'application'
-        security-groups:            [resource.aws.ec2-security-group.it.id]
-        subnets:                    [resource.aws.ec2-subnet.a.id, resource.aws.ec2-subnet.b.id]
-        idle-timeout:               var.idle-timeout
-        enable-deletion-protection: false
-        enable-http2:               true
-        tags:                       { unobin: 'alb-it' }
-      }
-    }
-    elbv2-listener: {
-      it: {
-        load-balancer-arn: resource.aws.elbv2-load-balancer.it.arn
-        protocol:          'HTTP'
-        port:              80
-        default-action: [
-          { type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn },
-        ]
-        tags: { unobin: 'alb-it' }
-      }
-    }
-    elbv2-listener-rule: {
-      it: {
-        listener-arn: resource.aws.elbv2-listener.it.arn
-        priority:     100
-        actions:    [{ type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn }]
-        conditions: [{ path-pattern: { values: var.rule-paths } }]
-        tags:       { unobin: 'alb-it' }
-      }
-    }
+  aws.ec2-vpc.it: { cidr-block: '10.20.0.0/16' }
+  aws.ec2-subnet.a: {
+    vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:        '10.20.1.0/24'
+    availability-zone: data.aws.ec2-availability-zones.available.names[0]
+    tags:              { unobin: 'alb-it' }
+  }
+  aws.ec2-subnet.b: {
+    vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:        '10.20.2.0/24'
+    availability-zone: data.aws.ec2-availability-zones.available.names[1]
+    tags:              { unobin: 'alb-it' }
+  }
+  aws.ec2-security-group.it: {
+    name:        'unobin-it-alb-sg'
+    description: 'unobin application load balancer integration test security group'
+    vpc-id:      resource.aws.ec2-vpc.it.vpc-id
+    tags:        { unobin: 'alb-it' }
+  }
+  aws.elbv2-target-group.it: {
+    name:                          'unobin-it-alb-tg'
+    target-type:                   'instance'
+    port:                          80
+    protocol:                      'HTTP'
+    vpc-id:                        resource.aws.ec2-vpc.it.vpc-id
+    deregistration-delay:          120
+    health-check-enabled:          true
+    health-check-protocol:         'HTTP'
+    health-check-path:             var.health-check-path
+    health-check-port:             'traffic-port'
+    health-check-interval-seconds: 15
+    health-check-timeout-seconds:  5
+    healthy-threshold-count:       3
+    unhealthy-threshold-count:     3
+    matcher:                       { http-code: '200-299' }
+    stickiness:                    { enabled: true, type: 'lb_cookie', cookie-duration: 600 }
+    tags:                          { unobin: 'alb-it' }
+  }
+  aws.elbv2-load-balancer.it: {
+    name:                       'unobin-it-alb'
+    internal:                   true
+    load-balancer-type:         'application'
+    security-groups:            [resource.aws.ec2-security-group.it.id]
+    subnets:                    [resource.aws.ec2-subnet.a.id, resource.aws.ec2-subnet.b.id]
+    idle-timeout:               var.idle-timeout
+    enable-deletion-protection: false
+    enable-http2:               true
+    tags:                       { unobin: 'alb-it' }
+  }
+  aws.elbv2-listener.it: {
+    load-balancer-arn: resource.aws.elbv2-load-balancer.it.arn
+    protocol:          'HTTP'
+    port:              80
+    default-action: [{ type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn }]
+    tags:           { unobin: 'alb-it' }
+  }
+  aws.elbv2-listener-rule.it: {
+    listener-arn: resource.aws.elbv2-listener.it.arn
+    priority:     100
+    actions:      [{ type: 'forward', target-group-arn: resource.aws.elbv2-target-group.it.arn }]
+    conditions:   [{ path-pattern: { values: var.rule-paths } }]
+    tags:         { unobin: 'alb-it' }
   }
 }
 

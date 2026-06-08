@@ -16,63 +16,47 @@ inputs: {
 }
 
 resources: {
-  aws: {
-    iam-role: {
-      it: {
-        role-name: 'unobin-it-lambda-role'
-        assume-role-policy-document: '''\-
-          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
-          {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
-          '''
-      }
-    }
-    iam-policy: {
-      it: {
-        policy-name: 'unobin-it-lambda-policy'
-        policy-document: '''\-
-          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
-          CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
-          '''
-      }
-    }
-    iam-role-policy-attachment: {
-      it: {
-        role-name:  resource.aws.iam-role.it.role-name
-        policy-arn: resource.aws.iam-policy.it.arn
-      }
-    }
-    lambda-function: {
-      it: {
-        function-name: 'unobin-it-function'
-        role:          resource.aws.iam-role.it.arn
-        runtime:       'python3.12'
-        handler:       'index.handler'
-        code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
-        memory-size:   var.memory-size
-        timeout:       var.timeout
-        environment:   { variables: { GREETING: var.greeting } }
-        tags:          { unobin: 'lambda-it' }
-      }
-    }
-    lambda-permission: {
-      it: {
-        function-name: resource.aws.lambda-function.it.function-name
-        statement-id:  'unobin-it-allow-invoke'
-        action:        'lambda:InvokeFunction'
-        principal:     's3.amazonaws.com'
-      }
-    }
+  aws.iam-role.it: {
+    role-name: 'unobin-it-lambda-role'
+    assume-role-policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+      {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+      '''
+  }
+  aws.iam-policy.it: {
+    policy-name: 'unobin-it-lambda-policy'
+    policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
+      CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+      '''
+  }
+  aws.iam-role-policy-attachment.it: {
+    role-name:  resource.aws.iam-role.it.role-name
+    policy-arn: resource.aws.iam-policy.it.arn
+  }
+  aws.lambda-function.it: {
+    function-name: 'unobin-it-function'
+    role:          resource.aws.iam-role.it.arn
+    runtime:       'python3.12'
+    handler:       'index.handler'
+    code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
+    memory-size:   var.memory-size
+    timeout:       var.timeout
+    environment:   { variables: { GREETING: var.greeting } }
+    tags:          { unobin: 'lambda-it' }
+  }
+  aws.lambda-permission.it: {
+    function-name: resource.aws.lambda-function.it.function-name
+    statement-id:  'unobin-it-allow-invoke'
+    action:        'lambda:InvokeFunction'
+    principal:     's3.amazonaws.com'
   }
 }
 
 actions: {
-  aws: {
-    lambda-invoke: {
-      it: {
-        function-name:   resource.aws.lambda-function.it.function-name
-        payload-content: '{"name":"unobin"}'
-      }
-    }
+  aws.lambda-invoke.it: {
+    function-name:   resource.aws.lambda-function.it.function-name
+    payload-content: '{"name":"unobin"}'
   }
 }
 

@@ -29,17 +29,14 @@ locals: {
 }
 
 resources: {
-  aws: {
-    kms-key: {
-      it: {
-        description:         local.description
-        enable-key-rotation: var.rotation-enabled
-        tags:                var.tags ?? { unobin: 'kms-it' }
-      }
-    }
-    kms-alias: {
-      it: { alias-name: 'alias/unobin-it-key', target-key-id: resource.aws.kms-key.it.key-id }
-    }
+  aws.kms-key.it: {
+    description:         local.description
+    enable-key-rotation: var.rotation-enabled
+    tags:                var.tags ?? { unobin: 'kms-it' }
+  }
+  aws.kms-alias.it: {
+    alias-name:    'alias/unobin-it-key'
+    target-key-id: resource.aws.kms-key.it.key-id
   }
 }
 

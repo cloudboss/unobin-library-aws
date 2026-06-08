@@ -17,7 +17,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
 	github.com/aws/smithy-go v1.25.1
-	github.com/cloudboss/unobin v0.6.0-12a
+	github.com/cloudboss/unobin v0.6.0-17a
 	github.com/stretchr/testify v1.11.1
 )
 

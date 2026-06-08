@@ -20,34 +20,27 @@ inputs: {
 }
 
 resources: {
-  aws: {
-    iam-role: {
-      it: {
-        role-name: 'unobin-it-role'
-        assume-role-policy-document: '''\-
-          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
-          {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
-          '''
-        max-session-duration: var.max-session-duration
-      }
-    }
-    iam-policy: { it: { policy-name: 'unobin-it-policy', policy-document: var.policy-document } }
-    iam-role-policy-attachment: {
-      it: {
-        role-name:  resource.aws.iam-role.it.role-name
-        policy-arn: resource.aws.iam-policy.it.arn
-      }
-    }
-    iam-instance-profile: {
-      it: { instance-profile-name: 'unobin-it-profile', role: resource.aws.iam-role.it.role-name }
-    }
-    iam-openid-connect-provider: {
-      it: {
-        url:             'https://oidc.unobin-it.example.com'
-        client-id-list:  ['sts.amazonaws.com']
-        thumbprint-list: var.oidc-thumbprints
-      }
-    }
+  aws.iam-role.it: {
+    role-name: 'unobin-it-role'
+    assume-role-policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+      {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+      '''
+    max-session-duration: var.max-session-duration
+  }
+  aws.iam-policy.it: { policy-name: 'unobin-it-policy', policy-document: var.policy-document }
+  aws.iam-role-policy-attachment.it: {
+    role-name:  resource.aws.iam-role.it.role-name
+    policy-arn: resource.aws.iam-policy.it.arn
+  }
+  aws.iam-instance-profile.it: {
+    instance-profile-name: 'unobin-it-profile'
+    role:                  resource.aws.iam-role.it.role-name
+  }
+  aws.iam-openid-connect-provider.it: {
+    url:             'https://oidc.unobin-it.example.com'
+    client-id-list:  ['sts.amazonaws.com']
+    thumbprint-list: var.oidc-thumbprints
   }
 }
 
