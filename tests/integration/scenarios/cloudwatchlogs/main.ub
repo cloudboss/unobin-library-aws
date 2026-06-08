@@ -1,0 +1,26 @@
+description: '''>-
+  Manages a CloudWatch Logs log group with a retention policy and tags. The retention
+  comes from an input so the update pass changes it in place through the retention-policy
+  reconcile, exercising the follow-on call and the tag sync across apply and destroy.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  name: { type: string, description: 'Name of the log group' }
+  retention: {
+    type:        optional(integer, 30)
+    description: 'Retention in days; the update pass changes it in place'
+  }
+}
+
+resources: {
+  aws.cloudwatchlogs-log-group.it: {
+    name:              var.name
+    retention-in-days: var.retention
+    log-group-class:   'STANDARD'
+    tags:              { unobin: 'cloudwatchlogs-it' }
+  }
+}
+
+outputs: { log-group-arn: { value: resource.aws.cloudwatchlogs-log-group.it.arn } }

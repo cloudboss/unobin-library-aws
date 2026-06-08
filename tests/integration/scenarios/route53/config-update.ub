@@ -1,0 +1,9 @@
+inputs: {
+  zone-name:   'unobin-it.example.com'
+  comment:     'unobin integration test zone'
+  www-address: '192.0.2.2'
+}
+
+configurations: { aws: { default: {} } }
+
+state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }

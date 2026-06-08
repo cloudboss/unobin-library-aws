@@ -9,7 +9,9 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
 	"github.com/cloudboss/unobin-library-aws/internal/config"
+	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
+	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
@@ -17,6 +19,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
 	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
+	"github.com/cloudboss/unobin-library-aws/internal/service/route53"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
 	"github.com/cloudboss/unobin-library-aws/internal/service/sts"
 )
@@ -109,6 +112,14 @@ func Library() *runtime.Library {
 				rds.Cluster, *rds.ClusterOutput](),
 			"rds-cluster-instance": runtime.MakeResource[
 				rds.ClusterInstance, *rds.ClusterInstanceOutput](),
+			"cloudwatchlogs-log-group": runtime.MakeResource[
+				cloudwatchlogs.LogGroup, *cloudwatchlogs.LogGroupOutput](),
+			"route53-hosted-zone": runtime.MakeResource[
+				route53.HostedZone, *route53.HostedZoneOutput](),
+			"route53-record-set": runtime.MakeResource[
+				route53.RecordSet, *route53.RecordSetOutput](),
+			"acm-certificate": runtime.MakeResource[
+				acm.Certificate, *acm.CertificateOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),

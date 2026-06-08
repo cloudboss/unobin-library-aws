@@ -1,0 +1,36 @@
+description: '''>-
+  Requests an ACM certificate validated by DNS and returns the validation records ACM
+  assigns, the value a downstream validation resource reads. The transparency-logging
+  preference and tags come from inputs so the update pass can change them in place:
+  the preference through UpdateCertificateOptions and the tags through the tag sync.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  transparency: {
+    type:        optional(string, 'ENABLED')
+    description: 'Certificate transparency logging preference'
+  }
+  tags: {
+    type:        optional(map(string))
+    description: 'Tags for the certificate; omitted, the stack supplies the scenario tag'
+  }
+}
+
+resources: {
+  aws.acm-certificate.it: {
+    domain-name:               'unobin-it.example.com'
+    validation-method:         'DNS'
+    subject-alternative-names: ['www.unobin-it.example.com']
+    options:                   { certificate-transparency-logging-preference: var.transparency }
+    tags:                      var.tags ?? { unobin: 'acm-it' }
+  }
+}
+
+outputs: {
+  certificate-arn:    { value: resource.aws.acm-certificate.it.arn }
+  certificate-status: { value: resource.aws.acm-certificate.it.status }
+  certificate-type:   { value: resource.aws.acm-certificate.it.type }
+  validation-options: { value: resource.aws.acm-certificate.it.domain-validation-options }
+}
