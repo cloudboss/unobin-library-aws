@@ -1,0 +1,42 @@
+description: '''>-
+  Manages an SQS queue with a dead-letter queue and a redrive policy pointing at it, plus
+  a queue policy that lets EventBridge send messages. The visibility timeout comes from
+  an input so the update pass changes it in place through SetQueueAttributes, and the
+  redrive and policy documents reference the sibling queue ARNs through interpolation.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  visibility-timeout: {
+    type:        optional(integer, 30)
+    description: 'Visibility timeout of the main queue in seconds; the update pass changes it'
+  }
+}
+
+resources: {
+  aws.sqs-queue.dlq: { name: 'unobin-it-sqs-dlq', tags: { unobin: 'sqs-it' } }
+  aws.sqs-queue.it: {
+    name:                     'unobin-it-sqs'
+    visibility-timeout:       var.visibility-timeout
+    message-retention-period: 86400
+    redrive-policy: $'''\-
+      {"deadLetterTargetArn":"{{ resource.aws.sqs-queue.dlq.arn }}","maxReceiveCount":5}
+      '''
+    tags: { unobin: 'sqs-it' }
+  }
+  aws.sqs-queue-policy.it: {
+    queue-url: resource.aws.sqs-queue.it.url
+    policy: $'''\-
+      {"Version":"2012-10-17","Statement":[{"Sid":"AllowEventBridgeSend",
+      "Effect":"Allow","Principal":{"Service":"events.amazonaws.com"},"Action":
+      "sqs:SendMessage","Resource":"{{ resource.aws.sqs-queue.it.arn }}"}]}
+      '''
+  }
+}
+
+outputs: {
+  queue-url: { value: resource.aws.sqs-queue.it.url }
+  queue-arn: { value: resource.aws.sqs-queue.it.arn }
+  dlq-arn:   { value: resource.aws.sqs-queue.dlq.arn }
+}

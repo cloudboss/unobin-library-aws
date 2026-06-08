@@ -1,0 +1,53 @@
+description: '''>-
+  Manages an SNS topic with a resource policy, a subscription that fans out to an SQS queue,
+  and a queue policy that lets the topic deliver to the queue. The display name comes from
+  an input so the update pass changes it in place through SetTopicAttributes, and the policy
+  and subscription reference the sibling topic and queue ARNs through interpolation.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  display-name: {
+    type:        optional(string, 'unobin integration topic')
+    description: 'Display name of the topic; the update pass changes it in place'
+  }
+}
+
+resources: {
+  aws.sns-topic.it: {
+    name:         'unobin-it-topic'
+    display-name: var.display-name
+    tags:         { unobin: 'sns-it' }
+  }
+  aws.sqs-queue.it: { name: 'unobin-it-sns-target', tags: { unobin: 'sns-it' } }
+  aws.sns-topic-policy.it: {
+    arn: resource.aws.sns-topic.it.arn
+    policy: $'''\-
+      {"Version":"2012-10-17","Statement":[{"Sid":"AllowEventBridgePublish",
+      "Effect":"Allow","Principal":{"Service":"events.amazonaws.com"},"Action":
+      "SNS:Publish","Resource":"{{ resource.aws.sns-topic.it.arn }}"}]}
+      '''
+  }
+  aws.sqs-queue-policy.it: {
+    queue-url: resource.aws.sqs-queue.it.url
+    policy: $'''\-
+      {"Version":"2012-10-17","Statement":[{"Sid":"AllowSNSDelivery","Effect":
+      "Allow","Principal":{"Service":"sns.amazonaws.com"},"Action":"sqs:
+      SendMessage","Resource":"{{ resource.aws.sqs-queue.it.arn }}","Condition":
+      {"ArnEquals":{"aws:SourceArn":"{{ resource.aws.sns-topic.it.arn }}"}}}]}
+      '''
+  }
+  aws.sns-topic-subscription.it: {
+    topic-arn:            resource.aws.sns-topic.it.arn
+    protocol:             'sqs'
+    endpoint:             resource.aws.sqs-queue.it.arn
+    raw-message-delivery: true
+  }
+}
+
+outputs: {
+  topic-arn:        { value: resource.aws.sns-topic.it.arn }
+  subscription-arn: { value: resource.aws.sns-topic-subscription.it.arn }
+  queue-arn:        { value: resource.aws.sqs-queue.it.arn }
+}

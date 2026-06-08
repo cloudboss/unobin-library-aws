@@ -21,6 +21,8 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	"github.com/cloudboss/unobin-library-aws/internal/service/route53"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
+	"github.com/cloudboss/unobin-library-aws/internal/service/sns"
+	"github.com/cloudboss/unobin-library-aws/internal/service/sqs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/sts"
 )
 
@@ -84,6 +86,8 @@ func Library() *runtime.Library {
 				lambda.Function, *lambda.FunctionOutput](),
 			"lambda-permission": runtime.MakeResource[
 				lambda.Permission, *lambda.PermissionOutput](),
+			"lambda-event-source-mapping": runtime.MakeResource[
+				lambda.EventSourceMapping, *lambda.EventSourceMappingOutput](),
 			"eventbridge-rule": runtime.MakeResource[
 				eventbridge.Rule, *eventbridge.RuleOutput](),
 			"eventbridge-target": runtime.MakeResource[
@@ -120,6 +124,14 @@ func Library() *runtime.Library {
 				route53.RecordSet, *route53.RecordSetOutput](),
 			"acm-certificate": runtime.MakeResource[
 				acm.Certificate, *acm.CertificateOutput](),
+			"sqs-queue": runtime.MakeResource[sqs.Queue, *sqs.QueueOutput](),
+			"sqs-queue-policy": runtime.MakeResource[
+				sqs.QueuePolicy, *sqs.QueuePolicyOutput](),
+			"sns-topic": runtime.MakeResource[sns.Topic, *sns.TopicOutput](),
+			"sns-topic-subscription": runtime.MakeResource[
+				sns.TopicSubscription, *sns.TopicSubscriptionOutput](),
+			"sns-topic-policy": runtime.MakeResource[
+				sns.TopicPolicy, *sns.TopicPolicyOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),

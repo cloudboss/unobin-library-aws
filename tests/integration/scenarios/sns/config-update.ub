@@ -1,4 +1,4 @@
-inputs: { memory-size: 256, timeout: 10, greeting: 'hello from unobin, updated', batch-size: 20 }
+inputs: { display-name: 'unobin integration topic, updated' }
 
 configurations: { aws: { default: {} } }
 

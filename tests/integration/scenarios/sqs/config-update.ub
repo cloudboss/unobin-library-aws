@@ -1,4 +1,4 @@
-inputs: { memory-size: 256, timeout: 10, greeting: 'hello from unobin, updated', batch-size: 20 }
+inputs: { visibility-timeout: 60 }
 
 configurations: { aws: { default: {} } }
 

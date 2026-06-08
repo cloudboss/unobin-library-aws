@@ -13,6 +13,10 @@ inputs: {
     type:        optional(string, 'hello from unobin')
     description: 'Value of the GREETING environment variable'
   }
+  batch-size: {
+    type:        optional(integer, 10)
+    description: 'Batch size of the event source mapping; the update pass changes it'
+  }
 }
 
 resources: {
@@ -26,8 +30,9 @@ resources: {
   aws.iam-policy.it: {
     policy-name: 'unobin-it-lambda-policy'
     policy-document: '''\-
-      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
-      CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogGroup",
+      "logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"},{"Effect":"Allow","Action":
+      ["sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes"],"Resource":"*"}]}
       '''
   }
   aws.iam-role-policy-attachment.it: {
@@ -51,6 +56,16 @@ resources: {
     action:        'lambda:InvokeFunction'
     principal:     's3.amazonaws.com'
   }
+  aws.sqs-queue.events: { name: 'unobin-it-lambda-events', tags: { unobin: 'lambda-it' } }
+  aws.lambda-event-source-mapping.it: {
+    function-name:                      resource.aws.lambda-function.it.function-name
+    event-source-arn:                   resource.aws.sqs-queue.events.arn
+    batch-size:                         var.batch-size
+    # An SQS source allows a batch size over 10 only with a batching window
+    # over zero, which the update pass needs when it raises the batch size.
+    maximum-batching-window-in-seconds: 5
+    enabled:                            true
+  }
 }
 
 actions: {
@@ -65,4 +80,6 @@ outputs: {
   function-version: { value: resource.aws.lambda-function.it.version }
   invoke-status:    { value: action.aws.lambda-invoke.it.status-code }
   invoke-payload:   { value: action.aws.lambda-invoke.it.payload }
+  events-queue-arn: { value: resource.aws.sqs-queue.events.arn }
+  esm-uuid:         { value: resource.aws.lambda-event-source-mapping.it.uuid }
 }

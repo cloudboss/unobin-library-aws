@@ -21,8 +21,9 @@ import (
 func TestLibraryRegistersLambda(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
-		"lambda-function":   reflect.TypeFor[*lambda.FunctionOutput](),
-		"lambda-permission": reflect.TypeFor[*lambda.PermissionOutput](),
+		"lambda-function":             reflect.TypeFor[*lambda.FunctionOutput](),
+		"lambda-permission":           reflect.TypeFor[*lambda.PermissionOutput](),
+		"lambda-event-source-mapping": reflect.TypeFor[*lambda.EventSourceMappingOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -297,6 +298,312 @@ func TestLambdaSchemas(t *testing.T) {
 						"var.function-url-auth-type == 'NONE')",
 					Message: "function-url-auth-type must be AWS_IAM or NONE",
 				},
+			},
+		},
+		"lambda-event-source-mapping": {
+			Inputs: map[string]typecheck.Type{
+				"amazon-managed-kafka-event-source-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "consumer-group-id", Type: typecheck.TString(), Optional: true},
+					{Name: "schema-registry-config", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "schema-registry-uri", Type: typecheck.TString(), Optional: true},
+						{Name: "event-record-format", Type: typecheck.TString(), Optional: true},
+						{Name: "access-configs", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+							{Name: "type", Type: typecheck.TString(), Optional: true},
+							{Name: "uri", Type: typecheck.TString(), Optional: true},
+						}))},
+						{Name: "schema-validation-configs", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+							{Name: "attribute", Type: typecheck.TString(), Optional: true},
+						}))},
+					}), Optional: true},
+				})),
+				"batch-size":                     typecheck.TOptional(typecheck.TInteger()),
+				"bisect-batch-on-function-error": typecheck.TOptional(typecheck.TBoolean()),
+				"destination-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "on-failure", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "destination", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				})),
+				"document-db-event-source-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "database-name", Type: typecheck.TString(), Optional: true},
+					{Name: "collection-name", Type: typecheck.TString(), Optional: true},
+					{Name: "full-document", Type: typecheck.TString(), Optional: true},
+				})),
+				"enabled":          typecheck.TOptional(typecheck.TBoolean()),
+				"event-source-arn": typecheck.TOptional(typecheck.TString()),
+				"filter-criteria": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "filters", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+						{Name: "pattern", Type: typecheck.TString(), Optional: true},
+					}))},
+				})),
+				"function-name":           typecheck.TString(),
+				"function-response-types": typecheck.TList(typecheck.TString()),
+				"kms-key-arn":             typecheck.TOptional(typecheck.TString()),
+				"logging-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "system-log-level", Type: typecheck.TString(), Optional: true},
+				})),
+				"maximum-batching-window-in-seconds": typecheck.TOptional(typecheck.TInteger()),
+				"maximum-record-age-in-seconds":      typecheck.TOptional(typecheck.TInteger()),
+				"maximum-retry-attempts":             typecheck.TOptional(typecheck.TInteger()),
+				"metrics-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "metrics", Type: typecheck.TList(typecheck.TString())},
+				})),
+				"parallelization-factor": typecheck.TOptional(typecheck.TInteger()),
+				"provisioned-poller-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "minimum-pollers", Type: typecheck.TInteger(), Optional: true},
+					{Name: "maximum-pollers", Type: typecheck.TInteger(), Optional: true},
+					{Name: "poller-group-name", Type: typecheck.TString(), Optional: true},
+				})),
+				"queues": typecheck.TList(typecheck.TString()),
+				"scaling-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "maximum-concurrency", Type: typecheck.TInteger(), Optional: true},
+				})),
+				"self-managed-event-source": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "endpoints", Type: typecheck.TMap(typecheck.TList(typecheck.TString()))},
+				})),
+				"self-managed-kafka-event-source-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "consumer-group-id", Type: typecheck.TString(), Optional: true},
+					{Name: "schema-registry-config", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "schema-registry-uri", Type: typecheck.TString(), Optional: true},
+						{Name: "event-record-format", Type: typecheck.TString(), Optional: true},
+						{Name: "access-configs", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+							{Name: "type", Type: typecheck.TString(), Optional: true},
+							{Name: "uri", Type: typecheck.TString(), Optional: true},
+						}))},
+						{Name: "schema-validation-configs", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+							{Name: "attribute", Type: typecheck.TString(), Optional: true},
+						}))},
+					}), Optional: true},
+				})),
+				"source-access-configurations": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "type", Type: typecheck.TString(), Optional: true},
+					{Name: "uri", Type: typecheck.TString(), Optional: true},
+				})),
+				"starting-position":           typecheck.TOptional(typecheck.TString()),
+				"starting-position-timestamp": typecheck.TOptional(typecheck.TString()),
+				"tags":                        typecheck.TMap(typecheck.TString()),
+				"topics":                      typecheck.TList(typecheck.TString()),
+				"tumbling-window-in-seconds":  typecheck.TOptional(typecheck.TInteger()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":                     typecheck.TString(),
+				"function-arn":            typecheck.TString(),
+				"last-modified":           typecheck.TString(),
+				"last-processing-result":  typecheck.TString(),
+				"state":                   typecheck.TString(),
+				"state-transition-reason": typecheck.TString(),
+				"uuid":                    typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:   "exactly-one-of",
+					Fields: []string{"var.event-source-arn", "var.self-managed-event-source"},
+				},
+				{
+					Kind: "forbidden-with",
+					Fields: []string{
+						"var.amazon-managed-kafka-event-source-config",
+						"var.self-managed-event-source",
+						"var.self-managed-kafka-event-source-config",
+					},
+				},
+				{
+					Kind: "forbidden-with",
+					Fields: []string{
+						"var.self-managed-kafka-event-source-config",
+						"var.event-source-arn",
+						"var.amazon-managed-kafka-event-source-config",
+					},
+				},
+				{
+					Kind: "predicate",
+					When: "(var.starting-position != null)",
+					Require: "(var.starting-position == 'TRIM_HORIZON' || " +
+						"var.starting-position == 'LATEST' || " +
+						"var.starting-position == 'AT_TIMESTAMP')",
+					Message: "starting-position must be TRIM_HORIZON, LATEST, or AT_TIMESTAMP",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.batch-size != null)",
+					Require: "(var.batch-size == null || " +
+						"var.batch-size >= 1) && " +
+						"(var.batch-size == null || " +
+						"var.batch-size <= 10000)",
+					Message: "batch-size must be between 1 and 10000",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.maximum-record-age-in-seconds != null)",
+					Require: "((var.maximum-record-age-in-seconds == -1) || " +
+						"((var.maximum-record-age-in-seconds == null || " +
+						"var.maximum-record-age-in-seconds >= 60) && " +
+						"(var.maximum-record-age-in-seconds == null || " +
+						"var.maximum-record-age-in-seconds <= 604800)))",
+					Message: "maximum-record-age-in-seconds must be -1 or between 60 and 604800",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.maximum-retry-attempts != null)",
+					Require: "(var.maximum-retry-attempts == null || " +
+						"var.maximum-retry-attempts >= -1) && " +
+						"(var.maximum-retry-attempts == null || " +
+						"var.maximum-retry-attempts <= 10000)",
+					Message: "maximum-retry-attempts must be between -1 and 10000",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.parallelization-factor != null)",
+					Require: "(var.parallelization-factor == null || " +
+						"var.parallelization-factor >= 1) && " +
+						"(var.parallelization-factor == null || " +
+						"var.parallelization-factor <= 10)",
+					Message: "parallelization-factor must be between 1 and 10",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.tumbling-window-in-seconds != null)",
+					Require: "(var.tumbling-window-in-seconds == null || " +
+						"var.tumbling-window-in-seconds >= 0) && " +
+						"(var.tumbling-window-in-seconds == null || " +
+						"var.tumbling-window-in-seconds <= 900)",
+					Message: "tumbling-window-in-seconds must be between 0 and 900",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.maximum-batching-window-in-seconds != null)",
+					Require: "(var.maximum-batching-window-in-seconds == null || " +
+						"var.maximum-batching-window-in-seconds >= 0) && " +
+						"(var.maximum-batching-window-in-seconds == null || " +
+						"var.maximum-batching-window-in-seconds <= 300)",
+					Message: "maximum-batching-window-in-seconds must be between 0 and 300",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.scaling-config != null)",
+					Require: "(var.scaling-config.maximum-concurrency == null || " +
+						"var.scaling-config.maximum-concurrency >= 2) && " +
+						"(var.scaling-config.maximum-concurrency == null || " +
+						"var.scaling-config.maximum-concurrency <= 1000)",
+					Message: "scaling-config maximum-concurrency must be between 2 and 1000",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.provisioned-poller-config.maximum-pollers != null)",
+					Require: "(var.provisioned-poller-config.maximum-pollers == null || " +
+						"var.provisioned-poller-config.maximum-pollers >= 1) && " +
+						"(var.provisioned-poller-config.maximum-pollers == null || " +
+						"var.provisioned-poller-config.maximum-pollers <= 2000)",
+					Message: "provisioned-poller-config maximum-pollers must be between 1 and 2000",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.provisioned-poller-config.minimum-pollers != null)",
+					Require: "(var.provisioned-poller-config.minimum-pollers == null || " +
+						"var.provisioned-poller-config.minimum-pollers >= 1) && " +
+						"(var.provisioned-poller-config.minimum-pollers == null || " +
+						"var.provisioned-poller-config.minimum-pollers <= 200)",
+					Message: "provisioned-poller-config minimum-pollers must be between 1 and 200",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.document-db-event-source-config.full-document != null)",
+					Require: "(var.document-db-event-source-config.full-document == 'UpdateLookup' || " +
+						"var.document-db-event-source-config.full-document == 'Default')",
+					Message: "document-db-event-source-config full-document must be UpdateLookup or Default",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.logging-config.system-log-level != null)",
+					Require: "(var.logging-config.system-log-level == 'DEBUG' || " +
+						"var.logging-config.system-log-level == 'INFO' || " +
+						"var.logging-config.system-log-level == 'WARN')",
+					Message: "logging-config system-log-level must be DEBUG, INFO, or WARN",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
+					Require: "(var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
+						"var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
+					Message: "amazon-managed-kafka schema-registry event-record-format must be JSON or SOURCE",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
+					Require: "(var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
+						"var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
+					Message: "self-managed-kafka schema-registry event-record-format must be JSON or SOURCE",
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@each.value == 'ReportBatchItemFailures')",
+					Message: "function-response-types values must be ReportBatchItemFailures",
+					ForEach: "var.function-response-types",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value == 'EventCount' || " +
+						"@each.value == 'ErrorCount' || " +
+						"@each.value == 'KafkaMetrics')",
+					Message: "a metrics-config metric must be EventCount, ErrorCount, or KafkaMetrics",
+					ForEach: "var.metrics-config.metrics",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.type != null)",
+					Require: "(@each.value.type == 'BASIC_AUTH' || " +
+						"@each.value.type == 'VPC_SUBNET' || " +
+						"@each.value.type == 'VPC_SECURITY_GROUP' || " +
+						"@each.value.type == 'SASL_SCRAM_512_AUTH' || " +
+						"@each.value.type == 'SASL_SCRAM_256_AUTH' || " +
+						"@each.value.type == 'VIRTUAL_HOST' || " +
+						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
+						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
+					Message: "a source-access-configuration type must be a valid auth or VPC type",
+					ForEach: "var.source-access-configurations",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.type != null)",
+					Require: "(@each.value.type == 'BASIC_AUTH' || " +
+						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
+						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
+					Message: "a schema-registry access-config type must be a valid auth type",
+					ForEach: "var.amazon-managed-kafka-event-source-config.schema-registry-config.access-configs",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.attribute != null)",
+					Require: "(@each.value.attribute == 'KEY' || " +
+						"@each.value.attribute == 'VALUE')",
+					Message: "a schema-registry validation attribute must be KEY or VALUE",
+					ForEach: "var.amazon-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.type != null)",
+					Require: "(@each.value.type == 'BASIC_AUTH' || " +
+						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
+						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
+					Message: "a schema-registry access-config type must be a valid auth type",
+					ForEach: "var.self-managed-kafka-event-source-config.schema-registry-config.access-configs",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.attribute != null)",
+					Require: "(@each.value.attribute == 'KEY' || " +
+						"@each.value.attribute == 'VALUE')",
+					Message: "a schema-registry validation attribute must be KEY or VALUE",
+					ForEach: "var.self-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.function-response-types", Optional: true},
+				{Field: "var.queues", Optional: true},
+				{Field: "var.topics", Optional: true},
+				{Field: "var.source-access-configurations", Optional: true},
+				{Field: "var.tags", Optional: true},
 			},
 		},
 	}
