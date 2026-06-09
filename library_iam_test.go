@@ -25,6 +25,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 		"iam-instance-profile":        reflect.TypeFor[*iam.InstanceProfileOutput](),
 		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
 		"iam-role-policy-attachment":  reflect.TypeFor[*iam.RolePolicyAttachmentOutput](),
+		"iam-role-policy":             reflect.TypeFor[*iam.RolePolicyOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -131,6 +132,18 @@ func TestIamSchemas(t *testing.T) {
 				"policy-arn": typecheck.TString(),
 			},
 			Outputs: map[string]typecheck.Type{},
+		},
+		"iam-role-policy": {
+			Inputs: map[string]typecheck.Type{
+				"policy-document": typecheck.TString(),
+				"policy-name":     typecheck.TString(),
+				"role-name":       typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"policy-document": typecheck.TString(),
+				"policy-name":     typecheck.TString(),
+				"role-name":       typecheck.TString(),
+			},
 		},
 	}
 

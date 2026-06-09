@@ -7,6 +7,10 @@ inputs: {
   oidc-thumbprints: [
     '990f4193972f2becf12ddeda5237f9c952f20d9e', 'c3846bf24b9e93ca64274c0ec67c1ecc5e024ffc',
   ]
+  inline-policy-document: '''\-
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":
+    ["s3:ListBucket","s3:GetBucketLocation"],"Resource":"*"}]}
+    '''
 }
 
 configurations: { aws: { default: {} } }

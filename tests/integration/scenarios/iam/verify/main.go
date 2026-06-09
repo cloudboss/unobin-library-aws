@@ -22,10 +22,11 @@ import (
 )
 
 const (
-	roleName    = "unobin-it-role"
-	policyName  = "unobin-it-policy"
-	profileName = "unobin-it-profile"
-	oidcURL     = "https://oidc.unobin-it.example.com"
+	roleName         = "unobin-it-role"
+	policyName       = "unobin-it-policy"
+	inlinePolicyName = "unobin-it-inline"
+	profileName      = "unobin-it-profile"
+	oidcURL          = "https://oidc.unobin-it.example.com"
 )
 
 func main() {
@@ -58,6 +59,13 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		RoleName: aws.String(roleName),
 	}); err != nil {
 		return fmt.Errorf("get role %s: %w", roleName, err)
+	}
+
+	if _, err := client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
+		RoleName:   aws.String(roleName),
+		PolicyName: aws.String(inlinePolicyName),
+	}); err != nil {
+		return fmt.Errorf("get inline role policy %s: %w", inlinePolicyName, err)
 	}
 
 	policyArn, err := findPolicyArn(ctx, client)
@@ -103,6 +111,9 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 	if err := requireRoleGone(ctx, client); err != nil {
 		return err
 	}
+	if err := requireInlinePolicyGone(ctx, client); err != nil {
+		return err
+	}
 	if err := requireProfileGone(ctx, client); err != nil {
 		return err
 	}
@@ -134,6 +145,23 @@ func requireRoleGone(ctx context.Context, client *iam.Client) error {
 		return nil
 	}
 	return fmt.Errorf("get role %s: %w", roleName, err)
+}
+
+// requireInlinePolicyGone confirms the inline role policy is gone. A missing
+// role reports the same NoSuchEntity, so this passes once the role is deleted
+// too, but it still catches an inline policy left behind on a surviving role.
+func requireInlinePolicyGone(ctx context.Context, client *iam.Client) error {
+	_, err := client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
+		RoleName:   aws.String(roleName),
+		PolicyName: aws.String(inlinePolicyName),
+	})
+	if err == nil {
+		return fmt.Errorf("inline role policy %s still exists", inlinePolicyName)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get inline role policy %s: %w", inlinePolicyName, err)
 }
 
 func requireProfileGone(ctx context.Context, client *iam.Client) error {

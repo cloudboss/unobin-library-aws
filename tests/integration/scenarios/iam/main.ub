@@ -13,6 +13,10 @@ inputs: {
     description: 'Maximum session duration of the role in seconds'
   }
   policy-document: { type: string, description: 'JSON document of the managed policy' }
+  inline-policy-document: {
+    type:        string
+    description: 'JSON document of the inline role policy; the update pass changes it'
+  }
   oidc-thumbprints: {
     type:        optional(list(string), ['990f4193972f2becf12ddeda5237f9c952f20d9e'])
     description: 'Server certificate thumbprints of the OIDC provider'
@@ -32,6 +36,11 @@ resources: {
   aws.iam-role-policy-attachment.it: {
     role-name:  resource.aws.iam-role.it.role-name
     policy-arn: resource.aws.iam-policy.it.arn
+  }
+  aws.iam-role-policy.it: {
+    role-name:       resource.aws.iam-role.it.role-name
+    policy-name:     'unobin-it-inline'
+    policy-document: var.inline-policy-document
   }
   aws.iam-instance-profile.it: {
     instance-profile-name: 'unobin-it-profile'

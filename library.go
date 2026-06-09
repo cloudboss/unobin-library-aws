@@ -12,6 +12,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
+	"github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
@@ -21,8 +22,10 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	"github.com/cloudboss/unobin-library-aws/internal/service/route53"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
+	"github.com/cloudboss/unobin-library-aws/internal/service/secretsmanager"
 	"github.com/cloudboss/unobin-library-aws/internal/service/sns"
 	"github.com/cloudboss/unobin-library-aws/internal/service/sqs"
+	"github.com/cloudboss/unobin-library-aws/internal/service/ssm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/sts"
 )
 
@@ -75,6 +78,8 @@ func Library() *runtime.Library {
 			"iam-role-policy-attachment": runtime.MakeResource[
 				iam.RolePolicyAttachment,
 				*iam.RolePolicyAttachmentOutput](),
+			"iam-role-policy": runtime.MakeResource[
+				iam.RolePolicy, *iam.RolePolicyOutput](),
 			"kms-key": runtime.MakeResource[kms.Key, *kms.KeyOutput](),
 			"kms-alias": runtime.MakeResource[
 				kms.Alias, *kms.AliasOutput](),
@@ -132,6 +137,12 @@ func Library() *runtime.Library {
 				sns.TopicSubscription, *sns.TopicSubscriptionOutput](),
 			"sns-topic-policy": runtime.MakeResource[
 				sns.TopicPolicy, *sns.TopicPolicyOutput](),
+			"dynamodb-table": runtime.MakeResource[
+				dynamodb.Table, *dynamodb.TableOutput](),
+			"ssm-parameter": runtime.MakeResource[
+				ssm.Parameter, *ssm.ParameterOutput](),
+			"secretsmanager-secret": runtime.MakeResource[
+				secretsmanager.Secret, *secretsmanager.SecretOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),
