@@ -22,6 +22,14 @@ inputs: {
     type:        optional(string)
     description: 'Stage tag value; omitted, the resources are tagged initial'
   }
+  policy-cooldown: {
+    type:        optional(integer, 300)
+    description: 'Scaling policy cooldown in seconds; the update pass changes it'
+  }
+  hook-timeout: {
+    type:        optional(integer, 300)
+    description: 'Lifecycle hook heartbeat timeout in seconds; the update pass changes it'
+  }
 }
 
 data: {
@@ -71,6 +79,21 @@ resources: {
     size:              1
     type:              'gp3'
     tags:              local.tags
+  }
+  aws.autoscaling-policy.it: {
+    autoscaling-group-name: resource.aws.autoscaling-group.it.name
+    name:                   'unobin-it-scale-out'
+    policy-type:            'SimpleScaling'
+    adjustment-type:        'ChangeInCapacity'
+    scaling-adjustment:     1
+    cooldown:               var.policy-cooldown
+  }
+  aws.autoscaling-lifecycle-hook.it: {
+    autoscaling-group-name: resource.aws.autoscaling-group.it.name
+    name:                   'unobin-it-drain'
+    lifecycle-transition:   'autoscaling:EC2_INSTANCE_TERMINATING'
+    default-result:         'CONTINUE'
+    heartbeat-timeout:      var.hook-timeout
   }
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
+	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatch"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
@@ -109,6 +110,10 @@ func Library() *runtime.Library {
 				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
 			"autoscaling-group": runtime.MakeResource[
 				autoscaling.Group, *autoscaling.GroupOutput](),
+			"autoscaling-policy": runtime.MakeResource[
+				autoscaling.Policy, *autoscaling.PolicyOutput](),
+			"autoscaling-lifecycle-hook": runtime.MakeResource[
+				autoscaling.LifecycleHook, *autoscaling.LifecycleHookOutput](),
 			"rds-subnet-group": runtime.MakeResource[
 				rds.SubnetGroup, *rds.SubnetGroupOutput](),
 			"rds-parameter-group": runtime.MakeResource[
@@ -123,6 +128,8 @@ func Library() *runtime.Library {
 				rds.ClusterInstance, *rds.ClusterInstanceOutput](),
 			"cloudwatchlogs-log-group": runtime.MakeResource[
 				cloudwatchlogs.LogGroup, *cloudwatchlogs.LogGroupOutput](),
+			"cloudwatch-metric-alarm": runtime.MakeResource[
+				cloudwatch.MetricAlarm, *cloudwatch.MetricAlarmOutput](),
 			"route53-hosted-zone": runtime.MakeResource[
 				route53.HostedZone, *route53.HostedZoneOutput](),
 			"route53-record-set": runtime.MakeResource[

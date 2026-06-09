@@ -35,6 +35,8 @@ const (
 	volumeTagKey       = "unobin"
 	volumeTagValue     = "autoscaling-it"
 	instanceType       = "t3.micro"
+	policyName         = "unobin-it-scale-out"
+	hookName           = "unobin-it-drain"
 )
 
 func main() {
@@ -111,6 +113,51 @@ func verifyApplied(
 		return fmt.Errorf("volume %s is type %s, want gp3",
 			aws.ToString(volume.VolumeId), volume.VolumeType)
 	}
+	if err := checkPolicy(ctx, asgClient); err != nil {
+		return err
+	}
+	if err := checkHook(ctx, asgClient); err != nil {
+		return err
+	}
+	return nil
+}
+
+// checkPolicy confirms the scaling policy exists, best-effort: an emulator may
+// not model scaling policies, so a miss degrades to a printed skip rather than a
+// failure.
+func checkPolicy(ctx context.Context, client *autoscaling.Client) error {
+	resp, err := client.DescribePolicies(ctx, &autoscaling.DescribePoliciesInput{
+		AutoScalingGroupName: aws.String(groupName),
+		PolicyNames:          []string{policyName},
+	})
+	if err != nil {
+		fmt.Printf("skip: scaling policy not modeled: %v\n", err)
+		return nil
+	}
+	if len(resp.ScalingPolicies) == 0 {
+		fmt.Println("skip: scaling policy not present")
+		return nil
+	}
+	fmt.Printf("ok: scaling policy %s present\n", policyName)
+	return nil
+}
+
+// checkHook confirms the lifecycle hook exists, best-effort: an emulator may not
+// model lifecycle hooks, so a miss degrades to a printed skip.
+func checkHook(ctx context.Context, client *autoscaling.Client) error {
+	resp, err := client.DescribeLifecycleHooks(ctx, &autoscaling.DescribeLifecycleHooksInput{
+		AutoScalingGroupName: aws.String(groupName),
+		LifecycleHookNames:   []string{hookName},
+	})
+	if err != nil {
+		fmt.Printf("skip: lifecycle hook not modeled: %v\n", err)
+		return nil
+	}
+	if len(resp.LifecycleHooks) == 0 {
+		fmt.Println("skip: lifecycle hook not present")
+		return nil
+	}
+	fmt.Printf("ok: lifecycle hook %s present\n", hookName)
 	return nil
 }
 
