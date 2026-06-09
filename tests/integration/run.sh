@@ -17,7 +17,9 @@
 # whose operations ministack does not support. The driver exports dummy AWS
 # credentials, AWS_REGION, and the chosen emulator's endpoint as
 # AWS_ENDPOINT_URL before invoking each scenario. For the live tier, the
-# environment must already contain real credentials and region.
+# environment must already contain real credentials and region. A scenario with
+# a .skip-<tier> file is skipped on that tier and runs on the others; the file
+# holds the reason, which is printed when the scenario is skipped.
 
 set -eu
 
@@ -117,6 +119,12 @@ COUNT=0
 for sdir in "${@}"; do
     COUNT=$((COUNT + 1))
     name=$(basename "${sdir}")
+    # A scenario opts out of a tier with a .skip-<tier> file holding a reason
+    # (printed below); the scenario still runs on every other tier.
+    if [ -f "${sdir}/.skip-${TIER}" ]; then
+        echo "==> skip ${TIER}/${name} ($(cat "${sdir}/.skip-${TIER}"))"
+        continue
+    fi
     # Each scenario picks its emulator: ministack unless a .backend file pins
     # it to localstack. The endpoint is exported per scenario so one run
     # serves scenarios on both emulators.

@@ -11,6 +11,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
+	"github.com/cloudboss/unobin-library-aws/internal/service/cloudfront"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatch"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
@@ -130,12 +131,24 @@ func Library() *runtime.Library {
 				cloudwatchlogs.LogGroup, *cloudwatchlogs.LogGroupOutput](),
 			"cloudwatch-metric-alarm": runtime.MakeResource[
 				cloudwatch.MetricAlarm, *cloudwatch.MetricAlarmOutput](),
+			"cloudfront-origin-access-control": runtime.MakeResource[
+				cloudfront.OriginAccessControl,
+				*cloudfront.OriginAccessControlOutput](),
+			"cloudfront-function": runtime.MakeResource[
+				cloudfront.Function, *cloudfront.FunctionOutput](),
+			"cloudfront-response-headers-policy": runtime.MakeResource[
+				cloudfront.ResponseHeadersPolicy,
+				*cloudfront.ResponseHeadersPolicyOutput](),
+			"cloudfront-distribution": runtime.MakeResource[
+				cloudfront.Distribution, *cloudfront.DistributionOutput](),
 			"route53-hosted-zone": runtime.MakeResource[
 				route53.HostedZone, *route53.HostedZoneOutput](),
 			"route53-record-set": runtime.MakeResource[
 				route53.RecordSet, *route53.RecordSetOutput](),
 			"acm-certificate": runtime.MakeResource[
 				acm.Certificate, *acm.CertificateOutput](),
+			"acm-certificate-validation": runtime.MakeResource[
+				acm.CertificateValidation, *acm.CertificateValidationOutput](),
 			"sqs-queue": runtime.MakeResource[sqs.Queue, *sqs.QueueOutput](),
 			"sqs-queue-policy": runtime.MakeResource[
 				sqs.QueuePolicy, *sqs.QueuePolicyOutput](),
@@ -157,6 +170,9 @@ func Library() *runtime.Library {
 				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
 			"sts-caller-identity": runtime.MakeDataSource[
 				sts.CallerIdentity, *sts.CallerIdentityOutput](),
+			"iam-openid-connect-provider": runtime.MakeDataSource[
+				iam.OpenIDConnectProviderData,
+				*iam.OpenIDConnectProviderDataOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": runtime.MakeAction[

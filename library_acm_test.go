@@ -20,7 +20,8 @@ import (
 func TestLibraryRegistersAcmResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"acm-certificate": reflect.TypeFor[*acm.CertificateOutput](),
+		"acm-certificate":            reflect.TypeFor[*acm.CertificateOutput](),
+		"acm-certificate-validation": reflect.TypeFor[*acm.CertificateValidationOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -163,6 +164,18 @@ func TestAcmSchemas(t *testing.T) {
 				{Field: "var.subject-alternative-names", Optional: true},
 				{Field: "var.validation-option", Optional: true},
 				{Field: "var.tags", Optional: true},
+			},
+		},
+		"acm-certificate-validation": {
+			Inputs: map[string]typecheck.Type{
+				"certificate-arn":         typecheck.TString(),
+				"validation-record-fqdns": typecheck.TList(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"certificate-arn": typecheck.TString(),
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.validation-record-fqdns", Optional: true},
 			},
 		},
 	}

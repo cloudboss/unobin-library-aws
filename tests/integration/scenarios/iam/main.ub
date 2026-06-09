@@ -53,8 +53,14 @@ resources: {
   }
 }
 
+data: {
+  aws.iam-openid-connect-provider.lookup: { url: resource.aws.iam-openid-connect-provider.it.url }
+}
+
 outputs: {
-  role-arn:    { value: resource.aws.iam-role.it.arn }
-  policy-arn:  { value: resource.aws.iam-policy.it.arn }
-  profile-arn: { value: resource.aws.iam-instance-profile.it.arn }
+  role-arn:          { value: resource.aws.iam-role.it.arn }
+  policy-arn:        { value: resource.aws.iam-policy.it.arn }
+  profile-arn:       { value: resource.aws.iam-instance-profile.it.arn }
+  oidc-provider-url: { value: data.aws.iam-openid-connect-provider.lookup.url }
+  oidc-client-ids:   { value: data.aws.iam-openid-connect-provider.lookup.client-id-list }
 }

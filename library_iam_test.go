@@ -154,3 +154,43 @@ func TestIamSchemas(t *testing.T) {
 		})
 	}
 }
+
+// TestLibraryRegistersIamOpenIDConnectProviderData checks the runtime
+// registration of the OIDC provider data source under DataSources (the resource
+// of the same key is registered separately under Resources).
+func TestLibraryRegistersIamOpenIDConnectProviderData(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "iam-openid-connect-provider")
+	assert.Equal(t, reflect.TypeFor[*iam.OpenIDConnectProviderDataOutput](),
+		lib.DataSources["iam-openid-connect-provider"].OutputType())
+}
+
+// TestIamOpenIDConnectProviderDataSchema asserts the whole derived TypeSchema for
+// the OIDC provider data source: the arn/url lookup keys (exactly one of them),
+// and the resolved provider outputs.
+func TestIamOpenIDConnectProviderDataSchema(t *testing.T) {
+	schema, warnings, err := goschema.Read(".")
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+	require.Contains(t, schema.DataSources, "iam-openid-connect-provider")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"arn": typecheck.TOptional(typecheck.TString()),
+			"url": typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":             typecheck.TString(),
+			"url":             typecheck.TString(),
+			"client-id-list":  typecheck.TList(typecheck.TString()),
+			"thumbprint-list": typecheck.TList(typecheck.TString()),
+			"tags":            typecheck.TMap(typecheck.TString()),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "exactly-one-of",
+				Fields: []string{"var.arn", "var.url"},
+			},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["iam-openid-connect-provider"])
+}
