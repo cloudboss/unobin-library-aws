@@ -16,6 +16,8 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
 	"github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+	"github.com/cloudboss/unobin-library-aws/internal/service/ecr"
+	"github.com/cloudboss/unobin-library-aws/internal/service/ecs"
 	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
@@ -163,6 +165,12 @@ func Library() *runtime.Library {
 				ssm.Parameter, *ssm.ParameterOutput](),
 			"secretsmanager-secret": runtime.MakeResource[
 				secretsmanager.Secret, *secretsmanager.SecretOutput](),
+			"ecr-repository": runtime.MakeResource[
+				ecr.Repository, *ecr.RepositoryOutput](),
+			"ecs-cluster": runtime.MakeResource[ecs.Cluster, *ecs.ClusterOutput](),
+			"ecs-task-definition": runtime.MakeResource[
+				ecs.TaskDefinition, *ecs.TaskDefinitionOutput](),
+			"ecs-service": runtime.MakeResource[ecs.Service, *ecs.ServiceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),

@@ -1,0 +1,85 @@
+description: '''>-
+  Manages the container stack end to end: an ECR repository whose URI feeds the task definition's
+  container image, an ECS cluster with a Fargate default capacity provider strategy, a Fargate
+  task definition, and a service in a small VPC at a desired count of zero so no task has to
+  launch. The scan-on-push flag, the strategy weight, and the service's deployment maximum
+  percent come from inputs so the update pass changes each in place through its own call path:
+  PutImageScanningConfiguration, PutClusterCapacityProviders, and UpdateService.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  scan-on-push: {
+    type:        optional(boolean, false)
+    description: 'ECR scan-on-push flag; the update pass enables it'
+  }
+  fargate-weight: {
+    type:        optional(integer, 1)
+    description: 'Weight of the FARGATE strategy entry; the update pass changes it'
+  }
+  maximum-percent: {
+    type:        optional(integer, 200)
+    description: 'Service deployment maximum percent; the update pass changes it'
+  }
+}
+
+data: { aws.ec2-availability-zones.available: { state: 'available' } }
+
+resources: {
+  aws.ec2-vpc.it: { cidr-block: '10.64.0.0/16' }
+  aws.ec2-subnet.a: {
+    vpc-id:            resource.aws.ec2-vpc.it.vpc-id
+    cidr-block:        '10.64.1.0/24'
+    availability-zone: data.aws.ec2-availability-zones.available.names[0]
+    tags:              { unobin: 'ecs-it' }
+  }
+  aws.ecr-repository.repo: {
+    name:         'unobin-it-ecs'
+    scan-on-push: var.scan-on-push
+    lifecycle-policy: '''\-
+      {"rules":[{"rulePriority":1,"description":"expire untagged images","selection":{"tagStatus":
+      "untagged","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
+      '''
+    tags: { unobin: 'ecs-it' }
+  }
+  aws.ecs-cluster.it: {
+    name:               'unobin-it-ecs'
+    capacity-providers: ['FARGATE', 'FARGATE_SPOT']
+    default-capacity-provider-strategy: [
+      { capacity-provider: 'FARGATE', weight: var.fargate-weight },
+    ]
+    tags: { unobin: 'ecs-it' }
+  }
+  aws.ecs-task-definition.it: {
+    family:                   'unobin-it-ecs'
+    cpu:                      '256'
+    memory:                   '512'
+    network-mode:             'awsvpc'
+    requires-compatibilities: ['FARGATE']
+    container-definitions: [
+      {
+        name:      'app'
+        image:     $'''{{ resource.aws.ecr-repository.repo.repository-uri }}:latest'''
+        essential: true
+      },
+    ]
+    tags: { unobin: 'ecs-it' }
+  }
+  aws.ecs-service.it: {
+    name:                     'unobin-it-ecs'
+    cluster:                  resource.aws.ecs-cluster.it.arn
+    task-definition:          resource.aws.ecs-task-definition.it.arn
+    desired-count:            0
+    network-configuration:    { subnets: [resource.aws.ec2-subnet.a.id] }
+    deployment-configuration: { maximum-percent: var.maximum-percent }
+    tags:                     { unobin: 'ecs-it' }
+  }
+}
+
+outputs: {
+  repository-uri:      { value: resource.aws.ecr-repository.repo.repository-uri }
+  cluster-arn:         { value: resource.aws.ecs-cluster.it.arn }
+  task-definition-arn: { value: resource.aws.ecs-task-definition.it.arn }
+  service-arn:         { value: resource.aws.ecs-service.it.arn }
+}
