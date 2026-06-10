@@ -1,0 +1,105 @@
+description: '''>-
+  Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a GET
+  route, an auto-deploying $default stage, and a function URL on the same function
+  with public-access permissions. The API description, integration timeout, route
+  operation name, stage variable, and function URL CORS max age come from inputs
+  so the update pass changes each in place through its own call path: UpdateApi,
+  UpdateIntegration, UpdateRoute, UpdateStage, and UpdateFunctionUrlConfig.
+  '''
+
+imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+inputs: {
+  api-description: {
+    type:        optional(string, 'unobin HTTP API scenario')
+    description: 'Description of the API; the update pass changes it'
+  }
+  integration-timeout: {
+    type:        optional(integer, 10000)
+    description: 'Integration timeout in milliseconds; the update pass raises it'
+  }
+  operation-name: {
+    type:        optional(string, 'getHello')
+    description: 'Operation name of the route; the update pass changes it'
+  }
+  stage-greeting: {
+    type:        optional(string, 'hello')
+    description: 'Value of the GREETING stage variable; the update pass changes it'
+  }
+  url-max-age: {
+    type:        optional(integer, 300)
+    description: 'CORS max age of the function URL in seconds; the update pass raises it'
+  }
+}
+
+resources: {
+  aws.iam-role.fn: {
+    role-name: 'unobin-it-apigatewayv2'
+    assume-role-policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+      {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+      '''
+  }
+  aws.lambda-function.fn: {
+    function-name: 'unobin-it-apigatewayv2'
+    role:          resource.aws.iam-role.fn.arn
+    runtime:       'python3.12'
+    handler:       'index.handler'
+    code:          { zip-file-path: '/tmp/unobin-it-apigatewayv2.zip' }
+    tags:          { unobin: 'apigatewayv2-it' }
+  }
+  aws.apigatewayv2-api.it: {
+    name:               'unobin-it-apigatewayv2'
+    protocol-type:      'HTTP'
+    description:        var.api-description
+    cors-configuration: { allow-origins: ['*'], allow-methods: ['GET'] }
+    tags:               { unobin: 'apigatewayv2-it' }
+  }
+  aws.apigatewayv2-integration.it: {
+    api-id:                 resource.aws.apigatewayv2-api.it.api-id
+    integration-type:       'AWS_PROXY'
+    integration-uri:        resource.aws.lambda-function.fn.arn
+    payload-format-version: '2.0'
+    timeout-in-millis:      var.integration-timeout
+  }
+  aws.apigatewayv2-route.it: {
+    api-id:         resource.aws.apigatewayv2-api.it.api-id
+    route-key:      'GET /hello'
+    operation-name: var.operation-name
+    target:         $'''integrations/{{ resource.aws.apigatewayv2-integration.it.integration-id }}'''
+  }
+  aws.apigatewayv2-stage.it: {
+    api-id:          resource.aws.apigatewayv2-api.it.api-id
+    name:            '$default'
+    auto-deploy:     true
+    stage-variables: { GREETING: var.stage-greeting }
+    tags:            { unobin: 'apigatewayv2-it' }
+  }
+  aws.lambda-permission.apigw: {
+    function-name: resource.aws.lambda-function.fn.function-name
+    statement-id:  'unobin-it-apigw-invoke'
+    action:        'lambda:InvokeFunction'
+    principal:     'apigateway.amazonaws.com'
+  }
+  aws.lambda-function-url.it: {
+    function-name: resource.aws.lambda-function.fn.function-name
+    auth-type:     'NONE'
+    cors:          { allow-origins: ['*'], max-age: var.url-max-age }
+  }
+  aws.lambda-permission.url: {
+    function-name:          resource.aws.lambda-function.fn.function-name
+    statement-id:           'unobin-it-url-public'
+    action:                 'lambda:InvokeFunctionUrl'
+    principal:              '*'
+    function-url-auth-type: 'NONE'
+  }
+}
+
+outputs: {
+  api-id:         { value: resource.aws.apigatewayv2-api.it.api-id }
+  api-endpoint:   { value: resource.aws.apigatewayv2-api.it.api-endpoint }
+  integration-id: { value: resource.aws.apigatewayv2-integration.it.integration-id }
+  route-id:       { value: resource.aws.apigatewayv2-route.it.route-id }
+  invoke-url:     { value: resource.aws.apigatewayv2-stage.it.invoke-url }
+  function-url:   { value: resource.aws.lambda-function-url.it.function-url }
+}

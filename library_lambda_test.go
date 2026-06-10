@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
 )
 
-// TestLibraryRegistersLambda checks the runtime registration: the two Lambda
+// TestLibraryRegistersLambda checks the runtime registration: the Lambda
 // resources are present under Resources and the invoke action under Actions,
 // each dispatching to its output type.
 func TestLibraryRegistersLambda(t *testing.T) {
@@ -24,6 +24,7 @@ func TestLibraryRegistersLambda(t *testing.T) {
 		"lambda-function":             reflect.TypeFor[*lambda.FunctionOutput](),
 		"lambda-permission":           reflect.TypeFor[*lambda.PermissionOutput](),
 		"lambda-event-source-mapping": reflect.TypeFor[*lambda.EventSourceMappingOutput](),
+		"lambda-function-url":         reflect.TypeFor[*lambda.FunctionUrlOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -604,6 +605,52 @@ func TestLambdaSchemas(t *testing.T) {
 				{Field: "var.topics", Optional: true},
 				{Field: "var.source-access-configurations", Optional: true},
 				{Field: "var.tags", Optional: true},
+			},
+		},
+		"lambda-function-url": {
+			Inputs: map[string]typecheck.Type{
+				"auth-type": typecheck.TString(),
+				"cors": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "allow-credentials", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "allow-headers", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "allow-methods", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "allow-origins", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "expose-headers", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "max-age", Type: typecheck.TInteger(), Optional: true},
+				})),
+				"function-name": typecheck.TString(),
+				"invoke-mode":   typecheck.TOptional(typecheck.TString()),
+				"qualifier":     typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"function-arn": typecheck.TString(),
+				"function-url": typecheck.TString(),
+				"qualifier":    typecheck.TString(),
+				"url-id":       typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(var.auth-type == 'AWS_IAM' || var.auth-type == 'NONE')",
+					Message: "auth-type must be AWS_IAM or NONE",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.invoke-mode != null)",
+					Require: "(var.invoke-mode == 'BUFFERED' || " +
+						"var.invoke-mode == 'RESPONSE_STREAM')",
+					Message: "invoke-mode must be BUFFERED or RESPONSE_STREAM",
+				},
+				{
+					Kind: "predicate",
+					When: "(var.cors.max-age != null)",
+					Require: "(var.cors.max-age == null || " +
+						"var.cors.max-age >= 0) && " +
+						"(var.cors.max-age == null || " +
+						"var.cors.max-age <= 86400)",
+					Message: "cors max-age must be between 0 and 86400 seconds",
+				},
 			},
 		},
 	}

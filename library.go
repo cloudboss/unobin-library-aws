@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
+	"github.com/cloudboss/unobin-library-aws/internal/service/apigatewayv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudfront"
 	"github.com/cloudboss/unobin-library-aws/internal/service/cloudwatch"
@@ -97,6 +98,8 @@ func Library() *runtime.Library {
 				lambda.Permission, *lambda.PermissionOutput](),
 			"lambda-event-source-mapping": runtime.MakeResource[
 				lambda.EventSourceMapping, *lambda.EventSourceMappingOutput](),
+			"lambda-function-url": runtime.MakeResource[
+				lambda.FunctionUrl, *lambda.FunctionUrlOutput](),
 			"eventbridge-rule": runtime.MakeResource[
 				eventbridge.Rule, *eventbridge.RuleOutput](),
 			"eventbridge-target": runtime.MakeResource[
@@ -171,6 +174,14 @@ func Library() *runtime.Library {
 			"ecs-task-definition": runtime.MakeResource[
 				ecs.TaskDefinition, *ecs.TaskDefinitionOutput](),
 			"ecs-service": runtime.MakeResource[ecs.Service, *ecs.ServiceOutput](),
+			"apigatewayv2-api": runtime.MakeResource[
+				apigatewayv2.Api, *apigatewayv2.ApiOutput](),
+			"apigatewayv2-integration": runtime.MakeResource[
+				apigatewayv2.Integration, *apigatewayv2.IntegrationOutput](),
+			"apigatewayv2-route": runtime.MakeResource[
+				apigatewayv2.Route, *apigatewayv2.RouteOutput](),
+			"apigatewayv2-stage": runtime.MakeResource[
+				apigatewayv2.Stage, *apigatewayv2.StageOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),
