@@ -27,7 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
 	github.com/aws/smithy-go v1.25.1
-	github.com/cloudboss/unobin v0.6.0-21a
+	github.com/cloudboss/unobin v0.6.0-24a
 	github.com/stretchr/testify v1.11.1
 )
 
