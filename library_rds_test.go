@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -44,9 +43,7 @@ func TestLibraryRegistersRds(t *testing.T) {
 // defaults -- for each RDS resource. The comparison is direct: goschema emits
 // object fields in declaration order, and the fixtures match that order.
 func TestRdsSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	tests := []struct {
 		key  string
 		want *runtime.TypeSchema

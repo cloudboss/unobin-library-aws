@@ -5,10 +5,10 @@
 package library
 
 import (
+	"github.com/cloudboss/unobin/pkg/awscfg"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 
-	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	"github.com/cloudboss/unobin-library-aws/internal/service/apigatewayv2"
 	"github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
@@ -40,7 +40,7 @@ func Library() *runtime.Library {
 		Description: "AWS library for unobin.",
 		Configuration: &cfg.ConfigurationType{
 			Description: "AWS library configuration",
-			New:         func() any { return &config.Configuration{} },
+			New:         func() any { return &awscfg.Configuration{} },
 		},
 		Resources: map[string]runtime.ResourceRegistration{
 			"ec2-vpc": runtime.MakeResource[ec2.Vpc, *ec2.VpcOutput](),

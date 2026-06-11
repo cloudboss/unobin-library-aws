@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -29,9 +28,7 @@ func TestLibraryRegistersAutoscalingGroup(t *testing.T) {
 // sensitive, the cross-field constraints derived from the Constraints
 // method, and the declared optional defaults.
 func TestAutoscalingGroupSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "autoscaling-group")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -170,9 +167,7 @@ func TestLibraryRegistersAutoscalingScaling(t *testing.T) {
 // scaling policy (with its target-tracking block and policy-type gating) and the
 // lifecycle hook.
 func TestAutoscalingScalingSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"autoscaling-policy": {

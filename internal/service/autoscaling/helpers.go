@@ -9,8 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	autoscalingtypes "github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
 	smithy "github.com/aws/smithy-go"
-
-	"github.com/cloudboss/unobin-library-aws/internal/config"
+	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
 // tagResourceType is the only resource type the Auto Scaling tag operations
@@ -18,15 +17,15 @@ import (
 const tagResourceType = "auto-scaling-group"
 
 // newClient returns the AWS SDK Go v2 client for Auto Scaling, configured
-// from cfg. cfg is the *config.Configuration the runtime hands every
+// from cfg. cfg is the *awscfg.Configuration the runtime hands every
 // lifecycle method; the helper unwraps it and builds an aws.Config via
-// config.LoadAWSConfig.
+// awscfg.Load.
 func newClient(ctx context.Context, cfg any) (*autoscaling.Client, error) {
-	c, ok := cfg.(*config.Configuration)
+	c, ok := cfg.(*awscfg.Configuration)
 	if !ok {
 		return nil, fmt.Errorf("autoscalingclient: unexpected configuration type %T", cfg)
 	}
-	awsCfg, err := config.LoadAWSConfig(ctx, c)
+	awsCfg, err := awscfg.Load(ctx, c)
 	if err != nil {
 		return nil, err
 	}

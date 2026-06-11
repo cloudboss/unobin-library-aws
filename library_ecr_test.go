@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -34,9 +33,7 @@ func TestLibraryRegistersEcr(t *testing.T) {
 // input and output field types, the mutability and encryption enums, the
 // exclusion-filter rules, and the optional defaults.
 func TestEcrSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"ecr-repository": {

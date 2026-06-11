@@ -8,20 +8,19 @@ import (
 
 	secretsmanager "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	secretsmanagertypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
-
-	"github.com/cloudboss/unobin-library-aws/internal/config"
+	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
 // newClient returns the AWS SDK Go v2 client for secretsmanager, configured
-// from cfg. cfg is the *config.Configuration the runtime hands every lifecycle
+// from cfg. cfg is the *awscfg.Configuration the runtime hands every lifecycle
 // method; the helper unwraps it and builds an aws.Config via
-// config.LoadAWSConfig.
+// awscfg.Load.
 func newClient(ctx context.Context, cfg any) (*secretsmanager.Client, error) {
-	c, ok := cfg.(*config.Configuration)
+	c, ok := cfg.(*awscfg.Configuration)
 	if !ok {
 		return nil, fmt.Errorf("secretsmanagerclient: unexpected configuration type %T", cfg)
 	}
-	awsCfg, err := config.LoadAWSConfig(ctx, c)
+	awsCfg, err := awscfg.Load(ctx, c)
 	if err != nil {
 		return nil, err
 	}

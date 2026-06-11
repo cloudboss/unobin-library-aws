@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
 	"github.com/stretchr/testify/assert"
@@ -27,9 +26,7 @@ func TestLibraryRegistersStsCallerIdentity(t *testing.T) {
 // TestStsCallerIdentitySchema asserts the whole derived TypeSchema for the
 // sts-caller-identity data source: no inputs, and the three identity outputs.
 func TestStsCallerIdentitySchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "sts-caller-identity")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{},

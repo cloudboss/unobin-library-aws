@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -36,9 +35,7 @@ func TestLibraryRegistersAcmResources(t *testing.T) {
 // including the domain-validation-options downstream validation reads, the
 // mutually-exclusive and enum constraints, and the optional defaults.
 func TestAcmSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	cases := map[string]*runtime.TypeSchema{
 		"acm-certificate": {

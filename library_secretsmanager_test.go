@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -36,9 +35,7 @@ func TestLibraryRegistersSecretsmanager(t *testing.T) {
 // the folded sensitive value), the value and recovery-window constraints the
 // Constraints method declares, and the optional defaults.
 func TestSecretsmanagerSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"secretsmanager-secret": {

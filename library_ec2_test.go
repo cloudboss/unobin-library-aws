@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -30,9 +29,7 @@ func TestLibraryRegistersEc2Vpc(t *testing.T) {
 // sensitive, and the full set of cross-field constraints derived from
 // the Constraints method.
 func TestEc2VpcSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-vpc")
 
 	want := &runtime.TypeSchema{
@@ -119,9 +116,7 @@ func TestLibraryRegistersEc2SecurityGroups(t *testing.T) {
 // cross-field constraints the dev CLI reads for the security group and its rule
 // resources. The ingress and egress rules are mirrors, so they share a schema.
 func TestEc2SecurityGroupSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	ruleSchema := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -218,9 +213,7 @@ func TestLibraryRegistersEc2Subnet(t *testing.T) {
 // the input and output field types, that nothing is sensitive, and the
 // cross-field constraints derived from the Constraints method.
 func TestEc2SubnetSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-subnet")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -343,9 +336,7 @@ func TestLibraryRegistersEc2Volume(t *testing.T) {
 // cross-field constraints derived from the Constraints method, and the
 // declared optional defaults.
 func TestEc2VolumeSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-volume")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -447,9 +438,7 @@ func TestLibraryRegistersEc2LaunchTemplate(t *testing.T) {
 // that nothing is sensitive, the constraints including the per-element
 // ForEach rules, and the declared optional defaults.
 func TestEc2LaunchTemplateSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-launch-template")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -788,9 +777,7 @@ func TestLibraryRegistersEc2Ami(t *testing.T) {
 // source: the query inputs, the selected image's outputs, that nothing is
 // sensitive, the owners constraint, and the declared optional defaults.
 func TestEc2AmiSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "ec2-ami")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -871,9 +858,7 @@ func TestLibraryRegistersEc2Routing(t *testing.T) {
 // output field types, the cross-field constraints, and the declared optional
 // defaults -- for each VPC-routing resource.
 func TestEc2RoutingSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	tests := []struct {
 		key  string
 		want *runtime.TypeSchema
@@ -1213,9 +1198,7 @@ func TestLibraryRegistersEc2KeyPair(t *testing.T) {
 // TestEc2KeyPairSchema asserts the whole derived TypeSchema for ec2-key-pair:
 // the input and output field types and the declared optional defaults.
 func TestEc2KeyPairSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-key-pair")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -1250,9 +1233,7 @@ func TestLibraryRegistersEc2Instance(t *testing.T) {
 // root-block-device blocks and the ForEach rules on the volume lists -- and
 // the declared optional defaults.
 func TestEc2InstanceSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.Resources, "ec2-instance")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
@@ -1528,9 +1509,7 @@ func TestLibraryRegistersEc2AvailabilityZones(t *testing.T) {
 // ec2-availability-zones data source: the query inputs, the three list
 // outputs, the state enum constraint, and the declared optional defaults.
 func TestEc2AvailabilityZonesSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "ec2-availability-zones")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{

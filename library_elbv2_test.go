@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -42,9 +41,7 @@ func TestLibraryRegistersElbv2(t *testing.T) {
 // load-balancing resource. The comparison is direct: nested object fields
 // follow goschema's declaration order.
 func TestElbv2Schemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	tests := []struct {
 		key  string
 		want *runtime.TypeSchema

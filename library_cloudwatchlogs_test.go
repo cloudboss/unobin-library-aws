@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -35,9 +34,7 @@ func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 // cloudwatchlogs-log-group resource: its input and output field types, the
 // retention and class enum constraints, and the optional tag default.
 func TestCloudwatchlogsSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	cases := map[string]*runtime.TypeSchema{
 		"cloudwatchlogs-log-group": {
