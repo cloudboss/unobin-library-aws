@@ -4,7 +4,7 @@ inputs: {
   object-body: 'hello from unobin, updated'
 }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

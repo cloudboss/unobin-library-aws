@@ -1,6 +1,6 @@
 inputs: { memory-size: 256, timeout: 10, greeting: 'hello from unobin, updated', batch-size: 20 }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

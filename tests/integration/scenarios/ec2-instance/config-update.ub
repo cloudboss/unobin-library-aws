@@ -1,6 +1,6 @@
 inputs: { instance-type: 't3.small', source-dest-check: false, stage: 'updated' }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

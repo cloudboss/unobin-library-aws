@@ -1,6 +1,6 @@
 inputs: { cidr-block: '10.42.0.0/16' }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

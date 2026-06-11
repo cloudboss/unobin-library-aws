@@ -4,7 +4,7 @@ inputs: {
   www-address: '192.0.2.2'
 }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

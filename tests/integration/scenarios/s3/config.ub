@@ -1,6 +1,6 @@
 inputs: { bucket: 'unobin-it-bucket' }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

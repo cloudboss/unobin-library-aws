@@ -1,6 +1,6 @@
 inputs: { comment: 'unobin cloudfront integration test (updated)' }
 
-configurations: { aws: { default: {} } }
+configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 
