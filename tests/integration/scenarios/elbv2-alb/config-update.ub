@@ -2,4 +2,6 @@ inputs: { idle-timeout: 180, health-check-path: '/health', rule-paths: ['/api/*'
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

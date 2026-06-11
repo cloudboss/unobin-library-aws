@@ -2,4 +2,6 @@ inputs: { value: 'updated', description: 'unobin integration test parameter (upd
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

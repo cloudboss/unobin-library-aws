@@ -2,4 +2,6 @@ inputs: { display-name: 'unobin integration topic, updated' }
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

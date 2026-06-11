@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -39,9 +38,7 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 // TLS, access-log, and route-settings blocks), the enum and cross-field
 // rules, and the optional defaults.
 func TestApigatewayv2Schemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"apigatewayv2-api": {

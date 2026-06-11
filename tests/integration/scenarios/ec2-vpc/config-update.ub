@@ -2,4 +2,6 @@ inputs: { cidr-block: '10.42.0.0/16', ssh-port: { from: 2222 } }
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

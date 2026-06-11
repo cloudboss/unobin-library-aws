@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -35,9 +34,7 @@ func TestLibraryRegistersSqs(t *testing.T) {
 // input and output field types, the cross-field and enum constraints each
 // Constraints method declares, and the optional defaults.
 func TestSqsSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"sqs-queue": {

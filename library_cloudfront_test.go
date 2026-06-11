@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -38,9 +37,7 @@ func TestLibraryRegistersCloudfront(t *testing.T) {
 // behavior, viewer certificate, and header-config blocks), the cross-field and
 // enum constraints, and the optional defaults.
 func TestCloudfrontSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"cloudfront-origin-access-control": {

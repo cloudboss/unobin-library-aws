@@ -10,21 +10,21 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithy "github.com/aws/smithy-go"
+	"github.com/cloudboss/unobin/pkg/awscfg"
 
-	"github.com/cloudboss/unobin-library-aws/internal/config"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
 // newClient returns the AWS SDK Go v2 client for ec2,
-// configured from cfg. cfg is the *config.Configuration the runtime
+// configured from cfg. cfg is the *awscfg.Configuration the runtime
 // hands every lifecycle method; the helper unwraps it and builds an
-// aws.Config via config.LoadAWSConfig.
+// aws.Config via awscfg.Load.
 func newClient(ctx context.Context, cfg any) (*ec2.Client, error) {
-	c, ok := cfg.(*config.Configuration)
+	c, ok := cfg.(*awscfg.Configuration)
 	if !ok {
 		return nil, fmt.Errorf("ec2client: unexpected configuration type %T", cfg)
 	}
-	awsCfg, err := config.LoadAWSConfig(ctx, c)
+	awsCfg, err := awscfg.Load(ctx, c)
 	if err != nil {
 		return nil, err
 	}

@@ -9,9 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/cloudboss/unobin/pkg/awscfg"
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
-
-	"github.com/cloudboss/unobin-library-aws/internal/config"
 )
 
 // fakeIAM is an in-process stand-in for the IAM Query API, the same design as
@@ -84,18 +83,19 @@ func (f *fakeIAM) serve(w http.ResponseWriter, r *http.Request) {
 }
 
 // configuration returns a module configuration that points the SDK at the
-// fake server with static credentials, and isolates the test from the
-// developer's shared AWS config files and the instance metadata service.
-func (f *fakeIAM) configuration() *config.Configuration {
+// fake server with credentials from the environment, and isolates the test
+// from the developer's shared AWS config files and the instance metadata
+// service.
+func (f *fakeIAM) configuration() *awscfg.Configuration {
 	dir := f.t.TempDir()
 	f.t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "missing-config"))
 	f.t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "missing-credentials"))
 	f.t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 	f.t.Setenv("AWS_PROFILE", "")
-	return &config.Configuration{
-		Region:          &cfg.String{Value: "us-east-1"},
-		AccessKeyId:     &cfg.String{Value: "AKIAFAKEFAKEFAKEFAKE"},
-		SecretAccessKey: &cfg.String{Value: "fake-secret-key"},
-		EndpointURL:     &cfg.String{Value: f.server.URL},
+	f.t.Setenv("AWS_ACCESS_KEY_ID", "AKIAFAKEFAKEFAKEFAKE")
+	f.t.Setenv("AWS_SECRET_ACCESS_KEY", "fake-secret-key")
+	return &awscfg.Configuration{
+		Region:      &cfg.String{Value: "us-east-1"},
+		EndpointURL: &cfg.String{Value: f.server.URL},
 	}
 }

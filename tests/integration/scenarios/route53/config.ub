@@ -2,4 +2,6 @@ inputs: { zone-name: 'unobin-it.example.com' }
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

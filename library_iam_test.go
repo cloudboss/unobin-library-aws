@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -40,9 +39,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 // sensitive, and the cross-field constraints derived from each Constraints
 // method. The whole TypeSchema is asserted so a stray field or tag is caught.
 func TestIamSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	cases := map[string]*runtime.TypeSchema{
 		"iam-role": {
@@ -169,9 +166,7 @@ func TestLibraryRegistersIamOpenIDConnectProviderData(t *testing.T) {
 // the OIDC provider data source: the arn/url lookup keys (exactly one of them),
 // and the resolved provider outputs.
 func TestIamOpenIDConnectProviderDataSchema(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "iam-openid-connect-provider")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{

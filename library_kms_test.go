@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -36,9 +35,7 @@ func TestLibraryRegistersKmsResources(t *testing.T) {
 // sensitive, and the cross-field constraints derived from each Constraints
 // method. The whole TypeSchema is asserted so a stray field or tag is caught.
 func TestKmsSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	cases := map[string]*runtime.TypeSchema{
 		"kms-key": {

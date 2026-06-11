@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/goschema"
 	"github.com/cloudboss/unobin/pkg/lang"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -34,9 +33,7 @@ func TestLibraryRegistersCloudwatch(t *testing.T) {
 // alarm: input and output field types (including the metric-query metric-math
 // array), the metric-form and enum constraints, and the optional defaults.
 func TestCloudwatchSchemas(t *testing.T) {
-	schema, warnings, err := goschema.Read(".")
-	require.NoError(t, err)
-	require.Empty(t, warnings)
+	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
 		"cloudwatch-metric-alarm": {

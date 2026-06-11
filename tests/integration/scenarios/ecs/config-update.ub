@@ -2,4 +2,6 @@ inputs: { scan-on-push: true, fargate-weight: 2, maximum-percent: 150 }
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

@@ -2,4 +2,6 @@ inputs: { secret-value: 'rotated-secret', description: 'unobin integration test 
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }

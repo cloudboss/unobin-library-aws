@@ -2,4 +2,6 @@ inputs: { transparency: 'DISABLED', tags: { unobin: 'acm-it', stage: 'updated' }
 
 configurations: { aws: { default: {} } }
 
-state: { @backend: local, path: '.unobin/state', encryption: { @key-source: noop } }
+state: { @backend: local, path: '.unobin/state' }
+
+encryption: { @key-source: noop }
