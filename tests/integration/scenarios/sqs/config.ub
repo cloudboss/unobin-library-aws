@@ -1,4 +1,4 @@
-configurations: { aws.default: {} }
+factory: { configurations: { aws.default: {} } }
 
 state: { @backend: local, path: '.unobin/state' }
 

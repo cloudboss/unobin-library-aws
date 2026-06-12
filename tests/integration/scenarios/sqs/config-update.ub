@@ -1,6 +1,4 @@
-inputs: { visibility-timeout: 60 }
-
-configurations: { aws.default: {} }
+factory: { inputs: { visibility-timeout: 60 }, configurations: { aws.default: {} } }
 
 state: { @backend: local, path: '.unobin/state' }
 

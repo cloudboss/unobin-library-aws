@@ -1,6 +1,7 @@
-inputs: { cross-zone: false, healthy-threshold: 5 }
-
-configurations: { aws.default: {} }
+factory: {
+  inputs:         { cross-zone: false, healthy-threshold: 5 }
+  configurations: { aws.default: {} }
+}
 
 state: { @backend: local, path: '.unobin/state' }
 

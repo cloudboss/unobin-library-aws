@@ -1,15 +1,16 @@
-inputs: {
-  policy-document: '''\-
-    {"Version":"2012-10-17","Statement":[{"Effect":
-    "Allow","Action":["s3:GetObject"],"Resource":"*"}]}
-    '''
-  inline-policy-document: '''\-
-    {"Version":"2012-10-17","Statement":[{"Effect":
-    "Allow","Action":["s3:ListBucket"],"Resource":"*"}]}
-    '''
+factory: {
+  inputs: {
+    policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":
+      "Allow","Action":["s3:GetObject"],"Resource":"*"}]}
+      '''
+    inline-policy-document: '''\-
+      {"Version":"2012-10-17","Statement":[{"Effect":
+      "Allow","Action":["s3:ListBucket"],"Resource":"*"}]}
+      '''
+  }
+  configurations: { aws.default: {} }
 }
-
-configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

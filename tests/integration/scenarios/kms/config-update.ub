@@ -1,10 +1,11 @@
-inputs: {
-  description:      'unobin integration test key, updated'
-  rotation-enabled: false
-  tags:             { unobin: 'kms-it', stage: 'updated' }
+factory: {
+  inputs: {
+    description:      'unobin integration test key, updated'
+    rotation-enabled: false
+    tags:             { unobin: 'kms-it', stage: 'updated' }
+  }
+  configurations: { aws.default: {} }
 }
-
-configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

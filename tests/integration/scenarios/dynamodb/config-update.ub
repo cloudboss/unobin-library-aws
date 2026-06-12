@@ -1,6 +1,4 @@
-inputs: { stage: 'updated' }
-
-configurations: { aws.default: {} }
+factory: { inputs: { stage: 'updated' }, configurations: { aws.default: {} } }
 
 state: { @backend: local, path: '.unobin/state' }
 

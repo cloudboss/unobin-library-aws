@@ -1,6 +1,4 @@
-inputs: { threshold: 90 }
-
-configurations: { aws.default: {} }
+factory: { inputs: { threshold: 90 }, configurations: { aws.default: {} } }
 
 state: { @backend: local, path: '.unobin/state' }
 

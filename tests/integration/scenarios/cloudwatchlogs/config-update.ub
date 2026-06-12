@@ -1,6 +1,7 @@
-inputs: { name: 'unobin-it-log-group', retention: 60 }
-
-configurations: { aws.default: {} }
+factory: {
+  inputs:         { name: 'unobin-it-log-group', retention: 60 }
+  configurations: { aws.default: {} }
+}
 
 state: { @backend: local, path: '.unobin/state' }
 

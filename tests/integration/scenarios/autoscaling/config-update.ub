@@ -1,12 +1,13 @@
-inputs: {
-  max-size:         2
-  lt-instance-type: 't3.small'
-  stage:            'updated'
-  policy-cooldown:  600
-  hook-timeout:     600
+factory: {
+  inputs: {
+    max-size:         2
+    lt-instance-type: 't3.small'
+    stage:            'updated'
+    policy-cooldown:  600
+    hook-timeout:     600
+  }
+  configurations: { aws.default: {} }
 }
-
-configurations: { aws.default: {} }
 
 state: { @backend: local, path: '.unobin/state' }
 

@@ -1,6 +1,10 @@
-inputs: { secret-value: 'rotated-secret', description: 'unobin integration test secret (updated)' }
-
-configurations: { aws.default: {} }
+factory: {
+  inputs: {
+    secret-value: 'rotated-secret'
+    description:  'unobin integration test secret (updated)'
+  }
+  configurations: { aws.default: {} }
+}
 
 state: { @backend: local, path: '.unobin/state' }
 
