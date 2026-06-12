@@ -1,0 +1,1 @@
+the scenario's example.com domain is reserved by AWS, which rejects the hosted zone on live; runs on the emulator tier only
