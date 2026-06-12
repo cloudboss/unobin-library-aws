@@ -281,10 +281,15 @@ func (r *Distribution) Update(
 	// it runs only when a non-tag input actually changed. A tag-only edit skips it
 	// and reconciles tags alone, avoiding a redeploy the cloud does not need.
 	if r.configChanged(prior) {
-		// CallerReference is immutable and only checked at create, so the update
-		// resends the value generated then, taken from the prior outputs.
-		config := r.expandConfig(prior.Outputs.CallerReference)
-		if err := r.updateConfig(ctx, client, id, prior.Outputs.ETag, config); err != nil {
+		// UpdateDistribution must send a complete configuration -- every member
+		// present at every level, even the optional ones create lets CloudFront
+		// default. The update therefore starts from the live config and overlays
+		// only the fields that changed, guarded by the ETag read alongside it.
+		config, etag, err := r.updatedConfig(ctx, client, id, prior)
+		if err != nil {
+			return nil, err
+		}
+		if err := r.updateConfig(ctx, client, id, etag, config); err != nil {
 			return nil, err
 		}
 		// An update that changes the configuration moves the distribution back to
@@ -362,6 +367,86 @@ func (r *Distribution) updateConfig(
 		return fmt.Errorf("update distribution %s: %w", id, err)
 	}
 	return nil
+}
+
+// updatedConfig builds the configuration for an UpdateDistribution. CloudFront
+// requires the update to send a complete configuration -- every member present
+// at every level, even the optional ones create lets it default and the ones the
+// library does not model -- so it starts from the live config read with
+// GetDistributionConfig and overlays only the fields whose input changed.
+// Unchanged and unmodeled fields keep their live values, which keeps the config
+// complete without reconstructing CloudFront's defaults, some of which the
+// schema does not document (the is-ipv6-enabled default is unstated, and
+// http-version defaults to http1.1, not http2). It returns the config and the
+// ETag read with it, the concurrency token the write that follows guards on.
+func (r *Distribution) updatedConfig(
+	ctx context.Context, client *cloudfront.Client, id string,
+	prior runtime.Prior[Distribution, *DistributionOutput],
+) (*cloudfronttypes.DistributionConfig, string, error) {
+	cur, err := client.GetDistributionConfig(ctx, &cloudfront.GetDistributionConfigInput{
+		Id: aws.String(id),
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("get distribution config %s: %w", id, err)
+	}
+	config := cur.DistributionConfig
+	overlayChangedConfig(config, r, prior)
+	return config, aws.ToString(cur.ETag), nil
+}
+
+// overlayChangedConfig overlays onto the live config every modeled field whose
+// input changed against the prior, leaving every unchanged field at its live
+// value. The set of fields mirrors configChanged, which decides whether an
+// update runs at all.
+func overlayChangedConfig(
+	config *cloudfronttypes.DistributionConfig, r *Distribution,
+	prior runtime.Prior[Distribution, *DistributionOutput],
+) {
+	if runtime.Changed(prior.Inputs.Enabled, r.Enabled) {
+		config.Enabled = boolOrFalse(r.Enabled)
+	}
+	if runtime.Changed(prior.Inputs.Aliases, r.Aliases) {
+		config.Aliases = expandAliases(r.Aliases)
+	}
+	if runtime.Changed(prior.Inputs.Comment, r.Comment) {
+		config.Comment = aws.String(aws.ToString(r.Comment))
+	}
+	if runtime.Changed(prior.Inputs.DefaultRootObject, r.DefaultRootObject) {
+		config.DefaultRootObject = aws.String(aws.ToString(r.DefaultRootObject))
+	}
+	if runtime.Changed(prior.Inputs.PriceClass, r.PriceClass) {
+		config.PriceClass = cloudfronttypes.PriceClass(aws.ToString(r.PriceClass))
+	}
+	if runtime.Changed(prior.Inputs.HttpVersion, r.HttpVersion) {
+		config.HttpVersion = cloudfronttypes.HttpVersion(aws.ToString(r.HttpVersion))
+	}
+	if runtime.Changed(prior.Inputs.IsIPV6Enabled, r.IsIPV6Enabled) {
+		config.IsIPV6Enabled = r.IsIPV6Enabled
+	}
+	if runtime.Changed(prior.Inputs.WebACLId, r.WebACLId) {
+		config.WebACLId = r.WebACLId
+	}
+	if runtime.Changed(prior.Inputs.Origins, r.Origins) {
+		config.Origins = expandOrigins(r.Origins)
+	}
+	if runtime.Changed(prior.Inputs.DefaultCacheBehavior, r.DefaultCacheBehavior) {
+		config.DefaultCacheBehavior = expandDefaultCacheBehavior(r.DefaultCacheBehavior)
+	}
+	if runtime.Changed(prior.Inputs.CacheBehaviors, r.CacheBehaviors) {
+		config.CacheBehaviors = expandCacheBehaviors(r.CacheBehaviors)
+	}
+	if runtime.Changed(prior.Inputs.CustomErrorResponses, r.CustomErrorResponses) {
+		config.CustomErrorResponses = expandCustomErrorResponses(r.CustomErrorResponses)
+	}
+	if runtime.Changed(prior.Inputs.ViewerCertificate, r.ViewerCertificate) {
+		config.ViewerCertificate = expandViewerCertificate(r.ViewerCertificate)
+	}
+	if runtime.Changed(prior.Inputs.Restrictions, r.Restrictions) {
+		config.Restrictions = expandRestrictions(r.Restrictions)
+	}
+	if runtime.Changed(prior.Inputs.Logging, r.Logging) {
+		config.Logging = expandLogging(r.Logging)
+	}
 }
 
 // syncTags reconciles the distribution's tags with the desired set, reading the
