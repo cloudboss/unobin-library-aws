@@ -1,0 +1,73 @@
+factory: {
+  description: '''>-
+    Manages an EventBridge rule and a target that invokes a Lambda function,
+    with the function, its execution role, and the resource permission that
+    lets EventBridge invoke it. The rule schedule and state come from inputs
+    so the update pass can change them in place through the PutRule upsert.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    schedule: {
+      type:        string
+      default:     'rate(5 minutes)'
+      description: 'Schedule expression of the rule'
+    }
+    rule-state: { type: string, default: 'ENABLED', description: 'Whether the rule is enabled' }
+  }
+
+  resources: {
+    iam-role-it: aws.iam-role {
+      role-name: 'unobin-it-eventbridge-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    iam-policy-it: aws.iam-policy {
+      policy-name: 'unobin-it-eventbridge-policy'
+      policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
+        CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+        '''
+    }
+    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+      role-name:  resource.iam-role-it.role-name
+      policy-arn: resource.iam-policy-it.arn
+    }
+    lambda-function-it: aws.lambda-function {
+      function-name: 'unobin-it-eventbridge-function'
+      role:          resource.iam-role-it.arn
+      runtime:       'python3.12'
+      handler:       'index.handler'
+      code:          { zip-file-path: '/tmp/unobin-it-eventbridge.zip' }
+      tags:          { unobin: 'eventbridge-it' }
+    }
+    eventbridge-rule-it: aws.eventbridge-rule {
+      name:                'unobin-it-rule'
+      schedule-expression: var.schedule
+      description:         'unobin eventbridge integration test rule'
+      state:               var.rule-state
+      tags:                { unobin: 'eventbridge-it' }
+    }
+    eventbridge-target-it: aws.eventbridge-target {
+      rule:      resource.eventbridge-rule-it.name
+      target-id: 'unobin-it-target'
+      arn:       resource.lambda-function-it.arn
+      input:     '{"source":"unobin"}'
+    }
+    lambda-permission-it: aws.lambda-permission {
+      function-name: resource.lambda-function-it.function-name
+      statement-id:  'unobin-it-allow-events'
+      action:        'lambda:InvokeFunction'
+      principal:     'events.amazonaws.com'
+      source-arn:    resource.eventbridge-rule-it.arn
+    }
+  }
+
+  outputs: {
+    rule-arn:  { value: resource.eventbridge-rule-it.arn }
+    target-id: { value: resource.eventbridge-target-it.target-id }
+  }
+}

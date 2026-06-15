@@ -1,0 +1,108 @@
+factory: {
+  description: '''>-
+    Manages the container stack end to end: an ECR repository whose URI feeds the task definition's
+    container image, an ECS cluster with a Fargate default capacity provider strategy, a Fargate
+    task definition, and a service in a small VPC at a desired count of zero so no task has to
+    launch. The scan-on-push flag, the strategy weight, and the service's deployment maximum
+    percent come from inputs so the update pass changes each in place through its own call path:
+    PutImageScanningConfiguration, PutClusterCapacityProviders, and UpdateService.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    scan-on-push: {
+      type:        boolean
+      default:     false
+      description: 'ECR scan-on-push flag; the update pass enables it'
+    }
+    fargate-weight: {
+      type:        integer
+      default:     1
+      description: 'Weight of the FARGATE strategy entry; the update pass changes it'
+    }
+    maximum-percent: {
+      type:        integer
+      default:     200
+      description: 'Service deployment maximum percent; the update pass changes it'
+    }
+  }
+
+  data: {
+    ec2-availability-zones-available: aws.ec2-availability-zones {
+      state: 'available'
+    }
+  }
+
+  resources: {
+    ec2-vpc-it: aws.ec2-vpc {
+      cidr-block: '10.64.0.0/16'
+    }
+    ec2-subnet-a: aws.ec2-subnet {
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.64.1.0/24'
+      availability-zone: data.ec2-availability-zones-available.names[0]
+      tags:              { unobin: 'ecs-it' }
+    }
+    ecr-repository-repo: aws.ecr-repository {
+      name:         'unobin-it-ecs'
+      scan-on-push: var.scan-on-push
+      lifecycle-policy: '''\-
+        {"rules":[{"rulePriority":1,"description":"expire untagged images","selection":{"tagStatus":
+        "untagged","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
+        '''
+      tags: { unobin: 'ecs-it' }
+    }
+    ecs-cluster-it: aws.ecs-cluster {
+      name:               'unobin-it-ecs'
+      capacity-providers: ['FARGATE', 'FARGATE_SPOT']
+      default-capacity-provider-strategy: [
+        { capacity-provider: 'FARGATE', weight: var.fargate-weight },
+      ]
+      tags: { unobin: 'ecs-it' }
+    }
+    iam-role-exec: aws.iam-role {
+      role-name: 'unobin-it-ecs-exec'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    iam-role-policy-attachment-exec: aws.iam-role-policy-attachment {
+      role-name:  resource.iam-role-exec.role-name
+      policy-arn: 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+    }
+    ecs-task-definition-it: aws.ecs-task-definition {
+      family:                   'unobin-it-ecs'
+      cpu:                      '256'
+      memory:                   '512'
+      network-mode:             'awsvpc'
+      requires-compatibilities: ['FARGATE']
+      execution-role-arn:       resource.iam-role-exec.arn
+      container-definitions: [
+        {
+          name:      'app'
+          image:     $'''{{ resource.ecr-repository-repo.repository-uri }}:latest'''
+          essential: true
+        },
+      ]
+      tags: { unobin: 'ecs-it' }
+    }
+    ecs-service-it: aws.ecs-service {
+      name:                     'unobin-it-ecs'
+      cluster:                  resource.ecs-cluster-it.arn
+      task-definition:          resource.ecs-task-definition-it.arn
+      desired-count:            0
+      network-configuration:    { subnets: [resource.ec2-subnet-a.id] }
+      deployment-configuration: { maximum-percent: var.maximum-percent }
+      tags:                     { unobin: 'ecs-it' }
+    }
+  }
+
+  outputs: {
+    repository-uri:      { value: resource.ecr-repository-repo.repository-uri }
+    cluster-arn:         { value: resource.ecs-cluster-it.arn }
+    task-definition-arn: { value: resource.ecs-task-definition-it.arn }
+    service-arn:         { value: resource.ecs-service-it.arn }
+  }
+}

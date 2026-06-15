@@ -1,0 +1,51 @@
+factory: {
+  description: '''>-
+    Manages a KMS key with tags and an alias that points at it, with automatic key
+    rotation turned on. The description, rotation flag, and tags come from inputs so the
+    update pass can change them in place: the description through UpdateKeyDescription,
+    rotation through its enable and disable calls, and tags through the tag sync.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    description: {
+      type:        optional(string)
+      description: 'Description of the key; omitted, the stack supplies one'
+    }
+    rotation-enabled: {
+      type:        boolean
+      default:     true
+      description: 'Whether automatic key rotation is on'
+    }
+    tags: {
+      type:        optional(map(string))
+      description: 'Tags for the key; omitted, the stack supplies the scenario tag'
+    }
+  }
+
+  locals: {
+    # The description input has no default, so the null test supplies the
+    # fallback and narrows the else branch to a plain string.
+    description: if var.description == null then 'unobin integration test key' else var.description
+  }
+
+  resources: {
+    kms-key-it: aws.kms-key {
+      description:         local.description
+      enable-key-rotation: var.rotation-enabled
+      tags:                var.tags ?? { unobin: 'kms-it' }
+    }
+    kms-alias-it: aws.kms-alias {
+      alias-name:    'alias/unobin-it-key'
+      target-key-id: resource.kms-key-it.key-id
+    }
+  }
+
+  outputs: {
+    key-arn:              { value: resource.kms-key-it.arn }
+    key-id:               { value: resource.kms-key-it.key-id }
+    alias-arn:            { value: resource.kms-alias-it.arn }
+    alias-target-key-arn: { value: resource.kms-alias-it.target-key-arn }
+  }
+}

@@ -1,5 +1,14 @@
-factory: { inputs: { stage: 'updated' }, configurations: { aws.default: {} } }
+stack: {
+  factory: {
+    inputs: { stage: 'updated' }
+    configurations: {
+      aws {}
+    }
+  }
 
-state: { @backend: local, path: '.unobin/state' }
+  state: local {
+    path: '.unobin/state'
+  }
 
-encryption: { @key-source: noop }
+  encryption: noop {}
+}

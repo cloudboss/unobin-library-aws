@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { cidr-block: '10.42.0.0/16', ssh-port: { from: 2222 } }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { cidr-block: '10.42.0.0/16', ssh-port: { from: 2222 } }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

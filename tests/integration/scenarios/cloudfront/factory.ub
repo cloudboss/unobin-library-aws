@@ -1,0 +1,88 @@
+factory: {
+  description: '''>-
+    Manages a CloudFront distribution and the pieces it composes: an S3 bucket origin, an
+    origin access control that fronts it, a CloudFront function and a response headers policy
+    attached to the default behavior, and the distribution itself on the default certificate.
+    The distribution comment comes from an input so the update pass changes it in place
+    through UpdateDistribution, exercising create, the deployed wait, the in-place update, and
+    the disable-then-delete teardown. Caching uses the AWS managed CachingOptimized policy.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    comment: {
+      type:        string
+      default:     'unobin cloudfront integration test'
+      description: 'Distribution comment; the update pass changes it'
+    }
+  }
+
+  resources: {
+    s3-bucket-origin: aws.s3-bucket {
+      bucket:           'unobin-it-cloudfront-origin'
+      empty-on-destroy: true
+      tags:             { unobin: 'cloudfront-it' }
+    }
+    cloudfront-origin-access-control-oac: aws.cloudfront-origin-access-control {
+      name:                              'unobin-it-oac'
+      description:                       'unobin integration test origin access control'
+      origin-access-control-origin-type: 's3'
+      signing-behavior:                  'always'
+      signing-protocol:                  'sigv4'
+    }
+    cloudfront-function-viewer: aws.cloudfront-function {
+      name:         'unobin-it-fn'
+      runtime:      'cloudfront-js-2.0'
+      comment:      'unobin integration test function'
+      code-content: 'function handler(event) { return event.request; }'
+    }
+    cloudfront-response-headers-policy-headers: aws.cloudfront-response-headers-policy {
+      name: 'unobin-it-headers'
+      security-headers-config: {
+        content-type-options: { override: true }
+        frame-options:        { frame-option: 'DENY', override: true }
+      }
+    }
+    cloudfront-distribution-it: aws.cloudfront-distribution {
+      enabled:             true
+      comment:             var.comment
+      default-root-object: 'index.html'
+      price-class:         'PriceClass_100'
+      origins: [
+        {
+          origin-id: 's3-origin'
+          domain-name: $'''\-
+            {{ resource.s3-bucket-origin.bucket }}.s3.
+            {{ resource.s3-bucket-origin.bucket-region }}.amazonaws.com
+            '''
+          origin-access-control-id: resource.cloudfront-origin-access-control-oac.id
+          custom-headers:           []
+          s3-origin-config:         { origin-access-identity: '' }
+        },
+      ]
+      default-cache-behavior: {
+        target-origin-id:           's3-origin'
+        viewer-protocol-policy:     'redirect-to-https'
+        cache-policy-id:            '658327ea-f89d-4fab-a63d-7e88639e58f6'
+        response-headers-policy-id: resource.cloudfront-response-headers-policy-headers.id
+        allowed-methods:            ['GET', 'HEAD']
+        cached-methods:             ['GET', 'HEAD']
+        compress:                   true
+        function-associations: [
+          { event-type: 'viewer-request', function-arn: resource.cloudfront-function-viewer.arn },
+        ]
+        lambda-function-associations: []
+      }
+      viewer-certificate: { cloudfront-default-certificate: true }
+      restrictions:       { geo-restriction: { restriction-type: 'none', locations: [] } }
+    }
+  }
+
+  outputs: {
+    distribution-id:          { value: resource.cloudfront-distribution-it.id }
+    distribution-domain-name: { value: resource.cloudfront-distribution-it.domain-name }
+    oac-id:                   { value: resource.cloudfront-origin-access-control-oac.id }
+    function-arn:             { value: resource.cloudfront-function-viewer.arn }
+  }
+}

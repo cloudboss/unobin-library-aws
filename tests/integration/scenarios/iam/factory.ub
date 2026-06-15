@@ -1,0 +1,75 @@
+factory: {
+  description: '''>-
+    Manages an IAM role with a managed policy, an attachment, an instance profile, and an
+    OIDC provider. The session duration, policy document, and provider thumbprints come from
+    inputs so the update pass can change them in place: the role through UpdateRole, the
+    policy through a new default version, and the thumbprints through the rotation call.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    max-session-duration: {
+      type:        integer
+      default:     3600
+      description: 'Maximum session duration of the role in seconds'
+    }
+    policy-document: { type: string, description: 'JSON document of the managed policy' }
+    inline-policy-document: {
+      type:        string
+      description: 'JSON document of the inline role policy; the update pass changes it'
+    }
+    oidc-thumbprints: {
+      type:        list(string)
+      default:     ['990f4193972f2becf12ddeda5237f9c952f20d9e']
+      description: 'Server certificate thumbprints of the OIDC provider'
+    }
+  }
+
+  resources: {
+    iam-role-it: aws.iam-role {
+      role-name: 'unobin-it-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+      max-session-duration: var.max-session-duration
+    }
+    iam-policy-it: aws.iam-policy {
+      policy-name:     'unobin-it-policy'
+      policy-document: var.policy-document
+    }
+    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+      role-name:  resource.iam-role-it.role-name
+      policy-arn: resource.iam-policy-it.arn
+    }
+    iam-role-policy-it: aws.iam-role-policy {
+      role-name:       resource.iam-role-it.role-name
+      policy-name:     'unobin-it-inline'
+      policy-document: var.inline-policy-document
+    }
+    iam-instance-profile-it: aws.iam-instance-profile {
+      instance-profile-name: 'unobin-it-profile'
+      role:                  resource.iam-role-it.role-name
+    }
+    iam-openid-connect-provider-it: aws.iam-openid-connect-provider {
+      url:             'https://oidc.unobin-it.example.com'
+      client-id-list:  ['sts.amazonaws.com']
+      thumbprint-list: var.oidc-thumbprints
+    }
+  }
+
+  data: {
+    iam-openid-connect-provider-lookup: aws.iam-openid-connect-provider {
+      url: resource.iam-openid-connect-provider-it.url
+    }
+  }
+
+  outputs: {
+    role-arn:          { value: resource.iam-role-it.arn }
+    policy-arn:        { value: resource.iam-policy-it.arn }
+    profile-arn:       { value: resource.iam-instance-profile-it.arn }
+    oidc-provider-url: { value: data.iam-openid-connect-provider-lookup.url }
+    oidc-client-ids:   { value: data.iam-openid-connect-provider-lookup.client-id-list }
+  }
+}

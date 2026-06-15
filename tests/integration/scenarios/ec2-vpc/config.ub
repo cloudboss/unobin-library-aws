@@ -1,5 +1,14 @@
-factory: { inputs: { cidr-block: '10.42.0.0/16' }, configurations: { aws.default: {} } }
+stack: {
+  factory: {
+    inputs: { cidr-block: '10.42.0.0/16' }
+    configurations: {
+      aws {}
+    }
+  }
 
-state: { @backend: local, path: '.unobin/state' }
+  state: local {
+    path: '.unobin/state'
+  }
 
-encryption: { @key-source: noop }
+  encryption: noop {}
+}

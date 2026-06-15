@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { scan-on-push: true, fargate-weight: 2, maximum-percent: 150 }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { scan-on-push: true, fargate-weight: 2, maximum-percent: 150 }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

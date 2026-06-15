@@ -1,12 +1,18 @@
-factory: {
-  inputs: {
-    bucket:      'unobin-it-bucket'
-    versioning:  { status: 'Enabled' }
-    object-body: 'hello from unobin, updated'
+stack: {
+  factory: {
+    inputs: {
+      bucket:      'unobin-it-bucket'
+      versioning:  { status: 'Enabled' }
+      object-body: 'hello from unobin, updated'
+    }
+    configurations: {
+      aws {}
+    }
   }
-  configurations: { aws.default: {} }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

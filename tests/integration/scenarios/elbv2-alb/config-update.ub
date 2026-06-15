@@ -1,8 +1,14 @@
-factory: {
-  inputs: { idle-timeout: 180, health-check-path: '/health', rule-paths: ['/api/*', '/v2/*'] }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { idle-timeout: 180, health-check-path: '/health', rule-paths: ['/api/*', '/v2/*'] }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

@@ -1,5 +1,14 @@
-factory: { inputs: { threshold: 90 }, configurations: { aws.default: {} } }
+stack: {
+  factory: {
+    inputs: { threshold: 90 }
+    configurations: {
+      aws {}
+    }
+  }
 
-state: { @backend: local, path: '.unobin/state' }
+  state: local {
+    path: '.unobin/state'
+  }
 
-encryption: { @key-source: noop }
+  encryption: noop {}
+}

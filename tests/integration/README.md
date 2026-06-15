@@ -27,7 +27,7 @@ Layout:
 ```
 scenarios/
   <scenario>/
-    main.ub           # unobin stack -- imports aws and uses one resource
+    factory.ub        # unobin stack -- imports aws and uses one resource
     config.ub         # operator config; AWS block is `default: {}` so env wins
     config-update.ub  # same config with changed inputs for the update pass
     .backend          # optional; pins the scenario's emulator (default is

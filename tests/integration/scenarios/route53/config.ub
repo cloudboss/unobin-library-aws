@@ -1,5 +1,14 @@
-factory: { inputs: { zone-name: 'unobin-it.example.com' }, configurations: { aws.default: {} } }
+stack: {
+  factory: {
+    inputs: { zone-name: 'unobin-it.example.com' }
+    configurations: {
+      aws {}
+    }
+  }
 
-state: { @backend: local, path: '.unobin/state' }
+  state: local {
+    path: '.unobin/state'
+  }
 
-encryption: { @key-source: noop }
+  encryption: noop {}
+}

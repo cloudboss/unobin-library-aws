@@ -1,0 +1,112 @@
+factory: {
+  description: '''>-
+    Manages an RDS estate: a VPC with two subnets backing a DB subnet group, a DB
+    parameter group and a cluster parameter group with declared parameters, an Aurora
+    PostgreSQL cluster scaled by Serverless v2 with one cluster instance, and a standalone
+    PostgreSQL instance. Exercises the create waits, the chunked parameter reconcile, the
+    follow-on modifies, and the tag sync across apply and destroy. The instance
+    parameters, scaling bound, and backup retention come from inputs so the update pass
+    can change them in place through the parameter reconcile and the modify calls.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    instance-parameters: {
+      type:        list(object({ name: string, value: string }))
+      description: 'Engine parameters of the DB parameter group'
+    }
+    aurora-max-capacity: {
+      type:        number
+      default:     1.0
+      description: 'Maximum ACUs of the Serverless v2 cluster'
+    }
+    backup-retention: {
+      type:        optional(integer)
+      description: 'Backup retention days of the standalone instance; omitted, the API default'
+    }
+  }
+
+  data: {
+    ec2-availability-zones-available: aws.ec2-availability-zones {
+      state: 'available'
+    }
+  }
+
+  resources: {
+    ec2-vpc-it: aws.ec2-vpc {
+      cidr-block: '10.61.0.0/16'
+    }
+    ec2-subnet-a: aws.ec2-subnet {
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.61.1.0/24'
+      availability-zone: data.ec2-availability-zones-available.names[0]
+      tags:              { unobin: 'rds-it' }
+    }
+    ec2-subnet-b: aws.ec2-subnet {
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.61.2.0/24'
+      availability-zone: data.ec2-availability-zones-available.names[1]
+      tags:              { unobin: 'rds-it' }
+    }
+    rds-subnet-group-it: aws.rds-subnet-group {
+      name:        'unobin-it-rds'
+      description: 'unobin rds integration test subnet group'
+      subnet-ids:  [resource.ec2-subnet-a.id, resource.ec2-subnet-b.id]
+      tags:        { unobin: 'rds-it' }
+    }
+    rds-parameter-group-it: aws.rds-parameter-group {
+      name:        'unobin-it-rds-pg'
+      family:      'postgres16'
+      description: 'unobin rds integration test parameter group'
+      parameters:  var.instance-parameters
+      tags:        { unobin: 'rds-it' }
+    }
+    rds-cluster-parameter-group-it: aws.rds-cluster-parameter-group {
+      name:        'unobin-it-rds-cpg'
+      family:      'aurora-postgresql16'
+      description: 'unobin rds integration test cluster parameter group'
+      parameters:  [{ name: 'log_connections', value: '1' }]
+      tags:        { unobin: 'rds-it' }
+    }
+    rds-cluster-it: aws.rds-cluster {
+      cluster-identifier:   'unobin-it-aurora'
+      engine:               'aurora-postgresql'
+      master-username:      'unobin'
+      master-password:      'unobin-it-password-1'
+      db-subnet-group-name: resource.rds-subnet-group-it.name
+      serverlessv2-scaling: { min-capacity: 0.5, max-capacity: var.aurora-max-capacity }
+      skip-final-snapshot:  true
+      tags:                 { unobin: 'rds-it' }
+    }
+    rds-cluster-instance-one: aws.rds-cluster-instance {
+      identifier:         'unobin-it-aurora-one'
+      cluster-identifier: resource.rds-cluster-it.cluster-identifier
+      engine:             'aurora-postgresql'
+      instance-class:     'db.serverless'
+      tags:               { unobin: 'rds-it' }
+    }
+    rds-instance-it: aws.rds-instance {
+      identifier:              'unobin-it-db'
+      engine:                  'postgres'
+      instance-class:          'db.t4g.micro'
+      allocated-storage:       20
+      username:                'unobin'
+      password:                'unobin-it-password-1'
+      db-subnet-group-name:    resource.rds-subnet-group-it.name
+      # The slot is optional, so the possibly-null input needs no discharge.
+      backup-retention-period: var.backup-retention
+      skip-final-snapshot:     true
+      tags:                    { unobin: 'rds-it' }
+    }
+  }
+
+  outputs: {
+    subnet-group-arn:            { value: resource.rds-subnet-group-it.arn }
+    parameter-group-arn:         { value: resource.rds-parameter-group-it.arn }
+    cluster-parameter-group-arn: { value: resource.rds-cluster-parameter-group-it.arn }
+    cluster-endpoint:            { value: resource.rds-cluster-it.endpoint }
+    cluster-instance-endpoint:   { value: resource.rds-cluster-instance-one.endpoint }
+    instance-endpoint:           { value: resource.rds-instance-it.endpoint }
+  }
+}

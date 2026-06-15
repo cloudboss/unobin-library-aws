@@ -1,8 +1,19 @@
-factory: {
-  inputs: { memory-size: 256, timeout: 10, greeting: 'hello from unobin, updated', batch-size: 20 }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: {
+      memory-size: 256
+      timeout:     10
+      greeting:    'hello from unobin, updated'
+      batch-size:  20
+    }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

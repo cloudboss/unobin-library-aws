@@ -1,0 +1,37 @@
+factory: {
+  description: '''>-
+    Manages a CloudWatch metric alarm watching an EC2 CPU metric. The threshold comes from
+    an input so the update pass changes it in place through PutMetricAlarm, exercising
+    create, the in-place update, and destroy. The alarm needs no real instance: with no data
+    it simply reports insufficient data, which is enough to create, read, and delete it.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    threshold: {
+      type:        number
+      default:     80
+      description: 'Alarm threshold in percent; the update pass changes it'
+    }
+  }
+
+  resources: {
+    cloudwatch-metric-alarm-it: aws.cloudwatch-metric-alarm {
+      alarm-name:          'unobin-it-alarm'
+      alarm-description:   'unobin integration test alarm'
+      comparison-operator: 'GreaterThanThreshold'
+      evaluation-periods:  2
+      metric-name:         'CPUUtilization'
+      namespace:           'AWS/EC2'
+      period:              300
+      statistic:           'Average'
+      threshold:           var.threshold
+      treat-missing-data:  'missing'
+      dimensions:          { InstanceId: 'i-0123456789abcdef0' }
+      tags:                { unobin: 'cloudwatch-it' }
+    }
+  }
+
+  outputs: { alarm-arn: { value: resource.cloudwatch-metric-alarm-it.arn } }
+}

@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { transparency: 'DISABLED', tags: { unobin: 'acm-it', stage: 'updated' } }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { transparency: 'DISABLED', tags: { unobin: 'acm-it', stage: 'updated' } }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

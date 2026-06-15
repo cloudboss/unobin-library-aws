@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { schedule: 'rate(10 minutes)', rule-state: 'DISABLED' }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { schedule: 'rate(10 minutes)', rule-state: 'DISABLED' }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

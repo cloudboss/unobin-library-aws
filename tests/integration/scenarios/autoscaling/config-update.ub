@@ -1,14 +1,20 @@
-factory: {
-  inputs: {
-    max-size:         2
-    lt-instance-type: 't3.small'
-    stage:            'updated'
-    policy-cooldown:  600
-    hook-timeout:     600
+stack: {
+  factory: {
+    inputs: {
+      max-size:         2
+      lt-instance-type: 't3.small'
+      stage:            'updated'
+      policy-cooldown:  600
+      hook-timeout:     600
+    }
+    configurations: {
+      aws {}
+    }
   }
-  configurations: { aws.default: {} }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

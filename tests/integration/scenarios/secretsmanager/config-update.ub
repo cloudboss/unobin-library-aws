@@ -1,11 +1,17 @@
-factory: {
-  inputs: {
-    secret-value: 'rotated-secret'
-    description:  'unobin integration test secret (updated)'
+stack: {
+  factory: {
+    inputs: {
+      secret-value: 'rotated-secret'
+      description:  'unobin integration test secret (updated)'
+    }
+    configurations: {
+      aws {}
+    }
   }
-  configurations: { aws.default: {} }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

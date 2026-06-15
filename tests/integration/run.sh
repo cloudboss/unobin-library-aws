@@ -73,7 +73,7 @@ if [ "${TIER}" = "emulator" ]; then
 fi
 
 # Populate the scenario list via positional parameters. Iterate every directory
-# under scenarios/ that contains a main.ub unless SCENARIO is defined.
+# under scenarios/ that contains a factory.ub unless SCENARIO is defined.
 SELECT="${SCENARIO:-}"
 if [ -n "${SELECT}" ]; then
     if [ ! -d "${SCENARIOS_DIR}/${SELECT}" ]; then
@@ -84,7 +84,7 @@ if [ -n "${SELECT}" ]; then
 else
     set --
     for d in "${SCENARIOS_DIR}"/*/; do
-        [ -d "${d}" ] || continue
+        [ -f "${d}/factory.ub" ] || continue
         set -- "${@}" "${d%/}"
     done
 fi
@@ -147,7 +147,7 @@ for sdir in "${@}"; do
         echo "==> ${TIER}/${name}"
     fi
     missing=""
-    for f in main.ub config.ub config-update.ub; do
+    for f in factory.ub config.ub config-update.ub; do
         if [ ! -f "${sdir}/${f}" ]; then
             echo "missing ${f}" >&2
             missing="true"
@@ -181,7 +181,7 @@ for sdir in "${@}"; do
     if [ -z "${failed_step}" ]; then
         (
             ${UNOBIN} compile \
-                -p "${sdir}/main.ub" \
+                -p "${sdir}" \
                 -o "${build_dir}" \
                 --build
         ) || failed_step="compile"

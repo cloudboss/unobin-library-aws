@@ -1,0 +1,64 @@
+factory: {
+  description: '''>-
+    Manages a VPC with a security group and ingress and egress rules. The
+    CIDR block and ingress port range come from inputs so the update pass
+    can change the rule's ports in place through ModifySecurityGroupRules.
+    '''
+
+  inputs: {
+    cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' }
+    ssh-port: {
+      type:        optional(object({ from: integer, to: optional(integer) }))
+      description: 'Ingress port range; omitted, port 22, and `to` falls back to `from`'
+    }
+  }
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  constraints: [
+    # The null test in when narrows what require reads; the optional `to`
+    # needs its own test, which narrows the comparison after the ||.
+    {
+      kind:    predicate
+      when:    var.ssh-port != null
+      require: var.ssh-port.to == null || var.ssh-port.from <= var.ssh-port.to
+      message: 'ssh-port from must not exceed to'
+    },
+  ]
+
+  resources: {
+    ec2-vpc-it: aws.ec2-vpc {
+      cidr-block: var.cidr-block
+    }
+    ec2-security-group-it: aws.ec2-security-group {
+      name:        'unobin-it-sg'
+      description: 'unobin integration test security group'
+      vpc-id:      resource.ec2-vpc-it.vpc-id
+      tags:        { unobin: 'ec2-it' }
+    }
+    ec2-security-group-ingress-rule-it: aws.ec2-security-group-ingress-rule {
+      security-group-id: resource.ec2-security-group-it.id
+      ip-protocol:       'tcp'
+      # Each nullable level wears its own marker; ?? ends the chain.
+      from-port:         var.ssh-port?.from ?? 22
+      to-port:           var.ssh-port?.to ?? var.ssh-port?.from ?? 22
+      cidr-ipv4:         var.cidr-block
+      description:       'ssh from the vpc'
+    }
+    ec2-security-group-egress-rule-it: aws.ec2-security-group-egress-rule {
+      security-group-id: resource.ec2-security-group-it.id
+      ip-protocol:       'tcp'
+      from-port:         443
+      to-port:           443
+      cidr-ipv4:         '0.0.0.0/0'
+      description:       'https outbound'
+    }
+  }
+
+  outputs: {
+    vpc-id:            { value: resource.ec2-vpc-it.vpc-id }
+    security-group-id: { value: resource.ec2-security-group-it.id }
+    ingress-rule-id:   { value: resource.ec2-security-group-ingress-rule-it.security-group-rule-id }
+    egress-rule-id:    { value: resource.ec2-security-group-egress-rule-it.security-group-rule-id }
+  }
+}

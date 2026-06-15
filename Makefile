@@ -7,7 +7,7 @@ GID := $(shell id -g)
 CTR_IMAGE_GO         := ghcr.io/cloudboss/docker.io/library/golang:1.26.2-alpine3.23
 CTR_IMAGE_LINT       := ghcr.io/cloudboss/docker.io/golangci/golangci-lint:v2.11.4-alpine
 CTR_IMAGE_LOCALSTACK := ghcr.io/cloudboss/docker.io/localstack/localstack:4.14.0
-CTR_IMAGE_MINISTACK  := ghcr.io/cloudboss/docker.io/ministackorg/ministack:1.3.56
+CTR_IMAGE_MINISTACK  := ghcr.io/cloudboss/docker.io/ministackorg/ministack:1.3.63
 
 NETWORK         := $(PROJECT)-it
 LOCALSTACK_NAME := $(PROJECT)-localstack

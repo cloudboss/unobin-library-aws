@@ -1,0 +1,92 @@
+factory: {
+  description: '''>-
+    Manages a Lambda function with its execution role, a resource-policy permission, and a
+    one-shot invocation. The memory size, timeout, and environment greeting come from
+    inputs so the update pass can change them in place through UpdateFunctionConfiguration.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    memory-size: { type: integer, default: 128, description: 'Memory of the function in MiB' }
+    timeout:     { type: integer, default: 3, description: 'Timeout of the function in seconds' }
+    greeting: {
+      type:        string
+      default:     'hello from unobin'
+      description: 'Value of the GREETING environment variable'
+    }
+    batch-size: {
+      type:        integer
+      default:     10
+      description: 'Batch size of the event source mapping; the update pass changes it'
+    }
+  }
+
+  resources: {
+    iam-role-it: aws.iam-role {
+      role-name: 'unobin-it-lambda-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    iam-policy-it: aws.iam-policy {
+      policy-name: 'unobin-it-lambda-policy'
+      policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogGroup",
+        "logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"},{"Effect":"Allow","Action":
+        ["sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes"],"Resource":"*"}]}
+        '''
+    }
+    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+      role-name:  resource.iam-role-it.role-name
+      policy-arn: resource.iam-policy-it.arn
+    }
+    lambda-function-it: aws.lambda-function {
+      function-name: 'unobin-it-function'
+      role:          resource.iam-role-it.arn
+      runtime:       'python3.12'
+      handler:       'index.handler'
+      code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
+      memory-size:   var.memory-size
+      timeout:       var.timeout
+      environment:   { variables: { GREETING: var.greeting } }
+      tags:          { unobin: 'lambda-it' }
+    }
+    lambda-permission-it: aws.lambda-permission {
+      function-name: resource.lambda-function-it.function-name
+      statement-id:  'unobin-it-allow-invoke'
+      action:        'lambda:InvokeFunction'
+      principal:     's3.amazonaws.com'
+    }
+    sqs-queue-events: aws.sqs-queue {
+      name: 'unobin-it-lambda-events'
+      tags: { unobin: 'lambda-it' }
+    }
+    lambda-event-source-mapping-it: aws.lambda-event-source-mapping {
+      function-name:                      resource.lambda-function-it.function-name
+      event-source-arn:                   resource.sqs-queue-events.arn
+      batch-size:                         var.batch-size
+      # An SQS source allows a batch size over 10 only with a batching window
+      # over zero, which the update pass needs when it raises the batch size.
+      maximum-batching-window-in-seconds: 5
+      enabled:                            true
+    }
+  }
+
+  actions: {
+    lambda-invoke-it: aws.lambda-invoke {
+      function-name:   resource.lambda-function-it.function-name
+      payload-content: '{"name":"unobin"}'
+    }
+  }
+
+  outputs: {
+    function-arn:     { value: resource.lambda-function-it.arn }
+    function-version: { value: resource.lambda-function-it.version }
+    invoke-status:    { value: action.lambda-invoke-it.status-code }
+    invoke-payload:   { value: action.lambda-invoke-it.payload }
+    events-queue-arn: { value: resource.sqs-queue-events.arn }
+    esm-uuid:         { value: resource.lambda-event-source-mapping-it.uuid }
+  }
+}

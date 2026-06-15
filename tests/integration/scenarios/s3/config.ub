@@ -1,5 +1,14 @@
-factory: { inputs: { bucket: 'unobin-it-bucket' }, configurations: { aws.default: {} } }
+stack: {
+  factory: {
+    inputs: { bucket: 'unobin-it-bucket' }
+    configurations: {
+      aws {}
+    }
+  }
 
-state: { @backend: local, path: '.unobin/state' }
+  state: local {
+    path: '.unobin/state'
+  }
 
-encryption: { @key-source: noop }
+  encryption: noop {}
+}

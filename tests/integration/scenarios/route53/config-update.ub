@@ -1,12 +1,18 @@
-factory: {
-  inputs: {
-    zone-name:   'unobin-it.example.com'
-    comment:     'unobin integration test zone'
-    www-address: '192.0.2.2'
+stack: {
+  factory: {
+    inputs: {
+      zone-name:   'unobin-it.example.com'
+      comment:     'unobin integration test zone'
+      www-address: '192.0.2.2'
+    }
+    configurations: {
+      aws {}
+    }
   }
-  configurations: { aws.default: {} }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

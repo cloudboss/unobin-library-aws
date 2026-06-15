@@ -1,0 +1,80 @@
+factory: {
+  description: '''>-
+    Manages an internal Network Load Balancer and its dependencies: a VPC with two
+    subnets, a TCP target group, the network load balancer across both subnets with
+    cross-zone load balancing enabled, and a TCP listener that forwards to the target
+    group. Exercises the network load-balancer type and its per-type attribute path
+    across apply and destroy. The cross-zone flag and healthy threshold come from inputs
+    so the update pass can change them in place through the attribute and modify calls.
+    '''
+
+  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  inputs: {
+    cross-zone: {
+      type:        boolean
+      default:     true
+      description: 'Whether cross-zone load balancing is on'
+    }
+    healthy-threshold: {
+      type:        optional(integer)
+      description: 'Consecutive health check successes before healthy; omitted, the API default'
+    }
+  }
+
+  data: {
+    ec2-availability-zones-available: aws.ec2-availability-zones {
+      state: 'available'
+    }
+  }
+
+  resources: {
+    ec2-vpc-it: aws.ec2-vpc {
+      cidr-block: '10.30.0.0/16'
+    }
+    ec2-subnet-a: aws.ec2-subnet {
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.30.1.0/24'
+      availability-zone: data.ec2-availability-zones-available.names[0]
+      tags:              { unobin: 'nlb-it' }
+    }
+    ec2-subnet-b: aws.ec2-subnet {
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.30.2.0/24'
+      availability-zone: data.ec2-availability-zones-available.names[1]
+      tags:              { unobin: 'nlb-it' }
+    }
+    elbv2-target-group-it: aws.elbv2-target-group {
+      name:                    'unobin-it-nlb-tg'
+      target-type:             'instance'
+      port:                    80
+      protocol:                'TCP'
+      vpc-id:                  resource.ec2-vpc-it.vpc-id
+      # The slot is optional, so the possibly-null input needs no discharge.
+      healthy-threshold-count: var.healthy-threshold
+      tags:                    { unobin: 'nlb-it' }
+    }
+    elbv2-load-balancer-it: aws.elbv2-load-balancer {
+      name:                             'unobin-it-nlb'
+      internal:                         true
+      load-balancer-type:               'network'
+      subnets:                          [resource.ec2-subnet-a.id, resource.ec2-subnet-b.id]
+      enable-cross-zone-load-balancing: var.cross-zone
+      tags:                             { unobin: 'nlb-it' }
+    }
+    elbv2-listener-it: aws.elbv2-listener {
+      load-balancer-arn: resource.elbv2-load-balancer-it.arn
+      protocol:          'TCP'
+      port:              80
+      default-action:    [{ type: 'forward', target-group-arn: resource.elbv2-target-group-it.arn }]
+      tags:              { unobin: 'nlb-it' }
+    }
+  }
+
+  outputs: {
+    load-balancer-arn: { value: resource.elbv2-load-balancer-it.arn }
+    dns-name:          { value: resource.elbv2-load-balancer-it.dns-name }
+    target-group-arn:  { value: resource.elbv2-target-group-it.arn }
+    listener-arn:      { value: resource.elbv2-listener-it.arn }
+  }
+}

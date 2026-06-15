@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { cross-zone: false, healthy-threshold: 5 }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { cross-zone: false, healthy-threshold: 5 }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

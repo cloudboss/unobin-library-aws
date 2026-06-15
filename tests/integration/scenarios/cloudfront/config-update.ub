@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { comment: 'unobin cloudfront integration test (updated)' }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { comment: 'unobin cloudfront integration test (updated)' }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

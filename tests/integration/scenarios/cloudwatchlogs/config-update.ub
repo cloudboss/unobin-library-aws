@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { name: 'unobin-it-log-group', retention: 60 }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { name: 'unobin-it-log-group', retention: 60 }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

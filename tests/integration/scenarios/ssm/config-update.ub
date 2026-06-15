@@ -1,8 +1,14 @@
-factory: {
-  inputs:         { value: 'updated', description: 'unobin integration test parameter (updated)' }
-  configurations: { aws.default: {} }
+stack: {
+  factory: {
+    inputs: { value: 'updated', description: 'unobin integration test parameter (updated)' }
+    configurations: {
+      aws {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }

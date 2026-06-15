@@ -1,14 +1,20 @@
-factory: {
-  inputs: {
-    api-description:     'unobin HTTP API scenario, updated'
-    integration-timeout: 15000
-    operation-name:      'getHelloV2'
-    stage-greeting:      'hej'
-    url-max-age:         600
+stack: {
+  factory: {
+    inputs: {
+      api-description:     'unobin HTTP API scenario, updated'
+      integration-timeout: 15000
+      operation-name:      'getHelloV2'
+      stage-greeting:      'hej'
+      url-max-age:         600
+    }
+    configurations: {
+      aws {}
+    }
   }
-  configurations: { aws.default: {} }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
 }
-
-state: { @backend: local, path: '.unobin/state' }
-
-encryption: { @key-source: noop }
