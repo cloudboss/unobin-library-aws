@@ -16,16 +16,12 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
+type awsCfg = awscfg.Configuration
+
 // newClient returns the AWS SDK Go v2 client for API Gateway v2, configured
-// from cfg. cfg is the *awscfg.Configuration the runtime hands every
-// lifecycle method; the helper unwraps it and builds an aws.Config via
-// awscfg.Load.
-func newClient(ctx context.Context, cfg any) (*apigatewayv2.Client, error) {
-	c, ok := cfg.(*awscfg.Configuration)
-	if !ok {
-		return nil, fmt.Errorf("apigatewayv2client: unexpected configuration type %T", cfg)
-	}
-	awsCfg, err := awscfg.Load(ctx, c)
+// from cfg. It builds an aws.Config via awscfg.Load.
+func newClient(ctx context.Context, cfg *awsCfg) (*apigatewayv2.Client, error) {
+	awsCfg, err := awscfg.Load(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

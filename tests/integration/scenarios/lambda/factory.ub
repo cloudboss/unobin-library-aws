@@ -7,7 +7,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     memory-size: { type: integer, default: 128, description: 'Memory of the function in MiB' }
     timeout:     { type: integer, default: 3, description: 'Timeout of the function in seconds' }
     greeting: {

@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { cross-zone: false, healthy-threshold: 5 }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

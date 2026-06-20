@@ -137,7 +137,7 @@ func (r RecordSet) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *RecordSet) Create(ctx context.Context, cfg any) (*RecordSetOutput, error) {
+func (r *RecordSet) Create(ctx context.Context, cfg *awsCfg) (*RecordSetOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (r *RecordSet) Create(ctx context.Context, cfg any) (*RecordSetOutput, erro
 }
 
 func (r *RecordSet) Read(
-	ctx context.Context, cfg any, prior *RecordSetOutput,
+	ctx context.Context, cfg *awsCfg, prior *RecordSetOutput,
 ) (*RecordSetOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -172,7 +172,7 @@ func (r *RecordSet) Read(
 }
 
 func (r *RecordSet) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[RecordSet, *RecordSetOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RecordSet, *RecordSetOutput],
 ) (*RecordSetOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -196,7 +196,7 @@ func (r *RecordSet) Update(
 	return r.read(ctx, client)
 }
 
-func (r *RecordSet) Delete(ctx context.Context, cfg any, prior *RecordSetOutput) error {
+func (r *RecordSet) Delete(ctx context.Context, cfg *awsCfg, prior *RecordSetOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

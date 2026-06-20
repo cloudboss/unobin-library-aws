@@ -3,7 +3,6 @@ package s3
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
@@ -11,16 +10,12 @@ import (
 	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
+type awsCfg = awscfg.Configuration
+
 // newClient returns the AWS SDK Go v2 client for s3, configured from cfg.
-// cfg is the *awscfg.Configuration the runtime hands every lifecycle
-// method; the helper unwraps it and builds an aws.Config via
-// awscfg.Load.
-func newClient(ctx context.Context, cfg any) (*s3.Client, error) {
-	c, ok := cfg.(*awscfg.Configuration)
-	if !ok {
-		return nil, fmt.Errorf("s3client: unexpected configuration type %T", cfg)
-	}
-	awsCfg, err := awscfg.Load(ctx, c)
+// It builds an aws.Config via awscfg.Load.
+func newClient(ctx context.Context, cfg *awsCfg) (*s3.Client, error) {
+	awsCfg, err := awscfg.Load(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

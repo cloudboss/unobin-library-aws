@@ -98,7 +98,7 @@ func (r *ResponseHeadersPolicy) config() *cloudfronttypes.ResponseHeadersPolicyC
 }
 
 func (r *ResponseHeadersPolicy) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*ResponseHeadersPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -122,7 +122,7 @@ func (r *ResponseHeadersPolicy) Create(
 }
 
 func (r *ResponseHeadersPolicy) Read(
-	ctx context.Context, cfg any, prior *ResponseHeadersPolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *ResponseHeadersPolicyOutput,
 ) (*ResponseHeadersPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -155,7 +155,7 @@ func (r *ResponseHeadersPolicy) read(
 }
 
 func (r *ResponseHeadersPolicy) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[ResponseHeadersPolicy, *ResponseHeadersPolicyOutput],
 ) (*ResponseHeadersPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
@@ -180,7 +180,7 @@ func (r *ResponseHeadersPolicy) Update(
 }
 
 func (r *ResponseHeadersPolicy) Delete(
-	ctx context.Context, cfg any, prior *ResponseHeadersPolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *ResponseHeadersPolicyOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

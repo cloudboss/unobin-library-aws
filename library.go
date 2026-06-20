@@ -34,167 +34,194 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/sts"
 )
 
+type resourcePtr[T, Out any] interface {
+	*T
+	runtime.TypedResource[T, Out, *awscfg.Configuration]
+}
+
+type dataSourcePtr[T, Out any] interface {
+	*T
+	runtime.TypedDataSource[Out, *awscfg.Configuration]
+}
+
+type actionPtr[T, Out any] interface {
+	*T
+	runtime.TypedAction[Out, *awscfg.Configuration]
+}
+
+func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistration {
+	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT]()
+}
+
+func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRegistration {
+	return runtime.MakeDataSource[T, Out, *awscfg.Configuration, PT]()
+}
+
+func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
+	return runtime.MakeAction[T, Out, *awscfg.Configuration, PT]()
+}
+
 func Library() *runtime.Library {
 	return &runtime.Library{
 		Name:        "aws",
 		Description: "AWS library for unobin.",
-		Configuration: &cfg.ConfigurationType{
+		Configuration: &cfg.ConfigurationType[*awscfg.Configuration]{
 			Description: "AWS library configuration",
-			New:         func() any { return &awscfg.Configuration{} },
+			New:         func() *awscfg.Configuration { return &awscfg.Configuration{} },
 		},
 		Resources: map[string]runtime.ResourceRegistration{
-			"ec2-vpc": runtime.MakeResource[ec2.Vpc, *ec2.VpcOutput](),
-			"ec2-security-group": runtime.MakeResource[
+			"ec2-vpc": makeResource[ec2.Vpc, *ec2.VpcOutput](),
+			"ec2-security-group": makeResource[
 				ec2.SecurityGroup, *ec2.SecurityGroupOutput](),
-			"ec2-security-group-ingress-rule": runtime.MakeResource[
+			"ec2-security-group-ingress-rule": makeResource[
 				ec2.SecurityGroupIngressRule, *ec2.SecurityGroupIngressRuleOutput](),
-			"ec2-security-group-egress-rule": runtime.MakeResource[
+			"ec2-security-group-egress-rule": makeResource[
 				ec2.SecurityGroupEgressRule, *ec2.SecurityGroupEgressRuleOutput](),
-			"ec2-subnet": runtime.MakeResource[ec2.Subnet, *ec2.SubnetOutput](),
-			"ec2-volume": runtime.MakeResource[ec2.Volume, *ec2.VolumeOutput](),
-			"ec2-launch-template": runtime.MakeResource[
+			"ec2-subnet": makeResource[ec2.Subnet, *ec2.SubnetOutput](),
+			"ec2-volume": makeResource[ec2.Volume, *ec2.VolumeOutput](),
+			"ec2-launch-template": makeResource[
 				ec2.LaunchTemplate, *ec2.LaunchTemplateOutput](),
-			"ec2-internet-gateway": runtime.MakeResource[
+			"ec2-internet-gateway": makeResource[
 				ec2.InternetGateway, *ec2.InternetGatewayOutput](),
-			"ec2-route-table": runtime.MakeResource[
+			"ec2-route-table": makeResource[
 				ec2.RouteTable, *ec2.RouteTableOutput](),
-			"ec2-route": runtime.MakeResource[ec2.Route, *ec2.RouteOutput](),
-			"ec2-route-table-association": runtime.MakeResource[
+			"ec2-route": makeResource[ec2.Route, *ec2.RouteOutput](),
+			"ec2-route-table-association": makeResource[
 				ec2.RouteTableAssociation,
 				*ec2.RouteTableAssociationOutput](),
-			"ec2-eip": runtime.MakeResource[ec2.Eip, *ec2.EipOutput](),
-			"ec2-nat-gateway": runtime.MakeResource[
+			"ec2-eip": makeResource[ec2.Eip, *ec2.EipOutput](),
+			"ec2-nat-gateway": makeResource[
 				ec2.NatGateway, *ec2.NatGatewayOutput](),
-			"ec2-vpc-endpoint": runtime.MakeResource[
+			"ec2-vpc-endpoint": makeResource[
 				ec2.VpcEndpoint, *ec2.VpcEndpointOutput](),
-			"ec2-key-pair": runtime.MakeResource[
+			"ec2-key-pair": makeResource[
 				ec2.KeyPair, *ec2.KeyPairOutput](),
-			"ec2-instance": runtime.MakeResource[
+			"ec2-instance": makeResource[
 				ec2.Instance, *ec2.InstanceOutput](),
-			"iam-role": runtime.MakeResource[
+			"iam-role": makeResource[
 				iam.Role, *iam.RoleOutput](),
-			"iam-policy": runtime.MakeResource[
+			"iam-policy": makeResource[
 				iam.Policy, *iam.PolicyOutput](),
-			"iam-instance-profile": runtime.MakeResource[
+			"iam-instance-profile": makeResource[
 				iam.InstanceProfile, *iam.InstanceProfileOutput](),
-			"iam-openid-connect-provider": runtime.MakeResource[
+			"iam-openid-connect-provider": makeResource[
 				iam.OpenIDConnectProvider,
 				*iam.OpenIDConnectProviderOutput](),
-			"iam-role-policy-attachment": runtime.MakeResource[
+			"iam-role-policy-attachment": makeResource[
 				iam.RolePolicyAttachment,
 				*iam.RolePolicyAttachmentOutput](),
-			"iam-role-policy": runtime.MakeResource[
+			"iam-role-policy": makeResource[
 				iam.RolePolicy, *iam.RolePolicyOutput](),
-			"kms-key": runtime.MakeResource[kms.Key, *kms.KeyOutput](),
-			"kms-alias": runtime.MakeResource[
+			"kms-key": makeResource[kms.Key, *kms.KeyOutput](),
+			"kms-alias": makeResource[
 				kms.Alias, *kms.AliasOutput](),
-			"s3-bucket": runtime.MakeResource[s3.Bucket, *s3.BucketOutput](),
-			"s3-bucket-policy": runtime.MakeResource[
+			"s3-bucket": makeResource[s3.Bucket, *s3.BucketOutput](),
+			"s3-bucket-policy": makeResource[
 				s3.BucketPolicy, *s3.BucketPolicyOutput](),
-			"s3-object": runtime.MakeResource[s3.Object, *s3.ObjectOutput](),
-			"lambda-function": runtime.MakeResource[
+			"s3-object": makeResource[s3.Object, *s3.ObjectOutput](),
+			"lambda-function": makeResource[
 				lambda.Function, *lambda.FunctionOutput](),
-			"lambda-permission": runtime.MakeResource[
+			"lambda-permission": makeResource[
 				lambda.Permission, *lambda.PermissionOutput](),
-			"lambda-event-source-mapping": runtime.MakeResource[
+			"lambda-event-source-mapping": makeResource[
 				lambda.EventSourceMapping, *lambda.EventSourceMappingOutput](),
-			"lambda-function-url": runtime.MakeResource[
+			"lambda-function-url": makeResource[
 				lambda.FunctionUrl, *lambda.FunctionUrlOutput](),
-			"eventbridge-rule": runtime.MakeResource[
+			"eventbridge-rule": makeResource[
 				eventbridge.Rule, *eventbridge.RuleOutput](),
-			"eventbridge-target": runtime.MakeResource[
+			"eventbridge-target": makeResource[
 				eventbridge.Target, *eventbridge.TargetOutput](),
-			"elbv2-load-balancer": runtime.MakeResource[
+			"elbv2-load-balancer": makeResource[
 				elbv2.LoadBalancer, *elbv2.LoadBalancerOutput](),
-			"elbv2-target-group": runtime.MakeResource[
+			"elbv2-target-group": makeResource[
 				elbv2.TargetGroup, *elbv2.TargetGroupOutput](),
-			"elbv2-listener": runtime.MakeResource[
+			"elbv2-listener": makeResource[
 				elbv2.Listener, *elbv2.ListenerOutput](),
-			"elbv2-listener-rule": runtime.MakeResource[
+			"elbv2-listener-rule": makeResource[
 				elbv2.ListenerRule, *elbv2.ListenerRuleOutput](),
-			"elbv2-listener-certificate": runtime.MakeResource[
+			"elbv2-listener-certificate": makeResource[
 				elbv2.ListenerCertificate, *elbv2.ListenerCertificateOutput](),
-			"autoscaling-group": runtime.MakeResource[
+			"autoscaling-group": makeResource[
 				autoscaling.Group, *autoscaling.GroupOutput](),
-			"autoscaling-policy": runtime.MakeResource[
+			"autoscaling-policy": makeResource[
 				autoscaling.Policy, *autoscaling.PolicyOutput](),
-			"autoscaling-lifecycle-hook": runtime.MakeResource[
+			"autoscaling-lifecycle-hook": makeResource[
 				autoscaling.LifecycleHook, *autoscaling.LifecycleHookOutput](),
-			"rds-subnet-group": runtime.MakeResource[
+			"rds-subnet-group": makeResource[
 				rds.SubnetGroup, *rds.SubnetGroupOutput](),
-			"rds-parameter-group": runtime.MakeResource[
+			"rds-parameter-group": makeResource[
 				rds.ParameterGroup, *rds.ParameterGroupOutput](),
-			"rds-cluster-parameter-group": runtime.MakeResource[
+			"rds-cluster-parameter-group": makeResource[
 				rds.ClusterParameterGroup, *rds.ClusterParameterGroupOutput](),
-			"rds-instance": runtime.MakeResource[
+			"rds-instance": makeResource[
 				rds.Instance, *rds.InstanceOutput](),
-			"rds-cluster": runtime.MakeResource[
+			"rds-cluster": makeResource[
 				rds.Cluster, *rds.ClusterOutput](),
-			"rds-cluster-instance": runtime.MakeResource[
+			"rds-cluster-instance": makeResource[
 				rds.ClusterInstance, *rds.ClusterInstanceOutput](),
-			"cloudwatchlogs-log-group": runtime.MakeResource[
+			"cloudwatchlogs-log-group": makeResource[
 				cloudwatchlogs.LogGroup, *cloudwatchlogs.LogGroupOutput](),
-			"cloudwatch-metric-alarm": runtime.MakeResource[
+			"cloudwatch-metric-alarm": makeResource[
 				cloudwatch.MetricAlarm, *cloudwatch.MetricAlarmOutput](),
-			"cloudfront-origin-access-control": runtime.MakeResource[
+			"cloudfront-origin-access-control": makeResource[
 				cloudfront.OriginAccessControl,
 				*cloudfront.OriginAccessControlOutput](),
-			"cloudfront-function": runtime.MakeResource[
+			"cloudfront-function": makeResource[
 				cloudfront.Function, *cloudfront.FunctionOutput](),
-			"cloudfront-response-headers-policy": runtime.MakeResource[
+			"cloudfront-response-headers-policy": makeResource[
 				cloudfront.ResponseHeadersPolicy,
 				*cloudfront.ResponseHeadersPolicyOutput](),
-			"cloudfront-distribution": runtime.MakeResource[
+			"cloudfront-distribution": makeResource[
 				cloudfront.Distribution, *cloudfront.DistributionOutput](),
-			"route53-hosted-zone": runtime.MakeResource[
+			"route53-hosted-zone": makeResource[
 				route53.HostedZone, *route53.HostedZoneOutput](),
-			"route53-record-set": runtime.MakeResource[
+			"route53-record-set": makeResource[
 				route53.RecordSet, *route53.RecordSetOutput](),
-			"acm-certificate": runtime.MakeResource[
+			"acm-certificate": makeResource[
 				acm.Certificate, *acm.CertificateOutput](),
-			"acm-certificate-validation": runtime.MakeResource[
+			"acm-certificate-validation": makeResource[
 				acm.CertificateValidation, *acm.CertificateValidationOutput](),
-			"sqs-queue": runtime.MakeResource[sqs.Queue, *sqs.QueueOutput](),
-			"sqs-queue-policy": runtime.MakeResource[
+			"sqs-queue": makeResource[sqs.Queue, *sqs.QueueOutput](),
+			"sqs-queue-policy": makeResource[
 				sqs.QueuePolicy, *sqs.QueuePolicyOutput](),
-			"sns-topic": runtime.MakeResource[sns.Topic, *sns.TopicOutput](),
-			"sns-topic-subscription": runtime.MakeResource[
+			"sns-topic": makeResource[sns.Topic, *sns.TopicOutput](),
+			"sns-topic-subscription": makeResource[
 				sns.TopicSubscription, *sns.TopicSubscriptionOutput](),
-			"sns-topic-policy": runtime.MakeResource[
+			"sns-topic-policy": makeResource[
 				sns.TopicPolicy, *sns.TopicPolicyOutput](),
-			"dynamodb-table": runtime.MakeResource[
+			"dynamodb-table": makeResource[
 				dynamodb.Table, *dynamodb.TableOutput](),
-			"ssm-parameter": runtime.MakeResource[
+			"ssm-parameter": makeResource[
 				ssm.Parameter, *ssm.ParameterOutput](),
-			"secretsmanager-secret": runtime.MakeResource[
+			"secretsmanager-secret": makeResource[
 				secretsmanager.Secret, *secretsmanager.SecretOutput](),
-			"ecr-repository": runtime.MakeResource[
+			"ecr-repository": makeResource[
 				ecr.Repository, *ecr.RepositoryOutput](),
-			"ecs-cluster": runtime.MakeResource[ecs.Cluster, *ecs.ClusterOutput](),
-			"ecs-task-definition": runtime.MakeResource[
+			"ecs-cluster": makeResource[ecs.Cluster, *ecs.ClusterOutput](),
+			"ecs-task-definition": makeResource[
 				ecs.TaskDefinition, *ecs.TaskDefinitionOutput](),
-			"ecs-service": runtime.MakeResource[ecs.Service, *ecs.ServiceOutput](),
-			"apigatewayv2-api": runtime.MakeResource[
+			"ecs-service": makeResource[ecs.Service, *ecs.ServiceOutput](),
+			"apigatewayv2-api": makeResource[
 				apigatewayv2.Api, *apigatewayv2.ApiOutput](),
-			"apigatewayv2-integration": runtime.MakeResource[
+			"apigatewayv2-integration": makeResource[
 				apigatewayv2.Integration, *apigatewayv2.IntegrationOutput](),
-			"apigatewayv2-route": runtime.MakeResource[
+			"apigatewayv2-route": makeResource[
 				apigatewayv2.Route, *apigatewayv2.RouteOutput](),
-			"apigatewayv2-stage": runtime.MakeResource[
+			"apigatewayv2-stage": makeResource[
 				apigatewayv2.Stage, *apigatewayv2.StageOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"ec2-ami": runtime.MakeDataSource[ec2.AMI, *ec2.AMIOutput](),
-			"ec2-availability-zones": runtime.MakeDataSource[
+			"ec2-ami": makeDataSource[ec2.AMI, *ec2.AMIOutput](),
+			"ec2-availability-zones": makeDataSource[
 				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
-			"sts-caller-identity": runtime.MakeDataSource[
+			"sts-caller-identity": makeDataSource[
 				sts.CallerIdentity, *sts.CallerIdentityOutput](),
-			"iam-openid-connect-provider": runtime.MakeDataSource[
+			"iam-openid-connect-provider": makeDataSource[
 				iam.OpenIDConnectProviderData,
 				*iam.OpenIDConnectProviderDataOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
-			"lambda-invoke": runtime.MakeAction[
+			"lambda-invoke": makeAction[
 				lambda.Invoke, *lambda.InvokeOutput](),
 		},
 	}

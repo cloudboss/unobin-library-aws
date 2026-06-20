@@ -110,7 +110,7 @@ func (r Permission) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Permission) Create(ctx context.Context, cfg any) (*PermissionOutput, error) {
+func (r *Permission) Create(ctx context.Context, cfg *awsCfg) (*PermissionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (r *Permission) Create(ctx context.Context, cfg any) (*PermissionOutput, er
 }
 
 func (r *Permission) Read(
-	ctx context.Context, cfg any, prior *PermissionOutput,
+	ctx context.Context, cfg *awsCfg, prior *PermissionOutput,
 ) (*PermissionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -176,12 +176,12 @@ func (r *Permission) Read(
 // replacement the runtime drives through Delete and Create. Update only returns
 // the prior outputs so the identity stays referenceable.
 func (r *Permission) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Permission, *PermissionOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Permission, *PermissionOutput],
 ) (*PermissionOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *Permission) Delete(ctx context.Context, cfg any, prior *PermissionOutput) error {
+func (r *Permission) Delete(ctx context.Context, cfg *awsCfg, prior *PermissionOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

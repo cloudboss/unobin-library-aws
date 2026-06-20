@@ -158,7 +158,7 @@ func (r Certificate) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Certificate) Create(ctx context.Context, cfg any) (*CertificateOutput, error) {
+func (r *Certificate) Create(ctx context.Context, cfg *awsCfg) (*CertificateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (r *Certificate) Create(ctx context.Context, cfg any) (*CertificateOutput, 
 }
 
 func (r *Certificate) Read(
-	ctx context.Context, cfg any, prior *CertificateOutput,
+	ctx context.Context, cfg *awsCfg, prior *CertificateOutput,
 ) (*CertificateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -192,7 +192,7 @@ func (r *Certificate) Read(
 }
 
 func (r *Certificate) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Certificate, *CertificateOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Certificate, *CertificateOutput],
 ) (*CertificateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -229,7 +229,7 @@ func (r *Certificate) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Certificate) Delete(ctx context.Context, cfg any, prior *CertificateOutput) error {
+func (r *Certificate) Delete(ctx context.Context, cfg *awsCfg, prior *CertificateOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

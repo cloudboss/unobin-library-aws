@@ -12,7 +12,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     stage: {
       type:        optional(string)
       description: 'Stage tag value; omitted, the resources are tagged initial'

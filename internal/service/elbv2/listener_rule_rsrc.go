@@ -204,7 +204,7 @@ func (r ListenerRule) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ListenerRule) Create(ctx context.Context, cfg any) (*ListenerRuleOutput, error) {
+func (r *ListenerRule) Create(ctx context.Context, cfg *awsCfg) (*ListenerRuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (r *ListenerRule) Create(ctx context.Context, cfg any) (*ListenerRuleOutput
 }
 
 func (r *ListenerRule) Read(
-	ctx context.Context, cfg any, prior *ListenerRuleOutput,
+	ctx context.Context, cfg *awsCfg, prior *ListenerRuleOutput,
 ) (*ListenerRuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -244,7 +244,7 @@ func (r *ListenerRule) Read(
 }
 
 func (r *ListenerRule) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[ListenerRule, *ListenerRuleOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ListenerRule, *ListenerRuleOutput],
 ) (*ListenerRuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -294,7 +294,7 @@ func (r *ListenerRule) Update(
 	return prior.Outputs, nil
 }
 
-func (r *ListenerRule) Delete(ctx context.Context, cfg any, prior *ListenerRuleOutput) error {
+func (r *ListenerRule) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerRuleOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

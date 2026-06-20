@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { visibility-timeout: 60 }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

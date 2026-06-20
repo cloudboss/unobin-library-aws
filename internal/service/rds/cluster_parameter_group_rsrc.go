@@ -114,7 +114,7 @@ func (r ClusterParameterGroup) Constraints() []constraint.Constraint {
 }
 
 func (r *ClusterParameterGroup) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*ClusterParameterGroupOutput, error) {
 	if err := validateClusterParameterGroupName(r.Name); err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (r *ClusterParameterGroup) Create(
 }
 
 func (r *ClusterParameterGroup) Read(
-	ctx context.Context, cfg any, prior *ClusterParameterGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupOutput,
 ) (*ClusterParameterGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -192,7 +192,7 @@ func (r *ClusterParameterGroup) read(
 }
 
 func (r *ClusterParameterGroup) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[ClusterParameterGroup, *ClusterParameterGroupOutput],
 ) (*ClusterParameterGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
@@ -218,7 +218,7 @@ func (r *ClusterParameterGroup) Update(
 }
 
 func (r *ClusterParameterGroup) Delete(
-	ctx context.Context, cfg any, prior *ClusterParameterGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

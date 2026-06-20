@@ -1,8 +1,8 @@
 stack: {
   factory: {
-    inputs: { value: 'updated', description: 'unobin integration test parameter (updated)' }
-    configurations: {
-      aws {}
+    inputs: {
+      value:       'updated'
+      description: 'unobin integration test parameter (updated)'
     }
   }
 

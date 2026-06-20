@@ -130,7 +130,7 @@ func (r Subnet) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Subnet) Create(ctx context.Context, cfg any) (*SubnetOutput, error) {
+func (r *Subnet) Create(ctx context.Context, cfg *awsCfg) (*SubnetOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,12 @@ func (r *Subnet) Create(ctx context.Context, cfg any) (*SubnetOutput, error) {
 	return r.read(ctx, client, id, true)
 }
 
-func (r *Subnet) Read(ctx context.Context, cfg any, prior *SubnetOutput) (*SubnetOutput, error) {
+func (r *Subnet) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SubnetOutput) (*SubnetOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -236,7 +241,7 @@ func (r *Subnet) read(
 }
 
 func (r *Subnet) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Subnet, *SubnetOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Subnet, *SubnetOutput],
 ) (*SubnetOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -256,7 +261,7 @@ func (r *Subnet) Update(
 	return r.read(ctx, client, id, false)
 }
 
-func (r *Subnet) Delete(ctx context.Context, cfg any, prior *SubnetOutput) error {
+func (r *Subnet) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

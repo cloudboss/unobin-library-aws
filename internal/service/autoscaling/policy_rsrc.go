@@ -150,7 +150,7 @@ func (r Policy) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Policy) Create(ctx context.Context, cfg any) (*PolicyOutput, error) {
+func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,12 @@ func (r *Policy) enabled() bool {
 	return true
 }
 
-func (r *Policy) Read(ctx context.Context, cfg any, prior *PolicyOutput) (*PolicyOutput, error) {
+func (r *Policy) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *PolicyOutput) (*PolicyOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -264,7 +269,7 @@ func (r *Policy) read(
 }
 
 func (r *Policy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Policy, *PolicyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Policy, *PolicyOutput],
 ) (*PolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -298,7 +303,7 @@ func (r *Policy) changed(prior runtime.Prior[Policy, *PolicyOutput]) bool {
 		runtime.Changed(p.TargetTracking, r.TargetTracking)
 }
 
-func (r *Policy) Delete(ctx context.Context, cfg any, prior *PolicyOutput) error {
+func (r *Policy) Delete(ctx context.Context, cfg *awsCfg, prior *PolicyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

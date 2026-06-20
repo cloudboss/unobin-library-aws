@@ -242,7 +242,7 @@ func (r ClusterInstance) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ClusterInstance) Create(ctx context.Context, cfg any) (*ClusterInstanceOutput, error) {
+func (r *ClusterInstance) Create(ctx context.Context, cfg *awsCfg) (*ClusterInstanceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -357,7 +357,7 @@ func (r *ClusterInstance) reconcileCACertificate(
 }
 
 func (r *ClusterInstance) Read(
-	ctx context.Context, cfg any, prior *ClusterInstanceOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceOutput,
 ) (*ClusterInstanceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -460,7 +460,7 @@ func (r *ClusterInstance) findInstance(
 }
 
 func (r *ClusterInstance) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[ClusterInstance, *ClusterInstanceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterInstance, *ClusterInstanceOutput],
 ) (*ClusterInstanceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -587,7 +587,7 @@ func (r *ClusterInstance) performanceInsightsChanged(
 }
 
 func (r *ClusterInstance) Delete(
-	ctx context.Context, cfg any, prior *ClusterInstanceOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

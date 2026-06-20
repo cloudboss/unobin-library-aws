@@ -152,7 +152,7 @@ func (r *Secret) validate() error {
 	return nil
 }
 
-func (r *Secret) Create(ctx context.Context, cfg any) (*SecretOutput, error) {
+func (r *Secret) Create(ctx context.Context, cfg *awsCfg) (*SecretOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -203,7 +203,12 @@ func (r *Secret) Create(ctx context.Context, cfg any) (*SecretOutput, error) {
 	return r.read(ctx, client, arn)
 }
 
-func (r *Secret) Read(ctx context.Context, cfg any, prior *SecretOutput) (*SecretOutput, error) {
+func (r *Secret) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecretOutput) (*SecretOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -266,7 +271,7 @@ func (r *Secret) readVersionID(
 }
 
 func (r *Secret) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Secret, *SecretOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Secret, *SecretOutput],
 ) (*SecretOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -319,7 +324,7 @@ func (r *Secret) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Secret) Delete(ctx context.Context, cfg any, prior *SecretOutput) error {
+func (r *Secret) Delete(ctx context.Context, cfg *awsCfg, prior *SecretOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

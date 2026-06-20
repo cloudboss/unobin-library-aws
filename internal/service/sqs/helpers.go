@@ -3,7 +3,6 @@ package sqs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	sqs "github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -11,15 +10,12 @@ import (
 	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
+type awsCfg = awscfg.Configuration
+
 // newClient returns the AWS SDK Go v2 client for sqs, configured from cfg.
-// cfg is the *awscfg.Configuration the runtime hands every lifecycle method;
-// the helper unwraps it and builds an aws.Config via awscfg.Load.
-func newClient(ctx context.Context, cfg any) (*sqs.Client, error) {
-	c, ok := cfg.(*awscfg.Configuration)
-	if !ok {
-		return nil, fmt.Errorf("sqsclient: unexpected configuration type %T", cfg)
-	}
-	awsCfg, err := awscfg.Load(ctx, c)
+// It builds an aws.Config via awscfg.Load.
+func newClient(ctx context.Context, cfg *awsCfg) (*sqs.Client, error) {
+	awsCfg, err := awscfg.Load(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

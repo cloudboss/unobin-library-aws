@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { cidr-block: '10.42.0.0/16' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

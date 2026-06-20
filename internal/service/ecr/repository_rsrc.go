@@ -137,7 +137,7 @@ func (r Repository) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Repository) Create(ctx context.Context, cfg any) (*RepositoryOutput, error) {
+func (r *Repository) Create(ctx context.Context, cfg *awsCfg) (*RepositoryOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -199,7 +199,7 @@ func (r *Repository) Create(ctx context.Context, cfg any) (*RepositoryOutput, er
 }
 
 func (r *Repository) Read(
-	ctx context.Context, cfg any, prior *RepositoryOutput,
+	ctx context.Context, cfg *awsCfg, prior *RepositoryOutput,
 ) (*RepositoryOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -260,7 +260,7 @@ func (r *Repository) read(
 }
 
 func (r *Repository) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Repository, *RepositoryOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Repository, *RepositoryOutput],
 ) (*RepositoryOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -307,7 +307,7 @@ func (r *Repository) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Repository) Delete(ctx context.Context, cfg any, prior *RepositoryOutput) error {
+func (r *Repository) Delete(ctx context.Context, cfg *awsCfg, prior *RepositoryOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

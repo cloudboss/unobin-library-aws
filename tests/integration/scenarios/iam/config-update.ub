@@ -14,9 +14,6 @@ stack: {
         ["s3:ListBucket","s3:GetBucketLocation"],"Resource":"*"}]}
         '''
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

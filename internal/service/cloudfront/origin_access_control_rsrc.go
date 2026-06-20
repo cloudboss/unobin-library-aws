@@ -102,7 +102,7 @@ func (r *OriginAccessControl) config() *cloudfronttypes.OriginAccessControlConfi
 }
 
 func (r *OriginAccessControl) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*OriginAccessControlOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (r *OriginAccessControl) Create(
 }
 
 func (r *OriginAccessControl) Read(
-	ctx context.Context, cfg any, prior *OriginAccessControlOutput,
+	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlOutput,
 ) (*OriginAccessControlOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -160,7 +160,7 @@ func (r *OriginAccessControl) read(
 }
 
 func (r *OriginAccessControl) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[OriginAccessControl, *OriginAccessControlOutput],
 ) (*OriginAccessControlOutput, error) {
 	if err := r.validate(); err != nil {
@@ -187,7 +187,7 @@ func (r *OriginAccessControl) Update(
 }
 
 func (r *OriginAccessControl) Delete(
-	ctx context.Context, cfg any, prior *OriginAccessControlOutput,
+	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

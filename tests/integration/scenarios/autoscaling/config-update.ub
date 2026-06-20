@@ -7,9 +7,6 @@ stack: {
       policy-cooldown:  600
       hook-timeout:     600
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

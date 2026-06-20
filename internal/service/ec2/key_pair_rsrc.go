@@ -50,7 +50,7 @@ func (r KeyPair) Defaults() []defaults.Default {
 	}
 }
 
-func (r *KeyPair) Create(ctx context.Context, cfg any) (*KeyPairOutput, error) {
+func (r *KeyPair) Create(ctx context.Context, cfg *awsCfg) (*KeyPairOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,12 @@ func (r *KeyPair) Create(ctx context.Context, cfg any) (*KeyPairOutput, error) {
 	return r.read(ctx, client)
 }
 
-func (r *KeyPair) Read(ctx context.Context, cfg any, prior *KeyPairOutput) (*KeyPairOutput, error) {
+func (r *KeyPair) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *KeyPairOutput) (*KeyPairOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -112,7 +117,7 @@ func (r *KeyPair) read(ctx context.Context, client *ec2.Client) (*KeyPairOutput,
 }
 
 func (r *KeyPair) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[KeyPair, *KeyPairOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyPair, *KeyPairOutput],
 ) (*KeyPairOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -130,7 +135,7 @@ func (r *KeyPair) Update(
 	return prior.Outputs, nil
 }
 
-func (r *KeyPair) Delete(ctx context.Context, cfg any, prior *KeyPairOutput) error {
+func (r *KeyPair) Delete(ctx context.Context, cfg *awsCfg, prior *KeyPairOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

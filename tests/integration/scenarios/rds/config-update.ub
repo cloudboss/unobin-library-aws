@@ -9,9 +9,6 @@ stack: {
       aurora-max-capacity: 2.0
       backup-retention:    2
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

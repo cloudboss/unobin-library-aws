@@ -11,7 +11,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     instance-parameters: {
       type:        list(object({ name: string, value: string }))
       description: 'Engine parameters of the DB parameter group'

@@ -113,7 +113,7 @@ func (r AMI) Constraints() []constraint.Constraint {
 // the unsafe-filter guard, paginates DescribeImages in full, applies the
 // client-side name-regex filter, then selects the single result -- erroring on
 // no match or, without most-recent, on more than one.
-func (r *AMI) Read(ctx context.Context, cfg any) (*AMIOutput, error) {
+func (r *AMI) Read(ctx context.Context, cfg *awsCfg) (*AMIOutput, error) {
 	nameRegex, err := r.compileNameRegex()
 	if err != nil {
 		return nil, err

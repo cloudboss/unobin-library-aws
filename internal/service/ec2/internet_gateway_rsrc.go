@@ -63,7 +63,7 @@ func (r InternetGateway) Defaults() []defaults.Default {
 	}
 }
 
-func (r *InternetGateway) Create(ctx context.Context, cfg any) (*InternetGatewayOutput, error) {
+func (r *InternetGateway) Create(ctx context.Context, cfg *awsCfg) (*InternetGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (r *InternetGateway) Create(ctx context.Context, cfg any) (*InternetGateway
 }
 
 func (r *InternetGateway) Read(
-	ctx context.Context, cfg any, prior *InternetGatewayOutput,
+	ctx context.Context, cfg *awsCfg, prior *InternetGatewayOutput,
 ) (*InternetGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *InternetGateway) Read(
 }
 
 func (r *InternetGateway) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[InternetGateway, *InternetGatewayOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[InternetGateway, *InternetGatewayOutput],
 ) (*InternetGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -127,7 +127,11 @@ func (r *InternetGateway) Update(
 	return r.read(ctx, client, id, false)
 }
 
-func (r *InternetGateway) Delete(ctx context.Context, cfg any, prior *InternetGatewayOutput) error {
+func (r *InternetGateway) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *InternetGatewayOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

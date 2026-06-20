@@ -134,7 +134,7 @@ func (r Volume) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Volume) Create(ctx context.Context, cfg any) (*VolumeOutput, error) {
+func (r *Volume) Create(ctx context.Context, cfg *awsCfg) (*VolumeOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,12 @@ func (r *Volume) Create(ctx context.Context, cfg any) (*VolumeOutput, error) {
 	return r.read(ctx, client, id)
 }
 
-func (r *Volume) Read(ctx context.Context, cfg any, prior *VolumeOutput) (*VolumeOutput, error) {
+func (r *Volume) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *VolumeOutput) (*VolumeOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -191,7 +196,7 @@ func (r *Volume) Read(ctx context.Context, cfg any, prior *VolumeOutput) (*Volum
 }
 
 func (r *Volume) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Volume, *VolumeOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Volume, *VolumeOutput],
 ) (*VolumeOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -216,7 +221,7 @@ func (r *Volume) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *Volume) Delete(ctx context.Context, cfg any, prior *VolumeOutput) error {
+func (r *Volume) Delete(ctx context.Context, cfg *awsCfg, prior *VolumeOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

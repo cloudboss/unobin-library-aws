@@ -4,9 +4,6 @@ stack: {
       secret-value: 'rotated-secret'
       description:  'unobin integration test secret (updated)'
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

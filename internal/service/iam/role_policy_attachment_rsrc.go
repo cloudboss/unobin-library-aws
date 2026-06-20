@@ -35,7 +35,7 @@ func (r *RolePolicyAttachment) ReplaceFields() []string {
 }
 
 func (r *RolePolicyAttachment) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*RolePolicyAttachmentOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *RolePolicyAttachment) Create(
 // returns NoSuchEntity, and a role whose list no longer contains the ARN
 // means the attachment drifted away. Both map to runtime.ErrNotFound.
 func (r *RolePolicyAttachment) Read(
-	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
+	ctx context.Context, cfg *awsCfg, prior *RolePolicyAttachmentOutput,
 ) (*RolePolicyAttachmentOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *RolePolicyAttachment) Read(
 }
 
 func (r *RolePolicyAttachment) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[RolePolicyAttachment, *RolePolicyAttachmentOutput],
 ) (*RolePolicyAttachmentOutput, error) {
 	return prior.Outputs, nil
@@ -102,7 +102,7 @@ func (r *RolePolicyAttachment) Update(
 // that is already gone returns NoSuchEntity, which is treated as success
 // so delete is idempotent.
 func (r *RolePolicyAttachment) Delete(
-	ctx context.Context, cfg any, prior *RolePolicyAttachmentOutput,
+	ctx context.Context, cfg *awsCfg, prior *RolePolicyAttachmentOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

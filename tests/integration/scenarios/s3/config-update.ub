@@ -5,9 +5,6 @@ stack: {
       versioning:  { status: 'Enabled' }
       object-body: 'hello from unobin, updated'
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

@@ -240,7 +240,7 @@ func (r Service) Constraints() []constraint.Constraint {
 // partitions, such as the ISO partitions, cannot tag a service as it is
 // created; when the tagged create fails for that reason, the service is
 // created without tags and tagged once it is active.
-func (r *Service) Create(ctx context.Context, cfg any) (*ServiceOutput, error) {
+func (r *Service) Create(ctx context.Context, cfg *awsCfg) (*ServiceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -301,7 +301,7 @@ func (r *Service) Create(ctx context.Context, cfg any) (*ServiceOutput, error) {
 // any status other than ACTIVE reads as not found; Create and Delete run
 // their own waits, leaving no transitional status for Read to wait out.
 func (r *Service) Read(
-	ctx context.Context, cfg any, prior *ServiceOutput,
+	ctx context.Context, cfg *awsCfg, prior *ServiceOutput,
 ) (*ServiceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -327,7 +327,7 @@ func (r *Service) Read(
 // ordinary deployment never leaves. The outputs cannot change, so the prior
 // outputs are returned.
 func (r *Service) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Service, *ServiceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Service, *ServiceOutput],
 ) (*ServiceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -374,7 +374,7 @@ func (r *Service) Update(
 // while dependent objects detach, and then the wait holds until the service
 // leaves the ACTIVE and DRAINING statuses; a service that stops describing
 // at all counts as deleted.
-func (r *Service) Delete(ctx context.Context, cfg any, prior *ServiceOutput) error {
+func (r *Service) Delete(ctx context.Context, cfg *awsCfg, prior *ServiceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

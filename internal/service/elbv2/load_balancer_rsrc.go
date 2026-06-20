@@ -165,7 +165,7 @@ func (r LoadBalancer) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LoadBalancer) Create(ctx context.Context, cfg any) (*LoadBalancerOutput, error) {
+func (r *LoadBalancer) Create(ctx context.Context, cfg *awsCfg) (*LoadBalancerOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (r *LoadBalancer) Create(ctx context.Context, cfg any) (*LoadBalancerOutput
 }
 
 func (r *LoadBalancer) Read(
-	ctx context.Context, cfg any, prior *LoadBalancerOutput,
+	ctx context.Context, cfg *awsCfg, prior *LoadBalancerOutput,
 ) (*LoadBalancerOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -255,7 +255,7 @@ func (r *LoadBalancer) read(
 }
 
 func (r *LoadBalancer) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[LoadBalancer, *LoadBalancerOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LoadBalancer, *LoadBalancerOutput],
 ) (*LoadBalancerOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -301,7 +301,7 @@ func (r *LoadBalancer) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *LoadBalancer) Delete(ctx context.Context, cfg any, prior *LoadBalancerOutput) error {
+func (r *LoadBalancer) Delete(ctx context.Context, cfg *awsCfg, prior *LoadBalancerOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

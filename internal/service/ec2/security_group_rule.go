@@ -130,7 +130,7 @@ func composeRuleARN(region, accountID, ruleID string) string {
 // through Read. There is no create-time waiter or retry: the rule is usable as
 // soon as authorize returns.
 func sgRuleCreate(
-	ctx context.Context, cfg any, r sgRule, egress bool,
+	ctx context.Context, cfg *awsCfg, r sgRule, egress bool,
 ) (ruleID, arn string, err error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -208,7 +208,7 @@ func findRule(
 // for (an id-reuse guard), or when the rule's direction does not match. The id
 // and ARN are immutable, so a present rule needs no values read back; the
 // caller keeps the prior output.
-func sgRuleRead(ctx context.Context, cfg any, ruleID string, egress bool) error {
+func sgRuleRead(ctx context.Context, cfg *awsCfg, ruleID string, egress bool) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func sgRuleRead(ctx context.Context, cfg any, ruleID string, egress bool) error 
 // sgRuleUpdate reconciles a rule in place. It rewrites the rule only when one
 // of its writable properties changed, then reconciles tags. The id and ARN
 // cannot change, so the caller returns the prior output unchanged.
-func sgRuleUpdate(ctx context.Context, cfg any, r sgRule, prior sgRule, ruleID string) error {
+func sgRuleUpdate(ctx context.Context, cfg *awsCfg, r sgRule, prior sgRule, ruleID string) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -272,7 +272,7 @@ func sgRuleSpecChanged(prior, current sgRule) bool {
 // first looks the rule up to recover its group id. A rule that is already gone
 // is a successful delete with nothing to do, as is a Revoke that races another
 // deletion and reports the rule or group already absent.
-func sgRuleDelete(ctx context.Context, cfg any, ruleID string, egress bool) error {
+func sgRuleDelete(ctx context.Context, cfg *awsCfg, ruleID string, egress bool) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

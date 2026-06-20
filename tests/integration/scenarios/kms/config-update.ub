@@ -5,9 +5,6 @@ stack: {
       rotation-enabled: false
       tags:             { unobin: 'kms-it', stage: 'updated' }
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

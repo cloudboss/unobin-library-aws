@@ -10,7 +10,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     api-description: {
       type:        string
       default:     'unobin HTTP API scenario'

@@ -19,16 +19,16 @@ The tier only changes which environment variables `run.sh` exports before
 invoking the scenarios. For the emulator tier, dummy credentials, region, and
 a per-scenario endpoint URL are defined with environment variables. For live
 tests, the environment must already contain the credentials and region. Each
-scenario's `config.ub` and `config-update.ub` leave the AWS configuration
-empty so the SDK's config loader reads everything from the environment.
+scenario factory gives `aws-config` a default empty object so the SDK's config
+loader reads everything from the environment.
 
 Layout:
 
 ```
 scenarios/
   <scenario>/
-    factory.ub        # unobin stack -- imports aws and uses one resource
-    config.ub         # operator config; AWS block is `default: {}` so env wins
+    factory.ub        # unobin factory -- imports aws and binds `aws-config`
+    config.ub         # operator config; env supplies AWS settings by default
     config-update.ub  # same config with changed inputs for the update pass
     .backend          # optional; pins the scenario's emulator (default is
                       #   ministack)
@@ -54,26 +54,24 @@ SCENARIO=ec2-vpc ./tests/integration/run.sh emulator
 
 ## What the driver does per scenario
 
-1. `unobin compile` the stack with
-   `--replace-go-module=github.com/cloudboss/unobin-library-aws=<repo>` so the
-   compiled binary uses the in-tree code.
-2. `go build` the compiled stack into `factory`.
-3. `./factory pin` both configs. The stack name is the config file's
+1. `unobin compile -p` the scenario directory and build the factory binary.
+2. `./<scenario> pin` both configs. The stack name is the config file's
    basename and the state is scoped by stack, so the update config is staged
    as `update/config.ub`: both passes then address the same stack and state.
-4. `./factory plan -c config.ub -o plan.json`, then `./factory apply plan.json`.
-5. `VERIFY_PHASE=applied go run ./<scenario>/verify` -- assert the resources
+3. `./<scenario> plan -c config.ub -o plan.json`, then
+   `./<scenario> apply plan.json`.
+4. `VERIFY_PHASE=applied go run ./<scenario>/verify` -- assert the resources
    are present.
-6. `./factory plan -c update/config.ub -o plan-update.json`, then
-   `./factory apply plan-update.json` -- exercise the in-place update paths
+5. `./<scenario> plan -c update/config.ub -o plan-update.json`, then
+   `./<scenario> apply plan-update.json` -- exercise the in-place update paths
    with the changed inputs.
-7. `./factory plan --destroy -c <config> -o destroy.json`, then
-   `./factory apply destroy.json` to tear everything down. The destroy plans
+6. `./<scenario> plan --destroy -c <config> -o destroy.json`, then
+   `./<scenario> apply destroy.json` to tear everything down. The destroy plans
    from the config of the most recent apply attempt, so a run that failed
    before the update pass still tears down with the inputs that built it.
    Destroy runs even after an earlier failure; if the destroy itself also
    fails, the run reports both, since resources are left behind.
-8. `VERIFY_PHASE=destroyed go run ./<scenario>/verify` -- assert nothing is
+7. `VERIFY_PHASE=destroyed go run ./<scenario>/verify` -- assert nothing is
    left behind.
 
 The driver builds and runs everything in a work directory under
@@ -89,8 +87,6 @@ and prints the failing step.
 
 ## Prerequisites
 
-- `unobin` and `unobin-library-aws` checked out as siblings (the driver finds
-  unobin via `../unobin` relative to this repo).
 - Go toolchain.
 - LocalStack (default port 4566) and ministack (default port 4567) for the
   emulator tier; `make emulators-up` starts both.

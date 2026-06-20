@@ -225,7 +225,7 @@ func (r Instance) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Instance) Create(ctx context.Context, cfg any) (*InstanceOutput, error) {
+func (r *Instance) Create(ctx context.Context, cfg *awsCfg) (*InstanceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -248,7 +248,7 @@ func (r *Instance) Create(ctx context.Context, cfg any) (*InstanceOutput, error)
 }
 
 func (r *Instance) Read(
-	ctx context.Context, cfg any, prior *InstanceOutput,
+	ctx context.Context, cfg *awsCfg, prior *InstanceOutput,
 ) (*InstanceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -258,7 +258,7 @@ func (r *Instance) Read(
 }
 
 func (r *Instance) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Instance, *InstanceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Instance, *InstanceOutput],
 ) (*InstanceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -271,7 +271,7 @@ func (r *Instance) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *Instance) Delete(ctx context.Context, cfg any, prior *InstanceOutput) error {
+func (r *Instance) Delete(ctx context.Context, cfg *awsCfg, prior *InstanceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

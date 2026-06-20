@@ -43,7 +43,7 @@ func (r *QueuePolicy) ReplaceFields() []string {
 	return []string{"queue-url"}
 }
 
-func (r *QueuePolicy) Create(ctx context.Context, cfg any) (*QueuePolicyOutput, error) {
+func (r *QueuePolicy) Create(ctx context.Context, cfg *awsCfg) (*QueuePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (r *QueuePolicy) Create(ctx context.Context, cfg any) (*QueuePolicyOutput, 
 }
 
 func (r *QueuePolicy) Read(
-	ctx context.Context, cfg any, prior *QueuePolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *QueuePolicyOutput,
 ) (*QueuePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *QueuePolicy) Read(
 }
 
 func (r *QueuePolicy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[QueuePolicy, *QueuePolicyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[QueuePolicy, *QueuePolicyOutput],
 ) (*QueuePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -108,7 +108,7 @@ func (r *QueuePolicy) Update(
 	return &QueuePolicyOutput{}, nil
 }
 
-func (r *QueuePolicy) Delete(ctx context.Context, cfg any, prior *QueuePolicyOutput) error {
+func (r *QueuePolicy) Delete(ctx context.Context, cfg *awsCfg, prior *QueuePolicyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

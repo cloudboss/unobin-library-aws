@@ -125,7 +125,7 @@ func (r NatGateway) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *NatGateway) Create(ctx context.Context, cfg any) (*NatGatewayOutput, error) {
+func (r *NatGateway) Create(ctx context.Context, cfg *awsCfg) (*NatGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (r *NatGateway) Create(ctx context.Context, cfg any) (*NatGatewayOutput, er
 }
 
 func (r *NatGateway) Read(
-	ctx context.Context, cfg any, prior *NatGatewayOutput,
+	ctx context.Context, cfg *awsCfg, prior *NatGatewayOutput,
 ) (*NatGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -168,7 +168,7 @@ func (r *NatGateway) Read(
 }
 
 func (r *NatGateway) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[NatGateway, *NatGatewayOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[NatGateway, *NatGatewayOutput],
 ) (*NatGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -208,7 +208,7 @@ func (r *NatGateway) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *NatGateway) Delete(ctx context.Context, cfg any, prior *NatGatewayOutput) error {
+func (r *NatGateway) Delete(ctx context.Context, cfg *awsCfg, prior *NatGatewayOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

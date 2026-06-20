@@ -112,7 +112,7 @@ func (r ParameterGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ParameterGroup) Create(ctx context.Context, cfg any) (*ParameterGroupOutput, error) {
+func (r *ParameterGroup) Create(ctx context.Context, cfg *awsCfg) (*ParameterGroupOutput, error) {
 	if err := validateParameterGroupName(r.Name); err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (r *ParameterGroup) Create(ctx context.Context, cfg any) (*ParameterGroupOu
 }
 
 func (r *ParameterGroup) Read(
-	ctx context.Context, cfg any, prior *ParameterGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *ParameterGroupOutput,
 ) (*ParameterGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -180,7 +180,7 @@ func (r *ParameterGroup) read(
 }
 
 func (r *ParameterGroup) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[ParameterGroup, *ParameterGroupOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ParameterGroup, *ParameterGroupOutput],
 ) (*ParameterGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -202,7 +202,11 @@ func (r *ParameterGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *ParameterGroup) Delete(ctx context.Context, cfg any, prior *ParameterGroupOutput) error {
+func (r *ParameterGroup) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ParameterGroupOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -6,9 +6,6 @@ stack: {
       greeting:    'hello from unobin, updated'
       batch-size:  20
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

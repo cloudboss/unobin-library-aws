@@ -73,7 +73,7 @@ func (r CertificateValidation) Defaults() []defaults.Default {
 }
 
 func (r *CertificateValidation) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*CertificateValidationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *CertificateValidation) Create(
 // failed, was revoked, or its validation timed out), reads as not-found so a
 // plan re-runs the wait.
 func (r *CertificateValidation) Read(
-	ctx context.Context, cfg any, prior *CertificateValidationOutput,
+	ctx context.Context, cfg *awsCfg, prior *CertificateValidationOutput,
 ) (*CertificateValidationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -133,7 +133,7 @@ func (r *CertificateValidation) Read(
 // method only when nothing it manages has changed; it returns the prior
 // outputs unchanged.
 func (r *CertificateValidation) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[CertificateValidation, *CertificateValidationOutput],
 ) (*CertificateValidationOutput, error) {
 	return prior.Outputs, nil
@@ -142,7 +142,7 @@ func (r *CertificateValidation) Update(
 // Delete is a no-op. The certificate belongs to the acm-certificate resource;
 // this barrier has nothing of its own to remove.
 func (r *CertificateValidation) Delete(
-	ctx context.Context, cfg any, prior *CertificateValidationOutput,
+	ctx context.Context, cfg *awsCfg, prior *CertificateValidationOutput,
 ) error {
 	return nil
 }

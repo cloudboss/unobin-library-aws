@@ -187,7 +187,7 @@ func (r Distribution) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Distribution) Create(ctx context.Context, cfg any) (*DistributionOutput, error) {
+func (r *Distribution) Create(ctx context.Context, cfg *awsCfg) (*DistributionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (r *Distribution) Create(ctx context.Context, cfg any) (*DistributionOutput
 }
 
 func (r *Distribution) Read(
-	ctx context.Context, cfg any, prior *DistributionOutput,
+	ctx context.Context, cfg *awsCfg, prior *DistributionOutput,
 ) (*DistributionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -269,7 +269,7 @@ func (r *Distribution) read(
 }
 
 func (r *Distribution) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Distribution, *DistributionOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Distribution, *DistributionOutput],
 ) (*DistributionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

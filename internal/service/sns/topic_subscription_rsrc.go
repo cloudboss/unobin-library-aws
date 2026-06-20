@@ -131,7 +131,11 @@ func (r TopicSubscription) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *TopicSubscription) Create(ctx context.Context, cfg any) (*TopicSubscriptionOutput, error) {
+func (r *TopicSubscription) Create(
+	ctx context.Context,
+	cfg *awsCfg) (*TopicSubscriptionOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -165,7 +169,7 @@ func (r *TopicSubscription) Create(ctx context.Context, cfg any) (*TopicSubscrip
 }
 
 func (r *TopicSubscription) Read(
-	ctx context.Context, cfg any, prior *TopicSubscriptionOutput,
+	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionOutput,
 ) (*TopicSubscriptionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -273,7 +277,7 @@ func (r *TopicSubscription) subscriptionPresent(
 }
 
 func (r *TopicSubscription) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[TopicSubscription, *TopicSubscriptionOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicSubscription, *TopicSubscriptionOutput],
 ) (*TopicSubscriptionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -287,7 +291,7 @@ func (r *TopicSubscription) Update(
 }
 
 func (r *TopicSubscription) Delete(
-	ctx context.Context, cfg any, prior *TopicSubscriptionOutput,
+	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

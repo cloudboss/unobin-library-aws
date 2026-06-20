@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { display-name: 'unobin integration topic, updated' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

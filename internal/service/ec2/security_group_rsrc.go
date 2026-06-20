@@ -80,7 +80,7 @@ func (r SecurityGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutput, error) {
+func (r *SecurityGroup) Create(ctx context.Context, cfg *awsCfg) (*SecurityGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg any) (*SecurityGroupOutp
 }
 
 func (r *SecurityGroup) Read(
-	ctx context.Context, cfg any, prior *SecurityGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *SecurityGroupOutput,
 ) (*SecurityGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *SecurityGroup) describe(
 }
 
 func (r *SecurityGroup) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[SecurityGroup, *SecurityGroupOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SecurityGroup, *SecurityGroupOutput],
 ) (*SecurityGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -215,7 +215,7 @@ func (r *SecurityGroup) Update(
 	return prior.Outputs, nil
 }
 
-func (r *SecurityGroup) Delete(ctx context.Context, cfg any, prior *SecurityGroupOutput) error {
+func (r *SecurityGroup) Delete(ctx context.Context, cfg *awsCfg, prior *SecurityGroupOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

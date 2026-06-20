@@ -10,9 +10,6 @@ stack: {
         "Allow","Action":["s3:ListBucket"],"Resource":"*"}]}
         '''
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

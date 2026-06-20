@@ -60,7 +60,7 @@ func (r OpenIDConnectProvider) Defaults() []defaults.Default {
 // omitted, IAM derives it from the provider's certificate chain.
 func (r *OpenIDConnectProvider) Create(
 	ctx context.Context,
-	cfg any,
+	cfg *awsCfg,
 ) (*OpenIDConnectProviderOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *OpenIDConnectProvider) Create(
 // Read fetches the current state of the IAM OIDC provider.
 func (r *OpenIDConnectProvider) Read(
 	ctx context.Context,
-	cfg any,
+	cfg *awsCfg,
 	prior *OpenIDConnectProviderOutput,
 ) (*OpenIDConnectProviderOutput, error) {
 	client, err := newClient(ctx, cfg)
@@ -112,7 +112,7 @@ func (r *OpenIDConnectProvider) Read(
 // thumbprint list, added or removed client IDs, and changed tags.
 func (r *OpenIDConnectProvider) Update(
 	ctx context.Context,
-	cfg any,
+	cfg *awsCfg,
 	prior runtime.Prior[OpenIDConnectProvider, *OpenIDConnectProviderOutput],
 ) (*OpenIDConnectProviderOutput, error) {
 	client, err := newClient(ctx, cfg)
@@ -153,7 +153,7 @@ func (r *OpenIDConnectProvider) Update(
 // Delete removes the IAM OIDC provider. A provider already gone is treated as deleted.
 func (r *OpenIDConnectProvider) Delete(
 	ctx context.Context,
-	cfg any,
+	cfg *awsCfg,
 	prior *OpenIDConnectProviderOutput,
 ) error {
 	client, err := newClient(ctx, cfg)

@@ -51,7 +51,7 @@ func (r OpenIDConnectProviderData) Constraints() []constraint.Constraint {
 // providers in the account, then reads that arn. A url input is validated before
 // use, and any lookup that matches nothing is a descriptive error.
 func (r *OpenIDConnectProviderData) Read(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*OpenIDConnectProviderDataOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

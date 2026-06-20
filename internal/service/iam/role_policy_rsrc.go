@@ -54,7 +54,7 @@ func (r *RolePolicy) ReplaceFields() []string {
 	}
 }
 
-func (r *RolePolicy) Create(ctx context.Context, cfg any) (*RolePolicyOutput, error) {
+func (r *RolePolicy) Create(ctx context.Context, cfg *awsCfg) (*RolePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (r *RolePolicy) Create(ctx context.Context, cfg any) (*RolePolicyOutput, er
 }
 
 func (r *RolePolicy) Read(
-	ctx context.Context, cfg any, prior *RolePolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *RolePolicyOutput,
 ) (*RolePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -136,7 +136,7 @@ func (r *RolePolicy) read(
 }
 
 func (r *RolePolicy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[RolePolicy, *RolePolicyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RolePolicy, *RolePolicyOutput],
 ) (*RolePolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -162,7 +162,7 @@ func (r *RolePolicy) Update(
 // is already gone returns NoSuchEntity, which is treated as success so the
 // delete is idempotent. It keys off the prior outputs so a replace deletes
 // the original policy rather than the new one.
-func (r *RolePolicy) Delete(ctx context.Context, cfg any, prior *RolePolicyOutput) error {
+func (r *RolePolicy) Delete(ctx context.Context, cfg *awsCfg, prior *RolePolicyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

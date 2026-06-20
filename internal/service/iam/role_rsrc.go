@@ -75,7 +75,7 @@ func (r Role) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Role) Create(ctx context.Context, cfg any) (*RoleOutput, error) {
+func (r *Role) Create(ctx context.Context, cfg *awsCfg) (*RoleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (r *Role) Create(ctx context.Context, cfg any) (*RoleOutput, error) {
 	return r.read(ctx, client, true)
 }
 
-func (r *Role) Read(ctx context.Context, cfg any, prior *RoleOutput) (*RoleOutput, error) {
+func (r *Role) Read(ctx context.Context, cfg *awsCfg, prior *RoleOutput) (*RoleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (r *Role) read(
 }
 
 func (r *Role) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Role, *RoleOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Role, *RoleOutput],
 ) (*RoleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -253,7 +253,7 @@ func (r *Role) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Role) Delete(ctx context.Context, cfg any, prior *RoleOutput) error {
+func (r *Role) Delete(ctx context.Context, cfg *awsCfg, prior *RoleOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -3,22 +3,18 @@ package acm
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	acm "github.com/aws/aws-sdk-go-v2/service/acm"
 	acmtypes "github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
+type awsCfg = awscfg.Configuration
+
 // newClient returns the AWS SDK Go v2 client for acm, configured from cfg.
-// cfg is the *awscfg.Configuration the runtime hands every lifecycle method;
-// the helper unwraps it and builds an aws.Config via awscfg.Load.
-func newClient(ctx context.Context, cfg any) (*acm.Client, error) {
-	c, ok := cfg.(*awscfg.Configuration)
-	if !ok {
-		return nil, fmt.Errorf("acmclient: unexpected configuration type %T", cfg)
-	}
-	awsCfg, err := awscfg.Load(ctx, c)
+// It builds an aws.Config via awscfg.Load.
+func newClient(ctx context.Context, cfg *awsCfg) (*acm.Client, error) {
+	awsCfg, err := awscfg.Load(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

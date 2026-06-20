@@ -108,7 +108,7 @@ func (r Route) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Route) Create(ctx context.Context, cfg any) (*RouteOutput, error) {
+func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (r *Route) Create(ctx context.Context, cfg any) (*RouteOutput, error) {
 // planned api-id replacement still reads the old route as existing. A
 // NotFoundException covers both a deleted route and a deleted parent API,
 // and either one correctly plans a recreate.
-func (r *Route) Read(ctx context.Context, cfg any, prior *RouteOutput) (*RouteOutput, error) {
+func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (r *Route) Read(ctx context.Context, cfg any, prior *RouteOutput) (*RouteOu
 // keys are removed first with DeleteRouteRequestParameter, and when those
 // removals are the whole change the patch call is skipped.
 func (r *Route) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Route, *RouteOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Route, *RouteOutput],
 ) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -298,7 +298,7 @@ func (r *Route) Update(
 // outputs so that a replacement deletes the old route rather than the new
 // one's coordinates. A NotFoundException means the route is already gone,
 // which is the desired end state.
-func (r *Route) Delete(ctx context.Context, cfg any, prior *RouteOutput) error {
+func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

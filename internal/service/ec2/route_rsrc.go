@@ -115,7 +115,7 @@ func (r Route) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Route) Create(ctx context.Context, cfg any) (*RouteOutput, error) {
+func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (r *Route) Create(ctx context.Context, cfg any) (*RouteOutput, error) {
 	return &RouteOutput{State: string(route.State)}, nil
 }
 
-func (r *Route) Read(ctx context.Context, cfg any, prior *RouteOutput) (*RouteOutput, error) {
+func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (r *Route) Read(ctx context.Context, cfg any, prior *RouteOutput) (*RouteOu
 }
 
 func (r *Route) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Route, *RouteOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Route, *RouteOutput],
 ) (*RouteOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -164,7 +164,7 @@ func (r *Route) Update(
 	return &RouteOutput{State: string(route.State)}, nil
 }
 
-func (r *Route) Delete(ctx context.Context, cfg any, prior *RouteOutput) error {
+func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

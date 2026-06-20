@@ -12,7 +12,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     instance-type: { type: string, default: 't3.micro', description: 'Instance type to launch' }
     source-dest-check: {
       type:        optional(boolean)

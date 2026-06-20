@@ -6,9 +6,6 @@ stack: {
         { name: 'log_disconnections', value: '1' },
       ]
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

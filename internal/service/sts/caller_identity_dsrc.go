@@ -27,7 +27,7 @@ type CallerIdentityOutput struct {
 
 // Read calls GetCallerIdentity and maps the response to the output struct. Any
 // error propagates wrapped; there is no value to find and so no not-found case.
-func (d *CallerIdentity) Read(ctx context.Context, cfg any) (*CallerIdentityOutput, error) {
+func (d *CallerIdentity) Read(ctx context.Context, cfg *awsCfg) (*CallerIdentityOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err

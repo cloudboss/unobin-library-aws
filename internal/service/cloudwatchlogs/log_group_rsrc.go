@@ -110,7 +110,7 @@ func (r LogGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LogGroup) Create(ctx context.Context, cfg any) (*LogGroupOutput, error) {
+func (r *LogGroup) Create(ctx context.Context, cfg *awsCfg) (*LogGroupOutput, error) {
 	if err := r.validateName(); err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (r *LogGroup) Create(ctx context.Context, cfg any) (*LogGroupOutput, error)
 }
 
 func (r *LogGroup) Read(
-	ctx context.Context, cfg any, prior *LogGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *LogGroupOutput,
 ) (*LogGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -190,7 +190,7 @@ func (r *LogGroup) read(
 }
 
 func (r *LogGroup) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[LogGroup, *LogGroupOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LogGroup, *LogGroupOutput],
 ) (*LogGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -257,7 +257,7 @@ func (r *LogGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *LogGroup) Delete(ctx context.Context, cfg any, prior *LogGroupOutput) error {
+func (r *LogGroup) Delete(ctx context.Context, cfg *awsCfg, prior *LogGroupOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

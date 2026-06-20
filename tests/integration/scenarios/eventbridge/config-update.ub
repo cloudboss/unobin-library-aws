@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { schedule: 'rate(10 minutes)', rule-state: 'DISABLED' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

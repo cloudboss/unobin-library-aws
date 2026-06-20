@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { comment: 'unobin cloudfront integration test (updated)' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

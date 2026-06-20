@@ -259,7 +259,7 @@ func (r Bucket) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Bucket) Create(ctx context.Context, cfg any) (*BucketOutput, error) {
+func (r *Bucket) Create(ctx context.Context, cfg *awsCfg) (*BucketOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -453,7 +453,7 @@ func (r *Bucket) createInput(region string, withTags, withConfig bool) *s3.Creat
 }
 
 func (r *Bucket) Read(
-	ctx context.Context, cfg any, prior *BucketOutput,
+	ctx context.Context, cfg *awsCfg, prior *BucketOutput,
 ) (*BucketOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -495,7 +495,7 @@ func (r *Bucket) read(
 }
 
 func (r *Bucket) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Bucket, *BucketOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Bucket, *BucketOutput],
 ) (*BucketOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -514,7 +514,7 @@ func (r *Bucket) Update(
 	return r.read(ctx, client, client.Options().Region)
 }
 
-func (r *Bucket) Delete(ctx context.Context, cfg any, prior *BucketOutput) error {
+func (r *Bucket) Delete(ctx context.Context, cfg *awsCfg, prior *BucketOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

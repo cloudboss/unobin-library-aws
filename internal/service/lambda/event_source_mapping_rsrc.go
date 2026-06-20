@@ -291,7 +291,7 @@ func (r EventSourceMapping) Constraints() []constraint.Constraint {
 }
 
 func (r *EventSourceMapping) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*EventSourceMappingOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -324,7 +324,7 @@ func (r *EventSourceMapping) Create(
 }
 
 func (r *EventSourceMapping) Read(
-	ctx context.Context, cfg any, prior *EventSourceMappingOutput,
+	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingOutput,
 ) (*EventSourceMappingOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -334,7 +334,9 @@ func (r *EventSourceMapping) Read(
 }
 
 func (r *EventSourceMapping) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[EventSourceMapping, *EventSourceMappingOutput],
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[EventSourceMapping, *EventSourceMappingOutput],
 ) (*EventSourceMappingOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -364,7 +366,7 @@ func (r *EventSourceMapping) Update(
 }
 
 func (r *EventSourceMapping) Delete(
-	ctx context.Context, cfg any, prior *EventSourceMappingOutput,
+	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

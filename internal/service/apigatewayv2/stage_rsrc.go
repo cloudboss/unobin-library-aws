@@ -139,7 +139,7 @@ func (r *Stage) validate() error {
 	return nil
 }
 
-func (r *Stage) Create(ctx context.Context, cfg any) (*StageOutput, error) {
+func (r *Stage) Create(ctx context.Context, cfg *awsCfg) (*StageOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (r *Stage) Create(ctx context.Context, cfg any) (*StageOutput, error) {
 	return stageOutput(client.Options().Region, r.ApiId, r.Name, api, resp.DeploymentId), nil
 }
 
-func (r *Stage) Read(ctx context.Context, cfg any, prior *StageOutput) (*StageOutput, error) {
+func (r *Stage) Read(ctx context.Context, cfg *awsCfg, prior *StageOutput) (*StageOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func (r *Stage) read(
 }
 
 func (r *Stage) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Stage, *StageOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Stage, *StageOutput],
 ) (*StageOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -400,7 +400,7 @@ func stageDeleteAccessLogSettings(
 // Delete removes the stage, keying off the prior outputs so that on a
 // replace the old stage is the one deleted. A stage already gone counts as
 // deleted.
-func (r *Stage) Delete(ctx context.Context, cfg any, prior *StageOutput) error {
+func (r *Stage) Delete(ctx context.Context, cfg *awsCfg, prior *StageOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

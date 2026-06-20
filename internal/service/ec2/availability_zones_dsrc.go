@@ -82,7 +82,11 @@ func (r AvailabilityZones) Constraints() []constraint.Constraint {
 // projects the matched zones into the three output lists, and errors when no
 // zone survives the excludes. The call adds no retry or waiter:
 // DescribeAvailabilityZones is consistent enough for a one-shot lookup.
-func (r *AvailabilityZones) Read(ctx context.Context, cfg any) (*AvailabilityZonesOutput, error) {
+func (r *AvailabilityZones) Read(
+	ctx context.Context,
+	cfg *awsCfg) (*AvailabilityZonesOutput,
+	error,
+) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err

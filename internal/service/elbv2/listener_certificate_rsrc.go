@@ -45,7 +45,7 @@ func (r *ListenerCertificate) ReplaceFields() []string {
 }
 
 func (r *ListenerCertificate) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*ListenerCertificateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -75,7 +75,7 @@ func (r *ListenerCertificate) Create(
 }
 
 func (r *ListenerCertificate) Read(
-	ctx context.Context, cfg any, prior *ListenerCertificateOutput,
+	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateOutput,
 ) (*ListenerCertificateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -88,13 +88,15 @@ func (r *ListenerCertificate) Read(
 // recreates the association rather than reaching Update. The interface still
 // requires the method, so it returns the prior outputs unchanged.
 func (r *ListenerCertificate) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[ListenerCertificate, *ListenerCertificateOutput],
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[ListenerCertificate, *ListenerCertificateOutput],
 ) (*ListenerCertificateOutput, error) {
 	return prior.Outputs, nil
 }
 
 func (r *ListenerCertificate) Delete(
-	ctx context.Context, cfg any, prior *ListenerCertificateOutput,
+	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

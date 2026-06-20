@@ -75,7 +75,7 @@ func (r RouteTableAssociation) Constraints() []constraint.Constraint {
 }
 
 func (r *RouteTableAssociation) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*RouteTableAssociationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -97,7 +97,7 @@ func (r *RouteTableAssociation) Create(
 }
 
 func (r *RouteTableAssociation) Read(
-	ctx context.Context, cfg any, prior *RouteTableAssociationOutput,
+	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationOutput,
 ) (*RouteTableAssociationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *RouteTableAssociation) Read(
 }
 
 func (r *RouteTableAssociation) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[RouteTableAssociation, *RouteTableAssociationOutput],
 ) (*RouteTableAssociationOutput, error) {
 	client, err := newClient(ctx, cfg)
@@ -152,7 +152,7 @@ func (r *RouteTableAssociation) Update(
 }
 
 func (r *RouteTableAssociation) Delete(
-	ctx context.Context, cfg any, prior *RouteTableAssociationOutput,
+	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationOutput,
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

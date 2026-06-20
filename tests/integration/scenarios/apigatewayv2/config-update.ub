@@ -7,9 +7,6 @@ stack: {
       stage-greeting:      'hej'
       url-max-age:         600
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

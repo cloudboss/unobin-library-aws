@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { scan-on-push: true, fargate-weight: 2, maximum-percent: 150 }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

@@ -119,7 +119,7 @@ func (r VpcEndpoint) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *VpcEndpoint) Create(ctx context.Context, cfg any) (*VpcEndpointOutput, error) {
+func (r *VpcEndpoint) Create(ctx context.Context, cfg *awsCfg) (*VpcEndpointOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (r *VpcEndpoint) Create(ctx context.Context, cfg any) (*VpcEndpointOutput, 
 }
 
 func (r *VpcEndpoint) Read(
-	ctx context.Context, cfg any, prior *VpcEndpointOutput,
+	ctx context.Context, cfg *awsCfg, prior *VpcEndpointOutput,
 ) (*VpcEndpointOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -188,7 +188,7 @@ func (r *VpcEndpoint) Read(
 }
 
 func (r *VpcEndpoint) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[VpcEndpoint, *VpcEndpointOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VpcEndpoint, *VpcEndpointOutput],
 ) (*VpcEndpointOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -214,7 +214,7 @@ func (r *VpcEndpoint) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *VpcEndpoint) Delete(ctx context.Context, cfg any, prior *VpcEndpointOutput) error {
+func (r *VpcEndpoint) Delete(ctx context.Context, cfg *awsCfg, prior *VpcEndpointOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

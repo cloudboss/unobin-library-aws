@@ -60,7 +60,7 @@ func (r Invoke) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Invoke) Run(ctx context.Context, cfg any) (*InvokeOutput, error) {
+func (r *Invoke) Run(ctx context.Context, cfg *awsCfg) (*InvokeOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err

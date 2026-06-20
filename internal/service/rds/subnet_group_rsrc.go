@@ -91,7 +91,7 @@ func (r SubnetGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *SubnetGroup) Create(ctx context.Context, cfg any) (*SubnetGroupOutput, error) {
+func (r *SubnetGroup) Create(ctx context.Context, cfg *awsCfg) (*SubnetGroupOutput, error) {
 	if err := r.validateName(); err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (r *SubnetGroup) Create(ctx context.Context, cfg any) (*SubnetGroupOutput, 
 }
 
 func (r *SubnetGroup) Read(
-	ctx context.Context, cfg any, prior *SubnetGroupOutput,
+	ctx context.Context, cfg *awsCfg, prior *SubnetGroupOutput,
 ) (*SubnetGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -138,7 +138,7 @@ func (r *SubnetGroup) read(
 }
 
 func (r *SubnetGroup) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[SubnetGroup, *SubnetGroupOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SubnetGroup, *SubnetGroupOutput],
 ) (*SubnetGroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -167,7 +167,7 @@ func (r *SubnetGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *SubnetGroup) Delete(ctx context.Context, cfg any, prior *SubnetGroupOutput) error {
+func (r *SubnetGroup) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetGroupOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

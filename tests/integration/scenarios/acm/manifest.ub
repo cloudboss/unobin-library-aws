@@ -1,4 +1,10 @@
 manifest: {
-  requires: {}
-  replace:  { 'github.com/cloudboss/unobin-library-aws': '../../../..' }
+  requires: {
+    'github.com/cloudboss/unobin-library-aws': {
+      version: 'v0.0.0-unobin-replaced'
+    }
+  }
+  replace: {
+    'github.com/cloudboss/unobin-library-aws': '../../../..'
+  }
 }

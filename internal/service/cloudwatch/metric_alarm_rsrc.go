@@ -218,7 +218,7 @@ func (r MetricAlarm) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MetricAlarm) Create(ctx context.Context, cfg any) (*MetricAlarmOutput, error) {
+func (r *MetricAlarm) Create(ctx context.Context, cfg *awsCfg) (*MetricAlarmOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -258,7 +258,7 @@ func (r *MetricAlarm) Create(ctx context.Context, cfg any) (*MetricAlarmOutput, 
 }
 
 func (r *MetricAlarm) Read(
-	ctx context.Context, cfg any, prior *MetricAlarmOutput,
+	ctx context.Context, cfg *awsCfg, prior *MetricAlarmOutput,
 ) (*MetricAlarmOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -292,7 +292,7 @@ func (r *MetricAlarm) read(
 }
 
 func (r *MetricAlarm) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[MetricAlarm, *MetricAlarmOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[MetricAlarm, *MetricAlarmOutput],
 ) (*MetricAlarmOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -320,7 +320,7 @@ func (r *MetricAlarm) Update(
 	return r.read(ctx, client)
 }
 
-func (r *MetricAlarm) Delete(ctx context.Context, cfg any, prior *MetricAlarmOutput) error {
+func (r *MetricAlarm) Delete(ctx context.Context, cfg *awsCfg, prior *MetricAlarmOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -41,7 +41,7 @@ func (r *Alias) ReplaceFields() []string {
 	return []string{"alias-name"}
 }
 
-func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
+func (r *Alias) Create(ctx context.Context, cfg *awsCfg) (*AliasOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *Alias) Create(ctx context.Context, cfg any) (*AliasOutput, error) {
 }
 
 func (r *Alias) Read(
-	ctx context.Context, cfg any, prior *AliasOutput,
+	ctx context.Context, cfg *awsCfg, prior *AliasOutput,
 ) (*AliasOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -117,7 +117,7 @@ func (r *Alias) read(
 }
 
 func (r *Alias) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Alias, *AliasOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Alias, *AliasOutput],
 ) (*AliasOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -137,7 +137,7 @@ func (r *Alias) Update(
 	return r.read(ctx, client, r.AliasName, false)
 }
 
-func (r *Alias) Delete(ctx context.Context, cfg any, prior *AliasOutput) error {
+func (r *Alias) Delete(ctx context.Context, cfg *awsCfg, prior *AliasOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

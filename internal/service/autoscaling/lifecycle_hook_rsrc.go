@@ -86,7 +86,7 @@ func (r LifecycleHook) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LifecycleHook) Create(ctx context.Context, cfg any) (*LifecycleHookOutput, error) {
+func (r *LifecycleHook) Create(ctx context.Context, cfg *awsCfg) (*LifecycleHookOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (r *LifecycleHook) putInput() *autoscaling.PutLifecycleHookInput {
 }
 
 func (r *LifecycleHook) Read(
-	ctx context.Context, cfg any, prior *LifecycleHookOutput,
+	ctx context.Context, cfg *awsCfg, prior *LifecycleHookOutput,
 ) (*LifecycleHookOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *LifecycleHook) read(
 }
 
 func (r *LifecycleHook) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[LifecycleHook, *LifecycleHookOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LifecycleHook, *LifecycleHookOutput],
 ) (*LifecycleHookOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *LifecycleHook) changed(
 		runtime.Changed(p.RoleARN, r.RoleARN)
 }
 
-func (r *LifecycleHook) Delete(ctx context.Context, cfg any, prior *LifecycleHookOutput) error {
+func (r *LifecycleHook) Delete(ctx context.Context, cfg *awsCfg, prior *LifecycleHookOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

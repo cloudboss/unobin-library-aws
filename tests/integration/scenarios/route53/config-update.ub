@@ -5,9 +5,6 @@ stack: {
       comment:     'unobin integration test zone'
       www-address: '192.0.2.2'
     }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

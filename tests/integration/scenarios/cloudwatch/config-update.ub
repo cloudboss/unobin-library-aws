@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { threshold: 90 }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

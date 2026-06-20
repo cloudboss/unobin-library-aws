@@ -160,7 +160,7 @@ func (r Queue) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Queue) Create(ctx context.Context, cfg any) (*QueueOutput, error) {
+func (r *Queue) Create(ctx context.Context, cfg *awsCfg) (*QueueOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (r *Queue) Create(ctx context.Context, cfg any) (*QueueOutput, error) {
 	return r.read(ctx, client, url)
 }
 
-func (r *Queue) Read(ctx context.Context, cfg any, prior *QueueOutput) (*QueueOutput, error) {
+func (r *Queue) Read(ctx context.Context, cfg *awsCfg, prior *QueueOutput) (*QueueOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func (r *Queue) read(
 }
 
 func (r *Queue) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Queue, *QueueOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Queue, *QueueOutput],
 ) (*QueueOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -284,7 +284,7 @@ func (r *Queue) Update(
 	return r.read(ctx, client, url)
 }
 
-func (r *Queue) Delete(ctx context.Context, cfg any, prior *QueueOutput) error {
+func (r *Queue) Delete(ctx context.Context, cfg *awsCfg, prior *QueueOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

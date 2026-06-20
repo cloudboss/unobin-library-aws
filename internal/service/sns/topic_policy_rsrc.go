@@ -49,7 +49,7 @@ func (r *TopicPolicy) ReplaceFields() []string {
 	return []string{"arn"}
 }
 
-func (r *TopicPolicy) Create(ctx context.Context, cfg any) (*TopicPolicyOutput, error) {
+func (r *TopicPolicy) Create(ctx context.Context, cfg *awsCfg) (*TopicPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (r *TopicPolicy) Create(ctx context.Context, cfg any) (*TopicPolicyOutput, 
 }
 
 func (r *TopicPolicy) Read(
-	ctx context.Context, cfg any, prior *TopicPolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *TopicPolicyOutput,
 ) (*TopicPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -73,7 +73,7 @@ func (r *TopicPolicy) Read(
 }
 
 func (r *TopicPolicy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[TopicPolicy, *TopicPolicyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicPolicy, *TopicPolicyOutput],
 ) (*TopicPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -85,7 +85,7 @@ func (r *TopicPolicy) Update(
 	return r.read(ctx, client)
 }
 
-func (r *TopicPolicy) Delete(ctx context.Context, cfg any, prior *TopicPolicyOutput) error {
+func (r *TopicPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *TopicPolicyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

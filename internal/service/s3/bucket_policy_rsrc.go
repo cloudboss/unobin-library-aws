@@ -39,7 +39,7 @@ func (r *BucketPolicy) ReplaceFields() []string {
 	return []string{"bucket"}
 }
 
-func (r *BucketPolicy) Create(ctx context.Context, cfg any) (*BucketPolicyOutput, error) {
+func (r *BucketPolicy) Create(ctx context.Context, cfg *awsCfg) (*BucketPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (r *BucketPolicy) Create(ctx context.Context, cfg any) (*BucketPolicyOutput
 }
 
 func (r *BucketPolicy) Read(
-	ctx context.Context, cfg any, prior *BucketPolicyOutput,
+	ctx context.Context, cfg *awsCfg, prior *BucketPolicyOutput,
 ) (*BucketPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *BucketPolicy) Read(
 }
 
 func (r *BucketPolicy) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[BucketPolicy, *BucketPolicyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[BucketPolicy, *BucketPolicyOutput],
 ) (*BucketPolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *BucketPolicy) Update(
 	return &BucketPolicyOutput{}, nil
 }
 
-func (r *BucketPolicy) Delete(ctx context.Context, cfg any, prior *BucketPolicyOutput) error {
+func (r *BucketPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *BucketPolicyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

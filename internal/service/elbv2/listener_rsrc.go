@@ -176,7 +176,7 @@ func (r Listener) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Listener) Create(ctx context.Context, cfg any) (*ListenerOutput, error) {
+func (r *Listener) Create(ctx context.Context, cfg *awsCfg) (*ListenerOutput, error) {
 	if err := validateDefaultActions(r.DefaultAction); err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (r *Listener) Create(ctx context.Context, cfg any) (*ListenerOutput, error)
 }
 
 func (r *Listener) Read(
-	ctx context.Context, cfg any, prior *ListenerOutput,
+	ctx context.Context, cfg *awsCfg, prior *ListenerOutput,
 ) (*ListenerOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -228,7 +228,7 @@ func (r *Listener) Read(
 }
 
 func (r *Listener) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Listener, *ListenerOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Listener, *ListenerOutput],
 ) (*ListenerOutput, error) {
 	if err := validateDefaultActions(r.DefaultAction); err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func (r *Listener) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Listener) Delete(ctx context.Context, cfg any, prior *ListenerOutput) error {
+func (r *Listener) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

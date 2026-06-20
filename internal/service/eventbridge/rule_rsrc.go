@@ -93,7 +93,7 @@ func (r Rule) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Rule) Create(ctx context.Context, cfg any) (*RuleOutput, error) {
+func (r *Rule) Create(ctx context.Context, cfg *awsCfg) (*RuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (r *Rule) Create(ctx context.Context, cfg any) (*RuleOutput, error) {
 	return r.read(ctx, client)
 }
 
-func (r *Rule) Read(ctx context.Context, cfg any, prior *RuleOutput) (*RuleOutput, error) {
+func (r *Rule) Read(ctx context.Context, cfg *awsCfg, prior *RuleOutput) (*RuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -152,7 +152,7 @@ func (r *Rule) read(ctx context.Context, client *eventbridge.Client) (*RuleOutpu
 }
 
 func (r *Rule) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Rule, *RuleOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Rule, *RuleOutput],
 ) (*RuleOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -189,7 +189,7 @@ func (r *Rule) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Rule) Delete(ctx context.Context, cfg any, prior *RuleOutput) error {
+func (r *Rule) Delete(ctx context.Context, cfg *awsCfg, prior *RuleOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

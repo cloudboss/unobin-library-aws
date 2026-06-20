@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { bucket: 'unobin-it-bucket' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

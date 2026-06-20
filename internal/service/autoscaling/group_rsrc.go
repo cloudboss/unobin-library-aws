@@ -140,7 +140,7 @@ func (r Group) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Group) Create(ctx context.Context, cfg any) (*GroupOutput, error) {
+func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (r *Group) createInput() *autoscaling.CreateAutoScalingGroupInput {
 	return in
 }
 
-func (r *Group) Read(ctx context.Context, cfg any, prior *GroupOutput) (*GroupOutput, error) {
+func (r *Group) Read(ctx context.Context, cfg *awsCfg, prior *GroupOutput) (*GroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func (r *Group) read(ctx context.Context, client *autoscaling.Client) (*GroupOut
 }
 
 func (r *Group) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Group, *GroupOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Group, *GroupOutput],
 ) (*GroupOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -490,7 +490,7 @@ func (r *Group) setMaintenancePolicy(in *autoscaling.UpdateAutoScalingGroupInput
 	in.InstanceMaintenancePolicy = removedMaintenancePolicy()
 }
 
-func (r *Group) Delete(ctx context.Context, cfg any, prior *GroupOutput) error {
+func (r *Group) Delete(ctx context.Context, cfg *awsCfg, prior *GroupOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -138,7 +138,7 @@ func (r Cluster) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Cluster) Create(ctx context.Context, cfg any) (*ClusterOutput, error) {
+func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (r *Cluster) Create(ctx context.Context, cfg any) (*ClusterOutput, error) {
 }
 
 func (r *Cluster) Read(
-	ctx context.Context, cfg any, prior *ClusterOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterOutput,
 ) (*ClusterOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -215,7 +215,7 @@ func (r *Cluster) Read(
 }
 
 func (r *Cluster) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Cluster, *ClusterOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Cluster, *ClusterOutput],
 ) (*ClusterOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -245,7 +245,7 @@ func (r *Cluster) Update(
 	return &ClusterOutput{Arn: arn}, nil
 }
 
-func (r *Cluster) Delete(ctx context.Context, cfg any, prior *ClusterOutput) error {
+func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -91,7 +91,7 @@ func (r SecurityGroupIngressRule) Constraints() []constraint.Constraint {
 }
 
 func (r *SecurityGroupIngressRule) Create(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 ) (*SecurityGroupIngressRuleOutput, error) {
 	ruleID, arn, err := sgRuleCreate(ctx, cfg, r.rule(), false)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *SecurityGroupIngressRule) Create(
 }
 
 func (r *SecurityGroupIngressRule) Read(
-	ctx context.Context, cfg any, prior *SecurityGroupIngressRuleOutput,
+	ctx context.Context, cfg *awsCfg, prior *SecurityGroupIngressRuleOutput,
 ) (*SecurityGroupIngressRuleOutput, error) {
 	if err := sgRuleRead(ctx, cfg, prior.SecurityGroupRuleId, false); err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (r *SecurityGroupIngressRule) Read(
 }
 
 func (r *SecurityGroupIngressRule) Update(
-	ctx context.Context, cfg any,
+	ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[SecurityGroupIngressRule, *SecurityGroupIngressRuleOutput],
 ) (*SecurityGroupIngressRuleOutput, error) {
 	err := sgRuleUpdate(ctx, cfg, r.rule(), prior.Inputs.rule(),
@@ -122,7 +122,7 @@ func (r *SecurityGroupIngressRule) Update(
 }
 
 func (r *SecurityGroupIngressRule) Delete(
-	ctx context.Context, cfg any, prior *SecurityGroupIngressRuleOutput,
+	ctx context.Context, cfg *awsCfg, prior *SecurityGroupIngressRuleOutput,
 ) error {
 	return sgRuleDelete(ctx, cfg, prior.SecurityGroupRuleId, false)
 }

@@ -278,7 +278,7 @@ func (r Cluster) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Cluster) Create(ctx context.Context, cfg any) (*ClusterOutput, error) {
+func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -659,7 +659,7 @@ func (r *Cluster) validate() error {
 }
 
 func (r *Cluster) Read(
-	ctx context.Context, cfg any, prior *ClusterOutput,
+	ctx context.Context, cfg *awsCfg, prior *ClusterOutput,
 ) (*ClusterOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -723,7 +723,7 @@ func (r *Cluster) readGlobalMembership(
 }
 
 func (r *Cluster) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Cluster, *ClusterOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Cluster, *ClusterOutput],
 ) (*ClusterOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -910,7 +910,7 @@ func (r *Cluster) modifyInput(
 	return in, changed
 }
 
-func (r *Cluster) Delete(ctx context.Context, cfg any, prior *ClusterOutput) error {
+func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -160,7 +160,7 @@ func (r *Parameter) validate() error {
 	return nil
 }
 
-func (r *Parameter) Create(ctx context.Context, cfg any) (*ParameterOutput, error) {
+func (r *Parameter) Create(ctx context.Context, cfg *awsCfg) (*ParameterOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (r *Parameter) Create(ctx context.Context, cfg any) (*ParameterOutput, erro
 }
 
 func (r *Parameter) Read(
-	ctx context.Context, cfg any, prior *ParameterOutput,
+	ctx context.Context, cfg *awsCfg, prior *ParameterOutput,
 ) (*ParameterOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *Parameter) Read(
 }
 
 func (r *Parameter) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Parameter, *ParameterOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Parameter, *ParameterOutput],
 ) (*ParameterOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (r *Parameter) Update(
 	return r.read(ctx, client, false)
 }
 
-func (r *Parameter) Delete(ctx context.Context, cfg any, prior *ParameterOutput) error {
+func (r *Parameter) Delete(ctx context.Context, cfg *awsCfg, prior *ParameterOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

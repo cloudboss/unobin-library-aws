@@ -88,7 +88,7 @@ func (r Eip) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Eip) Create(ctx context.Context, cfg any) (*EipOutput, error) {
+func (r *Eip) Create(ctx context.Context, cfg *awsCfg) (*EipOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (r *Eip) Create(ctx context.Context, cfg any) (*EipOutput, error) {
 	return r.read(ctx, client, id)
 }
 
-func (r *Eip) Read(ctx context.Context, cfg any, prior *EipOutput) (*EipOutput, error) {
+func (r *Eip) Read(ctx context.Context, cfg *awsCfg, prior *EipOutput) (*EipOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (r *Eip) read(ctx context.Context, client *ec2.Client, id string) (*EipOutp
 }
 
 func (r *Eip) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Eip, *EipOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Eip, *EipOutput],
 ) (*EipOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -160,7 +160,7 @@ func (r *Eip) Update(
 	return r.read(ctx, client, prior.Outputs.AllocationId)
 }
 
-func (r *Eip) Delete(ctx context.Context, cfg any, prior *EipOutput) error {
+func (r *Eip) Delete(ctx context.Context, cfg *awsCfg, prior *EipOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

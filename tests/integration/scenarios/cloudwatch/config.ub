@@ -1,9 +1,5 @@
 stack: {
-  factory: {
-    configurations: {
-      aws {}
-    }
-  }
+  factory: {}
 
   state: local {
     path: '.unobin/state'

@@ -149,7 +149,7 @@ func (r *Function) keyValueStoreAssociations() *cloudfronttypes.KeyValueStoreAss
 	}
 }
 
-func (r *Function) Create(ctx context.Context, cfg any) (*FunctionOutput, error) {
+func (r *Function) Create(ctx context.Context, cfg *awsCfg) (*FunctionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func (r *Function) Create(ctx context.Context, cfg any) (*FunctionOutput, error)
 }
 
 func (r *Function) Read(
-	ctx context.Context, cfg any, prior *FunctionOutput,
+	ctx context.Context, cfg *awsCfg, prior *FunctionOutput,
 ) (*FunctionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -237,7 +237,7 @@ func (r *Function) read(
 }
 
 func (r *Function) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Function, *FunctionOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Function, *FunctionOutput],
 ) (*FunctionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -295,7 +295,7 @@ func (r *Function) configChanged(prior runtime.Prior[Function, *FunctionOutput])
 			r.KeyValueStoreAssociations)
 }
 
-func (r *Function) Delete(ctx context.Context, cfg any, prior *FunctionOutput) error {
+func (r *Function) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

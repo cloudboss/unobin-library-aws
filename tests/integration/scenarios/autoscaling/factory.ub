@@ -13,7 +13,13 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
+  library-configs: { aws: var.aws-config }
+
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     desired-capacity: { type: integer, default: 0 }
     max-size:         { type: integer, default: 1, description: 'Upper bound of the group' }
     lt-instance-type: {

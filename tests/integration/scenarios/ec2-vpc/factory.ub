@@ -6,6 +6,10 @@ factory: {
     '''
 
   inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      default: {}
+    }
     cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' }
     ssh-port: {
       type:        optional(object({ from: integer, to: optional(integer) }))
@@ -14,6 +18,8 @@ factory: {
   }
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+
+  library-configs: { aws: var.aws-config }
 
   constraints: [
     # The null test in when narrows what require reads; the optional `to`

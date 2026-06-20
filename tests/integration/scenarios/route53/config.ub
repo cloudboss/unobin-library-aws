@@ -1,9 +1,6 @@
 stack: {
   factory: {
     inputs: { zone-name: 'unobin-it.example.com' }
-    configurations: {
-      aws {}
-    }
   }
 
   state: local {

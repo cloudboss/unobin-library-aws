@@ -227,7 +227,7 @@ func (r TaskDefinition) Constraints() []constraint.Constraint {
 // partitions, cannot tag a task definition as it is registered; when the
 // tagged register fails for that reason, the revision is registered without
 // tags and tagged right after.
-func (r *TaskDefinition) Create(ctx context.Context, cfg any) (*TaskDefinitionOutput, error) {
+func (r *TaskDefinition) Create(ctx context.Context, cfg *awsCfg) (*TaskDefinitionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (r *TaskDefinition) Create(ctx context.Context, cfg any) (*TaskDefinitionOu
 // INACTIVE or DELETE_IN_PROGRESS status, so the status check is the second
 // half of not-found detection.
 func (r *TaskDefinition) Read(
-	ctx context.Context, cfg any, prior *TaskDefinitionOutput,
+	ctx context.Context, cfg *awsCfg, prior *TaskDefinitionOutput,
 ) (*TaskDefinitionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -306,7 +306,7 @@ func (r *TaskDefinition) Read(
 // The outputs cannot change while the revision lives, so the prior outputs
 // are returned as is.
 func (r *TaskDefinition) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[TaskDefinition, *TaskDefinitionOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TaskDefinition, *TaskDefinitionOutput],
 ) (*TaskDefinitionOutput, error) {
 	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
 		client, err := newClient(ctx, cfg)
@@ -325,7 +325,11 @@ func (r *TaskDefinition) Update(
 // is the replacement just registered. Deregistration leaves the revision
 // describable as INACTIVE; tasks and services already running it keep
 // working.
-func (r *TaskDefinition) Delete(ctx context.Context, cfg any, prior *TaskDefinitionOutput) error {
+func (r *TaskDefinition) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TaskDefinitionOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

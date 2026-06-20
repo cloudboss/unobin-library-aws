@@ -162,7 +162,7 @@ func (r LaunchTemplate) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LaunchTemplate) Create(ctx context.Context, cfg any) (*LaunchTemplateOutput, error) {
+func (r *LaunchTemplate) Create(ctx context.Context, cfg *awsCfg) (*LaunchTemplateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -210,7 +210,7 @@ func (r *LaunchTemplate) Create(ctx context.Context, cfg any) (*LaunchTemplateOu
 }
 
 func (r *LaunchTemplate) Read(
-	ctx context.Context, cfg any, prior *LaunchTemplateOutput,
+	ctx context.Context, cfg *awsCfg, prior *LaunchTemplateOutput,
 ) (*LaunchTemplateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -220,7 +220,7 @@ func (r *LaunchTemplate) Read(
 }
 
 func (r *LaunchTemplate) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[LaunchTemplate, *LaunchTemplateOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LaunchTemplate, *LaunchTemplateOutput],
 ) (*LaunchTemplateOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -266,7 +266,11 @@ func (r *LaunchTemplate) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *LaunchTemplate) Delete(ctx context.Context, cfg any, prior *LaunchTemplateOutput) error {
+func (r *LaunchTemplate) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LaunchTemplateOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -118,7 +118,7 @@ func (r *HostedZone) validate() error {
 	return nil
 }
 
-func (r *HostedZone) Create(ctx context.Context, cfg any) (*HostedZoneOutput, error) {
+func (r *HostedZone) Create(ctx context.Context, cfg *awsCfg) (*HostedZoneOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (r *HostedZone) Create(ctx context.Context, cfg any) (*HostedZoneOutput, er
 }
 
 func (r *HostedZone) Read(
-	ctx context.Context, cfg any, prior *HostedZoneOutput,
+	ctx context.Context, cfg *awsCfg, prior *HostedZoneOutput,
 ) (*HostedZoneOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -238,7 +238,7 @@ func (r *HostedZone) read(
 }
 
 func (r *HostedZone) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[HostedZone, *HostedZoneOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[HostedZone, *HostedZoneOutput],
 ) (*HostedZoneOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func (r *HostedZone) Update(
 	return r.read(ctx, client, zoneID)
 }
 
-func (r *HostedZone) Delete(ctx context.Context, cfg any, prior *HostedZoneOutput) error {
+func (r *HostedZone) Delete(ctx context.Context, cfg *awsCfg, prior *HostedZoneOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

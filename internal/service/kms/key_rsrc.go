@@ -110,7 +110,7 @@ func (r Key) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Key) Create(ctx context.Context, cfg any) (*KeyOutput, error) {
+func (r *Key) Create(ctx context.Context, cfg *awsCfg) (*KeyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (r *Key) Create(ctx context.Context, cfg any) (*KeyOutput, error) {
 	return r.read(ctx, client, keyID, true)
 }
 
-func (r *Key) Read(ctx context.Context, cfg any, prior *KeyOutput) (*KeyOutput, error) {
+func (r *Key) Read(ctx context.Context, cfg *awsCfg, prior *KeyOutput) (*KeyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -229,7 +229,7 @@ func (r *Key) read(
 }
 
 func (r *Key) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Key, *KeyOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Key, *KeyOutput],
 ) (*KeyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -289,7 +289,7 @@ func (r *Key) Update(
 	return r.read(ctx, client, keyID, false)
 }
 
-func (r *Key) Delete(ctx context.Context, cfg any, prior *KeyOutput) error {
+func (r *Key) Delete(ctx context.Context, cfg *awsCfg, prior *KeyOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -159,7 +159,7 @@ func (r Integration) Constraints() []constraint.Constraint {
 // the rest. The service reads back a just-created integration immediately,
 // and the create response is the full integration representation, so the
 // outputs come straight from it with no settling wait.
-func (r *Integration) Create(ctx context.Context, cfg any) (*IntegrationOutput, error) {
+func (r *Integration) Create(ctx context.Context, cfg *awsCfg) (*IntegrationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -213,7 +213,7 @@ func (r *Integration) Create(ctx context.Context, cfg any) (*IntegrationOutput, 
 // integration is gone or the whole API is, since either way this integration
 // no longer exists; a response with no body is an error rather than drift.
 func (r *Integration) Read(
-	ctx context.Context, cfg any, prior *IntegrationOutput,
+	ctx context.Context, cfg *awsCfg, prior *IntegrationOutput,
 ) (*IntegrationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -248,7 +248,7 @@ func (r *Integration) Read(
 // update that omits it. The update response is the full integration
 // representation, so the outputs come from it directly.
 func (r *Integration) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Integration, *IntegrationOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Integration, *IntegrationOutput],
 ) (*IntegrationOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -376,7 +376,7 @@ func (r *Integration) updateIntegrationInput(
 // receiver already describes the new integration, so the identity pair comes
 // from prior. An integration already gone, or whose whole API is gone, counts
 // as deleted.
-func (r *Integration) Delete(ctx context.Context, cfg any, prior *IntegrationOutput) error {
+func (r *Integration) Delete(ctx context.Context, cfg *awsCfg, prior *IntegrationOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

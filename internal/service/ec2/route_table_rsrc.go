@@ -50,7 +50,7 @@ func (r RouteTable) Defaults() []defaults.Default {
 	}
 }
 
-func (r *RouteTable) Create(ctx context.Context, cfg any) (*RouteTableOutput, error) {
+func (r *RouteTable) Create(ctx context.Context, cfg *awsCfg) (*RouteTableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (r *RouteTable) Create(ctx context.Context, cfg any) (*RouteTableOutput, er
 }
 
 func (r *RouteTable) Read(
-	ctx context.Context, cfg any, prior *RouteTableOutput,
+	ctx context.Context, cfg *awsCfg, prior *RouteTableOutput,
 ) (*RouteTableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *RouteTable) Read(
 // reconciled as a set whenever they changed, the same as the other EC2
 // resources.
 func (r *RouteTable) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[RouteTable, *RouteTableOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteTable, *RouteTableOutput],
 ) (*RouteTableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *RouteTable) Update(
 // their own resource torn down by their own Delete first; this drain is a
 // best-effort backstop so an association the table still holds does not block
 // the delete.
-func (r *RouteTable) Delete(ctx context.Context, cfg any, prior *RouteTableOutput) error {
+func (r *RouteTable) Delete(ctx context.Context, cfg *awsCfg, prior *RouteTableOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

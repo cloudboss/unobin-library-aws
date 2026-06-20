@@ -212,7 +212,7 @@ func (r *Api) validate() error {
 	return nil
 }
 
-func (r *Api) Create(ctx context.Context, cfg any) (*ApiOutput, error) {
+func (r *Api) Create(ctx context.Context, cfg *awsCfg) (*ApiOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (r *Api) Create(ctx context.Context, cfg any) (*ApiOutput, error) {
 	}, nil
 }
 
-func (r *Api) Read(ctx context.Context, cfg any, prior *ApiOutput) (*ApiOutput, error) {
+func (r *Api) Read(ctx context.Context, cfg *awsCfg, prior *ApiOutput) (*ApiOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -314,7 +314,7 @@ func (r *Api) read(
 }
 
 func (r *Api) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Api, *ApiOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Api, *ApiOutput],
 ) (*ApiOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -361,7 +361,7 @@ func (r *Api) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Api) Delete(ctx context.Context, cfg any, prior *ApiOutput) error {
+func (r *Api) Delete(ctx context.Context, cfg *awsCfg, prior *ApiOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -1,8 +1,9 @@
 stack: {
   factory: {
-    inputs: { idle-timeout: 180, health-check-path: '/health', rule-paths: ['/api/*', '/v2/*'] }
-    configurations: {
-      aws {}
+    inputs: {
+      idle-timeout:      180
+      health-check-path: '/health'
+      rule-paths:        ['/api/*', '/v2/*']
     }
   }
 

@@ -174,7 +174,7 @@ func (r Table) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Table) Create(ctx context.Context, cfg any) (*TableOutput, error) {
+func (r *Table) Create(ctx context.Context, cfg *awsCfg) (*TableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (r *Table) createTable(ctx context.Context, client *dynamodb.Client) error 
 	return nil
 }
 
-func (r *Table) Read(ctx context.Context, cfg any, prior *TableOutput) (*TableOutput, error) {
+func (r *Table) Read(ctx context.Context, cfg *awsCfg, prior *TableOutput) (*TableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -268,7 +268,7 @@ func (r *Table) Read(ctx context.Context, cfg any, prior *TableOutput) (*TableOu
 }
 
 func (r *Table) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[Table, *TableOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Table, *TableOutput],
 ) (*TableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -295,7 +295,7 @@ func (r *Table) Update(
 	return tableOutput(desc), nil
 }
 
-func (r *Table) Delete(ctx context.Context, cfg any, prior *TableOutput) error {
+func (r *Table) Delete(ctx context.Context, cfg *awsCfg, prior *TableOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

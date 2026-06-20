@@ -87,7 +87,7 @@ func (r FunctionUrl) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *FunctionUrl) Create(ctx context.Context, cfg any) (*FunctionUrlOutput, error) {
+func (r *FunctionUrl) Create(ctx context.Context, cfg *awsCfg) (*FunctionUrlOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func (r *FunctionUrl) Create(ctx context.Context, cfg any) (*FunctionUrlOutput, 
 // endpoint while a replacement is pending. A not-found, whether the config or
 // the whole function is gone, maps to runtime.ErrNotFound.
 func (r *FunctionUrl) Read(
-	ctx context.Context, cfg any, prior *FunctionUrlOutput,
+	ctx context.Context, cfg *awsCfg, prior *FunctionUrlOutput,
 ) (*FunctionUrlOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -154,7 +154,7 @@ func (r *FunctionUrl) Read(
 // in place. A removed invoke-mode is not sent at all, per the scalar-removal
 // rule. The identity comes from the prior outputs, like Read and Delete.
 func (r *FunctionUrl) Update(
-	ctx context.Context, cfg any, prior runtime.Prior[FunctionUrl, *FunctionUrlOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionUrl, *FunctionUrlOutput],
 ) (*FunctionUrlOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -206,7 +206,7 @@ func (r *FunctionUrl) Update(
 // identity inputs are replace fields and on a replacement the receiver already
 // holds the new ones. A not-found is success: the config is already gone,
 // which deleting the function itself also brings about.
-func (r *FunctionUrl) Delete(ctx context.Context, cfg any, prior *FunctionUrlOutput) error {
+func (r *FunctionUrl) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionUrlOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

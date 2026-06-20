@@ -1,8 +1,8 @@
 stack: {
   factory: {
-    inputs: { transparency: 'DISABLED', tags: { unobin: 'acm-it', stage: 'updated' } }
-    configurations: {
-      aws {}
+    inputs: {
+      transparency: 'DISABLED'
+      tags:         { unobin: 'acm-it', stage: 'updated' }
     }
   }
 
