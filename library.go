@@ -211,7 +211,8 @@ func Library() *runtime.Library {
 				apigatewayv2.Stage, *apigatewayv2.StageOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"ec2-ami": makeDataSource[ec2.AMI, *ec2.AMIOutput](),
+			"route53-zone": makeDataSource[route53.ZoneData, *route53.ZoneDataOutput](),
+			"ec2-ami":      makeDataSource[ec2.AMI, *ec2.AMIOutput](),
 			"ec2-availability-zones": makeDataSource[
 				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
 			"sts-caller-identity": makeDataSource[

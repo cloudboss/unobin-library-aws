@@ -68,9 +68,23 @@ factory: {
     }
   }
 
+  data: {
+    route53-zone-by-name: aws.route53-zone {
+      name: resource.route53-hosted-zone-it.name
+      tags: { unobin: 'route53-it' }
+    }
+    route53-zone-by-id: aws.route53-zone {
+      zone-id: resource.route53-hosted-zone-it.zone-id
+    }
+  }
+
   outputs: {
-    zone-id:      { value: resource.route53-hosted-zone-it.zone-id }
-    name-servers: { value: resource.route53-hosted-zone-it.name-servers }
-    www-fqdn:     { value: resource.route53-record-set-www.fqdn }
+    zone-id:              { value: resource.route53-hosted-zone-it.zone-id }
+    name-servers:         { value: resource.route53-hosted-zone-it.name-servers }
+    www-fqdn:             { value: resource.route53-record-set-www.fqdn }
+    lookup-zone-id:       { value: data.route53-zone-by-name.zone-id }
+    lookup-zone-arn:      { value: data.route53-zone-by-name.arn }
+    lookup-primary-ns:    { value: data.route53-zone-by-name.primary-name-server }
+    lookup-zone-id-by-id: { value: data.route53-zone-by-id.zone-id }
   }
 }

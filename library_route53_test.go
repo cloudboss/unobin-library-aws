@@ -31,6 +31,15 @@ func TestLibraryRegistersRoute53Resources(t *testing.T) {
 	}
 }
 
+// TestLibraryRegistersRoute53DataSources checks the runtime registration of the
+// Route 53 data sources under DataSources.
+func TestLibraryRegistersRoute53DataSources(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "route53-zone")
+	assert.Equal(t, reflect.TypeFor[*route53.ZoneDataOutput](),
+		lib.DataSources["route53-zone"].OutputType())
+}
+
 // TestRoute53Schemas asserts the whole derived TypeSchema for each Route 53
 // resource: input and output field types, the cross-field and enum constraints
 // each Constraints method declares, and the optional defaults.
@@ -245,4 +254,45 @@ func TestRoute53Schemas(t *testing.T) {
 			assert.Equal(t, want, schema.Resources[key])
 		})
 	}
+}
+
+// TestRoute53DataSourceSchemas asserts the whole derived TypeSchema for each
+// Route 53 data source.
+func TestRoute53DataSourceSchemas(t *testing.T) {
+	schema := readLibrarySchema(t)
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"zone-id":      typecheck.TOptional(typecheck.TString()),
+			"name":         typecheck.TOptional(typecheck.TString()),
+			"private-zone": typecheck.TOptional(typecheck.TBoolean()),
+			"vpc-id":       typecheck.TOptional(typecheck.TString()),
+			"tags":         typecheck.TMap(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"zone-id":                     typecheck.TString(),
+			"arn":                         typecheck.TString(),
+			"name":                        typecheck.TString(),
+			"name-servers":                typecheck.TList(typecheck.TString()),
+			"primary-name-server":         typecheck.TString(),
+			"caller-reference":            typecheck.TString(),
+			"comment":                     typecheck.TString(),
+			"private-zone":                typecheck.TBoolean(),
+			"resource-record-set-count":   typecheck.TInteger(),
+			"enable-accelerated-recovery": typecheck.TBoolean(),
+			"linked-service-description":  typecheck.TString(),
+			"linked-service-principal":    typecheck.TString(),
+			"tags":                        typecheck.TMap(typecheck.TString()),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"var.zone-id", "var.name"},
+			},
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+		},
+	}
+	require.Contains(t, schema.DataSources, "route53-zone")
+	assert.Equal(t, want, schema.DataSources["route53-zone"])
 }

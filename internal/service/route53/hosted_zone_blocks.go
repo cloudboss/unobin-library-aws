@@ -78,7 +78,7 @@ func zoneCallerReference() string {
 // region nor account, only the partition and the zone id, since a zone id is
 // globally unique.
 func zoneARN(reg, zoneID string) string {
-	return fmt.Sprintf("arn:%s:route53::::hostedzone/%s", partition.Of(reg), zoneID)
+	return fmt.Sprintf("arn:%s:route53:::hostedzone/%s", partition.Of(reg), zoneID)
 }
 
 // zoneRegion returns the region the client is configured for, used to derive the
