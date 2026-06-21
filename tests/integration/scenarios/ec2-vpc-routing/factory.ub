@@ -34,6 +34,13 @@ factory: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
+    ec2-subnets-it: aws.ec2-subnets {
+      tags:   { unobin: 'vpc-routing-it' }
+      filter: [{ name: 'vpc-id', values: [resource.ec2-vpc-it.vpc-id] }]
+    }
+    ec2-subnets-empty: aws.ec2-subnets {
+      filter: [{ name: 'tag:unobin', values: ['vpc-routing-it-missing'] }]
+    }
   }
 
   locals: {
@@ -118,5 +125,7 @@ factory: {
     eip-public-ip:          { value: resource.ec2-eip-nat.public-ip }
     nat-gateway-id:         { value: resource.ec2-nat-gateway-it.nat-gateway-id }
     vpc-endpoint-id:        { value: resource.ec2-vpc-endpoint-s3.vpc-endpoint-id }
+    subnet-ids-by-lookup:   { value: data.ec2-subnets-it.ids }
+    empty-subnet-ids:       { value: data.ec2-subnets-empty.ids }
   }
 }

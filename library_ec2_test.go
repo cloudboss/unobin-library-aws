@@ -1547,3 +1547,37 @@ func TestEc2AvailabilityZonesSchema(t *testing.T) {
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-availability-zones"])
 }
+
+// TestLibraryRegistersEc2Subnets checks the runtime registration: ec2-subnets
+// is present under DataSources and dispatches to the SubnetsOutput type.
+func TestLibraryRegistersEc2Subnets(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-subnets")
+	assert.Equal(t, reflect.TypeFor[*ec2.SubnetsOutput](),
+		lib.DataSources["ec2-subnets"].OutputType())
+}
+
+// TestEc2SubnetsSchema asserts the whole derived TypeSchema for the
+// ec2-subnets data source: tag filters, generic filters, ids output, and the
+// declared optional defaults.
+func TestEc2SubnetsSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "ec2-subnets")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			})),
+			"tags": typecheck.TMap(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"ids": typecheck.TList(typecheck.TString()),
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "var.tags", Optional: true},
+			{Field: "var.filter", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["ec2-subnets"])
+}

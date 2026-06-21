@@ -215,6 +215,8 @@ func Library() *runtime.Library {
 			"ec2-ami":      makeDataSource[ec2.AMI, *ec2.AMIOutput](),
 			"ec2-availability-zones": makeDataSource[
 				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
+			"ec2-subnets": makeDataSource[
+				ec2.Subnets, *ec2.SubnetsOutput](),
 			"sts-caller-identity": makeDataSource[
 				sts.CallerIdentity, *sts.CallerIdentityOutput](),
 			"iam-openid-connect-provider": makeDataSource[
