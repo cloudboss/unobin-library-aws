@@ -165,6 +165,9 @@ func Library() *runtime.Library {
 				rds.ClusterInstance, *rds.ClusterInstanceOutput](),
 			"cloudwatchlogs-log-group": makeResource[
 				cloudwatchlogs.LogGroup, *cloudwatchlogs.LogGroupOutput](),
+			"cloudwatchlogs-subscription-filter": makeResource[
+				cloudwatchlogs.SubscriptionFilter,
+				*cloudwatchlogs.SubscriptionFilterOutput](),
 			"cloudwatch-metric-alarm": makeResource[
 				cloudwatch.MetricAlarm, *cloudwatch.MetricAlarmOutput](),
 			"cloudfront-origin-access-control": makeResource[

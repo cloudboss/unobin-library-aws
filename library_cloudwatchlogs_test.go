@@ -20,7 +20,8 @@ import (
 func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"cloudwatchlogs-log-group": reflect.TypeFor[*cloudwatchlogs.LogGroupOutput](),
+		"cloudwatchlogs-log-group":           reflect.TypeFor[*cloudwatchlogs.LogGroupOutput](),
+		"cloudwatchlogs-subscription-filter": reflect.TypeFor[*cloudwatchlogs.SubscriptionFilterOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -89,6 +90,45 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "var.tags", Optional: true},
+			},
+		},
+		"cloudwatchlogs-subscription-filter": {
+			Inputs: map[string]typecheck.Type{
+				"apply-on-transformed-logs": typecheck.TOptional(typecheck.TBoolean()),
+				"destination-arn":           typecheck.TString(),
+				"distribution":              typecheck.TString(),
+				"emit-system-fields":        typecheck.TList(typecheck.TString()),
+				"field-selection-criteria":  typecheck.TOptional(typecheck.TString()),
+				"filter-pattern":            typecheck.TString(),
+				"name":                      typecheck.TString(),
+				"log-group-name":            typecheck.TString(),
+				"role-arn":                  typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"apply-on-transformed-logs": typecheck.TBoolean(),
+				"log-group-name":            typecheck.TString(),
+				"name":                      typecheck.TString(),
+				"role-arn":                  typecheck.TOptional(typecheck.TString()),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "(var.distribution != null)",
+					Require: "(var.distribution == 'ByLogStream' || var.distribution == 'Random')",
+					Message: "distribution must be ByLogStream or Random",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value == '@aws.account' || " +
+						"@each.value == '@aws.region')",
+					Message: "emit-system-fields entries must be @aws.account or @aws.region",
+					ForEach: "var.emit-system-fields",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.distribution", Value: "'ByLogStream'"},
+				{Field: "var.emit-system-fields", Optional: true},
 			},
 		},
 	}

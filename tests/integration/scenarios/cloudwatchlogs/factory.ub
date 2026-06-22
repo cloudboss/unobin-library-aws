@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages a CloudWatch Logs log group with a retention policy and tags. The retention
-    comes from an input so the update pass changes it in place through the retention-policy
-    reconcile, exercising the follow-on call and the tag sync across apply and destroy.
+    Manages a CloudWatch Logs log group with a retention policy, tags, and a
+    subscription filter to a Lambda destination. The retention and filter pattern come
+    from inputs so the update pass changes them in place through their reconcile calls.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -20,6 +20,11 @@ factory: {
       default:     30
       description: 'Retention in days; the update pass changes it in place'
     }
+    filter-pattern: {
+      type:        string
+      default:     ''
+      description: 'Subscription filter pattern; the update pass changes it in place'
+    }
   }
 
   resources: {
@@ -29,7 +34,48 @@ factory: {
       log-group-class:   'STANDARD'
       tags:              { unobin: 'cloudwatchlogs-it' }
     }
+    iam-role-subscription-sink: aws.iam-role {
+      role-name: 'unobin-it-cwl-lambda-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    iam-policy-subscription-sink: aws.iam-policy {
+      policy-name: 'unobin-it-cwl-lambda-policy'
+      policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
+        CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+        '''
+    }
+    iam-role-policy-attachment-subscription-sink: aws.iam-role-policy-attachment {
+      role-name:  resource.iam-role-subscription-sink.role-name
+      policy-arn: resource.iam-policy-subscription-sink.arn
+    }
+    lambda-function-subscription-sink: aws.lambda-function {
+      function-name: 'unobin-it-cwl-sink'
+      role:          resource.iam-role-subscription-sink.arn
+      runtime:       'python3.12'
+      handler:       'index.handler'
+      code:          { zip-file-path: '/tmp/unobin-it-cwl-lambda.zip' }
+      tags:          { unobin: 'cloudwatchlogs-it' }
+    }
+    lambda-permission-subscription-sink: aws.lambda-permission {
+      function-name: resource.lambda-function-subscription-sink.function-name
+      statement-id:  'unobin-it-cwl-allow-logs'
+      action:        'lambda:InvokeFunction'
+      principal:     'logs.amazonaws.com'
+    }
+    cloudwatchlogs-subscription-filter-it: aws.cloudwatchlogs-subscription-filter {
+      destination-arn: resource.lambda-function-subscription-sink.arn
+      log-group-name:  resource.cloudwatchlogs-log-group-it.name
+      name:            'unobin-it-subscription-filter'
+      filter-pattern:  var.filter-pattern
+    }
   }
 
-  outputs: { log-group-arn: { value: resource.cloudwatchlogs-log-group-it.arn } }
+  outputs: {
+    log-group-arn:     { value: resource.cloudwatchlogs-log-group-it.arn }
+    subscription-name: { value: resource.cloudwatchlogs-subscription-filter-it.name }
+  }
 }

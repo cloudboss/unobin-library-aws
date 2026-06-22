@@ -1,6 +1,6 @@
 stack: {
   factory: {
-    inputs: { name: 'unobin-it-log-group', retention: 60 }
+    inputs: { name: 'unobin-it-log-group', retention: 60, filter-pattern: '{ $.level = "info" }' }
   }
 
   state: local {

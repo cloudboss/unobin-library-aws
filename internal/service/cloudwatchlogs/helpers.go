@@ -22,10 +22,8 @@ func newClient(ctx context.Context, cfg *awsCfg) (*cloudwatchlogs.Client, error)
 }
 
 // isNotFound reports whether err is CloudWatch Logs' resource-not-found
-// error. The Logs API models a missing resource as its own error type; a
-// Delete matches the type to treat a delete of a gone log group as success.
-// Read instead detects a missing log group by an empty describe result, so
-// it does not rely on this predicate.
+// error. The Logs API models a missing resource as its own error type, and
+// resources map it to absent reads or successful deletes.
 func isNotFound(err error) bool {
 	var notFound *cloudwatchlogstypes.ResourceNotFoundException
 	return errors.As(err, &notFound)
