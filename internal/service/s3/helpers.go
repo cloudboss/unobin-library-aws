@@ -5,12 +5,18 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
 type awsCfg = awscfg.Configuration
+
+const (
+	awsGlobalRegion = "aws-global"
+	usEast1Region   = "us-east-1"
+)
 
 // newClient returns the AWS SDK Go v2 client for s3, configured from cfg.
 // It builds an aws.Config via awscfg.Load.
@@ -19,6 +25,25 @@ func newClient(ctx context.Context, cfg *awsCfg) (*s3.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return s3ClientFromConfig(awsCfg), nil
+}
+
+func newDirectoryBucketClient(ctx context.Context, cfg *awsCfg) (*s3.Client, error) {
+	awsCfg, err := awscfg.Load(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return s3ClientFromConfig(directoryBucketAWSConfig(awsCfg)), nil
+}
+
+func directoryBucketAWSConfig(awsCfg aws.Config) aws.Config {
+	if awsCfg.Region == awsGlobalRegion {
+		awsCfg.Region = usEast1Region
+	}
+	return awsCfg
+}
+
+func s3ClientFromConfig(awsCfg aws.Config) *s3.Client {
 	return s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		// A custom endpoint -- LocalStack or another S3-compatible server -- is
 		// reached by path (host/bucket), not by the virtual-hosted bucket.host
@@ -27,7 +52,7 @@ func newClient(ctx context.Context, cfg *awsCfg) (*s3.Client, error) {
 		if awsCfg.BaseEndpoint != nil {
 			o.UsePathStyle = true
 		}
-	}), nil
+	})
 }
 
 // isNotFound reports whether err is an AWS API error whose service code is

@@ -14,17 +14,20 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 const (
-	bucketName = "unobin-it-bucket"
-	objectKey  = "hello.txt"
+	bucketName          = "unobin-it-bucket"
+	notificationQueueID = "unobin-it-s3-queue"
+	objectKey           = "hello.txt"
 )
 
 func main() {
@@ -100,6 +103,37 @@ func verifyApplied(ctx context.Context, client *s3.Client) error {
 		return fmt.Errorf("bucket %s has an empty policy", bucketName)
 	}
 
+	notification, err := client.GetBucketNotificationConfiguration(ctx,
+		&s3.GetBucketNotificationConfigurationInput{Bucket: aws.String(bucketName)})
+	if err != nil {
+		return fmt.Errorf("get bucket notification %s: %w", bucketName, err)
+	}
+	if notification.EventBridgeConfiguration == nil {
+		return fmt.Errorf("bucket %s has no EventBridge notification", bucketName)
+	}
+	if len(notification.QueueConfigurations) != 1 {
+		return fmt.Errorf("bucket %s has %d queue notifications, want 1",
+			bucketName, len(notification.QueueConfigurations))
+	}
+	queueNotification := notification.QueueConfigurations[0]
+	if got := aws.ToString(queueNotification.Id); got != notificationQueueID {
+		return fmt.Errorf("bucket %s queue notification id is %q, want %q",
+			bucketName, got, notificationQueueID)
+	}
+	if aws.ToString(queueNotification.QueueArn) == "" {
+		return fmt.Errorf("bucket %s queue notification has an empty ARN", bucketName)
+	}
+	if len(queueNotification.Events) != 1 ||
+		queueNotification.Events[0] != s3types.EventS3ObjectCreated {
+		return fmt.Errorf("bucket %s queue notification events are %v, want [%s]",
+			bucketName, queueNotification.Events, s3types.EventS3ObjectCreated)
+	}
+	prefix, suffix := notificationFilterValues(queueNotification.Filter)
+	if prefix != "images/" || suffix != "" {
+		return fmt.Errorf("bucket %s queue notification filter is prefix=%q suffix=%q",
+			bucketName, prefix, suffix)
+	}
+
 	if _, err := client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
@@ -110,6 +144,23 @@ func verifyApplied(ctx context.Context, client *s3.Client) error {
 	fmt.Printf("ok: bucket %s versioned, locked down, policied, with object %s\n",
 		bucketName, objectKey)
 	return nil
+}
+
+func notificationFilterValues(
+	filter *s3types.NotificationConfigurationFilter,
+) (prefix, suffix string) {
+	if filter == nil || filter.Key == nil {
+		return "", ""
+	}
+	for _, rule := range filter.Key.FilterRules {
+		switch strings.ToLower(string(rule.Name)) {
+		case "prefix":
+			prefix = aws.ToString(rule.Value)
+		case "suffix":
+			suffix = aws.ToString(rule.Value)
+		}
+	}
+	return prefix, suffix
 }
 
 func verifyDestroyed(ctx context.Context, client *s3.Client) error {

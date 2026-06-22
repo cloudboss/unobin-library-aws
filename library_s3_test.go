@@ -19,9 +19,10 @@ import (
 func TestLibraryRegistersS3Resources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
-		"s3-bucket":        reflect.TypeFor[*s3.BucketOutput](),
-		"s3-bucket-policy": reflect.TypeFor[*s3.BucketPolicyOutput](),
-		"s3-object":        reflect.TypeFor[*s3.ObjectOutput](),
+		"s3-bucket":              reflect.TypeFor[*s3.BucketOutput](),
+		"s3-bucket-notification": reflect.TypeFor[*s3.BucketNotificationOutput](),
+		"s3-bucket-policy":       reflect.TypeFor[*s3.BucketPolicyOutput](),
+		"s3-object":              reflect.TypeFor[*s3.ObjectOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -466,6 +467,66 @@ func TestS3Schemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "var.tags", Optional: true},
+			},
+		},
+		"s3-bucket-notification": {
+			Inputs: map[string]typecheck.Type{
+				"bucket":      typecheck.TString(),
+				"eventbridge": typecheck.TOptional(typecheck.TBoolean()),
+				"lambda-function": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "id", Type: typecheck.TString(), Optional: true},
+					{Name: "lambda-function-arn", Type: typecheck.TString(), Optional: true},
+					{Name: "events", Type: typecheck.TList(typecheck.TString())},
+					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
+					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
+				})),
+				"queue": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "id", Type: typecheck.TString(), Optional: true},
+					{Name: "queue-arn", Type: typecheck.TString()},
+					{Name: "events", Type: typecheck.TList(typecheck.TString())},
+					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
+					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
+				})),
+				"topic": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "id", Type: typecheck.TString(), Optional: true},
+					{Name: "topic-arn", Type: typecheck.TString()},
+					{Name: "events", Type: typecheck.TList(typecheck.TString())},
+					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
+					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
+				})),
+			},
+			Outputs: map[string]typecheck.Type{
+				"bucket":      typecheck.TString(),
+				"eventbridge": typecheck.TBoolean(),
+				"lambda-function-observed-summaries": typecheck.TList(
+					typecheck.TObject([]typecheck.ObjectField{
+						{Name: "id", Type: typecheck.TString()},
+						{Name: "lambda-function-arn", Type: typecheck.TString()},
+						{Name: "events", Type: typecheck.TList(typecheck.TString())},
+						{Name: "filter-prefix", Type: typecheck.TString()},
+						{Name: "filter-suffix", Type: typecheck.TString()},
+					})),
+				"queue-observed-summaries": typecheck.TList(
+					typecheck.TObject([]typecheck.ObjectField{
+						{Name: "id", Type: typecheck.TString()},
+						{Name: "queue-arn", Type: typecheck.TString()},
+						{Name: "events", Type: typecheck.TList(typecheck.TString())},
+						{Name: "filter-prefix", Type: typecheck.TString()},
+						{Name: "filter-suffix", Type: typecheck.TString()},
+					})),
+				"topic-observed-summaries": typecheck.TList(
+					typecheck.TObject([]typecheck.ObjectField{
+						{Name: "id", Type: typecheck.TString()},
+						{Name: "topic-arn", Type: typecheck.TString()},
+						{Name: "events", Type: typecheck.TList(typecheck.TString())},
+						{Name: "filter-prefix", Type: typecheck.TString()},
+						{Name: "filter-suffix", Type: typecheck.TString()},
+					})),
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "var.lambda-function", Optional: true},
+				{Field: "var.queue", Optional: true},
+				{Field: "var.topic", Optional: true},
 			},
 		},
 		"s3-bucket-policy": {

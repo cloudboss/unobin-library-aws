@@ -116,6 +116,8 @@ func Library() *runtime.Library {
 			"kms-alias": makeResource[
 				kms.Alias, *kms.AliasOutput](),
 			"s3-bucket": makeResource[s3.Bucket, *s3.BucketOutput](),
+			"s3-bucket-notification": makeResource[
+				s3.BucketNotification, *s3.BucketNotificationOutput](),
 			"s3-bucket-policy": makeResource[
 				s3.BucketPolicy, *s3.BucketPolicyOutput](),
 			"s3-object": makeResource[s3.Object, *s3.ObjectOutput](),

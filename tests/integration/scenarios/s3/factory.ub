@@ -1,9 +1,9 @@
 factory: {
   description: '''>-
-    Manages an S3 bucket with versioning, a public access block, a non-public bucket
-    policy, and an object. The bucket name, versioning block, and object body come
-    from inputs so the update pass can change them in place: the bucket starts
-    unversioned and the update enables versioning and rewrites the object body.
+    Manages an S3 bucket with versioning, a public access block, a non-public bucket policy,
+    EventBridge and SQS notifications, and an object. The bucket name, versioning block, and
+    object body come from inputs so the update pass can change them in place: the bucket
+    starts unversioned and the update enables versioning and rewrites the object body.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -49,6 +49,27 @@ factory: {
         "Action":"s3:GetBucketAcl","Resource":"{{ resource.s3-bucket-it.arn }}"}]}
         '''
     }
+    sqs-queue-notification-it: aws.sqs-queue {
+      name: 'unobin-it-s3-notification'
+      policy: $'''\-
+        {"Version":"2012-10-17","Statement":[{"Sid":"AllowS3Send","Effect":"Allow",
+        "Principal":{"Service":"s3.amazonaws.com"},"Action":"sqs:SendMessage","Resource":
+        "*","Condition":{"ArnLike":{"aws:SourceArn":"{{ resource.s3-bucket-it.arn }}"}}}]}
+        '''
+      tags: { unobin: 's3-it' }
+    }
+    s3-bucket-notification-it: aws.s3-bucket-notification {
+      bucket:      resource.s3-bucket-it.bucket
+      eventbridge: true
+      queue: [
+        {
+          id:            'unobin-it-s3-queue'
+          queue-arn:     resource.sqs-queue-notification-it.arn
+          events:        ['', 's3:ObjectCreated:*', '']
+          filter-prefix: 'images/'
+        },
+      ]
+    }
     s3-object-it: aws.s3-object {
       bucket:           resource.s3-bucket-it.bucket
       key:              'hello.txt'
@@ -61,7 +82,13 @@ factory: {
   outputs: {
     bucket-arn:    { value: resource.s3-bucket-it.arn }
     bucket-region: { value: resource.s3-bucket-it.bucket-region }
-    object-etag:   { value: resource.s3-object-it.etag }
-    object-key:    { value: resource.s3-object-it.key }
+    notification-queue-id: {
+      value: resource.s3-bucket-notification-it.queue-observed-summaries[0].id
+    }
+    notification-queue-events: {
+      value: resource.s3-bucket-notification-it.queue-observed-summaries[0].events
+    }
+    object-etag: { value: resource.s3-object-it.etag }
+    object-key:  { value: resource.s3-object-it.key }
   }
 }
