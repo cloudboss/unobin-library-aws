@@ -1,7 +1,7 @@
 factory: {
   description: '''>-
-    Manages a CloudWatch Logs log group with a retention policy, tags, and a
-    subscription filter to a Lambda destination. The retention and filter pattern come
+    Manages a CloudWatch Logs log group with a retention policy, tags, a metric filter, and
+    a subscription filter to a Lambda destination. The retention and filter patterns come
     from inputs so the update pass changes them in place through their reconcile calls.
     '''
 
@@ -25,6 +25,11 @@ factory: {
       default:     ''
       description: 'Subscription filter pattern; the update pass changes it in place'
     }
+    metric-filter-pattern: {
+      type:        string
+      default:     '{ $.metric = "one" }'
+      description: 'Metric filter pattern; the update pass changes it in place'
+    }
   }
 
   resources: {
@@ -33,6 +38,16 @@ factory: {
       retention-in-days: var.retention
       log-group-class:   'STANDARD'
       tags:              { unobin: 'cloudwatchlogs-it' }
+    }
+    cloudwatchlogs-metric-filter-it: aws.cloudwatchlogs-metric-filter {
+      filter-name:    'unobin-it-metric-filter'
+      log-group-name: resource.cloudwatchlogs-log-group-it.name
+      filter-pattern: var.metric-filter-pattern
+      metric-transformation: {
+        metric-name:      'UnobinMetricFilterCount'
+        metric-namespace: 'Unobin/Integration'
+        metric-value:     '1'
+      }
     }
     iam-role-subscription-sink: aws.iam-role {
       role-name: 'unobin-it-cwl-lambda-role'
@@ -76,6 +91,7 @@ factory: {
 
   outputs: {
     log-group-arn:     { value: resource.cloudwatchlogs-log-group-it.arn }
+    metric-filter:     { value: resource.cloudwatchlogs-metric-filter-it.filter-name }
     subscription-name: { value: resource.cloudwatchlogs-subscription-filter-it.name }
   }
 }

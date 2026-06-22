@@ -1,6 +1,11 @@
 stack: {
   factory: {
-    inputs: { name: 'unobin-it-log-group', retention: 60, filter-pattern: '{ $.level = "info" }' }
+    inputs: {
+      name:                  'unobin-it-log-group'
+      retention:             60
+      filter-pattern:        '{ $.level = "info" }'
+      metric-filter-pattern: '{ $.metric = "two" }'
+    }
   }
 
   state: local {

@@ -19,12 +19,15 @@ import (
 )
 
 const (
-	logGroupName     = "unobin-it-log-group"
-	filterName       = "unobin-it-subscription-filter"
-	functionName     = "unobin-it-cwl-sink"
-	markerKey        = "unobin"
-	markerValue      = "cloudwatchlogs-it"
-	appliedRetention = 30
+	logGroupName           = "unobin-it-log-group"
+	metricFilterName       = "unobin-it-metric-filter"
+	subscriptionFilterName = "unobin-it-subscription-filter"
+	metricName             = "UnobinMetricFilterCount"
+	metricNamespace        = "Unobin/Integration"
+	functionName           = "unobin-it-cwl-sink"
+	markerKey              = "unobin"
+	markerValue            = "cloudwatchlogs-it"
+	appliedRetention       = 30
 )
 
 func main() {
@@ -69,12 +72,23 @@ func verifyApplied(
 			logGroupName, retention, appliedRetention)
 	}
 
+	metricFilter, err := findMetricFilter(ctx, logsClient)
+	if err != nil {
+		return err
+	}
+	if metricFilter == nil {
+		return fmt.Errorf("metric filter %s not found", metricFilterName)
+	}
+	if err := verifyMetricFilter(metricFilter); err != nil {
+		return err
+	}
+
 	filter, err := findSubscriptionFilter(ctx, logsClient)
 	if err != nil {
 		return err
 	}
 	if filter == nil {
-		return fmt.Errorf("subscription filter %s not found", filterName)
+		return fmt.Errorf("subscription filter %s not found", subscriptionFilterName)
 	}
 	destination := aws.ToString(filter.DestinationArn)
 	if !strings.Contains(destination, ":function:"+functionName) {
@@ -104,7 +118,12 @@ func verifyApplied(
 
 	fmt.Printf("ok: log group %s present with retention %d days\n",
 		logGroupName, retention)
-	fmt.Printf("ok: subscription filter %s sends to %s\n", filterName, functionName)
+	if metricFilter != nil {
+		fmt.Printf("ok: metric filter %s emits %s/%s\n",
+			metricFilterName, metricNamespace, metricName)
+	}
+	fmt.Printf("ok: subscription filter %s sends to %s\n",
+		subscriptionFilterName, functionName)
 	return nil
 }
 
@@ -118,12 +137,19 @@ func verifyDestroyed(
 	if group != nil {
 		return fmt.Errorf("log group %s still exists", logGroupName)
 	}
+	metricFilter, err := findMetricFilter(ctx, logsClient)
+	if err != nil {
+		return err
+	}
+	if metricFilter != nil {
+		return fmt.Errorf("metric filter %s still exists", metricFilterName)
+	}
 	filter, err := findSubscriptionFilter(ctx, logsClient)
 	if err != nil {
 		return err
 	}
 	if filter != nil {
-		return fmt.Errorf("subscription filter %s still exists", filterName)
+		return fmt.Errorf("subscription filter %s still exists", subscriptionFilterName)
 	}
 	_, err = lambdaClient.GetFunction(ctx, &lambda.GetFunctionInput{
 		FunctionName: aws.String(functionName),
@@ -134,7 +160,7 @@ func verifyDestroyed(
 	if !isLambdaNotFound(err) {
 		return fmt.Errorf("get function %s: %w", functionName, err)
 	}
-	fmt.Printf("ok: log group %s and subscription filter %s gone\n", logGroupName, filterName)
+	fmt.Printf("ok: log group %s and filters gone\n", logGroupName)
 	return nil
 }
 
@@ -159,13 +185,55 @@ func findGroup(
 	return nil, nil
 }
 
+func findMetricFilter(
+	ctx context.Context, client *cloudwatchlogs.Client,
+) (*cloudwatchlogstypes.MetricFilter, error) {
+	pager := cloudwatchlogs.NewDescribeMetricFiltersPaginator(client,
+		&cloudwatchlogs.DescribeMetricFiltersInput{
+			LogGroupName:     aws.String(logGroupName),
+			FilterNamePrefix: aws.String(metricFilterName),
+		})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			if isLogsNotFound(err) {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("describe metric filters: %w", err)
+		}
+		for i := range page.MetricFilters {
+			if aws.ToString(page.MetricFilters[i].FilterName) == metricFilterName {
+				return &page.MetricFilters[i], nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func verifyMetricFilter(filter *cloudwatchlogstypes.MetricFilter) error {
+	if len(filter.MetricTransformations) == 0 {
+		return fmt.Errorf("metric filter %s has no transformations", metricFilterName)
+	}
+	mt := filter.MetricTransformations[0]
+	if got := aws.ToString(mt.MetricName); got != metricName {
+		return fmt.Errorf("metric name is %s, want %s", got, metricName)
+	}
+	if got := aws.ToString(mt.MetricNamespace); got != metricNamespace {
+		return fmt.Errorf("metric namespace is %s, want %s", got, metricNamespace)
+	}
+	if got := aws.ToString(mt.MetricValue); got != "1" {
+		return fmt.Errorf("metric value is %s, want 1", got)
+	}
+	return nil
+}
+
 func findSubscriptionFilter(
 	ctx context.Context, client *cloudwatchlogs.Client,
 ) (*cloudwatchlogstypes.SubscriptionFilter, error) {
 	pager := cloudwatchlogs.NewDescribeSubscriptionFiltersPaginator(client,
 		&cloudwatchlogs.DescribeSubscriptionFiltersInput{
 			LogGroupName:     aws.String(logGroupName),
-			FilterNamePrefix: aws.String(filterName),
+			FilterNamePrefix: aws.String(subscriptionFilterName),
 		})
 	for pager.HasMorePages() {
 		page, err := pager.NextPage(ctx)
@@ -176,7 +244,7 @@ func findSubscriptionFilter(
 			return nil, fmt.Errorf("describe subscription filters: %w", err)
 		}
 		for i := range page.SubscriptionFilters {
-			if aws.ToString(page.SubscriptionFilters[i].FilterName) == filterName {
+			if aws.ToString(page.SubscriptionFilters[i].FilterName) == subscriptionFilterName {
 				return &page.SubscriptionFilters[i], nil
 			}
 		}

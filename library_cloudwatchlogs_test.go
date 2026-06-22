@@ -15,12 +15,13 @@ import (
 )
 
 // TestLibraryRegistersCloudwatchlogsResources checks the runtime registration:
-// cloudwatchlogs-log-group is present under Resources and dispatches to its
-// output type.
+// the CloudWatch Logs resources are present under Resources and dispatch to
+// their output types.
 func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
 		"cloudwatchlogs-log-group":           reflect.TypeFor[*cloudwatchlogs.LogGroupOutput](),
+		"cloudwatchlogs-metric-filter":       reflect.TypeFor[*cloudwatchlogs.MetricFilterOutput](),
 		"cloudwatchlogs-subscription-filter": reflect.TypeFor[*cloudwatchlogs.SubscriptionFilterOutput](),
 	}
 	for key, outputType := range cases {
@@ -32,8 +33,8 @@ func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 }
 
 // TestCloudwatchlogsSchemas asserts the whole derived TypeSchema for the
-// cloudwatchlogs-log-group resource: its input and output field types, the
-// retention and class enum constraints, and the optional tag default.
+// CloudWatch Logs resources: their input and output field types, constraints,
+// and defaults.
 func TestCloudwatchlogsSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -129,6 +130,70 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			Defaults: []lang.DefaultSpec{
 				{Field: "var.distribution", Value: "'ByLogStream'"},
 				{Field: "var.emit-system-fields", Optional: true},
+			},
+		},
+		"cloudwatchlogs-metric-filter": {
+			Inputs: map[string]typecheck.Type{
+				"apply-on-transformed-logs": typecheck.TOptional(typecheck.TBoolean()),
+				"filter-name":               typecheck.TString(),
+				"filter-pattern":            typecheck.TString(),
+				"log-group-name":            typecheck.TString(),
+				"metric-transformation": typecheck.TObject([]typecheck.ObjectField{
+					{Name: "default-value", Type: typecheck.TNumber(), Optional: true},
+					{Name: "dimensions", Type: typecheck.TMap(typecheck.TString()), Optional: true},
+					{Name: "metric-name", Type: typecheck.TString()},
+					{Name: "metric-namespace", Type: typecheck.TString()},
+					{Name: "metric-value", Type: typecheck.TString()},
+					{Name: "unit", Type: typecheck.TString(), Optional: true},
+				}),
+			},
+			Outputs: map[string]typecheck.Type{
+				"apply-on-transformed-logs": typecheck.TBoolean(),
+				"filter-name":               typecheck.TString(),
+				"filter-pattern":            typecheck.TString(),
+				"log-group-name":            typecheck.TString(),
+				"metric-transformation": typecheck.TObject([]typecheck.ObjectField{
+					{Name: "default-value", Type: typecheck.TNumber(), Optional: true},
+					{Name: "dimensions", Type: typecheck.TMap(typecheck.TString()), Optional: true},
+					{Name: "metric-name", Type: typecheck.TString()},
+					{Name: "metric-namespace", Type: typecheck.TString()},
+					{Name: "metric-value", Type: typecheck.TString()},
+					{Name: "unit", Type: typecheck.TString()},
+				}),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "predicate",
+					When: "(var.metric-transformation.unit != null)",
+					Require: "(var.metric-transformation.unit == 'Seconds' || " +
+						"var.metric-transformation.unit == 'Microseconds' || " +
+						"var.metric-transformation.unit == 'Milliseconds' || " +
+						"var.metric-transformation.unit == 'Bytes' || " +
+						"var.metric-transformation.unit == 'Kilobytes' || " +
+						"var.metric-transformation.unit == 'Megabytes' || " +
+						"var.metric-transformation.unit == 'Gigabytes' || " +
+						"var.metric-transformation.unit == 'Terabytes' || " +
+						"var.metric-transformation.unit == 'Bits' || " +
+						"var.metric-transformation.unit == 'Kilobits' || " +
+						"var.metric-transformation.unit == 'Megabits' || " +
+						"var.metric-transformation.unit == 'Gigabits' || " +
+						"var.metric-transformation.unit == 'Terabits' || " +
+						"var.metric-transformation.unit == 'Percent' || " +
+						"var.metric-transformation.unit == 'Count' || " +
+						"var.metric-transformation.unit == 'Bytes/Second' || " +
+						"var.metric-transformation.unit == 'Kilobytes/Second' || " +
+						"var.metric-transformation.unit == 'Megabytes/Second' || " +
+						"var.metric-transformation.unit == 'Gigabytes/Second' || " +
+						"var.metric-transformation.unit == 'Terabytes/Second' || " +
+						"var.metric-transformation.unit == 'Bits/Second' || " +
+						"var.metric-transformation.unit == 'Kilobits/Second' || " +
+						"var.metric-transformation.unit == 'Megabits/Second' || " +
+						"var.metric-transformation.unit == 'Gigabits/Second' || " +
+						"var.metric-transformation.unit == 'Terabits/Second' || " +
+						"var.metric-transformation.unit == 'Count/Second' || " +
+						"var.metric-transformation.unit == 'None')",
+					Message: "metric-transformation unit must be a valid CloudWatch unit",
+				},
 			},
 		},
 	}

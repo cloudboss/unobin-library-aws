@@ -168,6 +168,9 @@ func Library() *runtime.Library {
 			"cloudwatchlogs-subscription-filter": makeResource[
 				cloudwatchlogs.SubscriptionFilter,
 				*cloudwatchlogs.SubscriptionFilterOutput](),
+			"cloudwatchlogs-metric-filter": makeResource[
+				cloudwatchlogs.MetricFilter,
+				*cloudwatchlogs.MetricFilterOutput](),
 			"cloudwatch-metric-alarm": makeResource[
 				cloudwatch.MetricAlarm, *cloudwatch.MetricAlarmOutput](),
 			"cloudfront-origin-access-control": makeResource[
