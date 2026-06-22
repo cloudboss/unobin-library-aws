@@ -41,13 +41,31 @@ func region(client *elbv2.Client) string {
 // runtime.ErrNotFound.
 func isNotFound(err error) bool {
 	var (
-		lb       *elbv2types.LoadBalancerNotFoundException
-		tg       *elbv2types.TargetGroupNotFoundException
 		listener *elbv2types.ListenerNotFoundException
 		rule     *elbv2types.RuleNotFoundException
 	)
-	return errors.As(err, &lb) || errors.As(err, &tg) ||
+	return isLoadBalancerNotFound(err) || isTargetGroupNotFound(err) ||
 		errors.As(err, &listener) || errors.As(err, &rule)
+}
+
+// isLoadBalancerNotFound reports whether err is ELBv2's
+// LoadBalancerNotFoundException.
+func isLoadBalancerNotFound(err error) bool {
+	var notFound *elbv2types.LoadBalancerNotFoundException
+	return errors.As(err, &notFound)
+}
+
+// isTargetGroupNotFound reports whether err is ELBv2's
+// TargetGroupNotFoundException.
+func isTargetGroupNotFound(err error) bool {
+	var notFound *elbv2types.TargetGroupNotFoundException
+	return errors.As(err, &notFound)
+}
+
+// isInvalidTarget reports whether err is ELBv2's InvalidTargetException.
+func isInvalidTarget(err error) bool {
+	var invalid *elbv2types.InvalidTargetException
+	return errors.As(err, &invalid)
 }
 
 // isCertificateNotFound reports whether err is ELBv2's CertificateNotFound

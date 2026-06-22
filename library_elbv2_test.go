@@ -14,9 +14,8 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 )
 
-// TestLibraryRegistersElbv2 checks the runtime registration: the five
-// load-balancing resources are present under Resources and dispatch to their
-// output types.
+// TestLibraryRegistersElbv2 checks the runtime registration: the load-balancing
+// resources are present under Resources and dispatch to their output types.
 func TestLibraryRegistersElbv2(t *testing.T) {
 	lib := library.Library()
 	require.Contains(t, lib.Resources, "elbv2-load-balancer")
@@ -25,6 +24,9 @@ func TestLibraryRegistersElbv2(t *testing.T) {
 	require.Contains(t, lib.Resources, "elbv2-target-group")
 	assert.Equal(t, reflect.TypeFor[*elbv2.TargetGroupOutput](),
 		lib.Resources["elbv2-target-group"].OutputType())
+	require.Contains(t, lib.Resources, "elbv2-target-group-attachment")
+	assert.Equal(t, reflect.TypeFor[*elbv2.TargetGroupAttachmentOutput](),
+		lib.Resources["elbv2-target-group-attachment"].OutputType())
 	require.Contains(t, lib.Resources, "elbv2-listener")
 	assert.Equal(t, reflect.TypeFor[*elbv2.ListenerOutput](),
 		lib.Resources["elbv2-listener"].OutputType())
@@ -384,6 +386,25 @@ func TestElbv2Schemas(t *testing.T) {
 				},
 				Defaults: []lang.DefaultSpec{
 					{Field: "var.tags", Optional: true},
+				},
+			},
+		},
+		{
+			key: "elbv2-target-group-attachment",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"availability-zone": typecheck.TOptional(typecheck.TString()),
+					"port":              typecheck.TOptional(typecheck.TInteger()),
+					"quic-server-id":    typecheck.TOptional(typecheck.TString()),
+					"target-group-arn":  typecheck.TString(),
+					"target-id":         typecheck.TString(),
+				},
+				Outputs: map[string]typecheck.Type{
+					"availability-zone": typecheck.TOptional(typecheck.TString()),
+					"port":              typecheck.TOptional(typecheck.TInteger()),
+					"quic-server-id":    typecheck.TOptional(typecheck.TString()),
+					"target-group-arn":  typecheck.TString(),
+					"target-id":         typecheck.TString(),
 				},
 			},
 		},

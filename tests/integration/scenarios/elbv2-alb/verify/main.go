@@ -2,10 +2,10 @@
 // named in the VERIFY_PHASE environment variable. It looks resources up by their
 // stable names because the driver passes no plan outputs into verify, and it
 // reads only cloud state: applied requires the load balancer to be active with
-// the idle-timeout attribute the scenario set, the target group to exist, an
-// HTTP listener on the load balancer, and a priority-100 rule on that listener;
-// destroyed requires the load balancer and target group to be gone. Tearing the
-// group down is the destroy plan's job, not the verifier's.
+// the idle-timeout attribute the scenario set, the IP target group and target to
+// exist, an HTTP listener on the load balancer, and a priority-100 rule on that
+// listener; destroyed requires the load balancer and target group to be gone.
+// Tearing the group down is the destroy plan's job, not the verifier's.
 package main
 
 import (
@@ -24,6 +24,8 @@ import (
 const (
 	loadBalancerName = "unobin-it-alb"
 	targetGroupName  = "unobin-it-alb-tg"
+	targetIP         = "10.20.1.50"
+	targetPort       = int32(8080)
 	idleTimeoutKey   = "idle_timeout.timeout_seconds"
 	idleTimeoutValue = "120"
 	rulePriority     = "100"
@@ -77,6 +79,12 @@ func verifyApplied(ctx context.Context, client *elasticloadbalancingv2.Client) e
 	if tg == nil {
 		return fmt.Errorf("target group %s not found", targetGroupName)
 	}
+	if tg.TargetType != elbv2types.TargetTypeEnumIp {
+		return fmt.Errorf("target group %s is not an IP target group", targetGroupName)
+	}
+	if err := checkTarget(ctx, client, aws.ToString(tg.TargetGroupArn)); err != nil {
+		return err
+	}
 
 	listener, err := findListener(ctx, client, lbArn)
 	if err != nil {
@@ -89,7 +97,7 @@ func verifyApplied(ctx context.Context, client *elasticloadbalancingv2.Client) e
 		return err
 	}
 
-	fmt.Printf("ok: load balancer %s active with target group, listener, and rule\n",
+	fmt.Printf("ok: load balancer %s active with target group, target, listener, and rule\n",
 		loadBalancerName)
 	return nil
 }
@@ -136,6 +144,30 @@ func checkIdleTimeout(
 		}
 	}
 	return fmt.Errorf("load balancer %s has no %s attribute", loadBalancerName, idleTimeoutKey)
+}
+
+// checkTarget confirms the target-group attachment registered the scenario IP
+// target with its port override.
+func checkTarget(
+	ctx context.Context, client *elasticloadbalancingv2.Client, targetGroupArn string,
+) error {
+	resp, err := client.DescribeTargetHealth(ctx,
+		&elasticloadbalancingv2.DescribeTargetHealthInput{
+			TargetGroupArn: aws.String(targetGroupArn),
+		})
+	if err != nil {
+		return fmt.Errorf("describe target health for %s: %w", targetGroupName, err)
+	}
+	for _, desc := range resp.TargetHealthDescriptions {
+		if desc.Target == nil {
+			continue
+		}
+		if aws.ToString(desc.Target.Id) == targetIP && aws.ToInt32(desc.Target.Port) == targetPort {
+			return nil
+		}
+	}
+	return fmt.Errorf("target group %s has no target %s:%d",
+		targetGroupName, targetIP, targetPort)
 }
 
 // checkRule confirms the listener has the scenario's priority-100 rule.

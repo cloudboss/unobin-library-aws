@@ -135,6 +135,8 @@ func Library() *runtime.Library {
 				elbv2.LoadBalancer, *elbv2.LoadBalancerOutput](),
 			"elbv2-target-group": makeResource[
 				elbv2.TargetGroup, *elbv2.TargetGroupOutput](),
+			"elbv2-target-group-attachment": makeResource[
+				elbv2.TargetGroupAttachment, *elbv2.TargetGroupAttachmentOutput](),
 			"elbv2-listener": makeResource[
 				elbv2.Listener, *elbv2.ListenerOutput](),
 			"elbv2-listener-rule": makeResource[

@@ -1,12 +1,12 @@
 factory: {
   description: '''>-
-    Manages an internal Application Load Balancer and its dependencies: a VPC with two
-    subnets and a security group, an HTTP target group, the load balancer across both
-    subnets, an HTTP listener that forwards to the target group, and a path-based listener
-    rule. Exercises subnet create and the load-balancing create, active wait, and follow-on
-    attribute, action, and tag reconcile across apply and destroy. The idle timeout, health
-    check path, and rule paths come from inputs so the update pass can change them in place
-    through the modify and attribute calls the create already exercises.
+    Manages an internal Application Load Balancer and its dependencies: a VPC with two subnets
+    and a security group, an HTTP IP target group with one registered target, the load balancer
+    across both subnets, an HTTP listener that forwards to the target group, and a path-based
+    listener rule. Exercises subnet create and the load-balancing create, active wait, and
+    follow-on attribute, action, target registration, and tag reconcile across apply and destroy.
+    The idle timeout, health check path, and rule paths come from inputs so the update pass can
+    change them in place through the modify and attribute calls the create already exercises.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -65,7 +65,7 @@ factory: {
     }
     elbv2-target-group-it: aws.elbv2-target-group {
       name:                          'unobin-it-alb-tg'
-      target-type:                   'instance'
+      target-type:                   'ip'
       port:                          80
       protocol:                      'HTTP'
       vpc-id:                        resource.ec2-vpc-it.vpc-id
@@ -81,6 +81,11 @@ factory: {
       matcher:                       { http-code: '200-299' }
       stickiness:                    { enabled: true, type: 'lb_cookie', cookie-duration: 600 }
       tags:                          { unobin: 'alb-it' }
+    }
+    elbv2-target-group-attachment-it: aws.elbv2-target-group-attachment {
+      target-group-arn: resource.elbv2-target-group-it.arn
+      target-id:        '10.20.1.50'
+      port:             8080
     }
     elbv2-load-balancer-it: aws.elbv2-load-balancer {
       name:                       'unobin-it-alb'
