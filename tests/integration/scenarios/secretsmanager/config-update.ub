@@ -1,8 +1,9 @@
 stack: {
   factory: {
     inputs: {
-      secret-value: 'rotated-secret'
-      description:  'unobin integration test secret (updated)'
+      secret-value:            'rotated-secret'
+      description:             'unobin integration test secret (updated)'
+      managed-version-stages:  ['']
     }
   }
 

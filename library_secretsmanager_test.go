@@ -15,12 +15,13 @@ import (
 )
 
 // TestLibraryRegistersSecretsmanager checks the runtime registration: the
-// Secrets Manager secret resource is present under Resources and dispatches to
-// its output type.
+// Secrets Manager resources are present under Resources and dispatch to their
+// output types.
 func TestLibraryRegistersSecretsmanager(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
-		"secretsmanager-secret": reflect.TypeFor[*secretsmanager.SecretOutput](),
+		"secretsmanager-secret":         reflect.TypeFor[*secretsmanager.SecretOutput](),
+		"secretsmanager-secret-version": reflect.TypeFor[*secretsmanager.SecretVersionOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -30,14 +31,37 @@ func TestLibraryRegistersSecretsmanager(t *testing.T) {
 	}
 }
 
-// TestSecretsmanagerSchemas asserts the whole derived TypeSchema for the Secrets
-// Manager secret: input and output field types (including the replica blocks and
-// the folded sensitive value), the value and recovery-window constraints the
-// Constraints method declares, and the optional defaults.
+// TestSecretsmanagerSchemas asserts the whole derived TypeSchema for the
+// Secrets Manager resources: input and output field types, sensitive payloads,
+// constraints, and optional defaults.
 func TestSecretsmanagerSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
+		"secretsmanager-secret-version": {
+			Inputs: map[string]typecheck.Type{
+				"secret-binary-content": typecheck.TOptional(typecheck.TString()),
+				"secret-id":             typecheck.TString(),
+				"secret-string":         typecheck.TOptional(typecheck.TString()),
+				"version-stages":        typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":            typecheck.TString(),
+				"secret-id":      typecheck.TString(),
+				"version-id":     typecheck.TString(),
+				"version-stages": typecheck.TList(typecheck.TString()),
+			},
+			SensitiveInputs: []string{"secret-binary-content", "secret-string"},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "at-most-one-of",
+					Fields: []string{
+						"var.secret-binary-content",
+						"var.secret-string",
+					},
+				},
+			},
+		},
 		"secretsmanager-secret": {
 			Inputs: map[string]typecheck.Type{
 				"description":                    typecheck.TOptional(typecheck.TString()),

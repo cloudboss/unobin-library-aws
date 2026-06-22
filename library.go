@@ -199,6 +199,8 @@ func Library() *runtime.Library {
 				ssm.Parameter, *ssm.ParameterOutput](),
 			"secretsmanager-secret": makeResource[
 				secretsmanager.Secret, *secretsmanager.SecretOutput](),
+			"secretsmanager-secret-version": makeResource[
+				secretsmanager.SecretVersion, *secretsmanager.SecretVersionOutput](),
 			"ecr-repository": makeResource[
 				ecr.Repository, *ecr.RepositoryOutput](),
 			"ecs-cluster": makeResource[ecs.Cluster, *ecs.ClusterOutput](),

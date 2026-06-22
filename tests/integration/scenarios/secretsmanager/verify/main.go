@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -19,8 +20,10 @@ import (
 )
 
 const (
-	secretName = "unobin-it-secret"
-	wantValue  = "initial-secret" // the value the first apply set
+	secretName          = "unobin-it-secret"
+	wantValue           = "initial-secret" // the value the first apply set
+	managedVersionValue = "managed-version-secret"
+	managedVersionStage = "AWSPENDING"
 )
 
 func main() {
@@ -58,8 +61,44 @@ func verifyApplied(ctx context.Context, client *secretsmanager.Client) error {
 	if got := aws.ToString(resp.SecretString); got != wantValue {
 		return fmt.Errorf("secret value is %q, want %q", got, wantValue)
 	}
-	fmt.Printf("ok: secret %s present with the value the first apply set\n", secretName)
+	if err := verifyManagedVersion(ctx, client); err != nil {
+		return err
+	}
+	fmt.Printf("ok: secret %s present with both expected values\n", secretName)
 	return nil
+}
+
+func verifyManagedVersion(ctx context.Context, client *secretsmanager.Client) error {
+	versions, err := client.ListSecretVersionIds(ctx,
+		&secretsmanager.ListSecretVersionIdsInput{
+			SecretId:          aws.String(secretName),
+			IncludeDeprecated: aws.Bool(true),
+		})
+	if err != nil {
+		return fmt.Errorf("list secret versions %s: %w", secretName, err)
+	}
+	for _, version := range versions.Versions {
+		if !hasStage(version.VersionStages, managedVersionStage) {
+			continue
+		}
+		value, err := client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+			SecretId:  aws.String(secretName),
+			VersionId: version.VersionId,
+		})
+		if err != nil {
+			return fmt.Errorf("get managed secret version: %w", err)
+		}
+		if got := aws.ToString(value.SecretString); got != managedVersionValue {
+			return fmt.Errorf("managed secret value is %q, want %q",
+				got, managedVersionValue)
+		}
+		return nil
+	}
+	return fmt.Errorf("secret version with stage %s not found", managedVersionStage)
+}
+
+func hasStage(stages []string, want string) bool {
+	return slices.Contains(stages, want)
 }
 
 func verifyDestroyed(ctx context.Context, client *secretsmanager.Client) error {

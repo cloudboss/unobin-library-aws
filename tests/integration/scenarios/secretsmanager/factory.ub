@@ -1,8 +1,9 @@
 factory: {
   description: '''>-
-    Manages a Secrets Manager secret whose string value and description come from inputs so the
-    update pass writes a new version through PutSecretValue and updates the description in place.
-    The recovery window is zero so destroy force-deletes the secret and a re-run can recreate it.
+    Manages a Secrets Manager secret whose string value and description come from inputs
+    so the update pass writes a new version through PutSecretValue and updates the
+    description in place. It also creates a separate labeled secret version. The recovery
+    window is zero so destroy force-deletes the secret and a re-run can recreate it.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -24,6 +25,11 @@ factory: {
       default:     'unobin integration test secret'
       description: 'Secret description; the update pass changes it'
     }
+    managed-version-stages: {
+      type:        list(string)
+      default:     ['', 'AWSPENDING', '']
+      description: 'Labels for the separate version; empty entries are ignored'
+    }
   }
 
   resources: {
@@ -34,10 +40,19 @@ factory: {
       recovery-window-in-days: 0
       tags:                    { unobin: 'secretsmanager-it' }
     }
+
+    secretsmanager-secret-version-it: aws.secretsmanager-secret-version {
+      secret-id:       resource.secretsmanager-secret-it.arn
+      secret-string:   'managed-version-secret'
+      version-stages:  var.managed-version-stages
+    }
   }
 
   outputs: {
     secret-arn:        { value: resource.secretsmanager-secret-it.arn }
     secret-version-id: { value: resource.secretsmanager-secret-it.version-id }
+    managed-secret-version-id: {
+      value: resource.secretsmanager-secret-version-it.version-id
+    }
   }
 }
