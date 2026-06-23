@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -28,12 +28,12 @@ factory: {
 
   resources: {
     s3-bucket-it: aws.s3-bucket {
-      bucket:           var.bucket
+      bucket:           input.bucket
       tags:             { unobin: 's3-it' }
       empty-on-destroy: true
       # The slot is itself optional, so the possibly-null input passes
       # through without a discharge.
-      versioning:       var.versioning
+      versioning:       input.versioning
       public-access-block: {
         block-public-acls:       true
         block-public-policy:     true
@@ -73,7 +73,7 @@ factory: {
     s3-object-it: aws.s3-object {
       bucket:           resource.s3-bucket-it.bucket
       key:              'hello.txt'
-      body-content:     var.object-body ?? 'hello from unobin'
+      body-content:     input.object-body ?? 'hello from unobin'
       content-type:     'text/plain'
       purge-on-destroy: true
     }

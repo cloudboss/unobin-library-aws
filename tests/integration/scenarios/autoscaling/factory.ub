@@ -13,7 +13,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -43,7 +43,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-ami-al2023: aws.ec2-ami {
       owners:      ['amazon']
       most-recent: true
@@ -54,7 +54,7 @@ factory: {
     }
   }
 
-  locals: { tags: { unobin: 'autoscaling-it', stage: var.stage ?? 'initial' } }
+  locals: { tags: { unobin: 'autoscaling-it', stage: input.stage ?? 'initial' } }
 
   resources: {
     ec2-vpc-it: aws.ec2-vpc {
@@ -63,14 +63,14 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.30.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              local.tags
     }
     ec2-launch-template-it: aws.ec2-launch-template {
       name: 'unobin-it-asg-lt'
       data: {
-        image-id:           data.ec2-ami-al2023.image-id
-        instance-type:      var.lt-instance-type
+        image-id:           data-source.ec2-ami-al2023.image-id
+        instance-type:      input.lt-instance-type
         metadata-options:   { http-tokens: 'required' }
         tag-specifications: [{ resource-type: 'instance', tags: { unobin: 'autoscaling-it' } }]
       }
@@ -79,8 +79,8 @@ factory: {
     autoscaling-group-it: aws.autoscaling-group {
       name:                'unobin-it-asg'
       min-size:            0
-      max-size:            var.max-size
-      desired-capacity:    var.desired-capacity
+      max-size:            input.max-size
+      desired-capacity:    input.desired-capacity
       vpc-zone-identifier: [resource.ec2-subnet-a.id]
       launch-template: {
         id:      resource.ec2-launch-template-it.launch-template-id
@@ -90,7 +90,7 @@ factory: {
       tags:              [{ key: 'unobin', value: 'autoscaling-it', propagate-at-launch: true }]
     }
     ec2-volume-it: aws.ec2-volume {
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       size:              1
       type:              'gp3'
       tags:              local.tags
@@ -101,19 +101,19 @@ factory: {
       policy-type:            'SimpleScaling'
       adjustment-type:        'ChangeInCapacity'
       scaling-adjustment:     1
-      cooldown:               var.policy-cooldown
+      cooldown:               input.policy-cooldown
     }
     autoscaling-lifecycle-hook-it: aws.autoscaling-lifecycle-hook {
       autoscaling-group-name: resource.autoscaling-group-it.name
       name:                   'unobin-it-drain'
       lifecycle-transition:   'autoscaling:EC2_INSTANCE_TERMINATING'
       default-result:         'CONTINUE'
-      heartbeat-timeout:      var.hook-timeout
+      heartbeat-timeout:      input.hook-timeout
     }
   }
 
   outputs: {
-    image-id:           { value: data.ec2-ami-al2023.image-id }
+    image-id:           { value: data-source.ec2-ami-al2023.image-id }
     launch-template-id: { value: resource.ec2-launch-template-it.launch-template-id }
     group-arn:          { value: resource.autoscaling-group-it.arn }
     volume-id:          { value: resource.ec2-volume-it.volume-id }

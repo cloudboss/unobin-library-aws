@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -29,8 +29,8 @@ factory: {
 
   resources: {
     route53-hosted-zone-it: aws.route53-hosted-zone {
-      name:          var.zone-name
-      comment:       var.comment
+      name:          input.zone-name
+      comment:       input.comment
       force-destroy: true
       tags:          { unobin: 'route53-it' }
     }
@@ -38,7 +38,7 @@ factory: {
       zone-id: resource.route53-hosted-zone-it.zone-id
       name:    'www'
       type:    'A'
-      records: [var.www-address]
+      records: [input.www-address]
       ttl:     300
     }
     route53-record-set-txt: aws.route53-record-set {
@@ -68,7 +68,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     route53-zone-by-name: aws.route53-zone {
       name: resource.route53-hosted-zone-it.name
       tags: { unobin: 'route53-it' }
@@ -82,9 +82,9 @@ factory: {
     zone-id:              { value: resource.route53-hosted-zone-it.zone-id }
     name-servers:         { value: resource.route53-hosted-zone-it.name-servers }
     www-fqdn:             { value: resource.route53-record-set-www.fqdn }
-    lookup-zone-id:       { value: data.route53-zone-by-name.zone-id }
-    lookup-zone-arn:      { value: data.route53-zone-by-name.arn }
-    lookup-primary-ns:    { value: data.route53-zone-by-name.primary-name-server }
-    lookup-zone-id-by-id: { value: data.route53-zone-by-id.zone-id }
+    lookup-zone-id:       { value: data-source.route53-zone-by-name.zone-id }
+    lookup-zone-arn:      { value: data-source.route53-zone-by-name.arn }
+    lookup-primary-ns:    { value: data-source.route53-zone-by-name.primary-name-server }
+    lookup-zone-id-by-id: { value: data-source.route53-zone-by-id.zone-id }
   }
 }

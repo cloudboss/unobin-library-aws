@@ -10,7 +10,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -28,7 +28,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -41,13 +41,13 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.30.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'nlb-it' }
     }
     ec2-subnet-b: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.30.2.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[1]
+      availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              { unobin: 'nlb-it' }
     }
     elbv2-target-group-it: aws.elbv2-target-group {
@@ -57,7 +57,7 @@ factory: {
       protocol:                'TCP'
       vpc-id:                  resource.ec2-vpc-it.vpc-id
       # The slot is optional, so the possibly-null input needs no discharge.
-      healthy-threshold-count: var.healthy-threshold
+      healthy-threshold-count: input.healthy-threshold
       tags:                    { unobin: 'nlb-it' }
     }
     elbv2-load-balancer-it: aws.elbv2-load-balancer {
@@ -65,7 +65,7 @@ factory: {
       internal:                         true
       load-balancer-type:               'network'
       subnets:                          [resource.ec2-subnet-a.id, resource.ec2-subnet-b.id]
-      enable-cross-zone-load-balancing: var.cross-zone
+      enable-cross-zone-load-balancing: input.cross-zone
       tags:                             { unobin: 'nlb-it' }
     }
     elbv2-listener-it: aws.elbv2-listener {

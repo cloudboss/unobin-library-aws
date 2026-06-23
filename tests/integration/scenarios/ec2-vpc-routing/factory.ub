@@ -12,7 +12,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -30,7 +30,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -44,8 +44,8 @@ factory: {
   }
 
   locals: {
-    tags: { unobin: 'vpc-routing-it', stage: var.stage ?? 'initial' }
-    endpoint-route-table-ids: if var.endpoint-on-public
+    tags: { unobin: 'vpc-routing-it', stage: input.stage ?? 'initial' }
+    endpoint-route-table-ids: if input.endpoint-on-public
       then [
         resource.ec2-route-table-private.route-table-id,
         resource.ec2-route-table-public.route-table-id,
@@ -60,13 +60,13 @@ factory: {
     ec2-subnet-public: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.62.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              local.tags
     }
     ec2-subnet-private: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.62.2.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[1]
+      availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              local.tags
     }
     ec2-internet-gateway-it: aws.ec2-internet-gateway {
@@ -75,11 +75,11 @@ factory: {
     }
     ec2-route-table-public: aws.ec2-route-table {
       vpc-id: resource.ec2-vpc-it.vpc-id
-      tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: var.stage ?? 'initial' }
+      tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: input.stage ?? 'initial' }
     }
     ec2-route-table-private: aws.ec2-route-table {
       vpc-id: resource.ec2-vpc-it.vpc-id
-      tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: var.stage ?? 'initial' }
+      tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: input.stage ?? 'initial' }
     }
     ec2-route-public-default: aws.ec2-route {
       route-table-id:         resource.ec2-route-table-public.route-table-id
@@ -125,7 +125,7 @@ factory: {
     eip-public-ip:          { value: resource.ec2-eip-nat.public-ip }
     nat-gateway-id:         { value: resource.ec2-nat-gateway-it.nat-gateway-id }
     vpc-endpoint-id:        { value: resource.ec2-vpc-endpoint-s3.vpc-endpoint-id }
-    subnet-ids-by-lookup:   { value: data.ec2-subnets-it.ids }
-    empty-subnet-ids:       { value: data.ec2-subnets-empty.ids }
+    subnet-ids-by-lookup:   { value: data-source.ec2-subnets-it.ids }
+    empty-subnet-ids:       { value: data-source.ec2-subnets-empty.ids }
   }
 }

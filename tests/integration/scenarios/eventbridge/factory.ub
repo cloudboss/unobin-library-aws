@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -52,9 +52,9 @@ factory: {
     }
     eventbridge-rule-it: aws.eventbridge-rule {
       name:                'unobin-it-rule'
-      schedule-expression: var.schedule
+      schedule-expression: input.schedule
       description:         'unobin eventbridge integration test rule'
-      state:               var.rule-state
+      state:               input.rule-state
       tags:                { unobin: 'eventbridge-it' }
     }
     eventbridge-target-it: aws.eventbridge-target {

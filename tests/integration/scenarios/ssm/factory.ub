@@ -7,7 +7,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -30,8 +30,8 @@ factory: {
     ssm-parameter-it: aws.ssm-parameter {
       name:        '/unobin/it/string'
       type:        'String'
-      value:       var.value
-      description: var.description
+      value:       input.value
+      description: input.description
       tier:        'Standard'
       tags:        { unobin: 'ssm-it' }
     }

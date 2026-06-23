@@ -11,7 +11,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -33,7 +33,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -46,13 +46,13 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.61.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'rds-it' }
     }
     ec2-subnet-b: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.61.2.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[1]
+      availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              { unobin: 'rds-it' }
     }
     rds-subnet-group-it: aws.rds-subnet-group {
@@ -65,7 +65,7 @@ factory: {
       name:        'unobin-it-rds-pg'
       family:      'postgres16'
       description: 'unobin rds integration test parameter group'
-      parameters:  var.instance-parameters
+      parameters:  input.instance-parameters
       tags:        { unobin: 'rds-it' }
     }
     rds-cluster-parameter-group-it: aws.rds-cluster-parameter-group {
@@ -81,7 +81,7 @@ factory: {
       master-username:      'unobin'
       master-password:      'unobin-it-password-1'
       db-subnet-group-name: resource.rds-subnet-group-it.name
-      serverlessv2-scaling: { min-capacity: 0.5, max-capacity: var.aurora-max-capacity }
+      serverlessv2-scaling: { min-capacity: 0.5, max-capacity: input.aurora-max-capacity }
       skip-final-snapshot:  true
       tags:                 { unobin: 'rds-it' }
     }
@@ -101,7 +101,7 @@ factory: {
       password:                'unobin-it-password-1'
       db-subnet-group-name:    resource.rds-subnet-group-it.name
       # The slot is optional, so the possibly-null input needs no discharge.
-      backup-retention-period: var.backup-retention
+      backup-retention-period: input.backup-retention
       skip-final-snapshot:     true
       tags:                    { unobin: 'rds-it' }
     }

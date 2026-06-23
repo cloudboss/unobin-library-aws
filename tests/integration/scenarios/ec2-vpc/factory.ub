@@ -19,22 +19,22 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   constraints: [
     # The null test in when narrows what require reads; the optional `to`
     # needs its own test, which narrows the comparison after the ||.
     {
       kind:    predicate
-      when:    var.ssh-port != null
-      require: var.ssh-port.to == null || var.ssh-port.from <= var.ssh-port.to
+      when:    input.ssh-port != null
+      require: input.ssh-port.to == null || input.ssh-port.from <= input.ssh-port.to
       message: 'ssh-port from must not exceed to'
     },
   ]
 
   resources: {
     ec2-vpc-it: aws.ec2-vpc {
-      cidr-block: var.cidr-block
+      cidr-block: input.cidr-block
     }
     ec2-security-group-it: aws.ec2-security-group {
       name:        'unobin-it-sg'
@@ -46,9 +46,9 @@ factory: {
       security-group-id: resource.ec2-security-group-it.id
       ip-protocol:       'tcp'
       # Each nullable level wears its own marker; ?? ends the chain.
-      from-port:         var.ssh-port?.from ?? 22
-      to-port:           var.ssh-port?.to ?? var.ssh-port?.from ?? 22
-      cidr-ipv4:         var.cidr-block
+      from-port:         input.ssh-port?.from ?? 22
+      to-port:           input.ssh-port?.to ?? input.ssh-port?.from ?? 22
+      cidr-ipv4:         input.cidr-block
       description:       'ssh from the vpc'
     }
     ec2-security-group-egress-rule-it: aws.ec2-security-group-egress-rule {

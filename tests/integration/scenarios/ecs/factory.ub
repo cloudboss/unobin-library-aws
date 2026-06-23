@@ -10,7 +10,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -34,7 +34,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -47,12 +47,12 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.64.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'ecs-it' }
     }
     ecr-repository-repo: aws.ecr-repository {
       name:         'unobin-it-ecs'
-      scan-on-push: var.scan-on-push
+      scan-on-push: input.scan-on-push
       lifecycle-policy: '''\-
         {"rules":[{"rulePriority":1,"description":"expire untagged images","selection":{"tagStatus":
         "untagged","countType":"imageCountMoreThan","countNumber":5},"action":{"type":"expire"}}]}
@@ -63,7 +63,7 @@ factory: {
       name:               'unobin-it-ecs'
       capacity-providers: ['FARGATE', 'FARGATE_SPOT']
       default-capacity-provider-strategy: [
-        { capacity-provider: 'FARGATE', weight: var.fargate-weight },
+        { capacity-provider: 'FARGATE', weight: input.fargate-weight },
       ]
       tags: { unobin: 'ecs-it' }
     }
@@ -100,7 +100,7 @@ factory: {
       task-definition:          resource.ecs-task-definition-it.arn
       desired-count:            0
       network-configuration:    { subnets: [resource.ec2-subnet-a.id] }
-      deployment-configuration: { maximum-percent: var.maximum-percent }
+      deployment-configuration: { maximum-percent: input.maximum-percent }
       tags:                     { unobin: 'ecs-it' }
     }
   }

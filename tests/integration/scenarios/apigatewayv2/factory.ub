@@ -10,7 +10,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -63,7 +63,7 @@ factory: {
     apigatewayv2-api-it: aws.apigatewayv2-api {
       name:               'unobin-it-apigatewayv2'
       protocol-type:      'HTTP'
-      description:        var.api-description
+      description:        input.api-description
       cors-configuration: { allow-origins: ['*'], allow-methods: ['GET'] }
       tags:               { unobin: 'apigatewayv2-it' }
     }
@@ -72,19 +72,19 @@ factory: {
       integration-type:       'AWS_PROXY'
       integration-uri:        resource.lambda-function-fn.arn
       payload-format-version: '2.0'
-      timeout-in-millis:      var.integration-timeout
+      timeout-in-millis:      input.integration-timeout
     }
     apigatewayv2-route-it: aws.apigatewayv2-route {
       api-id:         resource.apigatewayv2-api-it.api-id
       route-key:      'GET /hello'
-      operation-name: var.operation-name
+      operation-name: input.operation-name
       target:         $'''integrations/{{ resource.apigatewayv2-integration-it.integration-id }}'''
     }
     apigatewayv2-stage-it: aws.apigatewayv2-stage {
       api-id:          resource.apigatewayv2-api-it.api-id
       name:            '$default'
       auto-deploy:     true
-      stage-variables: { GREETING: var.stage-greeting }
+      stage-variables: { GREETING: input.stage-greeting }
       tags:            { unobin: 'apigatewayv2-it' }
     }
     lambda-permission-apigw: aws.lambda-permission {
@@ -96,7 +96,7 @@ factory: {
     lambda-function-url-it: aws.lambda-function-url {
       function-name: resource.lambda-function-fn.function-name
       auth-type:     'NONE'
-      cors:          { allow-origins: ['*'], max-age: var.url-max-age }
+      cors:          { allow-origins: ['*'], max-age: input.url-max-age }
     }
     lambda-permission-url: aws.lambda-permission {
       function-name:          resource.lambda-function-fn.function-name

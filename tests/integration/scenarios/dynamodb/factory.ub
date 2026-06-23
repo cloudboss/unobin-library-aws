@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -22,7 +22,7 @@ factory: {
     }
   }
 
-  locals: { tags: { unobin: 'dynamodb-it', stage: var.stage } }
+  locals: { tags: { unobin: 'dynamodb-it', stage: input.stage } }
 
   resources: {
     dynamodb-table-it: aws.dynamodb-table {

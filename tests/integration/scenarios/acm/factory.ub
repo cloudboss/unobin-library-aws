@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -31,8 +31,8 @@ factory: {
       domain-name:               'unobin-it.example.com'
       validation-method:         'DNS'
       subject-alternative-names: ['www.unobin-it.example.com']
-      options:                   { certificate-transparency-logging-preference: var.transparency }
-      tags:                      var.tags ?? { unobin: 'acm-it' }
+      options:                   { certificate-transparency-logging-preference: input.transparency }
+      tags:                      input.tags ?? { unobin: 'acm-it' }
     }
   }
 

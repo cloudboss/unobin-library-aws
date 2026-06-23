@@ -11,7 +11,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -35,7 +35,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -48,13 +48,13 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.20.1.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[0]
+      availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'alb-it' }
     }
     ec2-subnet-b: aws.ec2-subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.20.2.0/24'
-      availability-zone: data.ec2-availability-zones-available.names[1]
+      availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              { unobin: 'alb-it' }
     }
     ec2-security-group-it: aws.ec2-security-group {
@@ -72,7 +72,7 @@ factory: {
       deregistration-delay:          120
       health-check-enabled:          true
       health-check-protocol:         'HTTP'
-      health-check-path:             var.health-check-path
+      health-check-path:             input.health-check-path
       health-check-port:             'traffic-port'
       health-check-interval-seconds: 15
       health-check-timeout-seconds:  5
@@ -93,7 +93,7 @@ factory: {
       load-balancer-type:         'application'
       security-groups:            [resource.ec2-security-group-it.id]
       subnets:                    [resource.ec2-subnet-a.id, resource.ec2-subnet-b.id]
-      idle-timeout:               var.idle-timeout
+      idle-timeout:               input.idle-timeout
       enable-deletion-protection: false
       enable-http2:               true
       tags:                       { unobin: 'alb-it' }
@@ -109,7 +109,7 @@ factory: {
       listener-arn: resource.elbv2-listener-it.arn
       priority:     100
       actions:      [{ type: 'forward', target-group-arn: resource.elbv2-target-group-it.arn }]
-      conditions:   [{ path-pattern: { values: var.rule-paths } }]
+      conditions:   [{ path-pattern: { values: input.rule-paths } }]
       tags:         { unobin: 'alb-it' }
     }
   }

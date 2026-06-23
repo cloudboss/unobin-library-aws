@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -33,14 +33,14 @@ factory: {
   locals: {
     # The description input has no default, so the null test supplies the
     # fallback and narrows the else branch to a plain string.
-    description: if var.description == null then 'unobin integration test key' else var.description
+    description: if input.description == null then 'unobin integration test key' else input.description
   }
 
   resources: {
     kms-key-it: aws.kms-key {
       description:         local.description
-      enable-key-rotation: var.rotation-enabled
-      tags:                var.tags ?? { unobin: 'kms-it' }
+      enable-key-rotation: input.rotation-enabled
+      tags:                input.tags ?? { unobin: 'kms-it' }
     }
     kms-alias-it: aws.kms-alias {
       alias-name:    'alias/unobin-it-key'

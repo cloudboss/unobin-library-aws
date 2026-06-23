@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -29,7 +29,7 @@ factory: {
     }
     sqs-queue-it: aws.sqs-queue {
       name:                     'unobin-it-sqs'
-      visibility-timeout:       var.visibility-timeout
+      visibility-timeout:       input.visibility-timeout
       message-retention-period: 86400
       redrive-policy: $'''\-
         {"deadLetterTargetArn":"{{ resource.sqs-queue-dlq.arn }}","maxReceiveCount":5}

@@ -7,7 +7,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -54,9 +54,9 @@ factory: {
       runtime:       'python3.12'
       handler:       'index.handler'
       code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
-      memory-size:   var.memory-size
-      timeout:       var.timeout
-      environment:   { variables: { GREETING: var.greeting } }
+      memory-size:   input.memory-size
+      timeout:       input.timeout
+      environment:   { variables: { GREETING: input.greeting } }
       tags:          { unobin: 'lambda-it' }
     }
     lambda-permission-it: aws.lambda-permission {
@@ -72,7 +72,7 @@ factory: {
     lambda-event-source-mapping-it: aws.lambda-event-source-mapping {
       function-name:                      resource.lambda-function-it.function-name
       event-source-arn:                   resource.sqs-queue-events.arn
-      batch-size:                         var.batch-size
+      batch-size:                         input.batch-size
       # An SQS source allows a batch size over 10 only with a batching window
       # over zero, which the update pass needs when it raises the batch size.
       maximum-batching-window-in-seconds: 5

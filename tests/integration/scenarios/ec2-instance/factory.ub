@@ -12,7 +12,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -30,7 +30,7 @@ factory: {
     }
   }
 
-  data: {
+  data-sources: {
     ec2-ami-al2023: aws.ec2-ami {
       owners:      ['amazon']
       most-recent: true
@@ -42,7 +42,7 @@ factory: {
     sts-caller-identity-it: aws.sts-caller-identity {}
   }
 
-  locals: { tags: { unobin: 'instance-it', stage: var.stage ?? 'initial' } }
+  locals: { tags: { unobin: 'instance-it', stage: input.stage ?? 'initial' } }
 
   resources: {
     ec2-vpc-it: aws.ec2-vpc {
@@ -51,7 +51,7 @@ factory: {
     ec2-subnet-a: aws.ec2-subnet {
       vpc-id:               resource.ec2-vpc-it.vpc-id
       cidr-block:           '10.63.1.0/24'
-      availability-zone-id: data.ec2-availability-zones-available.zone-ids[0]
+      availability-zone-id: data-source.ec2-availability-zones-available.zone-ids[0]
       tags:                 local.tags
     }
     ec2-security-group-it: aws.ec2-security-group {
@@ -68,14 +68,14 @@ factory: {
       tags: local.tags
     }
     ec2-instance-it: aws.ec2-instance {
-      ami:                    data.ec2-ami-al2023.image-id
-      instance-type:          var.instance-type
+      ami:                    data-source.ec2-ami-al2023.image-id
+      instance-type:          input.instance-type
       subnet-id:              resource.ec2-subnet-a.id
       vpc-security-group-ids: [resource.ec2-security-group-it.id]
       key-name:               resource.ec2-key-pair-it.key-name
       user-data:              'echo unobin'
       # The slot is optional, so the possibly-null input needs no discharge.
-      source-dest-check:      var.source-dest-check
+      source-dest-check:      input.source-dest-check
       root-block-device:      { volume-size: 8, volume-type: 'gp3' }
       metadata-options:       { http-tokens: 'required' }
       tags:                   local.tags
@@ -87,8 +87,8 @@ factory: {
     instance-state: { value: resource.ec2-instance-it.instance-state }
     private-ip:     { value: resource.ec2-instance-it.private-ip }
     key-pair-id:    { value: resource.ec2-key-pair-it.key-pair-id }
-    account:        { value: data.sts-caller-identity-it.account }
-    zone-ids:       { value: data.ec2-availability-zones-available.zone-ids }
-    zone-names:     { value: data.ec2-availability-zones-available.names }
+    account:        { value: data-source.sts-caller-identity-it.account }
+    zone-ids:       { value: data-source.ec2-availability-zones-available.zone-ids }
+    zone-names:     { value: data-source.ec2-availability-zones-available.names }
   }
 }

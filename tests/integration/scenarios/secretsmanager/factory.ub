@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -35,8 +35,8 @@ factory: {
   resources: {
     secretsmanager-secret-it: aws.secretsmanager-secret {
       name:                    'unobin-it-secret'
-      description:             var.description
-      secret-string:           var.secret-value
+      description:             input.description
+      secret-string:           input.secret-value
       recovery-window-in-days: 0
       tags:                    { unobin: 'secretsmanager-it' }
     }
@@ -44,7 +44,7 @@ factory: {
     secretsmanager-secret-version-it: aws.secretsmanager-secret-version {
       secret-id:       resource.secretsmanager-secret-it.arn
       secret-string:   'managed-version-secret'
-      version-stages:  var.managed-version-stages
+      version-stages:  input.managed-version-stages
     }
   }
 

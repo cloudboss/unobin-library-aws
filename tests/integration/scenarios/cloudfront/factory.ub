@@ -10,7 +10,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -52,7 +52,7 @@ factory: {
     }
     cloudfront-distribution-it: aws.cloudfront-distribution {
       enabled:             true
-      comment:             var.comment
+      comment:             input.comment
       default-root-object: 'index.html'
       price-class:         'PriceClass_100'
       origins: [

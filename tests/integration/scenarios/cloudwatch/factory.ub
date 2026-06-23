@@ -8,7 +8,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -32,7 +32,7 @@ factory: {
       namespace:           'AWS/EC2'
       period:              300
       statistic:           'Average'
-      threshold:           var.threshold
+      threshold:           input.threshold
       treat-missing-data:  'missing'
       dimensions:          { InstanceId: 'i-0123456789abcdef0' }
       tags:                { unobin: 'cloudwatch-it' }

@@ -7,7 +7,7 @@ factory: {
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
 
-  library-configs: { aws: var.aws-config }
+  library-configs: { aws: input.aws-config }
 
   inputs: {
     aws-config: {
@@ -34,15 +34,15 @@ factory: {
 
   resources: {
     cloudwatchlogs-log-group-it: aws.cloudwatchlogs-log-group {
-      name:              var.name
-      retention-in-days: var.retention
+      name:              input.name
+      retention-in-days: input.retention
       log-group-class:   'STANDARD'
       tags:              { unobin: 'cloudwatchlogs-it' }
     }
     cloudwatchlogs-metric-filter-it: aws.cloudwatchlogs-metric-filter {
       filter-name:    'unobin-it-metric-filter'
       log-group-name: resource.cloudwatchlogs-log-group-it.name
-      filter-pattern: var.metric-filter-pattern
+      filter-pattern: input.metric-filter-pattern
       metric-transformation: {
         metric-name:      'UnobinMetricFilterCount'
         metric-namespace: 'Unobin/Integration'
@@ -85,7 +85,7 @@ factory: {
       destination-arn: resource.lambda-function-subscription-sink.arn
       log-group-name:  resource.cloudwatchlogs-log-group-it.name
       name:            'unobin-it-subscription-filter'
-      filter-pattern:  var.filter-pattern
+      filter-pattern:  input.filter-pattern
     }
   }
 
