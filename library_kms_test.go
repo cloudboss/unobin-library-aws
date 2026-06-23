@@ -60,44 +60,44 @@ func TestKmsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.xks-key-id", "var.custom-key-store-id"},
+					Fields: []string{"input.xks-key-id", "input.custom-key-store-id"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.key-spec != null)",
-					Require: "(var.key-spec == 'SYMMETRIC_DEFAULT' || var.key-spec == 'RSA_2048' || " +
-						"var.key-spec == 'RSA_3072' || var.key-spec == 'RSA_4096' || " +
-						"var.key-spec == 'ECC_NIST_P256' || var.key-spec == 'ECC_NIST_P384' || " +
-						"var.key-spec == 'ECC_NIST_P521' || var.key-spec == 'ECC_SECG_P256K1' || " +
-						"var.key-spec == 'ECC_NIST_EDWARDS25519' || var.key-spec == 'HMAC_224' || " +
-						"var.key-spec == 'HMAC_256' || var.key-spec == 'HMAC_384' || " +
-						"var.key-spec == 'HMAC_512' || var.key-spec == 'ML_DSA_44' || " +
-						"var.key-spec == 'ML_DSA_65' || var.key-spec == 'ML_DSA_87' || " +
-						"var.key-spec == 'SM2')",
+					When: "(input.key-spec != null)",
+					Require: "(input.key-spec == 'SYMMETRIC_DEFAULT' || input.key-spec == 'RSA_2048' || " +
+						"input.key-spec == 'RSA_3072' || input.key-spec == 'RSA_4096' || " +
+						"input.key-spec == 'ECC_NIST_P256' || input.key-spec == 'ECC_NIST_P384' || " +
+						"input.key-spec == 'ECC_NIST_P521' || input.key-spec == 'ECC_SECG_P256K1' || " +
+						"input.key-spec == 'ECC_NIST_EDWARDS25519' || input.key-spec == 'HMAC_224' || " +
+						"input.key-spec == 'HMAC_256' || input.key-spec == 'HMAC_384' || " +
+						"input.key-spec == 'HMAC_512' || input.key-spec == 'ML_DSA_44' || " +
+						"input.key-spec == 'ML_DSA_65' || input.key-spec == 'ML_DSA_87' || " +
+						"input.key-spec == 'SM2')",
 					Message: "key-spec must be a valid KMS key spec",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.key-usage != null)",
-					Require: "(var.key-usage == 'ENCRYPT_DECRYPT' || var.key-usage == 'SIGN_VERIFY' || " +
-						"var.key-usage == 'GENERATE_VERIFY_MAC' || var.key-usage == 'KEY_AGREEMENT')",
+					When: "(input.key-usage != null)",
+					Require: "(input.key-usage == 'ENCRYPT_DECRYPT' || input.key-usage == 'SIGN_VERIFY' || " +
+						"input.key-usage == 'GENERATE_VERIFY_MAC' || input.key-usage == 'KEY_AGREEMENT')",
 					Message: "key-usage must be a valid KMS key usage",
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.rotation-period-in-days", "var.enable-key-rotation"},
+					Fields: []string{"input.rotation-period-in-days", "input.enable-key-rotation"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.rotation-period-in-days != null)",
-					Require: "(var.rotation-period-in-days == null || " +
-						"var.rotation-period-in-days >= 90) && " +
-						"(var.rotation-period-in-days == null || var.rotation-period-in-days <= 2560)",
+					When: "(input.rotation-period-in-days != null)",
+					Require: "(input.rotation-period-in-days == null || " +
+						"input.rotation-period-in-days >= 90) && " +
+						"(input.rotation-period-in-days == null || input.rotation-period-in-days <= 2560)",
 					Message: "rotation-period-in-days must be between 90 and 2560",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"kms-alias": {

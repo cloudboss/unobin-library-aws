@@ -60,14 +60,14 @@ func TestIamSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.max-session-duration != null)",
-					Require: "(var.max-session-duration == null || var.max-session-duration >= 3600) && " +
-						"(var.max-session-duration == null || var.max-session-duration <= 43200)",
+					When: "(input.max-session-duration != null)",
+					Require: "(input.max-session-duration == null || input.max-session-duration >= 3600) && " +
+						"(input.max-session-duration == null || input.max-session-duration <= 43200)",
 					Message: "max-session-duration must be between 3600 and 43200 seconds",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-policy": {
@@ -86,7 +86,7 @@ func TestIamSchemas(t *testing.T) {
 				"create-date":        typecheck.TString(),
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-instance-profile": {
@@ -102,7 +102,7 @@ func TestIamSchemas(t *testing.T) {
 				"create-date":         typecheck.TString(),
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-openid-connect-provider": {
@@ -118,9 +118,9 @@ func TestIamSchemas(t *testing.T) {
 				"thumbprint-list": typecheck.TList(typecheck.TString()),
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.client-id-list", Optional: true},
-				{Field: "var.thumbprint-list", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.client-id-list", Optional: true},
+				{Field: "input.thumbprint-list", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-role-policy-attachment": {
@@ -183,7 +183,7 @@ func TestIamOpenIDConnectProviderDataSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:   "exactly-one-of",
-				Fields: []string{"var.arn", "var.url"},
+				Fields: []string{"input.arn", "input.url"},
 			},
 		},
 	}

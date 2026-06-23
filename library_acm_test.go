@@ -80,87 +80,87 @@ func TestAcmSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.domain-name", "var.private-key"},
+					Fields: []string{"input.domain-name", "input.private-key"},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.private-key",
-						"var.domain-name",
-						"var.certificate-authority-arn",
-						"var.key-algorithm",
-						"var.subject-alternative-names",
-						"var.validation-method",
-						"var.validation-option",
-						"var.options",
+						"input.private-key",
+						"input.domain-name",
+						"input.certificate-authority-arn",
+						"input.key-algorithm",
+						"input.subject-alternative-names",
+						"input.validation-method",
+						"input.validation-option",
+						"input.options",
 					},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.domain-name",
-						"var.certificate-body",
-						"var.private-key",
-						"var.certificate-chain",
+						"input.domain-name",
+						"input.certificate-body",
+						"input.private-key",
+						"input.certificate-chain",
 					},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.certificate-body", "var.private-key"},
+					Fields: []string{"input.certificate-body", "input.private-key"},
 				},
 				{
 					Kind:   "forbidden-with",
-					Fields: []string{"var.certificate-authority-arn", "var.validation-method"},
+					Fields: []string{"input.certificate-authority-arn", "input.validation-method"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.domain-name != null)",
-					Require: "((var.certificate-authority-arn != null) || " +
-						"(var.validation-method != null))",
+					When: "(input.domain-name != null)",
+					Require: "((input.certificate-authority-arn != null) || " +
+						"(input.validation-method != null))",
 					Message: "a domain-name request requires certificate-authority-arn or " +
 						"validation-method",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.validation-method != null)",
-					Require: "(var.validation-method == 'DNS' || " +
-						"var.validation-method == 'EMAIL')",
+					When: "(input.validation-method != null)",
+					Require: "(input.validation-method == 'DNS' || " +
+						"input.validation-method == 'EMAIL')",
 					Message: "validation-method must be DNS or EMAIL",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.key-algorithm != null)",
-					Require: "(var.key-algorithm == 'RSA_1024' || " +
-						"var.key-algorithm == 'RSA_2048' || " +
-						"var.key-algorithm == 'RSA_3072' || " +
-						"var.key-algorithm == 'RSA_4096' || " +
-						"var.key-algorithm == 'EC_prime256v1' || " +
-						"var.key-algorithm == 'EC_secp384r1' || " +
-						"var.key-algorithm == 'EC_secp521r1')",
+					When: "(input.key-algorithm != null)",
+					Require: "(input.key-algorithm == 'RSA_1024' || " +
+						"input.key-algorithm == 'RSA_2048' || " +
+						"input.key-algorithm == 'RSA_3072' || " +
+						"input.key-algorithm == 'RSA_4096' || " +
+						"input.key-algorithm == 'EC_prime256v1' || " +
+						"input.key-algorithm == 'EC_secp384r1' || " +
+						"input.key-algorithm == 'EC_secp521r1')",
 					Message: "key-algorithm must be a valid ACM key algorithm",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.options.certificate-transparency-logging-preference != null)",
-					Require: "(var.options.certificate-transparency-logging-preference == " +
+					When: "(input.options.certificate-transparency-logging-preference != null)",
+					Require: "(input.options.certificate-transparency-logging-preference == " +
 						"'ENABLED' || " +
-						"var.options.certificate-transparency-logging-preference == " +
+						"input.options.certificate-transparency-logging-preference == " +
 						"'DISABLED')",
 					Message: "options certificate-transparency-logging-preference must be " +
 						"ENABLED or DISABLED",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.options.export != null)",
-					Require: "(var.options.export == 'ENABLED' || " +
-						"var.options.export == 'DISABLED')",
+					When: "(input.options.export != null)",
+					Require: "(input.options.export == 'ENABLED' || " +
+						"input.options.export == 'DISABLED')",
 					Message: "options export must be ENABLED or DISABLED",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.subject-alternative-names", Optional: true},
-				{Field: "var.validation-option", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.subject-alternative-names", Optional: true},
+				{Field: "input.validation-option", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"acm-certificate-validation": {
@@ -172,7 +172,7 @@ func TestAcmSchemas(t *testing.T) {
 				"certificate-arn": typecheck.TString(),
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.validation-record-fqdns", Optional: true},
+				{Field: "input.validation-record-fqdns", Optional: true},
 			},
 		},
 	}

@@ -54,43 +54,43 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.retention-in-days != null)",
-					Require: "(var.retention-in-days == 0 || " +
-						"var.retention-in-days == 1 || " +
-						"var.retention-in-days == 3 || " +
-						"var.retention-in-days == 5 || " +
-						"var.retention-in-days == 7 || " +
-						"var.retention-in-days == 14 || " +
-						"var.retention-in-days == 30 || " +
-						"var.retention-in-days == 60 || " +
-						"var.retention-in-days == 90 || " +
-						"var.retention-in-days == 120 || " +
-						"var.retention-in-days == 150 || " +
-						"var.retention-in-days == 180 || " +
-						"var.retention-in-days == 365 || " +
-						"var.retention-in-days == 400 || " +
-						"var.retention-in-days == 545 || " +
-						"var.retention-in-days == 731 || " +
-						"var.retention-in-days == 1096 || " +
-						"var.retention-in-days == 1827 || " +
-						"var.retention-in-days == 2192 || " +
-						"var.retention-in-days == 2557 || " +
-						"var.retention-in-days == 2922 || " +
-						"var.retention-in-days == 3288 || " +
-						"var.retention-in-days == 3653)",
+					When: "(input.retention-in-days != null)",
+					Require: "(input.retention-in-days == 0 || " +
+						"input.retention-in-days == 1 || " +
+						"input.retention-in-days == 3 || " +
+						"input.retention-in-days == 5 || " +
+						"input.retention-in-days == 7 || " +
+						"input.retention-in-days == 14 || " +
+						"input.retention-in-days == 30 || " +
+						"input.retention-in-days == 60 || " +
+						"input.retention-in-days == 90 || " +
+						"input.retention-in-days == 120 || " +
+						"input.retention-in-days == 150 || " +
+						"input.retention-in-days == 180 || " +
+						"input.retention-in-days == 365 || " +
+						"input.retention-in-days == 400 || " +
+						"input.retention-in-days == 545 || " +
+						"input.retention-in-days == 731 || " +
+						"input.retention-in-days == 1096 || " +
+						"input.retention-in-days == 1827 || " +
+						"input.retention-in-days == 2192 || " +
+						"input.retention-in-days == 2557 || " +
+						"input.retention-in-days == 2922 || " +
+						"input.retention-in-days == 3288 || " +
+						"input.retention-in-days == 3653)",
 					Message: "retention-in-days must be a valid CloudWatch Logs retention value",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.log-group-class != null)",
-					Require: "(var.log-group-class == 'STANDARD' || " +
-						"var.log-group-class == 'INFREQUENT_ACCESS' || " +
-						"var.log-group-class == 'DELIVERY')",
+					When: "(input.log-group-class != null)",
+					Require: "(input.log-group-class == 'STANDARD' || " +
+						"input.log-group-class == 'INFREQUENT_ACCESS' || " +
+						"input.log-group-class == 'DELIVERY')",
 					Message: "log-group-class must be STANDARD, INFREQUENT_ACCESS, or DELIVERY",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"cloudwatchlogs-subscription-filter": {
@@ -114,8 +114,8 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:    "predicate",
-					When:    "(var.distribution != null)",
-					Require: "(var.distribution == 'ByLogStream' || var.distribution == 'Random')",
+					When:    "(input.distribution != null)",
+					Require: "(input.distribution == 'ByLogStream' || input.distribution == 'Random')",
 					Message: "distribution must be ByLogStream or Random",
 				},
 				{
@@ -124,12 +124,12 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 					Require: "(@each.value == '@aws.account' || " +
 						"@each.value == '@aws.region')",
 					Message: "emit-system-fields entries must be @aws.account or @aws.region",
-					ForEach: "var.emit-system-fields",
+					ForEach: "input.emit-system-fields",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.distribution", Value: "'ByLogStream'"},
-				{Field: "var.emit-system-fields", Optional: true},
+				{Field: "input.distribution", Value: "'ByLogStream'"},
+				{Field: "input.emit-system-fields", Optional: true},
 			},
 		},
 		"cloudwatchlogs-metric-filter": {
@@ -164,34 +164,34 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.metric-transformation.unit != null)",
-					Require: "(var.metric-transformation.unit == 'Seconds' || " +
-						"var.metric-transformation.unit == 'Microseconds' || " +
-						"var.metric-transformation.unit == 'Milliseconds' || " +
-						"var.metric-transformation.unit == 'Bytes' || " +
-						"var.metric-transformation.unit == 'Kilobytes' || " +
-						"var.metric-transformation.unit == 'Megabytes' || " +
-						"var.metric-transformation.unit == 'Gigabytes' || " +
-						"var.metric-transformation.unit == 'Terabytes' || " +
-						"var.metric-transformation.unit == 'Bits' || " +
-						"var.metric-transformation.unit == 'Kilobits' || " +
-						"var.metric-transformation.unit == 'Megabits' || " +
-						"var.metric-transformation.unit == 'Gigabits' || " +
-						"var.metric-transformation.unit == 'Terabits' || " +
-						"var.metric-transformation.unit == 'Percent' || " +
-						"var.metric-transformation.unit == 'Count' || " +
-						"var.metric-transformation.unit == 'Bytes/Second' || " +
-						"var.metric-transformation.unit == 'Kilobytes/Second' || " +
-						"var.metric-transformation.unit == 'Megabytes/Second' || " +
-						"var.metric-transformation.unit == 'Gigabytes/Second' || " +
-						"var.metric-transformation.unit == 'Terabytes/Second' || " +
-						"var.metric-transformation.unit == 'Bits/Second' || " +
-						"var.metric-transformation.unit == 'Kilobits/Second' || " +
-						"var.metric-transformation.unit == 'Megabits/Second' || " +
-						"var.metric-transformation.unit == 'Gigabits/Second' || " +
-						"var.metric-transformation.unit == 'Terabits/Second' || " +
-						"var.metric-transformation.unit == 'Count/Second' || " +
-						"var.metric-transformation.unit == 'None')",
+					When: "(input.metric-transformation.unit != null)",
+					Require: "(input.metric-transformation.unit == 'Seconds' || " +
+						"input.metric-transformation.unit == 'Microseconds' || " +
+						"input.metric-transformation.unit == 'Milliseconds' || " +
+						"input.metric-transformation.unit == 'Bytes' || " +
+						"input.metric-transformation.unit == 'Kilobytes' || " +
+						"input.metric-transformation.unit == 'Megabytes' || " +
+						"input.metric-transformation.unit == 'Gigabytes' || " +
+						"input.metric-transformation.unit == 'Terabytes' || " +
+						"input.metric-transformation.unit == 'Bits' || " +
+						"input.metric-transformation.unit == 'Kilobits' || " +
+						"input.metric-transformation.unit == 'Megabits' || " +
+						"input.metric-transformation.unit == 'Gigabits' || " +
+						"input.metric-transformation.unit == 'Terabits' || " +
+						"input.metric-transformation.unit == 'Percent' || " +
+						"input.metric-transformation.unit == 'Count' || " +
+						"input.metric-transformation.unit == 'Bytes/Second' || " +
+						"input.metric-transformation.unit == 'Kilobytes/Second' || " +
+						"input.metric-transformation.unit == 'Megabytes/Second' || " +
+						"input.metric-transformation.unit == 'Gigabytes/Second' || " +
+						"input.metric-transformation.unit == 'Terabytes/Second' || " +
+						"input.metric-transformation.unit == 'Bits/Second' || " +
+						"input.metric-transformation.unit == 'Kilobits/Second' || " +
+						"input.metric-transformation.unit == 'Megabits/Second' || " +
+						"input.metric-transformation.unit == 'Gigabits/Second' || " +
+						"input.metric-transformation.unit == 'Terabits/Second' || " +
+						"input.metric-transformation.unit == 'Count/Second' || " +
+						"input.metric-transformation.unit == 'None')",
 					Message: "metric-transformation unit must be a valid CloudWatch unit",
 				},
 			},

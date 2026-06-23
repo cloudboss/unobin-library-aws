@@ -64,85 +64,85 @@ func TestSqsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.kms-master-key-id", "var.sqs-managed-sse-enabled"},
+					Fields: []string{"input.kms-master-key-id", "input.sqs-managed-sse-enabled"},
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.content-based-deduplication == true)",
-					Require: "(var.fifo-queue == true)",
+					When:    "(input.content-based-deduplication == true)",
+					Require: "(input.fifo-queue == true)",
 					Message: "content-based-deduplication requires fifo-queue to be true",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.deduplication-scope != null)",
-					Require: "(var.deduplication-scope == 'messageGroup' || " +
-						"var.deduplication-scope == 'queue')",
+					When: "(input.deduplication-scope != null)",
+					Require: "(input.deduplication-scope == 'messageGroup' || " +
+						"input.deduplication-scope == 'queue')",
 					Message: "deduplication-scope must be messageGroup or queue",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.fifo-throughput-limit != null)",
-					Require: "(var.fifo-throughput-limit == 'perQueue' || " +
-						"var.fifo-throughput-limit == 'perMessageGroupId')",
+					When: "(input.fifo-throughput-limit != null)",
+					Require: "(input.fifo-throughput-limit == 'perQueue' || " +
+						"input.fifo-throughput-limit == 'perMessageGroupId')",
 					Message: "fifo-throughput-limit must be perQueue or perMessageGroupId",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.delay-seconds != null)",
-					Require: "(var.delay-seconds == null || " +
-						"var.delay-seconds >= 0) && " +
-						"(var.delay-seconds == null || " +
-						"var.delay-seconds <= 900)",
+					When: "(input.delay-seconds != null)",
+					Require: "(input.delay-seconds == null || " +
+						"input.delay-seconds >= 0) && " +
+						"(input.delay-seconds == null || " +
+						"input.delay-seconds <= 900)",
 					Message: "delay-seconds must be between 0 and 900",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.maximum-message-size != null)",
-					Require: "(var.maximum-message-size == null || " +
-						"var.maximum-message-size >= 1024) && " +
-						"(var.maximum-message-size == null || " +
-						"var.maximum-message-size <= 1048576)",
+					When: "(input.maximum-message-size != null)",
+					Require: "(input.maximum-message-size == null || " +
+						"input.maximum-message-size >= 1024) && " +
+						"(input.maximum-message-size == null || " +
+						"input.maximum-message-size <= 1048576)",
 					Message: "maximum-message-size must be between 1024 and 1048576",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.message-retention-period != null)",
-					Require: "(var.message-retention-period == null || " +
-						"var.message-retention-period >= 60) && " +
-						"(var.message-retention-period == null || " +
-						"var.message-retention-period <= 1209600)",
+					When: "(input.message-retention-period != null)",
+					Require: "(input.message-retention-period == null || " +
+						"input.message-retention-period >= 60) && " +
+						"(input.message-retention-period == null || " +
+						"input.message-retention-period <= 1209600)",
 					Message: "message-retention-period must be between 60 and 1209600",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.receive-message-wait-time-seconds != null)",
-					Require: "(var.receive-message-wait-time-seconds == null || " +
-						"var.receive-message-wait-time-seconds >= 0) && " +
-						"(var.receive-message-wait-time-seconds == null || " +
-						"var.receive-message-wait-time-seconds <= 20)",
+					When: "(input.receive-message-wait-time-seconds != null)",
+					Require: "(input.receive-message-wait-time-seconds == null || " +
+						"input.receive-message-wait-time-seconds >= 0) && " +
+						"(input.receive-message-wait-time-seconds == null || " +
+						"input.receive-message-wait-time-seconds <= 20)",
 					Message: "receive-message-wait-time-seconds must be between 0 and 20",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.visibility-timeout != null)",
-					Require: "(var.visibility-timeout == null || " +
-						"var.visibility-timeout >= 0) && " +
-						"(var.visibility-timeout == null || " +
-						"var.visibility-timeout <= 43200)",
+					When: "(input.visibility-timeout != null)",
+					Require: "(input.visibility-timeout == null || " +
+						"input.visibility-timeout >= 0) && " +
+						"(input.visibility-timeout == null || " +
+						"input.visibility-timeout <= 43200)",
 					Message: "visibility-timeout must be between 0 and 43200",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.kms-data-key-reuse-period-seconds != null)",
-					Require: "(var.kms-data-key-reuse-period-seconds == null || " +
-						"var.kms-data-key-reuse-period-seconds >= 60) && " +
-						"(var.kms-data-key-reuse-period-seconds == null || " +
-						"var.kms-data-key-reuse-period-seconds <= 86400)",
+					When: "(input.kms-data-key-reuse-period-seconds != null)",
+					Require: "(input.kms-data-key-reuse-period-seconds == null || " +
+						"input.kms-data-key-reuse-period-seconds >= 60) && " +
+						"(input.kms-data-key-reuse-period-seconds == null || " +
+						"input.kms-data-key-reuse-period-seconds <= 86400)",
 					Message: "kms-data-key-reuse-period-seconds must be between 60 and 86400",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 

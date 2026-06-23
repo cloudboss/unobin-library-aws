@@ -63,26 +63,26 @@ func TestEcrSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.image-tag-mutability != null)",
-					Require: "(var.image-tag-mutability == 'MUTABLE' || " +
-						"var.image-tag-mutability == 'IMMUTABLE' || " +
-						"var.image-tag-mutability == 'MUTABLE_WITH_EXCLUSION' || " +
-						"var.image-tag-mutability == 'IMMUTABLE_WITH_EXCLUSION')",
+					When: "(input.image-tag-mutability != null)",
+					Require: "(input.image-tag-mutability == 'MUTABLE' || " +
+						"input.image-tag-mutability == 'IMMUTABLE' || " +
+						"input.image-tag-mutability == 'MUTABLE_WITH_EXCLUSION' || " +
+						"input.image-tag-mutability == 'IMMUTABLE_WITH_EXCLUSION')",
 					Message: "image-tag-mutability must be a valid tag mutability setting",
 				},
 				{
 					Kind: "predicate",
-					When: "((var.image-tag-mutability-exclusion-filters != null) && " +
-						"(@core.length(var.image-tag-mutability-exclusion-filters) >= 1))",
-					Require: "(var.image-tag-mutability == 'MUTABLE_WITH_EXCLUSION' || " +
-						"var.image-tag-mutability == 'IMMUTABLE_WITH_EXCLUSION')",
+					When: "((input.image-tag-mutability-exclusion-filters != null) && " +
+						"(@core.length(input.image-tag-mutability-exclusion-filters) >= 1))",
+					Require: "(input.image-tag-mutability == 'MUTABLE_WITH_EXCLUSION' || " +
+						"input.image-tag-mutability == 'IMMUTABLE_WITH_EXCLUSION')",
 					Message: "exclusion filters require a WITH_EXCLUSION image-tag-mutability",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.image-tag-mutability-exclusion-filters == null || " +
-						"@core.length(var.image-tag-mutability-exclusion-filters) <= 5)",
+					Require: "(input.image-tag-mutability-exclusion-filters == null || " +
+						"@core.length(input.image-tag-mutability-exclusion-filters) <= 5)",
 					Message: "image-tag-mutability-exclusion-filters holds at most 5 filters",
 				},
 				{
@@ -90,20 +90,20 @@ func TestEcrSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.filter-type == 'WILDCARD')",
 					Message: "a filter type must be WILDCARD",
-					ForEach: "var.image-tag-mutability-exclusion-filters",
+					ForEach: "input.image-tag-mutability-exclusion-filters",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.encryption-configuration.encryption-type != null)",
-					Require: "(var.encryption-configuration.encryption-type == 'AES256' || " +
-						"var.encryption-configuration.encryption-type == 'KMS' || " +
-						"var.encryption-configuration.encryption-type == 'KMS_DSSE')",
+					When: "(input.encryption-configuration.encryption-type != null)",
+					Require: "(input.encryption-configuration.encryption-type == 'AES256' || " +
+						"input.encryption-configuration.encryption-type == 'KMS' || " +
+						"input.encryption-configuration.encryption-type == 'KMS_DSSE')",
 					Message: "encryption-type must be AES256, KMS, or KMS_DSSE",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.image-tag-mutability-exclusion-filters", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.image-tag-mutability-exclusion-filters", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

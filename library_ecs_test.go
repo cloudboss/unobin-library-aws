@@ -81,16 +81,16 @@ func TestEcsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.configuration.execute-command-configuration.logging != null)",
-					Require: "(var.configuration.execute-command-configuration.logging == 'NONE' || " +
-						"var.configuration.execute-command-configuration.logging == 'DEFAULT' || " +
-						"var.configuration.execute-command-configuration.logging == 'OVERRIDE')",
+					When: "(input.configuration.execute-command-configuration.logging != null)",
+					Require: "(input.configuration.execute-command-configuration.logging == 'NONE' || " +
+						"input.configuration.execute-command-configuration.logging == 'DEFAULT' || " +
+						"input.configuration.execute-command-configuration.logging == 'OVERRIDE')",
 					Message: "logging must be one of NONE, DEFAULT, or OVERRIDE",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.configuration.execute-command-configuration.logging == 'OVERRIDE')",
-					Require: "(var.configuration.execute-command-configuration.log-configuration != null)",
+					When:    "(input.configuration.execute-command-configuration.logging == 'OVERRIDE')",
+					Require: "(input.configuration.execute-command-configuration.log-configuration != null)",
 					Message: "log-configuration is required when logging is OVERRIDE",
 				},
 				{
@@ -98,7 +98,7 @@ func TestEcsSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.name == 'containerInsights')",
 					Message: "name must be containerInsights",
-					ForEach: "var.settings",
+					ForEach: "input.settings",
 				},
 				{
 					Kind: "predicate",
@@ -108,7 +108,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.base == null || " +
 						"@each.value.base <= 100000)",
 					Message: "base must be between 0 and 100000",
-					ForEach: "var.default-capacity-provider-strategy",
+					ForEach: "input.default-capacity-provider-strategy",
 				},
 				{
 					Kind: "predicate",
@@ -118,14 +118,14 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.weight == null || " +
 						"@each.value.weight <= 1000)",
 					Message: "weight must be between 0 and 1000",
-					ForEach: "var.default-capacity-provider-strategy",
+					ForEach: "input.default-capacity-provider-strategy",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.settings", Optional: true},
-				{Field: "var.capacity-providers", Optional: true},
-				{Field: "var.default-capacity-provider-strategy", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.settings", Optional: true},
+				{Field: "input.capacity-providers", Optional: true},
+				{Field: "input.default-capacity-provider-strategy", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"ecs-task-definition": {
@@ -325,25 +325,25 @@ func TestEcsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.network-mode != null)",
-					Require: "(var.network-mode == 'bridge' || " +
-						"var.network-mode == 'host' || " +
-						"var.network-mode == 'awsvpc' || " +
-						"var.network-mode == 'none')",
+					When: "(input.network-mode != null)",
+					Require: "(input.network-mode == 'bridge' || " +
+						"input.network-mode == 'host' || " +
+						"input.network-mode == 'awsvpc' || " +
+						"input.network-mode == 'none')",
 					Message: "network-mode must be bridge, host, awsvpc, or none",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.ipc-mode != null)",
-					Require: "(var.ipc-mode == 'host' || " +
-						"var.ipc-mode == 'task' || " +
-						"var.ipc-mode == 'none')",
+					When: "(input.ipc-mode != null)",
+					Require: "(input.ipc-mode == 'host' || " +
+						"input.ipc-mode == 'task' || " +
+						"input.ipc-mode == 'none')",
 					Message: "ipc-mode must be host, task, or none",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.pid-mode != null)",
-					Require: "(var.pid-mode == 'host' || var.pid-mode == 'task')",
+					When:    "(input.pid-mode != null)",
+					Require: "(input.pid-mode == 'host' || input.pid-mode == 'task')",
 					Message: "pid-mode must be host or task",
 				},
 				{
@@ -354,50 +354,50 @@ func TestEcsSchemas(t *testing.T) {
 						"@each.value == 'EXTERNAL' || " +
 						"@each.value == 'MANAGED_INSTANCES')",
 					Message: "a compatibility must be EC2, FARGATE, EXTERNAL, or MANAGED_INSTANCES",
-					ForEach: "var.requires-compatibilities",
+					ForEach: "input.requires-compatibilities",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.ephemeral-storage.size-in-gib != null)",
-					Require: "(var.ephemeral-storage.size-in-gib == null || " +
-						"var.ephemeral-storage.size-in-gib >= 21) && " +
-						"(var.ephemeral-storage.size-in-gib == null || " +
-						"var.ephemeral-storage.size-in-gib <= 200)",
+					When: "(input.ephemeral-storage.size-in-gib != null)",
+					Require: "(input.ephemeral-storage.size-in-gib == null || " +
+						"input.ephemeral-storage.size-in-gib >= 21) && " +
+						"(input.ephemeral-storage.size-in-gib == null || " +
+						"input.ephemeral-storage.size-in-gib <= 200)",
 					Message: "ephemeral-storage size-in-gib must be between 21 and 200",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.proxy-configuration.type != null)",
-					Require: "(var.proxy-configuration.type == 'APPMESH')",
+					When:    "(input.proxy-configuration.type != null)",
+					Require: "(input.proxy-configuration.type == 'APPMESH')",
 					Message: "proxy-configuration type must be APPMESH",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.runtime-platform.cpu-architecture != null)",
-					Require: "(var.runtime-platform.cpu-architecture == 'X86_64' || " +
-						"var.runtime-platform.cpu-architecture == 'ARM64')",
+					When: "(input.runtime-platform.cpu-architecture != null)",
+					Require: "(input.runtime-platform.cpu-architecture == 'X86_64' || " +
+						"input.runtime-platform.cpu-architecture == 'ARM64')",
 					Message: "runtime-platform cpu-architecture must be X86_64 or ARM64",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.runtime-platform.operating-system-family != null)",
-					Require: "(var.runtime-platform.operating-system-family == 'LINUX' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2016_FULL' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2019_CORE' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2019_FULL' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2004_CORE' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2022_CORE' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2022_FULL' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2025_CORE' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2025_FULL' || " +
-						"var.runtime-platform.operating-system-family == 'WINDOWS_SERVER_20H2_CORE')",
+					When: "(input.runtime-platform.operating-system-family != null)",
+					Require: "(input.runtime-platform.operating-system-family == 'LINUX' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2016_FULL' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2019_CORE' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2019_FULL' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2004_CORE' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2022_CORE' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2022_FULL' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2025_CORE' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_2025_FULL' || " +
+						"input.runtime-platform.operating-system-family == 'WINDOWS_SERVER_20H2_CORE')",
 					Message: "runtime-platform operating-system-family must be LINUX or a WINDOWS_SERVER family",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.placement-constraints == null || " +
-						"@core.length(var.placement-constraints) <= 10)",
+					Require: "(input.placement-constraints == null || " +
+						"@core.length(input.placement-constraints) <= 10)",
 					Message: "placement-constraints allows at most 10 entries",
 				},
 				{
@@ -405,14 +405,14 @@ func TestEcsSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.type == 'memberOf')",
 					Message: "a task definition placement constraint type must be memberOf",
-					ForEach: "var.placement-constraints",
+					ForEach: "input.placement-constraints",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'memberOf')",
 					Require: "(@each.value.expression != null)",
 					Message: "a memberOf placement constraint requires an expression",
-					ForEach: "var.placement-constraints",
+					ForEach: "input.placement-constraints",
 				},
 				{
 					Kind: "predicate",
@@ -420,7 +420,7 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.version-consistency == 'enabled' || " +
 						"@each.value.version-consistency == 'disabled')",
 					Message: "version-consistency must be enabled or disabled",
-					ForEach: "var.container-definitions",
+					ForEach: "input.container-definitions",
 				},
 				{
 					Kind: "predicate",
@@ -428,7 +428,7 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.docker-volume-configuration.scope == 'task' || " +
 						"@each.value.docker-volume-configuration.scope == 'shared')",
 					Message: "a docker volume scope must be task or shared",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 				{
 					Kind: "predicate",
@@ -436,7 +436,7 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.efs-volume-configuration.transit-encryption == 'ENABLED' || " +
 						"@each.value.efs-volume-configuration.transit-encryption == 'DISABLED')",
 					Message: "efs transit-encryption must be ENABLED or DISABLED",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 				{
 					Kind: "predicate",
@@ -446,7 +446,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.efs-volume-configuration.transit-encryption-port == null || " +
 						"@each.value.efs-volume-configuration.transit-encryption-port <= 65535)",
 					Message: "efs transit-encryption-port must be between 1 and 65535",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 				{
 					Kind: "predicate",
@@ -454,14 +454,14 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.efs-volume-configuration.authorization-config.iam == 'ENABLED' || " +
 						"@each.value.efs-volume-configuration.authorization-config.iam == 'DISABLED')",
 					Message: "efs authorization-config iam must be ENABLED or DISABLED",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.fsx-windows-file-server-volume-configuration != null)",
 					Require: "(@each.value.fsx-windows-file-server-volume-configuration.authorization-config != null)",
 					Message: "an fsx-windows-file-server volume requires authorization-config",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 				{
 					Kind: "predicate",
@@ -471,14 +471,14 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.s3files-volume-configuration.transit-encryption-port == null || " +
 						"@each.value.s3files-volume-configuration.transit-encryption-port <= 65535)",
 					Message: "s3files transit-encryption-port must be between 1 and 65535",
-					ForEach: "var.volumes",
+					ForEach: "input.volumes",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.placement-constraints", Optional: true},
-				{Field: "var.requires-compatibilities", Optional: true},
-				{Field: "var.volumes", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.placement-constraints", Optional: true},
+				{Field: "input.requires-compatibilities", Optional: true},
+				{Field: "input.volumes", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"ecs-service": {
@@ -536,59 +536,59 @@ func TestEcsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.launch-type", "var.capacity-provider-strategy"},
+					Fields: []string{"input.launch-type", "input.capacity-provider-strategy"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.launch-type != null)",
-					Require: "(var.launch-type == 'EC2' || " +
-						"var.launch-type == 'FARGATE' || " +
-						"var.launch-type == 'EXTERNAL')",
+					When: "(input.launch-type != null)",
+					Require: "(input.launch-type == 'EC2' || " +
+						"input.launch-type == 'FARGATE' || " +
+						"input.launch-type == 'EXTERNAL')",
 					Message: "launch-type must be EC2, FARGATE, or EXTERNAL",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.scheduling-strategy != null)",
-					Require: "(var.scheduling-strategy == 'REPLICA' || " +
-						"var.scheduling-strategy == 'DAEMON')",
+					When: "(input.scheduling-strategy != null)",
+					Require: "(input.scheduling-strategy == 'REPLICA' || " +
+						"input.scheduling-strategy == 'DAEMON')",
 					Message: "scheduling-strategy must be REPLICA or DAEMON",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.propagate-tags != null)",
-					Require: "(var.propagate-tags == 'SERVICE' || " +
-						"var.propagate-tags == 'TASK_DEFINITION' || " +
-						"var.propagate-tags == 'NONE')",
+					When: "(input.propagate-tags != null)",
+					Require: "(input.propagate-tags == 'SERVICE' || " +
+						"input.propagate-tags == 'TASK_DEFINITION' || " +
+						"input.propagate-tags == 'NONE')",
 					Message: "propagate-tags must be SERVICE, TASK_DEFINITION, or NONE",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.availability-zone-rebalancing != null)",
-					Require: "(var.availability-zone-rebalancing == 'ENABLED' || " +
-						"var.availability-zone-rebalancing == 'DISABLED')",
+					When: "(input.availability-zone-rebalancing != null)",
+					Require: "(input.availability-zone-rebalancing == 'ENABLED' || " +
+						"input.availability-zone-rebalancing == 'DISABLED')",
 					Message: "availability-zone-rebalancing must be ENABLED or DISABLED",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.health-check-grace-period-seconds != null)",
-					Require: "(var.health-check-grace-period-seconds == null || " +
-						"var.health-check-grace-period-seconds >= 0) && " +
-						"(var.health-check-grace-period-seconds == null || " +
-						"var.health-check-grace-period-seconds <= 2147483647)",
+					When: "(input.health-check-grace-period-seconds != null)",
+					Require: "(input.health-check-grace-period-seconds == null || " +
+						"input.health-check-grace-period-seconds >= 0) && " +
+						"(input.health-check-grace-period-seconds == null || " +
+						"input.health-check-grace-period-seconds <= 2147483647)",
 					Message: "health-check-grace-period-seconds must be between 0 and 2147483647",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.network-configuration != null)",
-					Require: "((var.network-configuration.subnets != null) && " +
-						"(@core.length(var.network-configuration.subnets) >= 1))",
+					When: "(input.network-configuration != null)",
+					Require: "((input.network-configuration.subnets != null) && " +
+						"(@core.length(input.network-configuration.subnets) >= 1))",
 					Message: "network-configuration subnets must not be empty",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.network-configuration.assign-public-ip != null)",
-					Require: "(var.network-configuration.assign-public-ip == 'ENABLED' || " +
-						"var.network-configuration.assign-public-ip == 'DISABLED')",
+					When: "(input.network-configuration.assign-public-ip != null)",
+					Require: "(input.network-configuration.assign-public-ip == 'ENABLED' || " +
+						"input.network-configuration.assign-public-ip == 'DISABLED')",
 					Message: "assign-public-ip must be ENABLED or DISABLED",
 				},
 				{
@@ -599,7 +599,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.base == null || " +
 						"@each.value.base <= 100000)",
 					Message: "base must be between 0 and 100000",
-					ForEach: "var.capacity-provider-strategy",
+					ForEach: "input.capacity-provider-strategy",
 				},
 				{
 					Kind: "predicate",
@@ -609,7 +609,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.weight == null || " +
 						"@each.value.weight <= 1000)",
 					Message: "weight must be between 0 and 1000",
-					ForEach: "var.capacity-provider-strategy",
+					ForEach: "input.capacity-provider-strategy",
 				},
 				{
 					Kind: "predicate",
@@ -619,13 +619,13 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.container-port == null || " +
 						"@each.value.container-port <= 65536)",
 					Message: "container-port must be between 0 and 65536",
-					ForEach: "var.load-balancers",
+					ForEach: "input.load-balancers",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.placement-constraints == null || " +
-						"@core.length(var.placement-constraints) <= 10)",
+					Require: "(input.placement-constraints == null || " +
+						"@core.length(input.placement-constraints) <= 10)",
 					Message: "placement-constraints allows at most 10 entries",
 				},
 				{
@@ -634,27 +634,27 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.type == 'distinctInstance' || " +
 						"@each.value.type == 'memberOf')",
 					Message: "type must be distinctInstance or memberOf",
-					ForEach: "var.placement-constraints",
+					ForEach: "input.placement-constraints",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'memberOf')",
 					Require: "(@each.value.expression != null)",
 					Message: "a memberOf placement constraint requires an expression",
-					ForEach: "var.placement-constraints",
+					ForEach: "input.placement-constraints",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'distinctInstance')",
 					Require: "(@each.value.expression == null)",
 					Message: "a distinctInstance placement constraint takes no expression",
-					ForEach: "var.placement-constraints",
+					ForEach: "input.placement-constraints",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.placement-strategy == null || " +
-						"@core.length(var.placement-strategy) <= 5)",
+					Require: "(input.placement-strategy == null || " +
+						"@core.length(input.placement-strategy) <= 5)",
 					Message: "placement-strategy allows at most 5 entries",
 				},
 				{
@@ -664,14 +664,14 @@ func TestEcsSchemas(t *testing.T) {
 						"@each.value.type == 'spread' || " +
 						"@each.value.type == 'binpack')",
 					Message: "type must be random, spread, or binpack",
-					ForEach: "var.placement-strategy",
+					ForEach: "input.placement-strategy",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'random')",
 					Require: "(@each.value.field == null)",
 					Message: "a random placement strategy must omit field",
-					ForEach: "var.placement-strategy",
+					ForEach: "input.placement-strategy",
 				},
 				{
 					Kind: "predicate",
@@ -679,15 +679,15 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.field == 'cpu' || " +
 						"@each.value.field == 'memory')",
 					Message: "a binpack placement strategy field must be cpu or memory",
-					ForEach: "var.placement-strategy",
+					ForEach: "input.placement-strategy",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.capacity-provider-strategy", Optional: true},
-				{Field: "var.load-balancers", Optional: true},
-				{Field: "var.placement-constraints", Optional: true},
-				{Field: "var.placement-strategy", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.capacity-provider-strategy", Optional: true},
+				{Field: "input.load-balancers", Optional: true},
+				{Field: "input.placement-constraints", Optional: true},
+				{Field: "input.placement-strategy", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

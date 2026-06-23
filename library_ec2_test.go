@@ -52,40 +52,40 @@ func TestEc2VpcSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:    "predicate",
-				When:    "(var.instance-tenancy != null)",
-				Require: "(var.instance-tenancy == 'default' || var.instance-tenancy == 'dedicated')",
+				When:    "(input.instance-tenancy != null)",
+				Require: "(input.instance-tenancy == 'default' || input.instance-tenancy == 'dedicated')",
 				Message: "instance-tenancy must be default or dedicated",
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.cidr-block", "var.ipv4-netmask-length"},
+				Fields: []string{"input.cidr-block", "input.ipv4-netmask-length"},
 			},
 			{
 				Kind:   "required-with",
-				Fields: []string{"var.ipv4-netmask-length", "var.ipv4-ipam-pool-id"},
+				Fields: []string{"input.ipv4-netmask-length", "input.ipv4-ipam-pool-id"},
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.ipv6-cidr-block", "var.ipv6-netmask-length"},
+				Fields: []string{"input.ipv6-cidr-block", "input.ipv6-netmask-length"},
 			},
 			{
 				Kind:   "required-with",
-				Fields: []string{"var.ipv6-cidr-block", "var.ipv6-ipam-pool-id"},
+				Fields: []string{"input.ipv6-cidr-block", "input.ipv6-ipam-pool-id"},
 			},
 			{
 				Kind:   "required-with",
-				Fields: []string{"var.ipv6-netmask-length", "var.ipv6-ipam-pool-id"},
+				Fields: []string{"input.ipv6-netmask-length", "input.ipv6-ipam-pool-id"},
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.amazon-provided-ipv6-cidr-block == true)",
-				Require: "(var.ipv6-cidr-block == null) && (var.ipv6-ipam-pool-id == null)",
+				When:    "(input.amazon-provided-ipv6-cidr-block == true)",
+				Require: "(input.ipv6-cidr-block == null) && (input.ipv6-ipam-pool-id == null)",
 				Message: "amazon-provided-ipv6-cidr-block cannot combine with an explicit ipv6 block or pool",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.ipv6-cidr-block-network-border-group != null)",
-				Require: "(var.amazon-provided-ipv6-cidr-block == true)",
+				When:    "(input.ipv6-cidr-block-network-border-group != null)",
+				Require: "(input.amazon-provided-ipv6-cidr-block == true)",
 				Message: "ipv6-cidr-block-network-border-group requires amazon-provided-ipv6-cidr-block",
 			},
 		},
@@ -139,27 +139,27 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 			{
 				Kind: "exactly-one-of",
 				Fields: []string{
-					"var.cidr-ipv4", "var.cidr-ipv6", "var.prefix-list-id",
-					"var.referenced-security-group-id",
+					"input.cidr-ipv4", "input.cidr-ipv6", "input.prefix-list-id",
+					"input.referenced-security-group-id",
 				},
 			},
 			{
 				Kind: "predicate",
-				When: "(var.from-port != null)",
-				Require: "(var.from-port == null || var.from-port >= -1) && " +
-					"(var.from-port == null || var.from-port <= 65535)",
+				When: "(input.from-port != null)",
+				Require: "(input.from-port == null || input.from-port >= -1) && " +
+					"(input.from-port == null || input.from-port <= 65535)",
 				Message: "from-port must be between -1 and 65535",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.to-port != null)",
-				Require: "(var.to-port == null || var.to-port >= -1) && " +
-					"(var.to-port == null || var.to-port <= 65535)",
+				When: "(input.to-port != null)",
+				Require: "(input.to-port == null || input.to-port >= -1) && " +
+					"(input.to-port == null || input.to-port <= 65535)",
 				Message: "to-port must be between -1 and 65535",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 
@@ -181,11 +181,11 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.name", "var.name-prefix"},
+					Fields: []string{"input.name", "input.name-prefix"},
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"ec2-security-group-ingress-rule": ruleSchema,
@@ -253,70 +253,70 @@ func TestEc2SubnetSchema(t *testing.T) {
 			{
 				Kind: "at-most-one-of",
 				Fields: []string{
-					"var.availability-zone", "var.availability-zone-id",
+					"input.availability-zone", "input.availability-zone-id",
 				},
 			},
 			{
 				Kind: "forbidden-with",
 				Fields: []string{
-					"var.ipv4-netmask-length", "var.cidr-block",
-					"var.customer-owned-ipv4-pool",
+					"input.ipv4-netmask-length", "input.cidr-block",
+					"input.customer-owned-ipv4-pool",
 				},
 			},
 			{
 				Kind: "required-with",
 				Fields: []string{
-					"var.ipv4-netmask-length", "var.ipv4-ipam-pool-id",
+					"input.ipv4-netmask-length", "input.ipv4-ipam-pool-id",
 				},
 			},
 			{
 				Kind: "at-most-one-of",
 				Fields: []string{
-					"var.ipv4-ipam-pool-id", "var.customer-owned-ipv4-pool",
+					"input.ipv4-ipam-pool-id", "input.customer-owned-ipv4-pool",
 				},
 			},
 			{
 				Kind: "required-with",
 				Fields: []string{
-					"var.customer-owned-ipv4-pool",
-					"var.map-customer-owned-ip-on-launch", "var.outpost-arn",
+					"input.customer-owned-ipv4-pool",
+					"input.map-customer-owned-ip-on-launch", "input.outpost-arn",
 				},
 			},
 			{
 				Kind: "required-with",
 				Fields: []string{
-					"var.map-customer-owned-ip-on-launch",
-					"var.customer-owned-ipv4-pool", "var.outpost-arn",
+					"input.map-customer-owned-ip-on-launch",
+					"input.customer-owned-ipv4-pool", "input.outpost-arn",
 				},
 			},
 			{
 				Kind:   "forbidden-with",
-				Fields: []string{"var.ipv6-netmask-length", "var.ipv6-cidr-block"},
+				Fields: []string{"input.ipv6-netmask-length", "input.ipv6-cidr-block"},
 			},
 			{
 				Kind: "required-with",
 				Fields: []string{
-					"var.ipv6-netmask-length", "var.ipv6-ipam-pool-id",
+					"input.ipv6-netmask-length", "input.ipv6-ipam-pool-id",
 				},
 			},
 			{
 				Kind: "predicate",
-				When: "(var.private-dns-hostname-type-on-launch != null)",
-				Require: "(var.private-dns-hostname-type-on-launch == 'ip-name' || " +
-					"var.private-dns-hostname-type-on-launch == 'resource-name')",
+				When: "(input.private-dns-hostname-type-on-launch != null)",
+				Require: "(input.private-dns-hostname-type-on-launch == 'ip-name' || " +
+					"input.private-dns-hostname-type-on-launch == 'resource-name')",
 				Message: "private-dns-hostname-type-on-launch must be ip-name or " +
 					"resource-name",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.enable-lni-at-device-index != null)",
-				Require: "(var.enable-lni-at-device-index == null || " +
-					"var.enable-lni-at-device-index > 0)",
+				When: "(input.enable-lni-at-device-index != null)",
+				Require: "(input.enable-lni-at-device-index == null || " +
+					"input.enable-lni-at-device-index > 0)",
 				Message: "enable-lni-at-device-index must be a positive device position",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.Resources["ec2-subnet"])
@@ -367,57 +367,57 @@ func TestEc2VolumeSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:   "at-least-one-of",
-				Fields: []string{"var.size", "var.snapshot-id"},
+				Fields: []string{"input.size", "input.snapshot-id"},
 			},
 			{
 				Kind: "predicate",
-				When: "(var.type != null)",
-				Require: "(var.type == 'standard' || var.type == 'gp2' || var.type == 'gp3' || " +
-					"var.type == 'io1' || var.type == 'io2' || var.type == 'sc1' || var.type == 'st1')",
+				When: "(input.type != null)",
+				Require: "(input.type == 'standard' || input.type == 'gp2' || input.type == 'gp3' || " +
+					"input.type == 'io1' || input.type == 'io2' || input.type == 'sc1' || input.type == 'st1')",
 				Message: "type must be standard, gp2, gp3, io1, io2, sc1, or st1",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.type == 'io1')",
-				Require: "(var.iops != null)",
+				When:    "(input.type == 'io1')",
+				Require: "(input.iops != null)",
 				Message: "iops is required when type is io1",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.type == 'io2')",
-				Require: "(var.iops != null)",
+				When:    "(input.type == 'io2')",
+				Require: "(input.iops != null)",
 				Message: "iops is required when type is io2",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.iops != null)",
-				Require: "(var.type == 'gp3' || var.type == 'io1' || var.type == 'io2')",
+				When:    "(input.iops != null)",
+				Require: "(input.type == 'gp3' || input.type == 'io1' || input.type == 'io2')",
 				Message: "iops is valid only for gp3, io1, or io2 volume types",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.throughput != null)",
-				Require: "(var.type == 'gp3') && (var.throughput == null || var.throughput >= 125) && " +
-					"(var.throughput == null || var.throughput <= 2000)",
+				When: "(input.throughput != null)",
+				Require: "(input.type == 'gp3') && (input.throughput == null || input.throughput >= 125) && " +
+					"(input.throughput == null || input.throughput <= 2000)",
 				Message: "throughput is valid only for gp3 volumes and must be 125 to 2000",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.multi-attach-enabled == true)",
-				Require: "(var.type == 'io1' || var.type == 'io2')",
+				When:    "(input.multi-attach-enabled == true)",
+				Require: "(input.type == 'io1' || input.type == 'io2')",
 				Message: "multi-attach-enabled is valid only for io1 or io2 volume types",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.volume-initialization-rate != null)",
-				Require: "(var.snapshot-id != null) && (var.volume-initialization-rate == null || " +
-					"var.volume-initialization-rate >= 100) && (var.volume-initialization-rate == null || " +
-					"var.volume-initialization-rate <= 300)",
+				When: "(input.volume-initialization-rate != null)",
+				Require: "(input.snapshot-id != null) && (input.volume-initialization-rate == null || " +
+					"input.volume-initialization-rate >= 100) && (input.volume-initialization-rate == null || " +
+					"input.volume-initialization-rate <= 300)",
 				Message: "volume-initialization-rate requires snapshot-id and must be 100 to 300",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.Resources["ec2-volume"])
@@ -594,170 +594,170 @@ func TestEc2LaunchTemplateSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.default-version", "var.update-default-version"},
+				Fields: []string{"input.default-version", "input.update-default-version"},
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.data.security-groups", "var.data.security-group-ids"},
+				Fields: []string{"input.data.security-groups", "input.data.security-group-ids"},
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.data.iam-instance-profile.arn", "var.data.iam-instance-profile.name"},
+				Fields: []string{"input.data.iam-instance-profile.arn", "input.data.iam-instance-profile.name"},
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.data.placement.group-id", "var.data.placement.group-name"},
+				Fields: []string{"input.data.placement.group-id", "input.data.placement.group-name"},
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.data.placement.host-resource-group-arn", "var.data.placement.host-id"},
+				Fields: []string{"input.data.placement.host-resource-group-arn", "input.data.placement.host-id"},
 			},
 			{
 				Kind: "at-most-one-of",
 				Fields: []string{
-					"var.data.capacity-reservation-specification.capacity-reservation-target." +
+					"input.data.capacity-reservation-specification.capacity-reservation-target." +
 						"capacity-reservation-id",
-					"var.data.capacity-reservation-specification.capacity-reservation-target." +
+					"input.data.capacity-reservation-specification.capacity-reservation-target." +
 						"capacity-reservation-resource-group-arn",
 				},
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.capacity-reservation-specification.capacity-reservation-preference != null)",
-				Require: "(var.data.capacity-reservation-specification.capacity-reservation-preference == " +
+				When: "(input.data.capacity-reservation-specification.capacity-reservation-preference != null)",
+				Require: "(input.data.capacity-reservation-specification.capacity-reservation-preference == " +
 					"'capacity-reservations-only' || " +
-					"var.data.capacity-reservation-specification.capacity-reservation-preference == 'open' || " +
-					"var.data.capacity-reservation-specification.capacity-reservation-preference == 'none')",
+					"input.data.capacity-reservation-specification.capacity-reservation-preference == 'open' || " +
+					"input.data.capacity-reservation-specification.capacity-reservation-preference == 'none')",
 				Message: "capacity-reservation-preference must be capacity-reservations-only, open, or none",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.version-description != null)",
-				Require: "(var.version-description == null || var.version-description <= 255)",
+				When:    "(input.version-description != null)",
+				Require: "(input.version-description == null || input.version-description <= 255)",
 				Message: "version-description must be at most 255 characters",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.instance-initiated-shutdown-behavior != null)",
-				Require: "(var.data.instance-initiated-shutdown-behavior == 'stop' || " +
-					"var.data.instance-initiated-shutdown-behavior == 'terminate')",
+				When: "(input.data.instance-initiated-shutdown-behavior != null)",
+				Require: "(input.data.instance-initiated-shutdown-behavior == 'stop' || " +
+					"input.data.instance-initiated-shutdown-behavior == 'terminate')",
 				Message: "instance-initiated-shutdown-behavior must be stop or terminate",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.credit-specification.cpu-credits != null)",
-				Require: "(var.data.credit-specification.cpu-credits == 'standard' || " +
-					"var.data.credit-specification.cpu-credits == 'unlimited')",
+				When: "(input.data.credit-specification.cpu-credits != null)",
+				Require: "(input.data.credit-specification.cpu-credits == 'standard' || " +
+					"input.data.credit-specification.cpu-credits == 'unlimited')",
 				Message: "credit-specification cpu-credits must be standard or unlimited",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.cpu-options.amd-sev-snp != null)",
-				Require: "(var.data.cpu-options.amd-sev-snp == 'enabled' || " +
-					"var.data.cpu-options.amd-sev-snp == 'disabled')",
+				When: "(input.data.cpu-options.amd-sev-snp != null)",
+				Require: "(input.data.cpu-options.amd-sev-snp == 'enabled' || " +
+					"input.data.cpu-options.amd-sev-snp == 'disabled')",
 				Message: "cpu-options amd-sev-snp must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.cpu-options.nested-virtualization != null)",
-				Require: "(var.data.cpu-options.nested-virtualization == 'enabled' || " +
-					"var.data.cpu-options.nested-virtualization == 'disabled')",
+				When: "(input.data.cpu-options.nested-virtualization != null)",
+				Require: "(input.data.cpu-options.nested-virtualization == 'enabled' || " +
+					"input.data.cpu-options.nested-virtualization == 'disabled')",
 				Message: "cpu-options nested-virtualization must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.placement.tenancy != null)",
-				Require: "(var.data.placement.tenancy == 'default' || " +
-					"var.data.placement.tenancy == 'dedicated' || var.data.placement.tenancy == 'host')",
+				When: "(input.data.placement.tenancy != null)",
+				Require: "(input.data.placement.tenancy == 'default' || " +
+					"input.data.placement.tenancy == 'dedicated' || input.data.placement.tenancy == 'host')",
 				Message: "placement tenancy must be default, dedicated, or host",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.private-dns-name-options.hostname-type != null)",
-				Require: "(var.data.private-dns-name-options.hostname-type == 'ip-name' || " +
-					"var.data.private-dns-name-options.hostname-type == 'resource-name')",
+				When: "(input.data.private-dns-name-options.hostname-type != null)",
+				Require: "(input.data.private-dns-name-options.hostname-type == 'ip-name' || " +
+					"input.data.private-dns-name-options.hostname-type == 'resource-name')",
 				Message: "private-dns-name-options hostname-type must be ip-name or resource-name",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.maintenance-options.auto-recovery != null)",
-				Require: "(var.data.maintenance-options.auto-recovery == 'default' || " +
-					"var.data.maintenance-options.auto-recovery == 'disabled')",
+				When: "(input.data.maintenance-options.auto-recovery != null)",
+				Require: "(input.data.maintenance-options.auto-recovery == 'default' || " +
+					"input.data.maintenance-options.auto-recovery == 'disabled')",
 				Message: "maintenance-options auto-recovery must be default or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.network-performance-options.bandwidth-weighting != null)",
-				Require: "(var.data.network-performance-options.bandwidth-weighting == 'default' || " +
-					"var.data.network-performance-options.bandwidth-weighting == 'vpc-1' || " +
-					"var.data.network-performance-options.bandwidth-weighting == 'ebs-1')",
+				When: "(input.data.network-performance-options.bandwidth-weighting != null)",
+				Require: "(input.data.network-performance-options.bandwidth-weighting == 'default' || " +
+					"input.data.network-performance-options.bandwidth-weighting == 'vpc-1' || " +
+					"input.data.network-performance-options.bandwidth-weighting == 'ebs-1')",
 				Message: "network-performance-options bandwidth-weighting must be default, vpc-1, or ebs-1",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.instance-market-options.market-type != null)",
-				Require: "(var.data.instance-market-options.market-type == 'spot' || " +
-					"var.data.instance-market-options.market-type == 'capacity-block' || " +
-					"var.data.instance-market-options.market-type == 'interruptible-capacity-reservation')",
+				When: "(input.data.instance-market-options.market-type != null)",
+				Require: "(input.data.instance-market-options.market-type == 'spot' || " +
+					"input.data.instance-market-options.market-type == 'capacity-block' || " +
+					"input.data.instance-market-options.market-type == 'interruptible-capacity-reservation')",
 				Message: "instance-market-options market-type must be a valid market type",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.instance-market-options.spot-options.instance-interruption-behavior != null)",
-				Require: "(var.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+				When: "(input.data.instance-market-options.spot-options.instance-interruption-behavior != null)",
+				Require: "(input.data.instance-market-options.spot-options.instance-interruption-behavior == " +
 					"'hibernate' || " +
-					"var.data.instance-market-options.spot-options.instance-interruption-behavior == 'stop' || " +
-					"var.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+					"input.data.instance-market-options.spot-options.instance-interruption-behavior == 'stop' || " +
+					"input.data.instance-market-options.spot-options.instance-interruption-behavior == " +
 					"'terminate')",
 				Message: "spot-options instance-interruption-behavior must be hibernate, stop, or terminate",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.instance-market-options.spot-options.spot-instance-type != null)",
-				Require: "(var.data.instance-market-options.spot-options.spot-instance-type == 'one-time' " +
-					"|| var.data.instance-market-options.spot-options.spot-instance-type == 'persistent')",
+				When: "(input.data.instance-market-options.spot-options.spot-instance-type != null)",
+				Require: "(input.data.instance-market-options.spot-options.spot-instance-type == 'one-time' " +
+					"|| input.data.instance-market-options.spot-options.spot-instance-type == 'persistent')",
 				Message: "spot-options spot-instance-type must be one-time or persistent",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.metadata-options.http-endpoint != null)",
-				Require: "(var.data.metadata-options.http-endpoint == 'enabled' || " +
-					"var.data.metadata-options.http-endpoint == 'disabled')",
+				When: "(input.data.metadata-options.http-endpoint != null)",
+				Require: "(input.data.metadata-options.http-endpoint == 'enabled' || " +
+					"input.data.metadata-options.http-endpoint == 'disabled')",
 				Message: "metadata-options http-endpoint must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.metadata-options.http-tokens != null)",
-				Require: "(var.data.metadata-options.http-tokens == 'optional' || " +
-					"var.data.metadata-options.http-tokens == 'required')",
+				When: "(input.data.metadata-options.http-tokens != null)",
+				Require: "(input.data.metadata-options.http-tokens == 'optional' || " +
+					"input.data.metadata-options.http-tokens == 'required')",
 				Message: "metadata-options http-tokens must be optional or required",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.metadata-options.http-protocol-ipv6 != null)",
-				Require: "(var.data.metadata-options.http-protocol-ipv6 == 'enabled' || " +
-					"var.data.metadata-options.http-protocol-ipv6 == 'disabled')",
+				When: "(input.data.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(input.data.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"input.data.metadata-options.http-protocol-ipv6 == 'disabled')",
 				Message: "metadata-options http-protocol-ipv6 must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.metadata-options.instance-metadata-tags != null)",
-				Require: "(var.data.metadata-options.instance-metadata-tags == 'enabled' || " +
-					"var.data.metadata-options.instance-metadata-tags == 'disabled')",
+				When: "(input.data.metadata-options.instance-metadata-tags != null)",
+				Require: "(input.data.metadata-options.instance-metadata-tags == 'enabled' || " +
+					"input.data.metadata-options.instance-metadata-tags == 'disabled')",
 				Message: "metadata-options instance-metadata-tags must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.data.metadata-options.http-put-response-hop-limit != null)",
-				Require: "(var.data.metadata-options.http-put-response-hop-limit == null || " +
-					"var.data.metadata-options.http-put-response-hop-limit >= 1) && " +
-					"(var.data.metadata-options.http-put-response-hop-limit == null || " +
-					"var.data.metadata-options.http-put-response-hop-limit <= 64)",
+				When: "(input.data.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(input.data.metadata-options.http-put-response-hop-limit == null || " +
+					"input.data.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(input.data.metadata-options.http-put-response-hop-limit == null || " +
+					"input.data.metadata-options.http-put-response-hop-limit <= 64)",
 				Message: "metadata-options http-put-response-hop-limit must be between 1 and 64",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, want,
@@ -811,16 +811,16 @@ func TestEc2AmiSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:    "predicate",
-				When:    "(var.owners != null)",
-				Require: "(var.owners == null || @core.length(var.owners) >= 1)",
+				When:    "(input.owners != null)",
+				Require: "(input.owners == null || @core.length(input.owners) >= 1)",
 				Message: "owners must list at least one owner when given",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.owners", Optional: true},
-			{Field: "var.executable-users", Optional: true},
-			{Field: "var.filters", Optional: true},
-			{Field: "var.image-ids", Optional: true},
+			{Field: "input.owners", Optional: true},
+			{Field: "input.executable-users", Optional: true},
+			{Field: "input.filters", Optional: true},
+			{Field: "input.image-ids", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-ami"])
@@ -876,7 +876,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"vpc-id":              typecheck.TString(),
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.tags", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -892,7 +892,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"route-table-id": typecheck.TString(),
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.tags", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -922,51 +922,51 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					{
 						Kind: "exactly-one-of",
 						Fields: []string{
-							"var.destination-cidr-block",
-							"var.destination-ipv6-cidr-block",
-							"var.destination-prefix-list-id",
+							"input.destination-cidr-block",
+							"input.destination-ipv6-cidr-block",
+							"input.destination-prefix-list-id",
 						},
 					},
 					{
 						Kind: "exactly-one-of",
 						Fields: []string{
-							"var.carrier-gateway-id",
-							"var.core-network-arn",
-							"var.egress-only-gateway-id",
-							"var.gateway-id",
-							"var.local-gateway-id",
-							"var.nat-gateway-id",
-							"var.network-interface-id",
-							"var.transit-gateway-id",
-							"var.vpc-endpoint-id",
-							"var.vpc-peering-connection-id",
+							"input.carrier-gateway-id",
+							"input.core-network-arn",
+							"input.egress-only-gateway-id",
+							"input.gateway-id",
+							"input.local-gateway-id",
+							"input.nat-gateway-id",
+							"input.network-interface-id",
+							"input.transit-gateway-id",
+							"input.vpc-endpoint-id",
+							"input.vpc-peering-connection-id",
 						},
 					},
 					{
 						Kind: "forbidden-with",
 						Fields: []string{
-							"var.carrier-gateway-id",
-							"var.destination-ipv6-cidr-block",
+							"input.carrier-gateway-id",
+							"input.destination-ipv6-cidr-block",
 						},
 					},
 					{
 						Kind: "forbidden-with",
 						Fields: []string{
-							"var.egress-only-gateway-id",
-							"var.destination-cidr-block",
+							"input.egress-only-gateway-id",
+							"input.destination-cidr-block",
 						},
 					},
 					{
 						Kind: "forbidden-with",
 						Fields: []string{
-							"var.vpc-endpoint-id",
-							"var.destination-prefix-list-id",
+							"input.vpc-endpoint-id",
+							"input.destination-prefix-list-id",
 						},
 					},
 					{
 						Kind:    "predicate",
-						When:    "(var.gateway-id != null)",
-						Require: "(var.gateway-id != 'local')",
+						When:    "(input.gateway-id != null)",
+						Require: "(input.gateway-id != 'local')",
 						Message: "gateway-id cannot be local; the local route is not managed here",
 					},
 				},
@@ -987,8 +987,8 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					{
 						Kind: "exactly-one-of",
 						Fields: []string{
-							"var.subnet-id",
-							"var.gateway-id",
+							"input.subnet-id",
+							"input.gateway-id",
 						},
 					},
 				},
@@ -1015,13 +1015,13 @@ func TestEc2RoutingSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind:    "predicate",
-						When:    "(var.domain != null)",
-						Require: "(var.domain == 'vpc' || var.domain == 'standard')",
+						When:    "(input.domain != null)",
+						Require: "(input.domain == 'vpc' || input.domain == 'standard')",
 						Message: "domain must be vpc or standard",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.tags", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -1050,50 +1050,50 @@ func TestEc2RoutingSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind: "predicate",
-						When: "(var.connectivity-type != null)",
-						Require: "(var.connectivity-type == 'public' || " +
-							"var.connectivity-type == 'private')",
+						When: "(input.connectivity-type != null)",
+						Require: "(input.connectivity-type == 'public' || " +
+							"input.connectivity-type == 'private')",
 						Message: "connectivity-type must be public or private",
 					},
 					{
 						Kind: "predicate",
-						When: "((var.connectivity-type == 'public') || " +
-							"(var.connectivity-type == null))",
-						Require: "(var.allocation-id != null)",
+						When: "((input.connectivity-type == 'public') || " +
+							"(input.connectivity-type == null))",
+						Require: "(input.allocation-id != null)",
 						Message: "allocation-id is required for a public NAT gateway",
 					},
 					{
 						Kind:    "predicate",
-						When:    "(var.connectivity-type == 'private')",
-						Require: "(var.allocation-id == null)",
+						When:    "(input.connectivity-type == 'private')",
+						Require: "(input.allocation-id == null)",
 						Message: "allocation-id is not supported with connectivity-type private",
 					},
 					{
 						Kind:    "predicate",
-						When:    "(var.connectivity-type == 'private')",
-						Require: "(var.secondary-allocation-ids == null)",
+						When:    "(input.connectivity-type == 'private')",
+						Require: "(input.secondary-allocation-ids == null)",
 						Message: "secondary-allocation-ids is not supported with " +
 							"connectivity-type private",
 					},
 					{
 						Kind:    "predicate",
-						When:    "(var.secondary-private-ip-address-count != null)",
-						Require: "(var.connectivity-type == 'private')",
+						When:    "(input.secondary-private-ip-address-count != null)",
+						Require: "(input.connectivity-type == 'private')",
 						Message: "secondary-private-ip-address-count is supported only with " +
 							"connectivity-type private",
 					},
 					{
 						Kind: "at-most-one-of",
 						Fields: []string{
-							"var.secondary-private-ip-address-count",
-							"var.secondary-private-ip-addresses",
+							"input.secondary-private-ip-address-count",
+							"input.secondary-private-ip-addresses",
 						},
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.secondary-allocation-ids", Optional: true},
-					{Field: "var.secondary-private-ip-addresses", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.secondary-allocation-ids", Optional: true},
+					{Field: "input.secondary-private-ip-addresses", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -1142,37 +1142,37 @@ func TestEc2RoutingSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind: "predicate",
-						When: "(var.vpc-endpoint-type != null)",
-						Require: "(var.vpc-endpoint-type == 'Gateway' || " +
-							"var.vpc-endpoint-type == 'Interface' || " +
-							"var.vpc-endpoint-type == 'GatewayLoadBalancer')",
+						When: "(input.vpc-endpoint-type != null)",
+						Require: "(input.vpc-endpoint-type == 'Gateway' || " +
+							"input.vpc-endpoint-type == 'Interface' || " +
+							"input.vpc-endpoint-type == 'GatewayLoadBalancer')",
 						Message: "vpc-endpoint-type must be Gateway, Interface, or " +
 							"GatewayLoadBalancer",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.ip-address-type != null)",
-						Require: "(var.ip-address-type == 'ipv4' || " +
-							"var.ip-address-type == 'dualstack' || " +
-							"var.ip-address-type == 'ipv6')",
+						When: "(input.ip-address-type != null)",
+						Require: "(input.ip-address-type == 'ipv4' || " +
+							"input.ip-address-type == 'dualstack' || " +
+							"input.ip-address-type == 'ipv6')",
 						Message: "ip-address-type must be ipv4, dualstack, or ipv6",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.dns-options.dns-record-ip-type != null)",
-						Require: "(var.dns-options.dns-record-ip-type == 'ipv4' || " +
-							"var.dns-options.dns-record-ip-type == 'dualstack' || " +
-							"var.dns-options.dns-record-ip-type == 'ipv6' || " +
-							"var.dns-options.dns-record-ip-type == 'service-defined')",
+						When: "(input.dns-options.dns-record-ip-type != null)",
+						Require: "(input.dns-options.dns-record-ip-type == 'ipv4' || " +
+							"input.dns-options.dns-record-ip-type == 'dualstack' || " +
+							"input.dns-options.dns-record-ip-type == 'ipv6' || " +
+							"input.dns-options.dns-record-ip-type == 'service-defined')",
 						Message: "dns-options dns-record-ip-type must be ipv4, " +
 							"dualstack, ipv6, or service-defined",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.route-table-ids", Optional: true},
-					{Field: "var.security-group-ids", Optional: true},
-					{Field: "var.subnet-ids", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.route-table-ids", Optional: true},
+					{Field: "input.security-group-ids", Optional: true},
+					{Field: "input.subnet-ids", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -1212,7 +1212,7 @@ func TestEc2KeyPairSchema(t *testing.T) {
 			"key-type":    typecheck.TString(),
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.Resources["ec2-key-pair"])
@@ -1344,109 +1344,109 @@ func TestEc2InstanceSchema(t *testing.T) {
 			{
 				Kind: "at-least-one-of",
 				Fields: []string{
-					"var.ami",
-					"var.launch-template",
+					"input.ami",
+					"input.launch-template",
 				},
 			},
 			{
 				Kind: "at-least-one-of",
 				Fields: []string{
-					"var.instance-type",
-					"var.launch-template",
+					"input.instance-type",
+					"input.launch-template",
 				},
 			},
 			{
 				Kind: "at-most-one-of",
 				Fields: []string{
-					"var.user-data",
-					"var.user-data-base64",
+					"input.user-data",
+					"input.user-data-base64",
 				},
 			},
 			{
 				Kind: "predicate",
-				When: "(var.tenancy != null)",
-				Require: "(var.tenancy == 'default' || var.tenancy == 'dedicated' || " +
-					"var.tenancy == 'host')",
+				When: "(input.tenancy != null)",
+				Require: "(input.tenancy == 'default' || input.tenancy == 'dedicated' || " +
+					"input.tenancy == 'host')",
 				Message: "tenancy must be default, dedicated, or host",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.launch-template != null)",
-				Require: "(((var.launch-template.id != null) && " +
-					"(var.launch-template.name == null)) || " +
-					"((var.launch-template.id == null) && " +
-					"(var.launch-template.name != null)))",
+				When: "(input.launch-template != null)",
+				Require: "(((input.launch-template.id != null) && " +
+					"(input.launch-template.name == null)) || " +
+					"((input.launch-template.id == null) && " +
+					"(input.launch-template.name != null)))",
 				Message: "launch-template requires exactly one of id and name",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.metadata-options.http-endpoint != null)",
-				Require: "(var.metadata-options.http-endpoint == 'enabled' || " +
-					"var.metadata-options.http-endpoint == 'disabled')",
+				When: "(input.metadata-options.http-endpoint != null)",
+				Require: "(input.metadata-options.http-endpoint == 'enabled' || " +
+					"input.metadata-options.http-endpoint == 'disabled')",
 				Message: "metadata-options http-endpoint must be enabled or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.metadata-options.http-tokens != null)",
-				Require: "(var.metadata-options.http-tokens == 'optional' || " +
-					"var.metadata-options.http-tokens == 'required')",
+				When: "(input.metadata-options.http-tokens != null)",
+				Require: "(input.metadata-options.http-tokens == 'optional' || " +
+					"input.metadata-options.http-tokens == 'required')",
 				Message: "metadata-options http-tokens must be optional or required",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.metadata-options.http-protocol-ipv6 != null)",
-				Require: "(var.metadata-options.http-protocol-ipv6 == 'enabled' || " +
-					"var.metadata-options.http-protocol-ipv6 == 'disabled')",
+				When: "(input.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(input.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"input.metadata-options.http-protocol-ipv6 == 'disabled')",
 				Message: "metadata-options http-protocol-ipv6 must be enabled " +
 					"or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.metadata-options.instance-metadata-tags != null)",
-				Require: "(var.metadata-options.instance-metadata-tags == 'enabled' " +
-					"|| var.metadata-options.instance-metadata-tags == 'disabled')",
+				When: "(input.metadata-options.instance-metadata-tags != null)",
+				Require: "(input.metadata-options.instance-metadata-tags == 'enabled' " +
+					"|| input.metadata-options.instance-metadata-tags == 'disabled')",
 				Message: "metadata-options instance-metadata-tags must be enabled " +
 					"or disabled",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.metadata-options.http-put-response-hop-limit != null)",
-				Require: "(var.metadata-options.http-put-response-hop-limit == null " +
-					"|| var.metadata-options.http-put-response-hop-limit >= 1) && " +
-					"(var.metadata-options.http-put-response-hop-limit == null || " +
-					"var.metadata-options.http-put-response-hop-limit <= 64)",
+				When: "(input.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(input.metadata-options.http-put-response-hop-limit == null " +
+					"|| input.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(input.metadata-options.http-put-response-hop-limit == null || " +
+					"input.metadata-options.http-put-response-hop-limit <= 64)",
 				Message: "metadata-options http-put-response-hop-limit must be " +
 					"1 to 64",
 			},
 			{
 				Kind: "predicate",
-				When: "((var.root-block-device.iops != null) && " +
-					"(var.root-block-device.volume-type != null))",
-				Require: "(var.root-block-device.volume-type == 'gp3' || " +
-					"var.root-block-device.volume-type == 'io1' || " +
-					"var.root-block-device.volume-type == 'io2')",
+				When: "((input.root-block-device.iops != null) && " +
+					"(input.root-block-device.volume-type != null))",
+				Require: "(input.root-block-device.volume-type == 'gp3' || " +
+					"input.root-block-device.volume-type == 'io1' || " +
+					"input.root-block-device.volume-type == 'io2')",
 				Message: "root-block-device iops is valid only for gp3, io1, " +
 					"or io2 volume types",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.root-block-device.volume-type == 'io1' || " +
-					"var.root-block-device.volume-type == 'io2')",
-				Require: "(var.root-block-device.iops != null)",
+				When: "(input.root-block-device.volume-type == 'io1' || " +
+					"input.root-block-device.volume-type == 'io2')",
+				Require: "(input.root-block-device.iops != null)",
 				Message: "root-block-device iops is required when volume-type " +
 					"is io1 or io2",
 			},
 			{
 				Kind: "predicate",
-				When: "((var.root-block-device.throughput != null) && " +
-					"(var.root-block-device.volume-type != null))",
-				Require: "(var.root-block-device.volume-type == 'gp3')",
+				When: "((input.root-block-device.throughput != null) && " +
+					"(input.root-block-device.volume-type != null))",
+				Require: "(input.root-block-device.volume-type == 'gp3')",
 				Message: "root-block-device throughput is valid only for gp3 volumes",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.root-block-device.tags != null)",
-				Require: "(var.volume-tags == null)",
+				When:    "(input.root-block-device.tags != null)",
+				Require: "(input.volume-tags == null)",
 				Message: "root-block-device tags cannot combine with volume-tags",
 			},
 			{
@@ -1457,7 +1457,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"@each.value.volume-type == 'io1' || " +
 					"@each.value.volume-type == 'io2')",
 				Message: "iops is valid only for gp3, io1, or io2 volume types",
-				ForEach: "var.ebs-block-device",
+				ForEach: "input.ebs-block-device",
 			},
 			{
 				Kind: "predicate",
@@ -1465,7 +1465,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"@each.value.volume-type == 'io2')",
 				Require: "(@each.value.iops != null)",
 				Message: "iops is required when volume-type is io1 or io2",
-				ForEach: "var.ebs-block-device",
+				ForEach: "input.ebs-block-device",
 			},
 			{
 				Kind: "predicate",
@@ -1473,7 +1473,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"(@each.value.volume-type != null))",
 				Require: "(@each.value.volume-type == 'gp3')",
 				Message: "throughput is valid only for gp3 volumes",
-				ForEach: "var.ebs-block-device",
+				ForEach: "input.ebs-block-device",
 			},
 			{
 				Kind: "predicate",
@@ -1481,15 +1481,15 @@ func TestEc2InstanceSchema(t *testing.T) {
 				Require: "((@each.value.virtual-name != null) && " +
 					"(@core.length(@each.value.virtual-name) >= 1))",
 				Message: "virtual-name is required unless no-device is true",
-				ForEach: "var.ephemeral-block-device",
+				ForEach: "input.ephemeral-block-device",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.vpc-security-group-ids", Optional: true},
-			{Field: "var.ebs-block-device", Optional: true},
-			{Field: "var.ephemeral-block-device", Optional: true},
-			{Field: "var.volume-tags", Optional: true},
-			{Field: "var.tags", Optional: true},
+			{Field: "input.vpc-security-group-ids", Optional: true},
+			{Field: "input.ebs-block-device", Optional: true},
+			{Field: "input.ephemeral-block-device", Optional: true},
+			{Field: "input.volume-tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.Resources["ec2-instance"])
@@ -1531,18 +1531,18 @@ func TestEc2AvailabilityZonesSchema(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind: "predicate",
-				When: "(var.state != null)",
-				Require: "(var.state == 'available' || var.state == 'information' || " +
-					"var.state == 'impaired' || var.state == 'unavailable' || " +
-					"var.state == 'constrained')",
+				When: "(input.state != null)",
+				Require: "(input.state == 'available' || input.state == 'information' || " +
+					"input.state == 'impaired' || input.state == 'unavailable' || " +
+					"input.state == 'constrained')",
 				Message: "state must be one of available, information, impaired, " +
 					"unavailable, or constrained",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.filters", Optional: true},
-			{Field: "var.exclude-names", Optional: true},
-			{Field: "var.exclude-zone-ids", Optional: true},
+			{Field: "input.filters", Optional: true},
+			{Field: "input.exclude-names", Optional: true},
+			{Field: "input.exclude-zone-ids", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-availability-zones"])
@@ -1575,8 +1575,8 @@ func TestEc2SubnetsSchema(t *testing.T) {
 			"ids": typecheck.TList(typecheck.TString()),
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
-			{Field: "var.filter", Optional: true},
+			{Field: "input.tags", Optional: true},
+			{Field: "input.filter", Optional: true},
 		},
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-subnets"])

@@ -56,25 +56,25 @@ func TestCloudfrontSchemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.origin-access-control-origin-type == 's3' || " +
-						"var.origin-access-control-origin-type == 'mediastore' || " +
-						"var.origin-access-control-origin-type == 'mediapackagev2' || " +
-						"var.origin-access-control-origin-type == 'lambda')",
+					Require: "(input.origin-access-control-origin-type == 's3' || " +
+						"input.origin-access-control-origin-type == 'mediastore' || " +
+						"input.origin-access-control-origin-type == 'mediapackagev2' || " +
+						"input.origin-access-control-origin-type == 'lambda')",
 					Message: "origin-access-control-origin-type must be one of " +
 						"s3, mediastore, mediapackagev2, lambda",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.signing-behavior == 'never' || " +
-						"var.signing-behavior == 'always' || " +
-						"var.signing-behavior == 'no-override')",
+					Require: "(input.signing-behavior == 'never' || " +
+						"input.signing-behavior == 'always' || " +
+						"input.signing-behavior == 'no-override')",
 					Message: "signing-behavior must be one of never, always, no-override",
 				},
 				{
 					Kind:    "predicate",
 					When:    "true",
-					Require: "(var.signing-protocol == 'sigv4')",
+					Require: "(input.signing-protocol == 'sigv4')",
 					Message: "signing-protocol must be sigv4",
 				},
 			},
@@ -100,17 +100,17 @@ func TestCloudfrontSchemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.runtime == 'cloudfront-js-1.0' || " +
-						"var.runtime == 'cloudfront-js-2.0')",
+					Require: "(input.runtime == 'cloudfront-js-1.0' || " +
+						"input.runtime == 'cloudfront-js-2.0')",
 					Message: "runtime must be one of cloudfront-js-1.0, cloudfront-js-2.0",
 				},
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.code-content", "var.code-path"},
+					Fields: []string{"input.code-content", "input.code-path"},
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.key-value-store-associations", Optional: true},
+				{Field: "input.key-value-store-associations", Optional: true},
 			},
 		},
 
@@ -189,37 +189,37 @@ func TestCloudfrontSchemas(t *testing.T) {
 				{
 					Kind: "at-least-one-of",
 					Fields: []string{
-						"var.cors-config", "var.custom-headers-config",
-						"var.remove-headers-config", "var.security-headers-config",
-						"var.server-timing-headers-config",
+						"input.cors-config", "input.custom-headers-config",
+						"input.remove-headers-config", "input.security-headers-config",
+						"input.server-timing-headers-config",
 					},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.security-headers-config.frame-options != null)",
-					Require: "(var.security-headers-config.frame-options.frame-option == 'DENY' || " +
-						"var.security-headers-config.frame-options.frame-option == 'SAMEORIGIN')",
+					When: "(input.security-headers-config.frame-options != null)",
+					Require: "(input.security-headers-config.frame-options.frame-option == 'DENY' || " +
+						"input.security-headers-config.frame-options.frame-option == 'SAMEORIGIN')",
 					Message: "security-headers-config frame-options frame-option " +
 						"must be DENY or SAMEORIGIN",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.security-headers-config.referrer-policy != null)",
-					Require: "(var.security-headers-config.referrer-policy.referrer-policy == " +
+					When: "(input.security-headers-config.referrer-policy != null)",
+					Require: "(input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'no-referrer' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'no-referrer-when-downgrade' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'origin' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'origin-when-cross-origin' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'same-origin' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'strict-origin' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'strict-origin-when-cross-origin' || " +
-						"var.security-headers-config.referrer-policy.referrer-policy == " +
+						"input.security-headers-config.referrer-policy.referrer-policy == " +
 						"'unsafe-url')",
 					Message: "security-headers-config referrer-policy referrer-policy must be " +
 						"one of no-referrer, no-referrer-when-downgrade, origin, " +
@@ -228,11 +228,11 @@ func TestCloudfrontSchemas(t *testing.T) {
 				},
 				{
 					Kind: "predicate",
-					When: "(var.server-timing-headers-config.sampling-rate != null)",
-					Require: "(var.server-timing-headers-config.sampling-rate == null || " +
-						"var.server-timing-headers-config.sampling-rate >= 0.0) && " +
-						"(var.server-timing-headers-config.sampling-rate == null || " +
-						"var.server-timing-headers-config.sampling-rate <= 100.0)",
+					When: "(input.server-timing-headers-config.sampling-rate != null)",
+					Require: "(input.server-timing-headers-config.sampling-rate == null || " +
+						"input.server-timing-headers-config.sampling-rate >= 0.0) && " +
+						"(input.server-timing-headers-config.sampling-rate == null || " +
+						"input.server-timing-headers-config.sampling-rate <= 100.0)",
 					Message: "server-timing-headers-config sampling-rate must be between 0 and 100",
 				},
 			},
@@ -358,76 +358,76 @@ func TestCloudfrontSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.price-class != null)",
-					Require: "(var.price-class == 'PriceClass_100' || " +
-						"var.price-class == 'PriceClass_200' || " +
-						"var.price-class == 'PriceClass_All')",
+					When: "(input.price-class != null)",
+					Require: "(input.price-class == 'PriceClass_100' || " +
+						"input.price-class == 'PriceClass_200' || " +
+						"input.price-class == 'PriceClass_All')",
 					Message: "price-class must be PriceClass_100, PriceClass_200, or PriceClass_All",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.http-version != null)",
-					Require: "(var.http-version == 'http1.1' || " +
-						"var.http-version == 'http2' || " +
-						"var.http-version == 'http2and3' || " +
-						"var.http-version == 'http3')",
+					When: "(input.http-version != null)",
+					Require: "(input.http-version == 'http1.1' || " +
+						"input.http-version == 'http2' || " +
+						"input.http-version == 'http2and3' || " +
+						"input.http-version == 'http3')",
 					Message: "http-version must be http1.1, http2, http2and3, or http3",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.viewer-certificate != null)",
-					Require: "(((var.viewer-certificate.cloudfront-default-certificate == true) && " +
-						"(var.viewer-certificate.acm-certificate-arn == null) && " +
-						"(var.viewer-certificate.iam-certificate-id == null)) || " +
-						"((var.viewer-certificate.acm-certificate-arn != null) && " +
-						"(var.viewer-certificate.iam-certificate-id == null) && " +
-						"!(var.viewer-certificate.cloudfront-default-certificate == true)) || " +
-						"((var.viewer-certificate.iam-certificate-id != null) && " +
-						"(var.viewer-certificate.acm-certificate-arn == null) && " +
-						"!(var.viewer-certificate.cloudfront-default-certificate == true)))",
+					When: "(input.viewer-certificate != null)",
+					Require: "(((input.viewer-certificate.cloudfront-default-certificate == true) && " +
+						"(input.viewer-certificate.acm-certificate-arn == null) && " +
+						"(input.viewer-certificate.iam-certificate-id == null)) || " +
+						"((input.viewer-certificate.acm-certificate-arn != null) && " +
+						"(input.viewer-certificate.iam-certificate-id == null) && " +
+						"!(input.viewer-certificate.cloudfront-default-certificate == true)) || " +
+						"((input.viewer-certificate.iam-certificate-id != null) && " +
+						"(input.viewer-certificate.acm-certificate-arn == null) && " +
+						"!(input.viewer-certificate.cloudfront-default-certificate == true)))",
 					Message: "viewer-certificate must set exactly one of " +
 						"cloudfront-default-certificate true, acm-certificate-arn, " +
 						"or iam-certificate-id",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.viewer-certificate.minimum-protocol-version != null)",
-					Require: "(var.viewer-certificate.minimum-protocol-version == 'SSLv3' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1_2016' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.1_2016' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2018' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2019' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2021' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.3_2025' || " +
-						"var.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2025')",
+					When: "(input.viewer-certificate.minimum-protocol-version != null)",
+					Require: "(input.viewer-certificate.minimum-protocol-version == 'SSLv3' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1_2016' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.1_2016' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2018' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2019' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2021' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.3_2025' || " +
+						"input.viewer-certificate.minimum-protocol-version == 'TLSv1.2_2025')",
 					Message: "viewer-certificate minimum-protocol-version must be one of " +
 						"SSLv3, TLSv1, TLSv1_2016, TLSv1.1_2016, TLSv1.2_2018, " +
 						"TLSv1.2_2019, TLSv1.2_2021, TLSv1.3_2025, TLSv1.2_2025",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.viewer-certificate.ssl-support-method != null)",
-					Require: "(var.viewer-certificate.ssl-support-method == 'sni-only' || " +
-						"var.viewer-certificate.ssl-support-method == 'vip' || " +
-						"var.viewer-certificate.ssl-support-method == 'static-ip')",
+					When: "(input.viewer-certificate.ssl-support-method != null)",
+					Require: "(input.viewer-certificate.ssl-support-method == 'sni-only' || " +
+						"input.viewer-certificate.ssl-support-method == 'vip' || " +
+						"input.viewer-certificate.ssl-support-method == 'static-ip')",
 					Message: "viewer-certificate ssl-support-method must be sni-only, vip, or static-ip",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.restrictions.geo-restriction.restriction-type != null)",
-					Require: "(var.restrictions.geo-restriction.restriction-type == 'none' || " +
-						"var.restrictions.geo-restriction.restriction-type == 'whitelist' || " +
-						"var.restrictions.geo-restriction.restriction-type == 'blacklist')",
+					When: "(input.restrictions.geo-restriction.restriction-type != null)",
+					Require: "(input.restrictions.geo-restriction.restriction-type == 'none' || " +
+						"input.restrictions.geo-restriction.restriction-type == 'whitelist' || " +
+						"input.restrictions.geo-restriction.restriction-type == 'blacklist')",
 					Message: "restrictions geo-restriction restriction-type must be " +
 						"none, whitelist, or blacklist",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.default-cache-behavior.viewer-protocol-policy == 'allow-all' || " +
-						"var.default-cache-behavior.viewer-protocol-policy == 'https-only' || " +
-						"var.default-cache-behavior.viewer-protocol-policy == 'redirect-to-https')",
+					Require: "(input.default-cache-behavior.viewer-protocol-policy == 'allow-all' || " +
+						"input.default-cache-behavior.viewer-protocol-policy == 'https-only' || " +
+						"input.default-cache-behavior.viewer-protocol-policy == 'redirect-to-https')",
 					Message: "default-cache-behavior viewer-protocol-policy must be " +
 						"allow-all, https-only, or redirect-to-https",
 				},
@@ -439,13 +439,13 @@ func TestCloudfrontSchemas(t *testing.T) {
 						"@each.value.viewer-protocol-policy == 'redirect-to-https')",
 					Message: "cache-behaviors viewer-protocol-policy must be " +
 						"allow-all, https-only, or redirect-to-https",
-					ForEach: "var.cache-behaviors",
+					ForEach: "input.cache-behaviors",
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.origins[*].s3-origin-config",
-						"var.origins[*].custom-origin-config",
+						"input.origins[*].s3-origin-config",
+						"input.origins[*].custom-origin-config",
 					},
 				},
 				{
@@ -456,14 +456,14 @@ func TestCloudfrontSchemas(t *testing.T) {
 						"@each.value.custom-origin-config.origin-protocol-policy == 'match-viewer')",
 					Message: "custom-origin-config origin-protocol-policy must be " +
 						"http-only, https-only, or match-viewer",
-					ForEach: "var.origins",
+					ForEach: "input.origins",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.aliases", Optional: true},
-				{Field: "var.cache-behaviors", Optional: true},
-				{Field: "var.custom-error-responses", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.aliases", Optional: true},
+				{Field: "input.cache-behaviors", Optional: true},
+				{Field: "input.custom-error-responses", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

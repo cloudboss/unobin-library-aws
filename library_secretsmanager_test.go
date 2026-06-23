@@ -56,8 +56,8 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.secret-binary-content",
-						"var.secret-string",
+						"input.secret-binary-content",
+						"input.secret-string",
 					},
 				},
 			},
@@ -91,16 +91,16 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.secret-string", "var.secret-binary"},
+					Fields: []string{"input.secret-string", "input.secret-binary"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.recovery-window-in-days != null)",
-					Require: "((var.recovery-window-in-days == 0) || " +
-						"((var.recovery-window-in-days == null || " +
-						"var.recovery-window-in-days >= 7) && " +
-						"(var.recovery-window-in-days == null || " +
-						"var.recovery-window-in-days <= 30)))",
+					When: "(input.recovery-window-in-days != null)",
+					Require: "((input.recovery-window-in-days == 0) || " +
+						"((input.recovery-window-in-days == null || " +
+						"input.recovery-window-in-days >= 7) && " +
+						"(input.recovery-window-in-days == null || " +
+						"input.recovery-window-in-days <= 30)))",
 					Message: "recovery-window-in-days must be 0 or between 7 and 30",
 				},
 				{
@@ -109,12 +109,12 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 					Require: "((@each.value.region != null) && " +
 						"(@core.length(@each.value.region) >= 1))",
 					Message: "a replica requires a region",
-					ForEach: "var.replica",
+					ForEach: "input.replica",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.replica", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.replica", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

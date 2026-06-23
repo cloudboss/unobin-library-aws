@@ -83,64 +83,64 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "(var.min-size == null || var.min-size >= 0)",
+				Require: "(input.min-size == null || input.min-size >= 0)",
 				Message: "min-size must be zero or greater",
 			},
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "(var.max-size == null || var.max-size >= 0)",
+				Require: "(input.max-size == null || input.max-size >= 0)",
 				Message: "max-size must be zero or greater",
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.availability-zones", "var.vpc-zone-identifier"},
+				Fields: []string{"input.availability-zones", "input.vpc-zone-identifier"},
 			},
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "((var.availability-zones != null) || (var.vpc-zone-identifier != null))",
+				Require: "((input.availability-zones != null) || (input.vpc-zone-identifier != null))",
 				Message: "one of availability-zones or vpc-zone-identifier is required",
 			},
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.launch-template.id", "var.launch-template.name"},
+				Fields: []string{"input.launch-template.id", "input.launch-template.name"},
 			},
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "((var.launch-template.id != null) || (var.launch-template.name != null))",
+				Require: "((input.launch-template.id != null) || (input.launch-template.name != null))",
 				Message: "launch-template requires one of id or name",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.desired-capacity-type != null)",
-				Require: "(var.desired-capacity-type == 'units' || var.desired-capacity-type == 'vcpu' || " +
-					"var.desired-capacity-type == 'memory-mib')",
+				When: "(input.desired-capacity-type != null)",
+				Require: "(input.desired-capacity-type == 'units' || input.desired-capacity-type == 'vcpu' || " +
+					"input.desired-capacity-type == 'memory-mib')",
 				Message: "desired-capacity-type must be units, vcpu, or memory-mib",
 			},
 			{
 				Kind: "predicate",
-				When: "(var.health-check-type != null)",
-				Require: "(var.health-check-type == 'EC2' || var.health-check-type == 'ELB' || " +
-					"var.health-check-type == 'VPC_LATTICE')",
+				When: "(input.health-check-type != null)",
+				Require: "(input.health-check-type == 'EC2' || input.health-check-type == 'ELB' || " +
+					"input.health-check-type == 'VPC_LATTICE')",
 				Message: "health-check-type must be EC2, ELB, or VPC_LATTICE",
 			},
 			{
 				Kind:    "predicate",
-				When:    "(var.metrics-granularity != null)",
-				Require: "(var.metrics-granularity == '1Minute')",
+				When:    "(input.metrics-granularity != null)",
+				Require: "(input.metrics-granularity == '1Minute')",
 				Message: "metrics-granularity must be 1Minute",
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.availability-zones", Optional: true},
-			{Field: "var.vpc-zone-identifier", Optional: true},
-			{Field: "var.termination-policies", Optional: true},
-			{Field: "var.tags", Optional: true},
-			{Field: "var.suspended-processes", Optional: true},
-			{Field: "var.enabled-metrics", Optional: true},
-			{Field: "var.target-group-arns", Optional: true},
+			{Field: "input.availability-zones", Optional: true},
+			{Field: "input.vpc-zone-identifier", Optional: true},
+			{Field: "input.termination-policies", Optional: true},
+			{Field: "input.tags", Optional: true},
+			{Field: "input.suspended-processes", Optional: true},
+			{Field: "input.enabled-metrics", Optional: true},
+			{Field: "input.target-group-arns", Optional: true},
 		},
 	}
 	assert.Equal(t, want,
@@ -236,83 +236,83 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.policy-type != null)",
-					Require: "(var.policy-type == 'SimpleScaling' || " +
-						"var.policy-type == 'StepScaling' || " +
-						"var.policy-type == 'TargetTrackingScaling' || " +
-						"var.policy-type == 'PredictiveScaling')",
+					When: "(input.policy-type != null)",
+					Require: "(input.policy-type == 'SimpleScaling' || " +
+						"input.policy-type == 'StepScaling' || " +
+						"input.policy-type == 'TargetTrackingScaling' || " +
+						"input.policy-type == 'PredictiveScaling')",
 					Message: "policy-type must be SimpleScaling, StepScaling, " +
 						"TargetTrackingScaling, or PredictiveScaling",
 				},
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.scaling-adjustment", "var.step-adjustments"},
+					Fields: []string{"input.scaling-adjustment", "input.step-adjustments"},
 				},
 				{
 					Kind: "predicate",
-					When: "((var.policy-type == null) || " +
-						"(var.policy-type == 'SimpleScaling'))",
-					Require: "(var.scaling-adjustment != null)",
+					When: "((input.policy-type == null) || " +
+						"(input.policy-type == 'SimpleScaling'))",
+					Require: "(input.scaling-adjustment != null)",
 					Message: "scaling-adjustment is required when policy-type is SimpleScaling",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.scaling-adjustment != null)",
-					Require: "((var.policy-type == null) || " +
-						"(var.policy-type == 'SimpleScaling'))",
+					When: "(input.scaling-adjustment != null)",
+					Require: "((input.policy-type == null) || " +
+						"(input.policy-type == 'SimpleScaling'))",
 					Message: "scaling-adjustment is valid only when policy-type is SimpleScaling",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.policy-type == 'StepScaling')",
-					Require: "(var.step-adjustments != null)",
+					When:    "(input.policy-type == 'StepScaling')",
+					Require: "(input.step-adjustments != null)",
 					Message: "step-adjustments is required when policy-type is StepScaling",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.step-adjustments != null)",
-					Require: "(var.policy-type == 'StepScaling')",
+					When:    "(input.step-adjustments != null)",
+					Require: "(input.policy-type == 'StepScaling')",
 					Message: "step-adjustments is valid only when policy-type is StepScaling",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.policy-type == 'TargetTrackingScaling')",
-					Require: "(var.target-tracking-configuration != null)",
+					When:    "(input.policy-type == 'TargetTrackingScaling')",
+					Require: "(input.target-tracking-configuration != null)",
 					Message: "target-tracking-configuration is required when policy-type " +
 						"is TargetTrackingScaling",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.target-tracking-configuration != null)",
-					Require: "(var.policy-type == 'TargetTrackingScaling')",
+					When:    "(input.target-tracking-configuration != null)",
+					Require: "(input.policy-type == 'TargetTrackingScaling')",
 					Message: "target-tracking-configuration is valid only when policy-type " +
 						"is TargetTrackingScaling",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.cooldown != null)",
-					Require: "((var.policy-type == null) || " +
-						"(var.policy-type == 'SimpleScaling'))",
+					When: "(input.cooldown != null)",
+					Require: "((input.policy-type == null) || " +
+						"(input.policy-type == 'SimpleScaling'))",
 					Message: "cooldown is valid only when policy-type is SimpleScaling",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.estimated-instance-warmup != null)",
-					Require: "(var.policy-type == 'StepScaling' || " +
-						"var.policy-type == 'TargetTrackingScaling')",
+					When: "(input.estimated-instance-warmup != null)",
+					Require: "(input.policy-type == 'StepScaling' || " +
+						"input.policy-type == 'TargetTrackingScaling')",
 					Message: "estimated-instance-warmup is valid only when policy-type is " +
 						"StepScaling or TargetTrackingScaling",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.min-adjustment-magnitude != null)",
-					Require: "(var.min-adjustment-magnitude == null || " +
-						"var.min-adjustment-magnitude >= 1)",
+					When: "(input.min-adjustment-magnitude != null)",
+					Require: "(input.min-adjustment-magnitude == null || " +
+						"input.min-adjustment-magnitude >= 1)",
 					Message: "min-adjustment-magnitude must be at least 1",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.step-adjustments", Optional: true},
+				{Field: "input.step-adjustments", Optional: true},
 			},
 		},
 		"autoscaling-lifecycle-hook": {
@@ -335,25 +335,25 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.lifecycle-transition == 'autoscaling:EC2_INSTANCE_LAUNCHING' || " +
-						"var.lifecycle-transition == 'autoscaling:EC2_INSTANCE_TERMINATING')",
+					Require: "(input.lifecycle-transition == 'autoscaling:EC2_INSTANCE_LAUNCHING' || " +
+						"input.lifecycle-transition == 'autoscaling:EC2_INSTANCE_TERMINATING')",
 					Message: "lifecycle-transition must be autoscaling:EC2_INSTANCE_LAUNCHING " +
 						"or autoscaling:EC2_INSTANCE_TERMINATING",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.default-result != null)",
-					Require: "(var.default-result == 'CONTINUE' || " +
-						"var.default-result == 'ABANDON')",
+					When: "(input.default-result != null)",
+					Require: "(input.default-result == 'CONTINUE' || " +
+						"input.default-result == 'ABANDON')",
 					Message: "default-result must be CONTINUE or ABANDON",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.heartbeat-timeout != null)",
-					Require: "(var.heartbeat-timeout == null || " +
-						"var.heartbeat-timeout >= 30) && " +
-						"(var.heartbeat-timeout == null || " +
-						"var.heartbeat-timeout <= 7200)",
+					When: "(input.heartbeat-timeout != null)",
+					Require: "(input.heartbeat-timeout == null || " +
+						"input.heartbeat-timeout >= 30) && " +
+						"(input.heartbeat-timeout == null || " +
+						"input.heartbeat-timeout <= 7200)",
 					Message: "heartbeat-timeout must be from 30 to 7200 seconds",
 				},
 			},

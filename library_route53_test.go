@@ -69,7 +69,7 @@ func TestRoute53Schemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.delegation-set-id", "var.vpcs"},
+					Fields: []string{"input.delegation-set-id", "input.vpcs"},
 				},
 				{
 					Kind: "predicate",
@@ -77,12 +77,12 @@ func TestRoute53Schemas(t *testing.T) {
 					Require: "((@each.value.vpc-id != null) && " +
 						"(@core.length(@each.value.vpc-id) >= 1))",
 					Message: "a vpc association requires a vpc-id",
-					ForEach: "var.vpcs",
+					ForEach: "input.vpcs",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.vpcs", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.vpcs", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"route53-record-set": {
@@ -130,120 +130,120 @@ func TestRoute53Schemas(t *testing.T) {
 				{
 					Kind:    "predicate",
 					When:    "true",
-					Require: "((var.zone-id != null) && (@core.length(var.zone-id) >= 1))",
+					Require: "((input.zone-id != null) && (@core.length(input.zone-id) >= 1))",
 				},
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.alias", "var.records"},
+					Fields: []string{"input.alias", "input.records"},
 				},
 				{
 					Kind:   "forbidden-with",
-					Fields: []string{"var.ttl", "var.alias"},
+					Fields: []string{"input.ttl", "input.alias"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.ttl", "var.records"},
+					Fields: []string{"input.ttl", "input.records"},
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.weighted-routing-policy",
-						"var.latency-routing-policy",
-						"var.failover-routing-policy",
-						"var.geolocation-routing-policy",
-						"var.multivalue-answer-routing-policy",
+						"input.weighted-routing-policy",
+						"input.latency-routing-policy",
+						"input.failover-routing-policy",
+						"input.geolocation-routing-policy",
+						"input.multivalue-answer-routing-policy",
 					},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.weighted-routing-policy", "var.set-identifier"},
+					Fields: []string{"input.weighted-routing-policy", "input.set-identifier"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.latency-routing-policy", "var.set-identifier"},
+					Fields: []string{"input.latency-routing-policy", "input.set-identifier"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.failover-routing-policy", "var.set-identifier"},
+					Fields: []string{"input.failover-routing-policy", "input.set-identifier"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.geolocation-routing-policy", "var.set-identifier"},
+					Fields: []string{"input.geolocation-routing-policy", "input.set-identifier"},
 				},
 				{
 					Kind: "required-with",
 					Fields: []string{
-						"var.multivalue-answer-routing-policy",
-						"var.set-identifier",
+						"input.multivalue-answer-routing-policy",
+						"input.set-identifier",
 					},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.failover-routing-policy != null)",
-					Require: "(var.failover-routing-policy.type == 'PRIMARY' || " +
-						"var.failover-routing-policy.type == 'SECONDARY')",
+					When: "(input.failover-routing-policy != null)",
+					Require: "(input.failover-routing-policy.type == 'PRIMARY' || " +
+						"input.failover-routing-policy.type == 'SECONDARY')",
 					Message: "failover-routing-policy type must be PRIMARY or SECONDARY",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.latency-routing-policy != null)",
-					Require: "(var.latency-routing-policy.region == 'us-east-1' || " +
-						"var.latency-routing-policy.region == 'us-east-2' || " +
-						"var.latency-routing-policy.region == 'us-west-1' || " +
-						"var.latency-routing-policy.region == 'us-west-2' || " +
-						"var.latency-routing-policy.region == 'ca-central-1' || " +
-						"var.latency-routing-policy.region == 'ca-west-1' || " +
-						"var.latency-routing-policy.region == 'eu-west-1' || " +
-						"var.latency-routing-policy.region == 'eu-west-2' || " +
-						"var.latency-routing-policy.region == 'eu-west-3' || " +
-						"var.latency-routing-policy.region == 'eu-central-1' || " +
-						"var.latency-routing-policy.region == 'eu-central-2' || " +
-						"var.latency-routing-policy.region == 'eu-north-1' || " +
-						"var.latency-routing-policy.region == 'eu-south-1' || " +
-						"var.latency-routing-policy.region == 'eu-south-2' || " +
-						"var.latency-routing-policy.region == 'ap-east-1' || " +
-						"var.latency-routing-policy.region == 'ap-east-2' || " +
-						"var.latency-routing-policy.region == 'ap-south-1' || " +
-						"var.latency-routing-policy.region == 'ap-south-2' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-1' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-2' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-3' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-4' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-5' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-6' || " +
-						"var.latency-routing-policy.region == 'ap-southeast-7' || " +
-						"var.latency-routing-policy.region == 'ap-northeast-1' || " +
-						"var.latency-routing-policy.region == 'ap-northeast-2' || " +
-						"var.latency-routing-policy.region == 'ap-northeast-3' || " +
-						"var.latency-routing-policy.region == 'sa-east-1' || " +
-						"var.latency-routing-policy.region == 'me-south-1' || " +
-						"var.latency-routing-policy.region == 'me-central-1' || " +
-						"var.latency-routing-policy.region == 'af-south-1' || " +
-						"var.latency-routing-policy.region == 'il-central-1' || " +
-						"var.latency-routing-policy.region == 'mx-central-1' || " +
-						"var.latency-routing-policy.region == 'cn-north-1' || " +
-						"var.latency-routing-policy.region == 'cn-northwest-1' || " +
-						"var.latency-routing-policy.region == 'us-gov-east-1' || " +
-						"var.latency-routing-policy.region == 'us-gov-west-1' || " +
-						"var.latency-routing-policy.region == 'eusc-de-east-1')",
+					When: "(input.latency-routing-policy != null)",
+					Require: "(input.latency-routing-policy.region == 'us-east-1' || " +
+						"input.latency-routing-policy.region == 'us-east-2' || " +
+						"input.latency-routing-policy.region == 'us-west-1' || " +
+						"input.latency-routing-policy.region == 'us-west-2' || " +
+						"input.latency-routing-policy.region == 'ca-central-1' || " +
+						"input.latency-routing-policy.region == 'ca-west-1' || " +
+						"input.latency-routing-policy.region == 'eu-west-1' || " +
+						"input.latency-routing-policy.region == 'eu-west-2' || " +
+						"input.latency-routing-policy.region == 'eu-west-3' || " +
+						"input.latency-routing-policy.region == 'eu-central-1' || " +
+						"input.latency-routing-policy.region == 'eu-central-2' || " +
+						"input.latency-routing-policy.region == 'eu-north-1' || " +
+						"input.latency-routing-policy.region == 'eu-south-1' || " +
+						"input.latency-routing-policy.region == 'eu-south-2' || " +
+						"input.latency-routing-policy.region == 'ap-east-1' || " +
+						"input.latency-routing-policy.region == 'ap-east-2' || " +
+						"input.latency-routing-policy.region == 'ap-south-1' || " +
+						"input.latency-routing-policy.region == 'ap-south-2' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-1' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-2' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-3' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-4' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-5' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-6' || " +
+						"input.latency-routing-policy.region == 'ap-southeast-7' || " +
+						"input.latency-routing-policy.region == 'ap-northeast-1' || " +
+						"input.latency-routing-policy.region == 'ap-northeast-2' || " +
+						"input.latency-routing-policy.region == 'ap-northeast-3' || " +
+						"input.latency-routing-policy.region == 'sa-east-1' || " +
+						"input.latency-routing-policy.region == 'me-south-1' || " +
+						"input.latency-routing-policy.region == 'me-central-1' || " +
+						"input.latency-routing-policy.region == 'af-south-1' || " +
+						"input.latency-routing-policy.region == 'il-central-1' || " +
+						"input.latency-routing-policy.region == 'mx-central-1' || " +
+						"input.latency-routing-policy.region == 'cn-north-1' || " +
+						"input.latency-routing-policy.region == 'cn-northwest-1' || " +
+						"input.latency-routing-policy.region == 'us-gov-east-1' || " +
+						"input.latency-routing-policy.region == 'us-gov-west-1' || " +
+						"input.latency-routing-policy.region == 'eusc-de-east-1')",
 					Message: "latency-routing-policy region must be a valid AWS region",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.type == 'A' || var.type == 'AAAA' || " +
-						"var.type == 'CAA' || var.type == 'CNAME' || " +
-						"var.type == 'DS' || var.type == 'MX' || " +
-						"var.type == 'NAPTR' || var.type == 'NS' || " +
-						"var.type == 'PTR' || var.type == 'SOA' || " +
-						"var.type == 'SPF' || var.type == 'SRV' || " +
-						"var.type == 'TXT' || var.type == 'TLSA' || " +
-						"var.type == 'SSHFP' || var.type == 'SVCB' || " +
-						"var.type == 'HTTPS')",
+					Require: "(input.type == 'A' || input.type == 'AAAA' || " +
+						"input.type == 'CAA' || input.type == 'CNAME' || " +
+						"input.type == 'DS' || input.type == 'MX' || " +
+						"input.type == 'NAPTR' || input.type == 'NS' || " +
+						"input.type == 'PTR' || input.type == 'SOA' || " +
+						"input.type == 'SPF' || input.type == 'SRV' || " +
+						"input.type == 'TXT' || input.type == 'TLSA' || " +
+						"input.type == 'SSHFP' || input.type == 'SVCB' || " +
+						"input.type == 'HTTPS')",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.records", Optional: true},
+				{Field: "input.records", Optional: true},
 			},
 		},
 	}
@@ -286,11 +286,11 @@ func TestRoute53DataSourceSchemas(t *testing.T) {
 		Constraints: []lang.ConstraintSpec{
 			{
 				Kind:   "at-most-one-of",
-				Fields: []string{"var.zone-id", "var.name"},
+				Fields: []string{"input.zone-id", "input.name"},
 			},
 		},
 		Defaults: []lang.DefaultSpec{
-			{Field: "var.tags", Optional: true},
+			{Field: "input.tags", Optional: true},
 		},
 	}
 	require.Contains(t, schema.DataSources, "route53-zone")

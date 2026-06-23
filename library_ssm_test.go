@@ -58,40 +58,40 @@ func TestSsmSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.value", "var.insecure-value"},
+					Fields: []string{"input.value", "input.insecure-value"},
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.type == 'SecureString')",
-					Require: "(var.insecure-value == null)",
+					When:    "(input.type == 'SecureString')",
+					Require: "(input.insecure-value == null)",
 					Message: "insecure-value cannot be set when type is SecureString",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.type == 'String' || " +
-						"var.type == 'StringList' || " +
-						"var.type == 'SecureString')",
+					Require: "(input.type == 'String' || " +
+						"input.type == 'StringList' || " +
+						"input.type == 'SecureString')",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.tier != null)",
-					Require: "(var.tier == 'Standard' || " +
-						"var.tier == 'Advanced' || " +
-						"var.tier == 'Intelligent-Tiering')",
+					When: "(input.tier != null)",
+					Require: "(input.tier == 'Standard' || " +
+						"input.tier == 'Advanced' || " +
+						"input.tier == 'Intelligent-Tiering')",
 					Message: "tier must be Standard, Advanced, or Intelligent-Tiering",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.data-type != null)",
-					Require: "(var.data-type == 'text' || " +
-						"var.data-type == 'aws:ec2:image' || " +
-						"var.data-type == 'aws:ssm:integration')",
+					When: "(input.data-type != null)",
+					Require: "(input.data-type == 'text' || " +
+						"input.data-type == 'aws:ec2:image' || " +
+						"input.data-type == 'aws:ssm:integration')",
 					Message: "data-type must be text, aws:ec2:image, or aws:ssm:integration",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

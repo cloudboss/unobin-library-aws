@@ -5,7 +5,7 @@
 // scenario's sizes and capacity, the launch template to exist with a t3.micro
 // default version, and the tagged gp3 volume to be available; destroyed
 // requires the group, the template, and the volume to be gone. The expected
-// capacity follows the same UB_VAR_desired_capacity variable that overrides
+// capacity follows the same UB_INPUT_desired_capacity variable that overrides
 // the scenario's desired-capacity input, zero when unset: at zero the group
 // must have no instances, above zero it must hold that many healthy in-service
 // instances, which the resource's capacity wait settles before apply returns.
@@ -189,16 +189,16 @@ func verifyDestroyed(
 }
 
 // desiredCapacity returns the capacity the run was applied with: the value of
-// UB_VAR_desired_capacity, the same variable that overrides the scenario's
+// UB_INPUT_desired_capacity, the same variable that overrides the scenario's
 // desired-capacity input, or zero when it is unset or empty.
 func desiredCapacity() (int, error) {
-	raw := os.Getenv("UB_VAR_desired_capacity")
+	raw := os.Getenv("UB_INPUT_desired_capacity")
 	if raw == "" {
 		return 0, nil
 	}
 	n, err := strconv.Atoi(raw)
 	if err != nil {
-		return 0, fmt.Errorf("parse UB_VAR_desired_capacity %q: %w", raw, err)
+		return 0, fmt.Errorf("parse UB_INPUT_desired_capacity %q: %w", raw, err)
 	}
 	return n, nil
 }

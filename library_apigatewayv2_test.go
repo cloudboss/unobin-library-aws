@@ -77,72 +77,72 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.protocol-type == 'HTTP' || " +
-						"var.protocol-type == 'WEBSOCKET')",
+					Require: "(input.protocol-type == 'HTTP' || " +
+						"input.protocol-type == 'WEBSOCKET')",
 					Message: "protocol-type must be HTTP or WEBSOCKET",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.ip-address-type != null)",
-					Require: "(var.ip-address-type == 'ipv4' || " +
-						"var.ip-address-type == 'dualstack')",
+					When: "(input.ip-address-type != null)",
+					Require: "(input.ip-address-type == 'ipv4' || " +
+						"input.ip-address-type == 'dualstack')",
 					Message: "ip-address-type must be ipv4 or dualstack",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.api-key-selection-expression != null)",
-					Require: "(var.api-key-selection-expression == '$context.authorizer.usageIdentifierKey' || " +
-						"var.api-key-selection-expression == '$request.header.x-api-key')",
+					When: "(input.api-key-selection-expression != null)",
+					Require: "(input.api-key-selection-expression == '$context.authorizer.usageIdentifierKey' || " +
+						"input.api-key-selection-expression == '$request.header.x-api-key')",
 					Message: "api-key-selection-expression must be " +
 						"$context.authorizer.usageIdentifierKey or $request.header.x-api-key",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.protocol-type == 'WEBSOCKET')",
-					Require: "(var.cors-configuration == null) && " +
-						"(var.credentials-arn == null) && " +
-						"(var.route-key == null) && " +
-						"(var.target == null) && " +
-						"(var.body == null) && " +
-						"(var.fail-on-warnings == null)",
+					When: "(input.protocol-type == 'WEBSOCKET')",
+					Require: "(input.cors-configuration == null) && " +
+						"(input.credentials-arn == null) && " +
+						"(input.route-key == null) && " +
+						"(input.target == null) && " +
+						"(input.body == null) && " +
+						"(input.fail-on-warnings == null)",
 					Message: "cors-configuration, credentials-arn, route-key, target, body, " +
 						"and fail-on-warnings are supported only for HTTP APIs",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.protocol-type == 'WEBSOCKET')",
-					Require: "(var.route-selection-expression != null)",
+					When:    "(input.protocol-type == 'WEBSOCKET')",
+					Require: "(input.route-selection-expression != null)",
 					Message: "route-selection-expression is required for a WebSocket API",
 				},
 				{
 					Kind: "predicate",
-					When: "((var.protocol-type == 'HTTP') && " +
-						"(var.route-selection-expression != null))",
-					Require: "(var.route-selection-expression == '$request.method $request.path')",
+					When: "((input.protocol-type == 'HTTP') && " +
+						"(input.route-selection-expression != null))",
+					Require: "(input.route-selection-expression == '$request.method $request.path')",
 					Message: "route-selection-expression for an HTTP API must be " +
 						"$request.method $request.path",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.base-path != null)",
-					Require: "(var.base-path == 'ignore' || " +
-						"var.base-path == 'prepend' || " +
-						"var.base-path == 'split')",
+					When: "(input.base-path != null)",
+					Require: "(input.base-path == 'ignore' || " +
+						"input.base-path == 'prepend' || " +
+						"input.base-path == 'split')",
 					Message: "base-path must be ignore, prepend, or split",
 				},
 				{
 					Kind:    "required-with",
-					Fields:  []string{"var.fail-on-warnings", "var.body"},
+					Fields:  []string{"input.fail-on-warnings", "input.body"},
 					Message: "fail-on-warnings applies only to a body import",
 				},
 				{
 					Kind:    "required-with",
-					Fields:  []string{"var.base-path", "var.body"},
+					Fields:  []string{"input.base-path", "input.body"},
 					Message: "base-path applies only to a body import",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"apigatewayv2-integration": {
@@ -180,72 +180,72 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.integration-type == 'AWS' || " +
-						"var.integration-type == 'AWS_PROXY' || " +
-						"var.integration-type == 'HTTP' || " +
-						"var.integration-type == 'HTTP_PROXY' || " +
-						"var.integration-type == 'MOCK')",
+					Require: "(input.integration-type == 'AWS' || " +
+						"input.integration-type == 'AWS_PROXY' || " +
+						"input.integration-type == 'HTTP' || " +
+						"input.integration-type == 'HTTP_PROXY' || " +
+						"input.integration-type == 'MOCK')",
 					Message: "integration-type must be AWS, AWS_PROXY, HTTP, HTTP_PROXY, or MOCK",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.integration-subtype != null)",
-					Require: "(var.integration-type == 'AWS_PROXY')",
+					When:    "(input.integration-subtype != null)",
+					Require: "(input.integration-type == 'AWS_PROXY')",
 					Message: "integration-subtype requires integration-type AWS_PROXY",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.connection-type == 'VPC_LINK')",
-					Require: "(var.connection-id != null)",
+					When:    "(input.connection-type == 'VPC_LINK')",
+					Require: "(input.connection-id != null)",
 					Message: "connection-type VPC_LINK requires connection-id",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.connection-type != null)",
-					Require: "(var.connection-type == 'INTERNET' || " +
-						"var.connection-type == 'VPC_LINK')",
+					When: "(input.connection-type != null)",
+					Require: "(input.connection-type == 'INTERNET' || " +
+						"input.connection-type == 'VPC_LINK')",
 					Message: "connection-type must be INTERNET or VPC_LINK",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.content-handling-strategy != null)",
-					Require: "(var.content-handling-strategy == 'CONVERT_TO_BINARY' || " +
-						"var.content-handling-strategy == 'CONVERT_TO_TEXT')",
+					When: "(input.content-handling-strategy != null)",
+					Require: "(input.content-handling-strategy == 'CONVERT_TO_BINARY' || " +
+						"input.content-handling-strategy == 'CONVERT_TO_TEXT')",
 					Message: "content-handling-strategy must be CONVERT_TO_BINARY or CONVERT_TO_TEXT",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.passthrough-behavior != null)",
-					Require: "(var.passthrough-behavior == 'WHEN_NO_MATCH' || " +
-						"var.passthrough-behavior == 'NEVER' || " +
-						"var.passthrough-behavior == 'WHEN_NO_TEMPLATES')",
+					When: "(input.passthrough-behavior != null)",
+					Require: "(input.passthrough-behavior == 'WHEN_NO_MATCH' || " +
+						"input.passthrough-behavior == 'NEVER' || " +
+						"input.passthrough-behavior == 'WHEN_NO_TEMPLATES')",
 					Message: "passthrough-behavior must be WHEN_NO_MATCH, NEVER, or WHEN_NO_TEMPLATES",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.payload-format-version != null)",
-					Require: "(var.payload-format-version == '1.0' || " +
-						"var.payload-format-version == '2.0')",
+					When: "(input.payload-format-version != null)",
+					Require: "(input.payload-format-version == '1.0' || " +
+						"input.payload-format-version == '2.0')",
 					Message: "payload-format-version must be 1.0 or 2.0",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.integration-method != null)",
-					Require: "(var.integration-method == 'ANY' || " +
-						"var.integration-method == 'DELETE' || " +
-						"var.integration-method == 'GET' || " +
-						"var.integration-method == 'HEAD' || " +
-						"var.integration-method == 'OPTIONS' || " +
-						"var.integration-method == 'PATCH' || " +
-						"var.integration-method == 'POST' || " +
-						"var.integration-method == 'PUT')",
+					When: "(input.integration-method != null)",
+					Require: "(input.integration-method == 'ANY' || " +
+						"input.integration-method == 'DELETE' || " +
+						"input.integration-method == 'GET' || " +
+						"input.integration-method == 'HEAD' || " +
+						"input.integration-method == 'OPTIONS' || " +
+						"input.integration-method == 'PATCH' || " +
+						"input.integration-method == 'POST' || " +
+						"input.integration-method == 'PUT')",
 					Message: "integration-method must be a valid HTTP method",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.request-parameters", Optional: true},
-				{Field: "var.request-templates", Optional: true},
-				{Field: "var.response-parameters", Optional: true},
+				{Field: "input.request-parameters", Optional: true},
+				{Field: "input.request-templates", Optional: true},
+				{Field: "input.response-parameters", Optional: true},
 			},
 		},
 		"apigatewayv2-route": {
@@ -270,38 +270,38 @@ func TestApigatewayv2Schemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.authorization-type != null)",
-					Require: "(var.authorization-type == 'NONE' || " +
-						"var.authorization-type == 'AWS_IAM' || " +
-						"var.authorization-type == 'CUSTOM' || " +
-						"var.authorization-type == 'JWT')",
+					When: "(input.authorization-type != null)",
+					Require: "(input.authorization-type == 'NONE' || " +
+						"input.authorization-type == 'AWS_IAM' || " +
+						"input.authorization-type == 'CUSTOM' || " +
+						"input.authorization-type == 'JWT')",
 					Message: "authorization-type must be NONE, AWS_IAM, CUSTOM, or JWT",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.authorization-type == 'CUSTOM' || " +
-						"var.authorization-type == 'JWT')",
-					Require: "(var.authorizer-id != null)",
+					When: "(input.authorization-type == 'CUSTOM' || " +
+						"input.authorization-type == 'JWT')",
+					Require: "(input.authorizer-id != null)",
 					Message: "authorizer-id is required when authorization-type is CUSTOM or JWT",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.operation-name != null)",
-					Require: "((var.operation-name != null) && " +
-						"(@core.length(var.operation-name) >= 1))",
+					When: "(input.operation-name != null)",
+					Require: "((input.operation-name != null) && " +
+						"(@core.length(input.operation-name) >= 1))",
 					Message: "operation-name must not be empty",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.target != null)",
-					Require: "((var.target != null) && (@core.length(var.target) >= 1))",
+					When:    "(input.target != null)",
+					Require: "((input.target != null) && (@core.length(input.target) >= 1))",
 					Message: "target must not be empty",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.authorization-scopes", Optional: true},
-				{Field: "var.request-models", Optional: true},
-				{Field: "var.request-parameters", Optional: true},
+				{Field: "input.authorization-scopes", Optional: true},
+				{Field: "input.request-models", Optional: true},
+				{Field: "input.request-parameters", Optional: true},
 			},
 		},
 		"apigatewayv2-stage": {
@@ -344,16 +344,16 @@ func TestApigatewayv2Schemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:    "predicate",
-					When:    "(var.auto-deploy == true)",
-					Require: "(var.deployment-id == null)",
+					When:    "(input.auto-deploy == true)",
+					Require: "(input.deployment-id == null)",
 					Message: "deployment-id cannot be set when auto-deploy is enabled",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.default-route-settings.logging-level != null)",
-					Require: "(var.default-route-settings.logging-level == 'ERROR' || " +
-						"var.default-route-settings.logging-level == 'INFO' || " +
-						"var.default-route-settings.logging-level == 'OFF')",
+					When: "(input.default-route-settings.logging-level != null)",
+					Require: "(input.default-route-settings.logging-level == 'ERROR' || " +
+						"input.default-route-settings.logging-level == 'INFO' || " +
+						"input.default-route-settings.logging-level == 'OFF')",
 					Message: "default-route-settings logging-level must be ERROR, INFO, or OFF",
 				},
 				{
@@ -363,13 +363,13 @@ func TestApigatewayv2Schemas(t *testing.T) {
 						"@each.value.logging-level == 'INFO' || " +
 						"@each.value.logging-level == 'OFF')",
 					Message: "route-settings logging-level must be ERROR, INFO, or OFF",
-					ForEach: "var.route-settings",
+					ForEach: "input.route-settings",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.route-settings", Optional: true},
-				{Field: "var.stage-variables", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.route-settings", Optional: true},
+				{Field: "input.stage-variables", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

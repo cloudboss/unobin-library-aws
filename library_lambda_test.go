@@ -128,147 +128,147 @@ func TestLambdaSchemas(t *testing.T) {
 				{
 					Kind: "exactly-one-of",
 					Fields: []string{
-						"var.code.zip-file-content", "var.code.zip-file-path",
-						"var.code.s3-bucket", "var.code.image-uri",
+						"input.code.zip-file-content", "input.code.zip-file-path",
+						"input.code.s3-bucket", "input.code.image-uri",
 					},
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.code.zip-file-content", "var.code.zip-file-path",
+						"input.code.zip-file-content", "input.code.zip-file-path",
 					},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.code.s3-bucket", "var.code.s3-key"},
+					Fields: []string{"input.code.s3-bucket", "input.code.s3-key"},
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.code.s3-key", "var.code.s3-bucket"},
+					Fields: []string{"input.code.s3-key", "input.code.s3-bucket"},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.code.s3-object-version", "var.code.zip-file-content",
-						"var.code.zip-file-path", "var.code.image-uri",
+						"input.code.s3-object-version", "input.code.zip-file-content",
+						"input.code.zip-file-path", "input.code.image-uri",
 					},
 				},
 				{
 					Kind:   "forbidden-with",
-					Fields: []string{"var.code.source-kms-key-arn", "var.code.image-uri"},
+					Fields: []string{"input.code.source-kms-key-arn", "input.code.image-uri"},
 				},
 				{
 					Kind:    "predicate",
-					When:    "!(var.package-type == 'Image')",
-					Require: "(var.handler != null) && (var.runtime != null)",
+					When:    "!(input.package-type == 'Image')",
+					Require: "(input.handler != null) && (input.runtime != null)",
 					Message: "handler and runtime are required for a Zip package",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.package-type == 'Image')",
-					Require: "(var.code.image-uri != null)",
+					When:    "(input.package-type == 'Image')",
+					Require: "(input.code.image-uri != null)",
 					Message: "an Image package requires code.image-uri",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.package-type != null)",
-					Require: "(var.package-type == 'Zip' || var.package-type == 'Image')",
+					When:    "(input.package-type != null)",
+					Require: "(input.package-type == 'Zip' || input.package-type == 'Image')",
 					Message: "package-type must be Zip or Image",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.memory-size != null)",
-					Require: "(var.memory-size == null || var.memory-size >= 128) && " +
-						"(var.memory-size == null || var.memory-size <= 32768)",
+					When: "(input.memory-size != null)",
+					Require: "(input.memory-size == null || input.memory-size >= 128) && " +
+						"(input.memory-size == null || input.memory-size <= 32768)",
 					Message: "memory-size must be between 128 and 32768",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.timeout != null)",
-					Require: "(var.timeout == null || var.timeout >= 1) && (var.timeout == null || " +
-						"var.timeout <= 900)",
+					When: "(input.timeout != null)",
+					Require: "(input.timeout == null || input.timeout >= 1) && (input.timeout == null || " +
+						"input.timeout <= 900)",
 					Message: "timeout must be between 1 and 900",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.reserved-concurrent-executions != null)",
-					Require: "(var.reserved-concurrent-executions == null || " +
-						"var.reserved-concurrent-executions >= 0)",
+					When: "(input.reserved-concurrent-executions != null)",
+					Require: "(input.reserved-concurrent-executions == null || " +
+						"input.reserved-concurrent-executions >= 0)",
 					Message: "reserved-concurrent-executions must be zero or greater",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.image-config != null)",
-					Require: "(var.package-type == 'Image')",
+					When:    "(input.image-config != null)",
+					Require: "(input.package-type == 'Image')",
 					Message: "image-config applies only to an Image package",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.tracing-config.mode != null)",
-					Require: "(var.tracing-config.mode == 'Active' || " +
-						"var.tracing-config.mode == 'PassThrough')",
+					When: "(input.tracing-config.mode != null)",
+					Require: "(input.tracing-config.mode == 'Active' || " +
+						"input.tracing-config.mode == 'PassThrough')",
 					Message: "tracing-config mode must be Active or PassThrough",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.logging-config.log-format != null)",
-					Require: "(var.logging-config.log-format == 'Text' || " +
-						"var.logging-config.log-format == 'JSON')",
+					When: "(input.logging-config.log-format != null)",
+					Require: "(input.logging-config.log-format == 'Text' || " +
+						"input.logging-config.log-format == 'JSON')",
 					Message: "logging-config log-format must be Text or JSON",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.logging-config.application-log-level != null)",
-					Require: "(var.logging-config.application-log-level == 'TRACE' || " +
-						"var.logging-config.application-log-level == 'DEBUG' || " +
-						"var.logging-config.application-log-level == 'INFO' || " +
-						"var.logging-config.application-log-level == 'WARN' || " +
-						"var.logging-config.application-log-level == 'ERROR' || " +
-						"var.logging-config.application-log-level == 'FATAL')",
+					When: "(input.logging-config.application-log-level != null)",
+					Require: "(input.logging-config.application-log-level == 'TRACE' || " +
+						"input.logging-config.application-log-level == 'DEBUG' || " +
+						"input.logging-config.application-log-level == 'INFO' || " +
+						"input.logging-config.application-log-level == 'WARN' || " +
+						"input.logging-config.application-log-level == 'ERROR' || " +
+						"input.logging-config.application-log-level == 'FATAL')",
 					Message: "application-log-level must be TRACE, DEBUG, INFO, WARN, ERROR, or FATAL",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.logging-config.application-log-level != null)",
-					Require: "(var.logging-config.log-format == 'JSON')",
+					When:    "(input.logging-config.application-log-level != null)",
+					Require: "(input.logging-config.log-format == 'JSON')",
 					Message: "application-log-level requires log-format JSON",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.logging-config.system-log-level != null)",
-					Require: "(var.logging-config.system-log-level == 'DEBUG' || " +
-						"var.logging-config.system-log-level == 'INFO' || " +
-						"var.logging-config.system-log-level == 'WARN')",
+					When: "(input.logging-config.system-log-level != null)",
+					Require: "(input.logging-config.system-log-level == 'DEBUG' || " +
+						"input.logging-config.system-log-level == 'INFO' || " +
+						"input.logging-config.system-log-level == 'WARN')",
 					Message: "system-log-level must be DEBUG, INFO, or WARN",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.logging-config.system-log-level != null)",
-					Require: "(var.logging-config.log-format == 'JSON')",
+					When:    "(input.logging-config.system-log-level != null)",
+					Require: "(input.logging-config.log-format == 'JSON')",
 					Message: "system-log-level requires log-format JSON",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.snap-start.apply-on != null)",
-					Require: "(var.snap-start.apply-on == 'None' || " +
-						"var.snap-start.apply-on == 'PublishedVersions')",
+					When: "(input.snap-start.apply-on != null)",
+					Require: "(input.snap-start.apply-on == 'None' || " +
+						"input.snap-start.apply-on == 'PublishedVersions')",
 					Message: "snap-start apply-on must be None or PublishedVersions",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.ephemeral-storage.size != null)",
-					Require: "(var.ephemeral-storage.size == null || " +
-						"var.ephemeral-storage.size >= 512) && " +
-						"(var.ephemeral-storage.size == null || " +
-						"var.ephemeral-storage.size <= 10240)",
+					When: "(input.ephemeral-storage.size != null)",
+					Require: "(input.ephemeral-storage.size == null || " +
+						"input.ephemeral-storage.size >= 512) && " +
+						"(input.ephemeral-storage.size == null || " +
+						"input.ephemeral-storage.size <= 10240)",
 					Message: "ephemeral-storage size must be between 512 and 10240",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.architectures", Optional: true},
-				{Field: "var.layers", Optional: true},
-				{Field: "var.file-system-configs", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.architectures", Optional: true},
+				{Field: "input.layers", Optional: true},
+				{Field: "input.file-system-configs", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"lambda-permission": {
@@ -291,9 +291,9 @@ func TestLambdaSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind: "predicate",
-					When: "(var.function-url-auth-type != null)",
-					Require: "(var.function-url-auth-type == 'AWS_IAM' || " +
-						"var.function-url-auth-type == 'NONE')",
+					When: "(input.function-url-auth-type != null)",
+					Require: "(input.function-url-auth-type == 'AWS_IAM' || " +
+						"input.function-url-auth-type == 'NONE')",
 					Message: "function-url-auth-type must be AWS_IAM or NONE",
 				},
 			},
@@ -394,141 +394,141 @@ func TestLambdaSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.event-source-arn", "var.self-managed-event-source"},
+					Fields: []string{"input.event-source-arn", "input.self-managed-event-source"},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.amazon-managed-kafka-event-source-config",
-						"var.self-managed-event-source",
-						"var.self-managed-kafka-event-source-config",
+						"input.amazon-managed-kafka-event-source-config",
+						"input.self-managed-event-source",
+						"input.self-managed-kafka-event-source-config",
 					},
 				},
 				{
 					Kind: "forbidden-with",
 					Fields: []string{
-						"var.self-managed-kafka-event-source-config",
-						"var.event-source-arn",
-						"var.amazon-managed-kafka-event-source-config",
+						"input.self-managed-kafka-event-source-config",
+						"input.event-source-arn",
+						"input.amazon-managed-kafka-event-source-config",
 					},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.starting-position != null)",
-					Require: "(var.starting-position == 'TRIM_HORIZON' || " +
-						"var.starting-position == 'LATEST' || " +
-						"var.starting-position == 'AT_TIMESTAMP')",
+					When: "(input.starting-position != null)",
+					Require: "(input.starting-position == 'TRIM_HORIZON' || " +
+						"input.starting-position == 'LATEST' || " +
+						"input.starting-position == 'AT_TIMESTAMP')",
 					Message: "starting-position must be TRIM_HORIZON, LATEST, or AT_TIMESTAMP",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.batch-size != null)",
-					Require: "(var.batch-size == null || " +
-						"var.batch-size >= 1) && " +
-						"(var.batch-size == null || " +
-						"var.batch-size <= 10000)",
+					When: "(input.batch-size != null)",
+					Require: "(input.batch-size == null || " +
+						"input.batch-size >= 1) && " +
+						"(input.batch-size == null || " +
+						"input.batch-size <= 10000)",
 					Message: "batch-size must be between 1 and 10000",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.maximum-record-age-in-seconds != null)",
-					Require: "((var.maximum-record-age-in-seconds == -1) || " +
-						"((var.maximum-record-age-in-seconds == null || " +
-						"var.maximum-record-age-in-seconds >= 60) && " +
-						"(var.maximum-record-age-in-seconds == null || " +
-						"var.maximum-record-age-in-seconds <= 604800)))",
+					When: "(input.maximum-record-age-in-seconds != null)",
+					Require: "((input.maximum-record-age-in-seconds == -1) || " +
+						"((input.maximum-record-age-in-seconds == null || " +
+						"input.maximum-record-age-in-seconds >= 60) && " +
+						"(input.maximum-record-age-in-seconds == null || " +
+						"input.maximum-record-age-in-seconds <= 604800)))",
 					Message: "maximum-record-age-in-seconds must be -1 or between 60 and 604800",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.maximum-retry-attempts != null)",
-					Require: "(var.maximum-retry-attempts == null || " +
-						"var.maximum-retry-attempts >= -1) && " +
-						"(var.maximum-retry-attempts == null || " +
-						"var.maximum-retry-attempts <= 10000)",
+					When: "(input.maximum-retry-attempts != null)",
+					Require: "(input.maximum-retry-attempts == null || " +
+						"input.maximum-retry-attempts >= -1) && " +
+						"(input.maximum-retry-attempts == null || " +
+						"input.maximum-retry-attempts <= 10000)",
 					Message: "maximum-retry-attempts must be between -1 and 10000",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.parallelization-factor != null)",
-					Require: "(var.parallelization-factor == null || " +
-						"var.parallelization-factor >= 1) && " +
-						"(var.parallelization-factor == null || " +
-						"var.parallelization-factor <= 10)",
+					When: "(input.parallelization-factor != null)",
+					Require: "(input.parallelization-factor == null || " +
+						"input.parallelization-factor >= 1) && " +
+						"(input.parallelization-factor == null || " +
+						"input.parallelization-factor <= 10)",
 					Message: "parallelization-factor must be between 1 and 10",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.tumbling-window-in-seconds != null)",
-					Require: "(var.tumbling-window-in-seconds == null || " +
-						"var.tumbling-window-in-seconds >= 0) && " +
-						"(var.tumbling-window-in-seconds == null || " +
-						"var.tumbling-window-in-seconds <= 900)",
+					When: "(input.tumbling-window-in-seconds != null)",
+					Require: "(input.tumbling-window-in-seconds == null || " +
+						"input.tumbling-window-in-seconds >= 0) && " +
+						"(input.tumbling-window-in-seconds == null || " +
+						"input.tumbling-window-in-seconds <= 900)",
 					Message: "tumbling-window-in-seconds must be between 0 and 900",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.maximum-batching-window-in-seconds != null)",
-					Require: "(var.maximum-batching-window-in-seconds == null || " +
-						"var.maximum-batching-window-in-seconds >= 0) && " +
-						"(var.maximum-batching-window-in-seconds == null || " +
-						"var.maximum-batching-window-in-seconds <= 300)",
+					When: "(input.maximum-batching-window-in-seconds != null)",
+					Require: "(input.maximum-batching-window-in-seconds == null || " +
+						"input.maximum-batching-window-in-seconds >= 0) && " +
+						"(input.maximum-batching-window-in-seconds == null || " +
+						"input.maximum-batching-window-in-seconds <= 300)",
 					Message: "maximum-batching-window-in-seconds must be between 0 and 300",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.scaling-config != null)",
-					Require: "(var.scaling-config.maximum-concurrency == null || " +
-						"var.scaling-config.maximum-concurrency >= 2) && " +
-						"(var.scaling-config.maximum-concurrency == null || " +
-						"var.scaling-config.maximum-concurrency <= 1000)",
+					When: "(input.scaling-config != null)",
+					Require: "(input.scaling-config.maximum-concurrency == null || " +
+						"input.scaling-config.maximum-concurrency >= 2) && " +
+						"(input.scaling-config.maximum-concurrency == null || " +
+						"input.scaling-config.maximum-concurrency <= 1000)",
 					Message: "scaling-config maximum-concurrency must be between 2 and 1000",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.provisioned-poller-config.maximum-pollers != null)",
-					Require: "(var.provisioned-poller-config.maximum-pollers == null || " +
-						"var.provisioned-poller-config.maximum-pollers >= 1) && " +
-						"(var.provisioned-poller-config.maximum-pollers == null || " +
-						"var.provisioned-poller-config.maximum-pollers <= 2000)",
+					When: "(input.provisioned-poller-config.maximum-pollers != null)",
+					Require: "(input.provisioned-poller-config.maximum-pollers == null || " +
+						"input.provisioned-poller-config.maximum-pollers >= 1) && " +
+						"(input.provisioned-poller-config.maximum-pollers == null || " +
+						"input.provisioned-poller-config.maximum-pollers <= 2000)",
 					Message: "provisioned-poller-config maximum-pollers must be between 1 and 2000",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.provisioned-poller-config.minimum-pollers != null)",
-					Require: "(var.provisioned-poller-config.minimum-pollers == null || " +
-						"var.provisioned-poller-config.minimum-pollers >= 1) && " +
-						"(var.provisioned-poller-config.minimum-pollers == null || " +
-						"var.provisioned-poller-config.minimum-pollers <= 200)",
+					When: "(input.provisioned-poller-config.minimum-pollers != null)",
+					Require: "(input.provisioned-poller-config.minimum-pollers == null || " +
+						"input.provisioned-poller-config.minimum-pollers >= 1) && " +
+						"(input.provisioned-poller-config.minimum-pollers == null || " +
+						"input.provisioned-poller-config.minimum-pollers <= 200)",
 					Message: "provisioned-poller-config minimum-pollers must be between 1 and 200",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.document-db-event-source-config.full-document != null)",
-					Require: "(var.document-db-event-source-config.full-document == 'UpdateLookup' || " +
-						"var.document-db-event-source-config.full-document == 'Default')",
+					When: "(input.document-db-event-source-config.full-document != null)",
+					Require: "(input.document-db-event-source-config.full-document == 'UpdateLookup' || " +
+						"input.document-db-event-source-config.full-document == 'Default')",
 					Message: "document-db-event-source-config full-document must be UpdateLookup or Default",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.logging-config.system-log-level != null)",
-					Require: "(var.logging-config.system-log-level == 'DEBUG' || " +
-						"var.logging-config.system-log-level == 'INFO' || " +
-						"var.logging-config.system-log-level == 'WARN')",
+					When: "(input.logging-config.system-log-level != null)",
+					Require: "(input.logging-config.system-log-level == 'DEBUG' || " +
+						"input.logging-config.system-log-level == 'INFO' || " +
+						"input.logging-config.system-log-level == 'WARN')",
 					Message: "logging-config system-log-level must be DEBUG, INFO, or WARN",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
-					Require: "(var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
-						"var.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
+					When: "(input.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
+					Require: "(input.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
+						"input.amazon-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
 					Message: "amazon-managed-kafka schema-registry event-record-format must be JSON or SOURCE",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
-					Require: "(var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
-						"var.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
+					When: "(input.self-managed-kafka-event-source-config.schema-registry-config.event-record-format != null)",
+					Require: "(input.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'JSON' || " +
+						"input.self-managed-kafka-event-source-config.schema-registry-config.event-record-format == 'SOURCE')",
 					Message: "self-managed-kafka schema-registry event-record-format must be JSON or SOURCE",
 				},
 				{
@@ -536,7 +536,7 @@ func TestLambdaSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value == 'ReportBatchItemFailures')",
 					Message: "function-response-types values must be ReportBatchItemFailures",
-					ForEach: "var.function-response-types",
+					ForEach: "input.function-response-types",
 				},
 				{
 					Kind: "predicate",
@@ -545,7 +545,7 @@ func TestLambdaSchemas(t *testing.T) {
 						"@each.value == 'ErrorCount' || " +
 						"@each.value == 'KafkaMetrics')",
 					Message: "a metrics-config metric must be EventCount, ErrorCount, or KafkaMetrics",
-					ForEach: "var.metrics-config.metrics",
+					ForEach: "input.metrics-config.metrics",
 				},
 				{
 					Kind: "predicate",
@@ -559,7 +559,7 @@ func TestLambdaSchemas(t *testing.T) {
 						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
 						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
 					Message: "a source-access-configuration type must be a valid auth or VPC type",
-					ForEach: "var.source-access-configurations",
+					ForEach: "input.source-access-configurations",
 				},
 				{
 					Kind: "predicate",
@@ -568,7 +568,7 @@ func TestLambdaSchemas(t *testing.T) {
 						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
 						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
 					Message: "a schema-registry access-config type must be a valid auth type",
-					ForEach: "var.amazon-managed-kafka-event-source-config.schema-registry-config.access-configs",
+					ForEach: "input.amazon-managed-kafka-event-source-config.schema-registry-config.access-configs",
 				},
 				{
 					Kind: "predicate",
@@ -576,7 +576,7 @@ func TestLambdaSchemas(t *testing.T) {
 					Require: "(@each.value.attribute == 'KEY' || " +
 						"@each.value.attribute == 'VALUE')",
 					Message: "a schema-registry validation attribute must be KEY or VALUE",
-					ForEach: "var.amazon-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
+					ForEach: "input.amazon-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
 				},
 				{
 					Kind: "predicate",
@@ -585,7 +585,7 @@ func TestLambdaSchemas(t *testing.T) {
 						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
 						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
 					Message: "a schema-registry access-config type must be a valid auth type",
-					ForEach: "var.self-managed-kafka-event-source-config.schema-registry-config.access-configs",
+					ForEach: "input.self-managed-kafka-event-source-config.schema-registry-config.access-configs",
 				},
 				{
 					Kind: "predicate",
@@ -593,15 +593,15 @@ func TestLambdaSchemas(t *testing.T) {
 					Require: "(@each.value.attribute == 'KEY' || " +
 						"@each.value.attribute == 'VALUE')",
 					Message: "a schema-registry validation attribute must be KEY or VALUE",
-					ForEach: "var.self-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
+					ForEach: "input.self-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.function-response-types", Optional: true},
-				{Field: "var.queues", Optional: true},
-				{Field: "var.topics", Optional: true},
-				{Field: "var.source-access-configurations", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.function-response-types", Optional: true},
+				{Field: "input.queues", Optional: true},
+				{Field: "input.topics", Optional: true},
+				{Field: "input.source-access-configurations", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"lambda-function-url": {
@@ -629,23 +629,23 @@ func TestLambdaSchemas(t *testing.T) {
 				{
 					Kind:    "predicate",
 					When:    "true",
-					Require: "(var.auth-type == 'AWS_IAM' || var.auth-type == 'NONE')",
+					Require: "(input.auth-type == 'AWS_IAM' || input.auth-type == 'NONE')",
 					Message: "auth-type must be AWS_IAM or NONE",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.invoke-mode != null)",
-					Require: "(var.invoke-mode == 'BUFFERED' || " +
-						"var.invoke-mode == 'RESPONSE_STREAM')",
+					When: "(input.invoke-mode != null)",
+					Require: "(input.invoke-mode == 'BUFFERED' || " +
+						"input.invoke-mode == 'RESPONSE_STREAM')",
 					Message: "invoke-mode must be BUFFERED or RESPONSE_STREAM",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.cors.max-age != null)",
-					Require: "(var.cors.max-age == null || " +
-						"var.cors.max-age >= 0) && " +
-						"(var.cors.max-age == null || " +
-						"var.cors.max-age <= 86400)",
+					When: "(input.cors.max-age != null)",
+					Require: "(input.cors.max-age == null || " +
+						"input.cors.max-age >= 0) && " +
+						"(input.cors.max-age == null || " +
+						"input.cors.max-age <= 86400)",
 					Message: "cors max-age must be between 0 and 86400 seconds",
 				},
 			},
@@ -679,19 +679,19 @@ func TestLambdaSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "exactly-one-of",
-					Fields: []string{"var.payload-content", "var.payload-path"},
+					Fields: []string{"input.payload-content", "input.payload-path"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.invocation-type != null)",
-					Require: "(var.invocation-type == 'RequestResponse' || " +
-						"var.invocation-type == 'Event' || var.invocation-type == 'DryRun')",
+					When: "(input.invocation-type != null)",
+					Require: "(input.invocation-type == 'RequestResponse' || " +
+						"input.invocation-type == 'Event' || input.invocation-type == 'DryRun')",
 					Message: "invocation-type must be RequestResponse, Event, or DryRun",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.log-type != null)",
-					Require: "(var.log-type == 'None' || var.log-type == 'Tail')",
+					When:    "(input.log-type != null)",
+					Require: "(input.log-type == 'None' || input.log-type == 'Tail')",
 					Message: "log-type must be None or Tail",
 				},
 			},

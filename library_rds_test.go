@@ -66,13 +66,13 @@ func TestRdsSchemas(t *testing.T) {
 					{
 						Kind: "predicate",
 						When: "true",
-						Require: "((var.subnet-ids != null) && " +
-							"(@core.length(var.subnet-ids) >= 1))",
+						Require: "((input.subnet-ids != null) && " +
+							"(@core.length(input.subnet-ids) >= 1))",
 						Message: "subnet-ids must not be empty",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.tags", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -100,12 +100,12 @@ func TestRdsSchemas(t *testing.T) {
 						Require: "(@each.value.apply-method == 'immediate' || " +
 							"@each.value.apply-method == 'pending-reboot')",
 						Message: "apply-method must be immediate or pending-reboot",
-						ForEach: "var.parameters",
+						ForEach: "input.parameters",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.parameters", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.parameters", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -133,12 +133,12 @@ func TestRdsSchemas(t *testing.T) {
 						Require: "(@each.value.apply-method == 'immediate' || " +
 							"@each.value.apply-method == 'pending-reboot')",
 						Message: "apply-method must be immediate or pending-reboot",
-						ForEach: "var.parameters",
+						ForEach: "input.parameters",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.parameters", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.parameters", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -280,108 +280,108 @@ func TestRdsSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind: "at-most-one-of",
-						Fields: []string{"var.replicate-source-db", "var.s3-import",
-							"var.snapshot-identifier", "var.restore-to-point-in-time"},
+						Fields: []string{"input.replicate-source-db", "input.s3-import",
+							"input.snapshot-identifier", "input.restore-to-point-in-time"},
 					},
 					{
 						Kind:   "at-most-one-of",
-						Fields: []string{"var.manage-master-user-password", "var.password"},
+						Fields: []string{"input.manage-master-user-password", "input.password"},
 					},
 					{
 						Kind:   "at-most-one-of",
-						Fields: []string{"var.domain", "var.domain-fqdn"},
+						Fields: []string{"input.domain", "input.domain-fqdn"},
 					},
 					{
 						Kind:   "at-most-one-of",
-						Fields: []string{"var.domain-iam-role-name", "var.domain-fqdn"},
+						Fields: []string{"input.domain-iam-role-name", "input.domain-fqdn"},
 					},
 					{
 						Kind: "forbidden-with",
-						Fields: []string{"var.character-set-name", "var.replicate-source-db",
-							"var.s3-import", "var.snapshot-identifier",
-							"var.restore-to-point-in-time"},
+						Fields: []string{"input.character-set-name", "input.replicate-source-db",
+							"input.s3-import", "input.snapshot-identifier",
+							"input.restore-to-point-in-time"},
 					},
 					{
 						Kind:   "forbidden-with",
-						Fields: []string{"var.db-name", "var.replicate-source-db"},
+						Fields: []string{"input.db-name", "input.replicate-source-db"},
 					},
 					{
 						Kind:   "forbidden-with",
-						Fields: []string{"var.username", "var.replicate-source-db"},
+						Fields: []string{"input.username", "input.replicate-source-db"},
 					},
 					{
 						Kind:   "forbidden-with",
-						Fields: []string{"var.timezone", "var.s3-import"},
+						Fields: []string{"input.timezone", "input.s3-import"},
 					},
 					{
 						Kind:   "forbidden-with",
-						Fields: []string{"var.backup-target", "var.s3-import"},
+						Fields: []string{"input.backup-target", "input.s3-import"},
 					},
 					{
 						Kind: "predicate",
-						When: "(var.database-insights-mode != null)",
-						Require: "(var.database-insights-mode == 'standard' || " +
-							"var.database-insights-mode == 'advanced')",
+						When: "(input.database-insights-mode != null)",
+						Require: "(input.database-insights-mode == 'standard' || " +
+							"input.database-insights-mode == 'advanced')",
 						Message: "database-insights-mode must be standard or advanced",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.replica-mode != null)",
-						Require: "(var.replica-mode == 'open-read-only' || " +
-							"var.replica-mode == 'mounted')",
+						When: "(input.replica-mode != null)",
+						Require: "(input.replica-mode == 'open-read-only' || " +
+							"input.replica-mode == 'mounted')",
 						Message: "replica-mode must be open-read-only or mounted",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.engine-lifecycle-support != null)",
-						Require: "(var.engine-lifecycle-support == " +
+						When: "(input.engine-lifecycle-support != null)",
+						Require: "(input.engine-lifecycle-support == " +
 							"'open-source-rds-extended-support' || " +
-							"var.engine-lifecycle-support == " +
+							"input.engine-lifecycle-support == " +
 							"'open-source-rds-extended-support-disabled')",
 						Message: "engine-lifecycle-support must be a valid " +
 							"extended-support value",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.network-type != null)",
-						Require: "(var.network-type == 'IPV4' || " +
-							"var.network-type == 'DUAL')",
+						When: "(input.network-type != null)",
+						Require: "(input.network-type == 'IPV4' || " +
+							"input.network-type == 'DUAL')",
 						Message: "network-type must be IPV4 or DUAL",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.backup-target != null)",
-						Require: "(var.backup-target == 'outposts' || " +
-							"var.backup-target == 'region')",
+						When: "(input.backup-target != null)",
+						Require: "(input.backup-target == 'outposts' || " +
+							"input.backup-target == 'region')",
 						Message: "backup-target must be outposts or region",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.storage-type != null)",
-						Require: "(var.storage-type == 'gp2' || var.storage-type == 'gp3' " +
-							"|| var.storage-type == 'io1' || var.storage-type == 'io2' || " +
-							"var.storage-type == 'standard')",
+						When: "(input.storage-type != null)",
+						Require: "(input.storage-type == 'gp2' || input.storage-type == 'gp3' " +
+							"|| input.storage-type == 'io1' || input.storage-type == 'io2' || " +
+							"input.storage-type == 'standard')",
 						Message: "storage-type must be gp2, gp3, io1, io2, or standard",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.backup-retention-period != null)",
-						Require: "(var.backup-retention-period == null || " +
-							"var.backup-retention-period >= 0) && " +
-							"(var.backup-retention-period == null || " +
-							"var.backup-retention-period <= 35)",
+						When: "(input.backup-retention-period != null)",
+						Require: "(input.backup-retention-period == null || " +
+							"input.backup-retention-period >= 0) && " +
+							"(input.backup-retention-period == null || " +
+							"input.backup-retention-period <= 35)",
 						Message: "backup-retention-period must be between 0 and 35",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.monitoring-interval != null)",
-						Require: "(var.monitoring-interval == 0 || " +
-							"var.monitoring-interval == 1 || " +
-							"var.monitoring-interval == 5 || " +
-							"var.monitoring-interval == 10 || " +
-							"var.monitoring-interval == 15 || " +
-							"var.monitoring-interval == 30 || " +
-							"var.monitoring-interval == 60)",
+						When: "(input.monitoring-interval != null)",
+						Require: "(input.monitoring-interval == 0 || " +
+							"input.monitoring-interval == 1 || " +
+							"input.monitoring-interval == 5 || " +
+							"input.monitoring-interval == 10 || " +
+							"input.monitoring-interval == 15 || " +
+							"input.monitoring-interval == 30 || " +
+							"input.monitoring-interval == 60)",
 						Message: "monitoring-interval must be 0, 1, 5, 10, 15, 30, or 60",
 					},
 					{
@@ -397,14 +397,14 @@ func TestRdsSchemas(t *testing.T) {
 							"@each.value == 'upgrade')",
 						Message: "enabled-cloudwatch-logs-exports entries must be " +
 							"valid instance log types",
-						ForEach: "var.enabled-cloudwatch-logs-exports",
+						ForEach: "input.enabled-cloudwatch-logs-exports",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.vpc-security-group-ids", Optional: true},
-					{Field: "var.enabled-cloudwatch-logs-exports", Optional: true},
-					{Field: "var.domain-dns-ips", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.vpc-security-group-ids", Optional: true},
+					{Field: "input.enabled-cloudwatch-logs-exports", Optional: true},
+					{Field: "input.domain-dns-ips", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -553,50 +553,50 @@ func TestRdsSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind: "at-most-one-of",
-						Fields: []string{"var.snapshot-identifier", "var.s3-import",
-							"var.restore-to-point-in-time"},
+						Fields: []string{"input.snapshot-identifier", "input.s3-import",
+							"input.restore-to-point-in-time"},
 					},
 					{
 						Kind: "forbidden-with",
-						Fields: []string{"var.snapshot-identifier",
-							"var.global-cluster-identifier"},
+						Fields: []string{"input.snapshot-identifier",
+							"input.global-cluster-identifier"},
 					},
 					{
 						Kind: "at-most-one-of",
-						Fields: []string{"var.manage-master-user-password",
-							"var.master-password"},
+						Fields: []string{"input.manage-master-user-password",
+							"input.master-password"},
 					},
 					{
 						Kind: "predicate",
-						When: "(var.engine-mode != null)",
-						Require: "(var.engine-mode == 'global' || " +
-							"var.engine-mode == 'multimaster' || " +
-							"var.engine-mode == 'parallelquery' || " +
-							"var.engine-mode == 'provisioned' || " +
-							"var.engine-mode == 'serverless')",
+						When: "(input.engine-mode != null)",
+						Require: "(input.engine-mode == 'global' || " +
+							"input.engine-mode == 'multimaster' || " +
+							"input.engine-mode == 'parallelquery' || " +
+							"input.engine-mode == 'provisioned' || " +
+							"input.engine-mode == 'serverless')",
 						Message: "engine-mode must be one of global, multimaster, " +
 							"parallelquery, provisioned, or serverless",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.cluster-scalability-type != null)",
-						Require: "(var.cluster-scalability-type == 'standard' || " +
-							"var.cluster-scalability-type == 'limitless')",
+						When: "(input.cluster-scalability-type != null)",
+						Require: "(input.cluster-scalability-type == 'standard' || " +
+							"input.cluster-scalability-type == 'limitless')",
 						Message: "cluster-scalability-type must be standard or limitless",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.database-insights-mode != null)",
-						Require: "(var.database-insights-mode == 'standard' || " +
-							"var.database-insights-mode == 'advanced')",
+						When: "(input.database-insights-mode != null)",
+						Require: "(input.database-insights-mode == 'standard' || " +
+							"input.database-insights-mode == 'advanced')",
 						Message: "database-insights-mode must be standard or advanced",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.engine-lifecycle-support != null)",
-						Require: "(var.engine-lifecycle-support == " +
+						When: "(input.engine-lifecycle-support != null)",
+						Require: "(input.engine-lifecycle-support == " +
 							"'open-source-rds-extended-support' || " +
-							"var.engine-lifecycle-support == " +
+							"input.engine-lifecycle-support == " +
 							"'open-source-rds-extended-support-disabled')",
 						Message: "engine-lifecycle-support must be " +
 							"open-source-rds-extended-support or " +
@@ -604,25 +604,25 @@ func TestRdsSchemas(t *testing.T) {
 					},
 					{
 						Kind: "predicate",
-						When: "(var.network-type != null)",
-						Require: "(var.network-type == 'DUAL' || " +
-							"var.network-type == 'IPV4')",
+						When: "(input.network-type != null)",
+						Require: "(input.network-type == 'DUAL' || " +
+							"input.network-type == 'IPV4')",
 						Message: "network-type must be DUAL or IPV4",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.backup-retention-period != null)",
-						Require: "(var.backup-retention-period == null || " +
-							"var.backup-retention-period <= 35)",
+						When: "(input.backup-retention-period != null)",
+						Require: "(input.backup-retention-period == null || " +
+							"input.backup-retention-period <= 35)",
 						Message: "backup-retention-period must be at most 35",
 					},
 					{
 						Kind: "predicate",
-						When: "(var.backtrack-window != null)",
-						Require: "(var.backtrack-window == null || " +
-							"var.backtrack-window >= 0) && " +
-							"(var.backtrack-window == null || " +
-							"var.backtrack-window <= 259200)",
+						When: "(input.backtrack-window != null)",
+						Require: "(input.backtrack-window == null || " +
+							"input.backtrack-window >= 0) && " +
+							"(input.backtrack-window == null || " +
+							"input.backtrack-window <= 259200)",
 						Message: "backtrack-window must be between 0 and 259200",
 					},
 					{
@@ -635,15 +635,15 @@ func TestRdsSchemas(t *testing.T) {
 							"@each.value == 'slowquery' || @each.value == 'upgrade')",
 						Message: "enabled-cloudwatch-logs-exports entries must be " +
 							"valid cluster log types",
-						ForEach: "var.enabled-cloudwatch-logs-exports",
+						ForEach: "input.enabled-cloudwatch-logs-exports",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.availability-zones", Optional: true},
-					{Field: "var.enabled-cloudwatch-logs-exports", Optional: true},
-					{Field: "var.iam-roles", Optional: true},
-					{Field: "var.vpc-security-group-ids", Optional: true},
-					{Field: "var.tags", Optional: true},
+					{Field: "input.availability-zones", Optional: true},
+					{Field: "input.enabled-cloudwatch-logs-exports", Optional: true},
+					{Field: "input.iam-roles", Optional: true},
+					{Field: "input.vpc-security-group-ids", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -697,17 +697,17 @@ func TestRdsSchemas(t *testing.T) {
 				Constraints: []lang.ConstraintSpec{
 					{
 						Kind: "predicate",
-						When: "(var.performance-insights-retention-period != null)",
-						Require: "(var.performance-insights-retention-period == null || " +
-							"var.performance-insights-retention-period >= 7) && " +
-							"(var.performance-insights-retention-period == null || " +
-							"var.performance-insights-retention-period <= 731)",
+						When: "(input.performance-insights-retention-period != null)",
+						Require: "(input.performance-insights-retention-period == null || " +
+							"input.performance-insights-retention-period >= 7) && " +
+							"(input.performance-insights-retention-period == null || " +
+							"input.performance-insights-retention-period <= 731)",
 						Message: "performance-insights-retention-period must be " +
 							"between 7 and 731",
 					},
 				},
 				Defaults: []lang.DefaultSpec{
-					{Field: "var.tags", Optional: true},
+					{Field: "input.tags", Optional: true},
 				},
 			},
 		},

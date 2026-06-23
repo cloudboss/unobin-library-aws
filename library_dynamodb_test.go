@@ -106,84 +106,84 @@ func TestDynamodbSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.read-capacity", "var.on-demand-throughput"},
+					Fields: []string{"input.read-capacity", "input.on-demand-throughput"},
 				},
 				{
 					Kind:   "at-most-one-of",
-					Fields: []string{"var.write-capacity", "var.on-demand-throughput"},
+					Fields: []string{"input.write-capacity", "input.on-demand-throughput"},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.billing-mode == 'PROVISIONED')",
-					Require: "(var.read-capacity != null) && " +
-						"(var.read-capacity == null || " +
-						"var.read-capacity >= 1) && " +
-						"(var.write-capacity != null) && " +
-						"(var.write-capacity == null || " +
-						"var.write-capacity >= 1)",
+					When: "(input.billing-mode == 'PROVISIONED')",
+					Require: "(input.read-capacity != null) && " +
+						"(input.read-capacity == null || " +
+						"input.read-capacity >= 1) && " +
+						"(input.write-capacity != null) && " +
+						"(input.write-capacity == null || " +
+						"input.write-capacity >= 1)",
 					Message: "read-capacity and write-capacity are required and at least 1 " +
 						"when billing-mode is PROVISIONED",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.billing-mode == 'PAY_PER_REQUEST')",
-					Require: "(var.read-capacity == null) && (var.write-capacity == null)",
+					When:    "(input.billing-mode == 'PAY_PER_REQUEST')",
+					Require: "(input.read-capacity == null) && (input.write-capacity == null)",
 					Message: "read-capacity and write-capacity must be unset " +
 						"when billing-mode is PAY_PER_REQUEST",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.billing-mode != null)",
-					Require: "(var.billing-mode == 'PROVISIONED' || " +
-						"var.billing-mode == 'PAY_PER_REQUEST')",
+					When: "(input.billing-mode != null)",
+					Require: "(input.billing-mode == 'PROVISIONED' || " +
+						"input.billing-mode == 'PAY_PER_REQUEST')",
 					Message: "billing-mode must be PROVISIONED or PAY_PER_REQUEST",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.table-class != null)",
-					Require: "(var.table-class == 'STANDARD' || " +
-						"var.table-class == 'STANDARD_INFREQUENT_ACCESS')",
+					When: "(input.table-class != null)",
+					Require: "(input.table-class == 'STANDARD' || " +
+						"input.table-class == 'STANDARD_INFREQUENT_ACCESS')",
 					Message: "table-class must be STANDARD or STANDARD_INFREQUENT_ACCESS",
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.stream-view-type", "var.stream-enabled"},
+					Fields: []string{"input.stream-view-type", "input.stream-enabled"},
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.stream-enabled == true)",
-					Require: "(var.stream-view-type != null)",
+					When:    "(input.stream-enabled == true)",
+					Require: "(input.stream-view-type != null)",
 					Message: "stream-view-type is required when stream-enabled is true",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.stream-enabled == false)",
-					Require: "(var.stream-view-type == null)",
+					When:    "(input.stream-enabled == false)",
+					Require: "(input.stream-view-type == null)",
 					Message: "stream-view-type must be unset when stream-enabled is false",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.stream-view-type != null)",
-					Require: "(var.stream-view-type == 'NEW_IMAGE' || " +
-						"var.stream-view-type == 'OLD_IMAGE' || " +
-						"var.stream-view-type == 'NEW_AND_OLD_IMAGES' || " +
-						"var.stream-view-type == 'KEYS_ONLY')",
+					When: "(input.stream-view-type != null)",
+					Require: "(input.stream-view-type == 'NEW_IMAGE' || " +
+						"input.stream-view-type == 'OLD_IMAGE' || " +
+						"input.stream-view-type == 'NEW_AND_OLD_IMAGES' || " +
+						"input.stream-view-type == 'KEYS_ONLY')",
 					Message: "stream-view-type must be a valid DynamoDB stream view type",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.ttl.enabled == true)",
-					Require: "((var.ttl.attribute-name != null) && " +
-						"(@core.length(var.ttl.attribute-name) >= 1))",
+					When: "(input.ttl.enabled == true)",
+					Require: "((input.ttl.attribute-name != null) && " +
+						"(@core.length(input.ttl.attribute-name) >= 1))",
 					Message: "ttl attribute-name is required when ttl is enabled",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.point-in-time-recovery.recovery-period-in-days != null)",
-					Require: "(var.point-in-time-recovery.recovery-period-in-days == null || " +
-						"var.point-in-time-recovery.recovery-period-in-days >= 1) && " +
-						"(var.point-in-time-recovery.recovery-period-in-days == null || " +
-						"var.point-in-time-recovery.recovery-period-in-days <= 35)",
+					When: "(input.point-in-time-recovery.recovery-period-in-days != null)",
+					Require: "(input.point-in-time-recovery.recovery-period-in-days == null || " +
+						"input.point-in-time-recovery.recovery-period-in-days >= 1) && " +
+						"(input.point-in-time-recovery.recovery-period-in-days == null || " +
+						"input.point-in-time-recovery.recovery-period-in-days <= 35)",
 					Message: "point-in-time-recovery recovery-period-in-days must be between 1 and 35",
 				},
 				{
@@ -193,7 +193,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.type == 'N' || " +
 						"@each.value.type == 'B')",
 					Message: "attribute type must be S, N, or B",
-					ForEach: "var.attribute",
+					ForEach: "input.attribute",
 				},
 				{
 					Kind: "predicate",
@@ -203,7 +203,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.projection-type == 'KEYS_ONLY')",
 					Message: "local-secondary-index projection-type must be ALL, " +
 						"INCLUDE, or KEYS_ONLY",
-					ForEach: "var.local-secondary-index",
+					ForEach: "input.local-secondary-index",
 				},
 				{
 					Kind: "predicate",
@@ -213,25 +213,25 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.projection-type == 'KEYS_ONLY')",
 					Message: "global-secondary-index projection-type must be ALL, " +
 						"INCLUDE, or KEYS_ONLY",
-					ForEach: "var.global-secondary-index",
+					ForEach: "input.global-secondary-index",
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.global-secondary-index[*].read-capacity",
-						"var.global-secondary-index[*].on-demand-throughput",
+						"input.global-secondary-index[*].read-capacity",
+						"input.global-secondary-index[*].on-demand-throughput",
 					},
 				},
 				{
 					Kind: "at-most-one-of",
 					Fields: []string{
-						"var.global-secondary-index[*].write-capacity",
-						"var.global-secondary-index[*].on-demand-throughput",
+						"input.global-secondary-index[*].write-capacity",
+						"input.global-secondary-index[*].on-demand-throughput",
 					},
 				},
 				{
 					Kind: "predicate",
-					When: "(var.billing-mode == 'PROVISIONED')",
+					When: "(input.billing-mode == 'PROVISIONED')",
 					Require: "(@each.value.read-capacity != null) && " +
 						"(@each.value.read-capacity == null || " +
 						"@each.value.read-capacity >= 1) && " +
@@ -240,23 +240,23 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.write-capacity >= 1)",
 					Message: "global-secondary-index read-capacity and write-capacity " +
 						"are required and at least 1 when billing-mode is PROVISIONED",
-					ForEach: "var.global-secondary-index",
+					ForEach: "input.global-secondary-index",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.billing-mode == 'PAY_PER_REQUEST')",
+					When: "(input.billing-mode == 'PAY_PER_REQUEST')",
 					Require: "(@each.value.read-capacity == null) && " +
 						"(@each.value.write-capacity == null)",
 					Message: "global-secondary-index read-capacity and write-capacity " +
 						"must be unset when billing-mode is PAY_PER_REQUEST",
-					ForEach: "var.global-secondary-index",
+					ForEach: "input.global-secondary-index",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.attribute", Optional: true},
-				{Field: "var.local-secondary-index", Optional: true},
-				{Field: "var.global-secondary-index", Optional: true},
-				{Field: "var.tags", Optional: true},
+				{Field: "input.attribute", Optional: true},
+				{Field: "input.local-secondary-index", Optional: true},
+				{Field: "input.global-secondary-index", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 	}

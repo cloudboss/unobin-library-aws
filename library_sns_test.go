@@ -75,91 +75,91 @@ func TestSnsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:    "predicate",
-					When:    "(var.archive-policy != null)",
-					Require: "(var.fifo-topic == true)",
+					When:    "(input.archive-policy != null)",
+					Require: "(input.fifo-topic == true)",
 					Message: "archive-policy requires fifo-topic to be true",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.fifo-throughput-scope != null)",
-					Require: "(var.fifo-topic == true)",
+					When:    "(input.fifo-throughput-scope != null)",
+					Require: "(input.fifo-topic == true)",
 					Message: "fifo-throughput-scope requires fifo-topic to be true",
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.content-based-deduplication == true)",
-					Require: "(var.fifo-topic == true)",
+					When:    "(input.content-based-deduplication == true)",
+					Require: "(input.fifo-topic == true)",
 					Message: "content-based-deduplication requires fifo-topic to be true",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.fifo-throughput-scope != null)",
-					Require: "(var.fifo-throughput-scope == 'Topic' || " +
-						"var.fifo-throughput-scope == 'MessageGroup')",
+					When: "(input.fifo-throughput-scope != null)",
+					Require: "(input.fifo-throughput-scope == 'Topic' || " +
+						"input.fifo-throughput-scope == 'MessageGroup')",
 					Message: "fifo-throughput-scope must be Topic or MessageGroup",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.tracing-config != null)",
-					Require: "(var.tracing-config == 'Active' || " +
-						"var.tracing-config == 'PassThrough')",
+					When: "(input.tracing-config != null)",
+					Require: "(input.tracing-config == 'Active' || " +
+						"input.tracing-config == 'PassThrough')",
 					Message: "tracing-config must be Active or PassThrough",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.signature-version != null)",
-					Require: "(var.signature-version == '1' || " +
-						"var.signature-version == '2')",
+					When: "(input.signature-version != null)",
+					Require: "(input.signature-version == '1' || " +
+						"input.signature-version == '2')",
 					Message: "signature-version must be 1 or 2",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.http-success-feedback-sample-rate != null)",
-					Require: "(var.http-success-feedback-sample-rate == null || " +
-						"var.http-success-feedback-sample-rate >= 0) && " +
-						"(var.http-success-feedback-sample-rate == null || " +
-						"var.http-success-feedback-sample-rate <= 100)",
+					When: "(input.http-success-feedback-sample-rate != null)",
+					Require: "(input.http-success-feedback-sample-rate == null || " +
+						"input.http-success-feedback-sample-rate >= 0) && " +
+						"(input.http-success-feedback-sample-rate == null || " +
+						"input.http-success-feedback-sample-rate <= 100)",
 					Message: "http-success-feedback-sample-rate must be between 0 and 100",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.sqs-success-feedback-sample-rate != null)",
-					Require: "(var.sqs-success-feedback-sample-rate == null || " +
-						"var.sqs-success-feedback-sample-rate >= 0) && " +
-						"(var.sqs-success-feedback-sample-rate == null || " +
-						"var.sqs-success-feedback-sample-rate <= 100)",
+					When: "(input.sqs-success-feedback-sample-rate != null)",
+					Require: "(input.sqs-success-feedback-sample-rate == null || " +
+						"input.sqs-success-feedback-sample-rate >= 0) && " +
+						"(input.sqs-success-feedback-sample-rate == null || " +
+						"input.sqs-success-feedback-sample-rate <= 100)",
 					Message: "sqs-success-feedback-sample-rate must be between 0 and 100",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.application-success-feedback-sample-rate != null)",
-					Require: "(var.application-success-feedback-sample-rate == null || " +
-						"var.application-success-feedback-sample-rate >= 0) && " +
-						"(var.application-success-feedback-sample-rate == null || " +
-						"var.application-success-feedback-sample-rate <= 100)",
+					When: "(input.application-success-feedback-sample-rate != null)",
+					Require: "(input.application-success-feedback-sample-rate == null || " +
+						"input.application-success-feedback-sample-rate >= 0) && " +
+						"(input.application-success-feedback-sample-rate == null || " +
+						"input.application-success-feedback-sample-rate <= 100)",
 					Message: "application-success-feedback-sample-rate must be between 0 and 100",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.firehose-success-feedback-sample-rate != null)",
-					Require: "(var.firehose-success-feedback-sample-rate == null || " +
-						"var.firehose-success-feedback-sample-rate >= 0) && " +
-						"(var.firehose-success-feedback-sample-rate == null || " +
-						"var.firehose-success-feedback-sample-rate <= 100)",
+					When: "(input.firehose-success-feedback-sample-rate != null)",
+					Require: "(input.firehose-success-feedback-sample-rate == null || " +
+						"input.firehose-success-feedback-sample-rate >= 0) && " +
+						"(input.firehose-success-feedback-sample-rate == null || " +
+						"input.firehose-success-feedback-sample-rate <= 100)",
 					Message: "firehose-success-feedback-sample-rate must be between 0 and 100",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.lambda-success-feedback-sample-rate != null)",
-					Require: "(var.lambda-success-feedback-sample-rate == null || " +
-						"var.lambda-success-feedback-sample-rate >= 0) && " +
-						"(var.lambda-success-feedback-sample-rate == null || " +
-						"var.lambda-success-feedback-sample-rate <= 100)",
+					When: "(input.lambda-success-feedback-sample-rate != null)",
+					Require: "(input.lambda-success-feedback-sample-rate == null || " +
+						"input.lambda-success-feedback-sample-rate >= 0) && " +
+						"(input.lambda-success-feedback-sample-rate == null || " +
+						"input.lambda-success-feedback-sample-rate <= 100)",
 					Message: "lambda-success-feedback-sample-rate must be between 0 and 100",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
-				{Field: "var.tags", Optional: true},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 
@@ -188,31 +188,31 @@ func TestSnsSchemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(var.protocol == 'application' || " +
-						"var.protocol == 'email' || " +
-						"var.protocol == 'email-json' || " +
-						"var.protocol == 'firehose' || " +
-						"var.protocol == 'http' || " +
-						"var.protocol == 'https' || " +
-						"var.protocol == 'lambda' || " +
-						"var.protocol == 'sms' || " +
-						"var.protocol == 'sqs')",
+					Require: "(input.protocol == 'application' || " +
+						"input.protocol == 'email' || " +
+						"input.protocol == 'email-json' || " +
+						"input.protocol == 'firehose' || " +
+						"input.protocol == 'http' || " +
+						"input.protocol == 'https' || " +
+						"input.protocol == 'lambda' || " +
+						"input.protocol == 'sms' || " +
+						"input.protocol == 'sqs')",
 				},
 				{
 					Kind: "predicate",
-					When: "(var.filter-policy-scope != null)",
-					Require: "(var.filter-policy-scope == 'MessageAttributes' || " +
-						"var.filter-policy-scope == 'MessageBody')",
+					When: "(input.filter-policy-scope != null)",
+					Require: "(input.filter-policy-scope == 'MessageAttributes' || " +
+						"input.filter-policy-scope == 'MessageBody')",
 					Message: "filter-policy-scope must be MessageAttributes or MessageBody",
 				},
 				{
 					Kind:   "required-with",
-					Fields: []string{"var.filter-policy-scope", "var.filter-policy"},
+					Fields: []string{"input.filter-policy-scope", "input.filter-policy"},
 				},
 				{
 					Kind:    "predicate",
-					When:    "(var.protocol == 'firehose')",
-					Require: "(var.subscription-role-arn != null)",
+					When:    "(input.protocol == 'firehose')",
+					Require: "(input.subscription-role-arn != null)",
 					Message: "subscription-role-arn is required when protocol is firehose",
 				},
 			},
