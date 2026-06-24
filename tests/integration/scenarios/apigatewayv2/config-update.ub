@@ -6,6 +6,7 @@ stack: {
       operation-name:      'getHelloV2'
       stage-greeting:      'hej'
       url-max-age:         600
+      domain-tag-value:    'updated'
     }
   }
 

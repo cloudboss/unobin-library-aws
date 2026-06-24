@@ -1,0 +1,1 @@
+API Gateway v2 custom domains and ACM certificates are not modeled by the emulators; runs on the live tier only

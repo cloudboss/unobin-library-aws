@@ -15,8 +15,8 @@ import (
 )
 
 // TestLibraryRegistersApigatewayv2 checks the runtime registration: the API,
-// integration, route, and stage resources are present under Resources and
-// dispatch to their output types.
+// integration, route, stage, and domain-name resources are present under
+// Resources and dispatch to their output types.
 func TestLibraryRegistersApigatewayv2(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
@@ -24,6 +24,7 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 		"apigatewayv2-integration": reflect.TypeFor[*apigatewayv2.IntegrationOutput](),
 		"apigatewayv2-route":       reflect.TypeFor[*apigatewayv2.RouteOutput](),
 		"apigatewayv2-stage":       reflect.TypeFor[*apigatewayv2.StageOutput](),
+		"apigatewayv2-domain-name": reflect.TypeFor[*apigatewayv2.DomainNameOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -33,9 +34,9 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 	}
 }
 
-// TestApigatewayv2Schemas asserts the whole derived TypeSchema for the four
-// API Gateway v2 resources: input and output field types (including the CORS,
-// TLS, access-log, and route-settings blocks), the enum and cross-field
+// TestApigatewayv2Schemas asserts the whole derived TypeSchema for the API
+// Gateway v2 resources: input and output field types (including the CORS, TLS,
+// access-log, route-settings, and domain-name blocks), the enum and cross-field
 // rules, and the optional defaults.
 func TestApigatewayv2Schemas(t *testing.T) {
 	schema := readLibrarySchema(t)
@@ -91,7 +92,8 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "(input.api-key-selection-expression != null)",
-					Require: "(input.api-key-selection-expression == '$context.authorizer.usageIdentifierKey' || " +
+					Require: "(input.api-key-selection-expression == " +
+						"'$context.authorizer.usageIdentifierKey' || " +
 						"input.api-key-selection-expression == '$request.header.x-api-key')",
 					Message: "api-key-selection-expression must be " +
 						"$context.authorizer.usageIdentifierKey or $request.header.x-api-key",
@@ -369,6 +371,67 @@ func TestApigatewayv2Schemas(t *testing.T) {
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.route-settings", Optional: true},
 				{Field: "input.stage-variables", Optional: true},
+				{Field: "input.tags", Optional: true},
+			},
+		},
+		"apigatewayv2-domain-name": {
+			Inputs: map[string]typecheck.Type{
+				"domain-name": typecheck.TString(),
+				"domain-name-configurations": typecheck.TList(typecheck.TObject(
+					[]typecheck.ObjectField{
+						{Name: "certificate-arn", Type: typecheck.TString()},
+						{Name: "endpoint-type", Type: typecheck.TString()},
+						{Name: "ip-address-type", Type: typecheck.TString(), Optional: true},
+						{
+							Name:     "ownership-verification-certificate-arn",
+							Type:     typecheck.TString(),
+							Optional: true,
+						},
+						{Name: "security-policy", Type: typecheck.TString()},
+					})),
+				"mutual-tls-authentication": typecheck.TOptional(typecheck.TObject(
+					[]typecheck.ObjectField{
+						{Name: "truststore-uri", Type: typecheck.TString()},
+						{Name: "truststore-version", Type: typecheck.TString(), Optional: true},
+					})),
+				"routing-mode": typecheck.TOptional(typecheck.TString()),
+				"tags":         typecheck.TMap(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"api-gateway-domain-name":                typecheck.TString(),
+				"api-mapping-selection-expression":       typecheck.TString(),
+				"arn":                                    typecheck.TString(),
+				"domain-name":                            typecheck.TString(),
+				"domain-name-status":                     typecheck.TString(),
+				"domain-name-status-message":             typecheck.TString(),
+				"hosted-zone-id":                         typecheck.TString(),
+				"ip-address-type":                        typecheck.TString(),
+				"ownership-verification-certificate-arn": typecheck.TString(),
+				"routing-mode":                           typecheck.TString(),
+				"tags":                                   typecheck.TMap(typecheck.TString()),
+				"target-domain-name":                     typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(input.domain-name-configurations == null || " +
+						"@core.length(input.domain-name-configurations) >= 1) && " +
+						"(input.domain-name-configurations == null || " +
+						"@core.length(input.domain-name-configurations) <= 1)",
+					Message: "domain-name-configurations must have exactly one item",
+				},
+				{
+					Kind: "predicate",
+					When: "(@each.value.ip-address-type != null)",
+					Require: "(@each.value.ip-address-type == 'ipv4' || " +
+						"@each.value.ip-address-type == 'dualstack')",
+					Message: "domain-name-configurations ip-address-type must be " +
+						"ipv4 or dualstack",
+					ForEach: "input.domain-name-configurations",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
 				{Field: "input.tags", Optional: true},
 			},
 		},

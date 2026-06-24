@@ -1,11 +1,11 @@
 factory: {
   description: '''>-
-    Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a GET
-    route, an auto-deploying $default stage, and a function URL on the same function
-    with public-access permissions. The API description, integration timeout, route
-    operation name, stage variable, and function URL CORS max age come from inputs
+    Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a GET route, an
+    auto-deploying $default stage, a custom domain name, and a function URL on the same
+    function with public-access permissions. The API description, integration timeout, route
+    operation name, stage variable, domain tag, and function URL CORS max age come from inputs
     so the update pass changes each in place through its own call path: UpdateApi,
-    UpdateIntegration, UpdateRoute, UpdateStage, and UpdateFunctionUrlConfig.
+    UpdateIntegration, UpdateRoute, UpdateStage, domain tag sync, and UpdateFunctionUrlConfig.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -41,6 +41,11 @@ factory: {
       type:        integer
       default:     300
       description: 'CORS max age of the function URL in seconds; the update pass raises it'
+    }
+    domain-tag-value: {
+      type:        string
+      default:     'initial'
+      description: 'Tag value on the custom domain; the update pass changes it'
     }
   }
 
@@ -87,6 +92,75 @@ factory: {
       stage-variables: { GREETING: input.stage-greeting }
       tags:            { unobin: 'apigatewayv2-it' }
     }
+    acm-certificate-domain: aws.acm-certificate {
+      certificate-body: '''|-
+        -----BEGIN CERTIFICATE-----
+        MIIDbDCCAlSgAwIBAgIUfDaefT2sDefrfhNup19KkLQTuPMwDQYJKoZIhvcNAQEL
+        BQAwLTErMCkGA1UEAwwidW5vYmluLWl0LWFwaWdhdGV3YXl2Mi5leGFtcGxlLmNv
+        bTAeFw0yNjA2MjQyMDMxMjlaFw0zNjA2MjEyMDMxMjlaMC0xKzApBgNVBAMMInVu
+        b2Jpbi1pdC1hcGlnYXRld2F5djIuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+        AQUAA4IBDwAwggEKAoIBAQCNjvpmUaE7PVGTaHL2jUbrQQhxHQkDv7JC38XlpG5d
+        BHlr0QKEqxrDaGzd5V8Qs/pIoXTyMkILZJRgYDMQEq+brsCL8qZNftNnAC0PoCC4
+        3EMo+yFxeBNlzggFkyKxhz9DWJmw1IRkEehkheV2mxNWzr1JVuv4PpELDQNIvxbB
+        Lsn1lszvn1ou+FaKUSBLUEsk4Dj+YpqkaV4vugGb11h2q99JUqirL42ho3ukNuZT
+        L/MoSKQm6EDFcth835QJTPxj6+xtu9x8zNiW477qxPrD1J3r11XDGKC7p+J6tOVt
+        q1+jbI/ZtlyR17tEZDl7HOG0N5hKjma7uCW6JNuWcFuBAgMBAAGjgYMwgYAwHQYD
+        VR0OBBYEFMPeT+HXUVgm2fu52DnywsgS7yEbMB8GA1UdIwQYMBaAFMPeT+HXUVgm
+        2fu52DnywsgS7yEbMA8GA1UdEwEB/wQFMAMBAf8wLQYDVR0RBCYwJIIidW5vYmlu
+        LWl0LWFwaWdhdGV3YXl2Mi5leGFtcGxlLmNvbTANBgkqhkiG9w0BAQsFAAOCAQEA
+        e9fnq9v2FbmGiRJyEQn51uGm0obI7ArigOpGrEjbeiEWWljOpxepKcqAVjBKkoez
+        YG6DMexrlqUlnfTHcQx0LP/ufMlufRfVOgdQnPzssZ5bYvSyRw6HolxjHvmi9IUn
+        IOiMAxGjcBvUfuaDwxG21k0rr4il+0/ZGN3d+1I3UPm/CXQThQbdpi7folWBvqek
+        GXXlJP4UkMIbi9BPN0MFzlIdE28pQJjzTbzmq3CjnsHffPPTk769whWKqToh4UQo
+        4eRX4NAeq01D84OH37NLKCnpgggT4XvB2VK5EZB5K+6qhLbWFuyn2F4WroVveBjl
+        0J4dNC3YADWG4Zsm5a+grQ==
+        -----END CERTIFICATE-----
+        '''
+      private-key: '''|-
+        -----BEGIN PRIVATE KEY-----
+        MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCNjvpmUaE7PVGT
+        aHL2jUbrQQhxHQkDv7JC38XlpG5dBHlr0QKEqxrDaGzd5V8Qs/pIoXTyMkILZJRg
+        YDMQEq+brsCL8qZNftNnAC0PoCC43EMo+yFxeBNlzggFkyKxhz9DWJmw1IRkEehk
+        heV2mxNWzr1JVuv4PpELDQNIvxbBLsn1lszvn1ou+FaKUSBLUEsk4Dj+YpqkaV4v
+        ugGb11h2q99JUqirL42ho3ukNuZTL/MoSKQm6EDFcth835QJTPxj6+xtu9x8zNiW
+        477qxPrD1J3r11XDGKC7p+J6tOVtq1+jbI/ZtlyR17tEZDl7HOG0N5hKjma7uCW6
+        JNuWcFuBAgMBAAECggEABf8SHhKz49qkeZwtb4J7SDSeZw058CfXBSRtwX0qRCQw
+        AQhO5SAK349tOiaQ1PgswFYfijFlEQ67BsyYaSRDflKkGyGFmCeIzLaKEh0AOdhx
+        u1sM9v2lQ7UbK6JIkFDYdhG7G+2aqJMGHzj5SAGIa49RHxnQn9jFo9xSoOqgTAFP
+        Xy/FpJhnGDuu64xiuJn1iaGugT9CKMYqbATmY8ab9oAwtHj562Mgg/2SrXqzy8N+
+        D665y4AXoYvY5/MBSifCEOT4sGnKR4vQS1BY7neOlsSI7Nlfd8PfcLtgbg/2NPjV
+        o4E+BbojeIou7vYM0LNgLCM0SjujCVai5UER4n0UOQKBgQDFQpo+GI5zwQDwDUmq
+        sOzN3/kuIjsci7Jy1zFEhzKRDH+x9OhPNvA262+9WakqzIw0wCSOle1UrQ8j0+No
+        CKbOGU+/H6wfj/0p4OA+STWE9eYkDjDyT8p2lOSSg8gYATQEG55DWvcu8rU3cXyC
+        gzLO/DvsLREUE2UxnL5NF6wPyQKBgQC3tiqN6DmtGA3dFBJrbRJK+BchpMQ4aece
+        OzzdncRr1dG9zcyx7H3G8w5G7QBOooUBmpFKsiFaKftA8v7kq8uoRCDmqt26bWKA
+        1XgNC5vJ66jQHtdn8da9LalN6xvC1izcW6Jm6uB+4YzFoP7P5qQa8pjWETVqorqm
+        kn5erSd5+QKBgEgKxghNsaEG6Q/C2pezXBjoZrn5mHsZbgfRHdY4RjiBRxW4Kyvb
+        FaoJHFscJtNRtxcA4ZkNmorlVXUxSolRN5Jn3h8gMx2n2b70uREmbZxsriuW3ztv
+        9rKOOFhmNqrFrbieWZOh4krMK3DfSqjjv6emqT/dSbJ6TufqpfnD3nw5AoGAL30S
+        gP5PsnPuWYCvxj86pFB/Qj4iTubpTIJJmIwI00tBXYwOZsvYM45u2Vy4YJtYQHLh
+        Lerf/jut7DskMp5KFeQOkTIIAQH3nZAQ6WZfzhFx4OKoEgGM3fgotLCay4GrtQam
+        822xvHq3dfrJA5r+Ps0JPwTRxw/rqdVifzzJYJkCgYAu1fTiRNbQdQVWNzl8CZ5Z
+        41LTmsvnMiC+ntVE1Qf+0G1JakZy5v3A+78zLmdkxfTf7dK8yiVV30boyxwerRzj
+        WSh6BL1/nqVSb9xMlAygtB5JqB/Gu6H79VIAaEeYapR5jEZMw+4mDK0Ld2hj5u7+
+        i3t40WYPu2IWU/YHVm3xVQ==
+        -----END PRIVATE KEY-----
+        '''
+      tags: { unobin: 'apigatewayv2-domain-cert-it' }
+    }
+    apigatewayv2-domain-name-it: aws.apigatewayv2-domain-name {
+      domain-name: 'unobin-it-apigatewayv2.example.com'
+      domain-name-configurations: [
+        {
+          certificate-arn: resource.acm-certificate-domain.arn
+          endpoint-type:   'REGIONAL'
+          ip-address-type: 'ipv4'
+          security-policy: 'TLS_1_2'
+        },
+      ]
+      routing-mode: 'API_MAPPING_ONLY'
+      tags:         { unobin: 'apigatewayv2-domain-it', pass: input.domain-tag-value }
+    }
     lambda-permission-apigw: aws.lambda-permission {
       function-name: resource.lambda-function-fn.function-name
       statement-id:  'unobin-it-apigw-invoke'
@@ -113,6 +187,16 @@ factory: {
     integration-id: { value: resource.apigatewayv2-integration-it.integration-id }
     route-id:       { value: resource.apigatewayv2-route-it.route-id }
     invoke-url:     { value: resource.apigatewayv2-stage-it.invoke-url }
-    function-url:   { value: resource.lambda-function-url-it.function-url }
+    domain-api-gateway-name: {
+      value: resource.apigatewayv2-domain-name-it.api-gateway-domain-name
+    }
+    domain-hosted-zone-id: {
+      value: resource.apigatewayv2-domain-name-it.hosted-zone-id
+    }
+    domain-target-domain-name: {
+      value: resource.apigatewayv2-domain-name-it.target-domain-name
+    }
+    domain-certificate-arn: { value: resource.acm-certificate-domain.arn }
+    function-url:           { value: resource.lambda-function-url-it.function-url }
   }
 }

@@ -3,11 +3,11 @@
 // stable name because the driver passes no plan outputs into verify, and it
 // reads only cloud state: applied requires the HTTP API, its AWS_PROXY
 // integration, the GET /hello route targeting that integration, the $default
-// stage, and the function URL on the backing function; destroyed requires the
-// API and the function URL to be gone. Input echoes an emulator may not model
-// (auto-deploy, stage variables) are checked best-effort, degrading to a
-// printed skip. Tearing the stack down is the destroy plan's job, not the
-// verifier's.
+// stage, the custom domain name, and the function URL on the backing function;
+// destroyed requires the API, domain name, and function URL to be gone. The
+// scenario is live-only because the emulators do not model API Gateway v2 custom
+// domains with ACM certificates. Tearing the stack down is the destroy plan's
+// job, not the verifier's.
 package main
 
 import (
@@ -27,7 +27,10 @@ import (
 
 const (
 	apiName      = "unobin-it-apigatewayv2"
+	domainName   = "unobin-it-apigatewayv2.example.com"
 	functionName = "unobin-it-apigatewayv2"
+	markerKey    = "unobin"
+	markerValue  = "apigatewayv2-domain-it"
 	routeKey     = "GET /hello"
 	stageName    = "$default"
 )
@@ -72,7 +75,7 @@ func verifyApplied(
 		return fmt.Errorf("api %s protocol is %s, want HTTP", apiName, got)
 	}
 	if aws.ToString(api.ApiEndpoint) == "" {
-		fmt.Println("skip: api endpoint not modeled")
+		return fmt.Errorf("api %s endpoint is empty", apiName)
 	}
 	apiID := aws.ToString(api.ApiId)
 
@@ -103,7 +106,20 @@ func verifyApplied(
 	if stage == nil {
 		return fmt.Errorf("api %s has no stage %s", apiName, stageName)
 	}
-	checkStageEchoes(stage)
+	if err := checkStageEchoes(stage); err != nil {
+		return err
+	}
+
+	domain, err := findDomainName(ctx, apiClient)
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("domain name %s not found", domainName)
+	}
+	if err := checkDomainName(domain); err != nil {
+		return err
+	}
 
 	urlConfig, err := findFunctionURL(ctx, lambdaClient)
 	if err != nil {
@@ -121,20 +137,38 @@ func verifyApplied(
 	return nil
 }
 
-// checkStageEchoes confirms the stage's input echoes best-effort: an emulator
-// may not store auto-deploy or stage variables, so a miss degrades to a
-// printed skip rather than a failure.
-func checkStageEchoes(stage *apigatewayv2.GetStageOutput) {
+func checkStageEchoes(stage *apigatewayv2.GetStageOutput) error {
 	if !aws.ToBool(stage.AutoDeploy) {
-		fmt.Println("skip: stage auto-deploy not modeled")
-	} else {
-		fmt.Println("ok: stage auto-deploy enabled")
+		return fmt.Errorf("stage %s auto-deploy is false, want true", stageName)
 	}
 	if got := stage.StageVariables["GREETING"]; got == "" {
-		fmt.Println("skip: stage variables not modeled")
-	} else {
-		fmt.Printf("ok: stage variable GREETING=%s\n", got)
+		return fmt.Errorf("stage %s variable GREETING is empty", stageName)
 	}
+	return nil
+}
+
+func checkDomainName(domain *apigatewayv2.GetDomainNameOutput) error {
+	if len(domain.DomainNameConfigurations) == 0 {
+		return fmt.Errorf("domain name %s has no configurations", domainName)
+	}
+	config := domain.DomainNameConfigurations[0]
+	if got := config.DomainNameStatus; got != apigatewayv2types.DomainNameStatus("AVAILABLE") {
+		return fmt.Errorf("domain status is %s, want AVAILABLE", got)
+	}
+	if aws.ToString(config.ApiGatewayDomainName) == "" {
+		return fmt.Errorf("domain alias target is empty")
+	}
+	if aws.ToString(config.HostedZoneId) == "" {
+		return fmt.Errorf("domain hosted zone id is empty")
+	}
+	got := domain.Tags[markerKey]
+	if got == "" {
+		return fmt.Errorf("domain tag %s is empty, want %s", markerKey, markerValue)
+	}
+	if got != markerValue {
+		return fmt.Errorf("domain tag %s=%s, want %s", markerKey, got, markerValue)
+	}
+	return nil
 }
 
 func verifyDestroyed(
@@ -146,6 +180,13 @@ func verifyDestroyed(
 	}
 	if api != nil {
 		return fmt.Errorf("api %s still exists", apiName)
+	}
+	domain, err := findDomainName(ctx, apiClient)
+	if err != nil {
+		return err
+	}
+	if domain != nil {
+		return fmt.Errorf("domain name %s still exists", domainName)
 	}
 	urlConfig, err := findFunctionURL(ctx, lambdaClient)
 	if err != nil {
@@ -243,6 +284,23 @@ func findStage(
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get stage: %w", err)
+	}
+	return resp, nil
+}
+
+// findDomainName returns the custom domain, or nil when it is gone.
+func findDomainName(
+	ctx context.Context, client *apigatewayv2.Client,
+) (*apigatewayv2.GetDomainNameOutput, error) {
+	resp, err := client.GetDomainName(ctx, &apigatewayv2.GetDomainNameInput{
+		DomainName: aws.String(domainName),
+	})
+	if err != nil {
+		var notFound *apigatewayv2types.NotFoundException
+		if errors.As(err, &notFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get domain name: %w", err)
 	}
 	return resp, nil
 }
