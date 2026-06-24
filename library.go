@@ -223,6 +223,8 @@ func Library() *runtime.Library {
 				apigatewayv2.Stage, *apigatewayv2.StageOutput](),
 			"apigatewayv2-domain-name": makeResource[
 				apigatewayv2.DomainName, *apigatewayv2.DomainNameOutput](),
+			"apigatewayv2-api-mapping": makeResource[
+				apigatewayv2.ApiMapping, *apigatewayv2.ApiMappingOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"route53-zone": makeDataSource[route53.ZoneData, *route53.ZoneDataOutput](),

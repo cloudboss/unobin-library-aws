@@ -3,11 +3,11 @@
 // stable name because the driver passes no plan outputs into verify, and it
 // reads only cloud state: applied requires the HTTP API, its AWS_PROXY
 // integration, the GET /hello route targeting that integration, the $default
-// stage, the custom domain name, and the function URL on the backing function;
-// destroyed requires the API, domain name, and function URL to be gone. The
-// scenario is live-only because the emulators do not model API Gateway v2 custom
-// domains with ACM certificates. Tearing the stack down is the destroy plan's
-// job, not the verifier's.
+// stage, the custom domain name, its API mapping, and the function URL on the
+// backing function; destroyed requires the API, domain name, and function URL
+// to be gone. The scenario is live-only because the emulators do not model API
+// Gateway v2 custom domains with ACM certificates. Tearing the stack down is
+// the destroy plan's job, not the verifier's.
 package main
 
 import (
@@ -26,13 +26,14 @@ import (
 )
 
 const (
-	apiName      = "unobin-it-apigatewayv2"
-	domainName   = "unobin-it-apigatewayv2.example.com"
-	functionName = "unobin-it-apigatewayv2"
-	markerKey    = "unobin"
-	markerValue  = "apigatewayv2-domain-it"
-	routeKey     = "GET /hello"
-	stageName    = "$default"
+	apiName       = "unobin-it-apigatewayv2"
+	domainName    = "unobin-it-apigatewayv2.example.com"
+	functionName  = "unobin-it-apigatewayv2"
+	markerKey     = "unobin"
+	markerValue   = "apigatewayv2-domain-it"
+	routeKey      = "GET /hello"
+	stageName     = "$default"
+	apiMappingKey = "hello"
 )
 
 func main() {
@@ -121,6 +122,17 @@ func verifyApplied(
 		return err
 	}
 
+	mapping, err := findAPIMapping(ctx, apiClient, apiID)
+	if err != nil {
+		return err
+	}
+	if mapping == nil {
+		return fmt.Errorf("domain name %s has no API mapping", domainName)
+	}
+	if err := checkAPIMapping(mapping, apiID); err != nil {
+		return err
+	}
+
 	urlConfig, err := findFunctionURL(ctx, lambdaClient)
 	if err != nil {
 		return err
@@ -167,6 +179,19 @@ func checkDomainName(domain *apigatewayv2.GetDomainNameOutput) error {
 	}
 	if got != markerValue {
 		return fmt.Errorf("domain tag %s=%s, want %s", markerKey, got, markerValue)
+	}
+	return nil
+}
+
+func checkAPIMapping(mapping *apigatewayv2types.ApiMapping, apiID string) error {
+	if got := aws.ToString(mapping.ApiId); got != apiID {
+		return fmt.Errorf("API mapping api id is %s, want %s", got, apiID)
+	}
+	if got := aws.ToString(mapping.Stage); got != stageName {
+		return fmt.Errorf("API mapping stage is %s, want %s", got, stageName)
+	}
+	if got := aws.ToString(mapping.ApiMappingKey); got != apiMappingKey {
+		return fmt.Errorf("API mapping key is %s, want %s", got, apiMappingKey)
 	}
 	return nil
 }
@@ -303,6 +328,33 @@ func findDomainName(
 		return nil, fmt.Errorf("get domain name: %w", err)
 	}
 	return resp, nil
+}
+
+// findAPIMapping returns the custom domain mapping matched by API id and key.
+func findAPIMapping(
+	ctx context.Context, client *apigatewayv2.Client, apiID string,
+) (*apigatewayv2types.ApiMapping, error) {
+	var next *string
+	for {
+		resp, err := client.GetApiMappings(ctx, &apigatewayv2.GetApiMappingsInput{
+			DomainName: aws.String(domainName),
+			NextToken:  next,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("get api mappings: %w", err)
+		}
+		for i := range resp.Items {
+			item := &resp.Items[i]
+			if aws.ToString(item.ApiId) == apiID &&
+				aws.ToString(item.ApiMappingKey) == apiMappingKey {
+				return item, nil
+			}
+		}
+		if resp.NextToken == nil {
+			return nil, nil
+		}
+		next = resp.NextToken
+	}
 }
 
 // findFunctionURL returns the function's URL config, or nil when the config

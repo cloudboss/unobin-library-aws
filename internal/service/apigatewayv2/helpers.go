@@ -29,8 +29,7 @@ func newClient(ctx context.Context, cfg *awsCfg) (*apigatewayv2.Client, error) {
 }
 
 // isNotFound reports whether err is the API Gateway v2 NotFoundException,
-// the one typed error the service returns for a missing API, integration,
-// route, or stage.
+// the typed error the service returns for a missing resource.
 func isNotFound(err error) bool {
 	var nf *apigatewayv2types.NotFoundException
 	return errors.As(err, &nf)

@@ -15,8 +15,8 @@ import (
 )
 
 // TestLibraryRegistersApigatewayv2 checks the runtime registration: the API,
-// integration, route, stage, and domain-name resources are present under
-// Resources and dispatch to their output types.
+// integration, route, stage, domain-name, and api-mapping resources are present
+// under Resources and dispatch to their output types.
 func TestLibraryRegistersApigatewayv2(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
@@ -25,6 +25,7 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 		"apigatewayv2-route":       reflect.TypeFor[*apigatewayv2.RouteOutput](),
 		"apigatewayv2-stage":       reflect.TypeFor[*apigatewayv2.StageOutput](),
 		"apigatewayv2-domain-name": reflect.TypeFor[*apigatewayv2.DomainNameOutput](),
+		"apigatewayv2-api-mapping": reflect.TypeFor[*apigatewayv2.ApiMappingOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -36,8 +37,8 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 
 // TestApigatewayv2Schemas asserts the whole derived TypeSchema for the API
 // Gateway v2 resources: input and output field types (including the CORS, TLS,
-// access-log, route-settings, and domain-name blocks), the enum and cross-field
-// rules, and the optional defaults.
+// access-log, route-settings, domain-name, and api-mapping blocks), the enum
+// and cross-field rules, and the optional defaults.
 func TestApigatewayv2Schemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -433,6 +434,18 @@ func TestApigatewayv2Schemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.tags", Optional: true},
+			},
+		},
+		"apigatewayv2-api-mapping": {
+			Inputs: map[string]typecheck.Type{
+				"api-id":          typecheck.TString(),
+				"api-mapping-key": typecheck.TOptional(typecheck.TString()),
+				"domain-name":     typecheck.TString(),
+				"stage":           typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"api-mapping-id": typecheck.TString(),
+				"domain-name":    typecheck.TString(),
 			},
 		},
 	}

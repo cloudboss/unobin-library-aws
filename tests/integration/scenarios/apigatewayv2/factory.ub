@@ -1,11 +1,12 @@
 factory: {
   description: '''>-
     Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a GET route, an
-    auto-deploying $default stage, a custom domain name, and a function URL on the same
-    function with public-access permissions. The API description, integration timeout, route
-    operation name, stage variable, domain tag, and function URL CORS max age come from inputs
-    so the update pass changes each in place through its own call path: UpdateApi,
-    UpdateIntegration, UpdateRoute, UpdateStage, domain tag sync, and UpdateFunctionUrlConfig.
+    auto-deploying $default stage, a custom domain name, an API mapping, and a function
+    URL on the same function with public-access permissions. The API description,
+    integration timeout, route operation name, stage variable, API mapping key, domain
+    tag, and function URL CORS max age come from inputs so the update pass changes each in
+    place through its own call path: UpdateApi, UpdateIntegration, UpdateRoute,
+    UpdateStage, UpdateApiMapping, domain tag sync, and UpdateFunctionUrlConfig.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -46,6 +47,11 @@ factory: {
       type:        string
       default:     'initial'
       description: 'Tag value on the custom domain; the update pass changes it'
+    }
+    api-mapping-key: {
+      type:        string
+      default:     'hello'
+      description: 'API mapping key; the update pass clears it to the root mapping'
     }
   }
 
@@ -161,6 +167,12 @@ factory: {
       routing-mode: 'API_MAPPING_ONLY'
       tags:         { unobin: 'apigatewayv2-domain-it', pass: input.domain-tag-value }
     }
+    apigatewayv2-api-mapping-it: aws.apigatewayv2-api-mapping {
+      api-id:          resource.apigatewayv2-api-it.api-id
+      domain-name:     resource.apigatewayv2-domain-name-it.domain-name
+      stage:           resource.apigatewayv2-stage-it.name
+      api-mapping-key: input.api-mapping-key
+    }
     lambda-permission-apigw: aws.lambda-permission {
       function-name: resource.lambda-function-fn.function-name
       statement-id:  'unobin-it-apigw-invoke'
@@ -197,6 +209,7 @@ factory: {
       value: resource.apigatewayv2-domain-name-it.target-domain-name
     }
     domain-certificate-arn: { value: resource.acm-certificate-domain.arn }
+    api-mapping-id:         { value: resource.apigatewayv2-api-mapping-it.api-mapping-id }
     function-url:           { value: resource.lambda-function-url-it.function-url }
   }
 }
