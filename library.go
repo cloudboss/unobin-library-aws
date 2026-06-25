@@ -221,6 +221,8 @@ func Library() *runtime.Library {
 				apigatewayv2.Route, *apigatewayv2.RouteOutput](),
 			"apigatewayv2-stage": makeResource[
 				apigatewayv2.Stage, *apigatewayv2.StageOutput](),
+			"apigatewayv2-authorizer": makeResource[
+				apigatewayv2.Authorizer, *apigatewayv2.AuthorizerOutput](),
 			"apigatewayv2-domain-name": makeResource[
 				apigatewayv2.DomainName, *apigatewayv2.DomainNameOutput](),
 			"apigatewayv2-api-mapping": makeResource[

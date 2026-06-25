@@ -15,13 +15,14 @@ import (
 )
 
 // TestLibraryRegistersApigatewayv2 checks the runtime registration: the API,
-// integration, route, stage, domain-name, and api-mapping resources are present
-// under Resources and dispatch to their output types.
+// integration, authorizer, route, stage, domain-name, and api-mapping resources
+// are present under Resources and dispatch to their output types.
 func TestLibraryRegistersApigatewayv2(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
 		"apigatewayv2-api":         reflect.TypeFor[*apigatewayv2.ApiOutput](),
 		"apigatewayv2-integration": reflect.TypeFor[*apigatewayv2.IntegrationOutput](),
+		"apigatewayv2-authorizer":  reflect.TypeFor[*apigatewayv2.AuthorizerOutput](),
 		"apigatewayv2-route":       reflect.TypeFor[*apigatewayv2.RouteOutput](),
 		"apigatewayv2-stage":       reflect.TypeFor[*apigatewayv2.StageOutput](),
 		"apigatewayv2-domain-name": reflect.TypeFor[*apigatewayv2.DomainNameOutput](),
@@ -36,9 +37,9 @@ func TestLibraryRegistersApigatewayv2(t *testing.T) {
 }
 
 // TestApigatewayv2Schemas asserts the whole derived TypeSchema for the API
-// Gateway v2 resources: input and output field types (including the CORS, TLS,
-// access-log, route-settings, domain-name, and api-mapping blocks), the enum
-// and cross-field rules, and the optional defaults.
+// Gateway v2 resources: input and output field types (including the CORS, JWT,
+// TLS, access-log, route-settings, domain-name, and api-mapping blocks), the
+// enum and cross-field rules, and the optional defaults.
 func TestApigatewayv2Schemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -249,6 +250,70 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				{Field: "input.request-parameters", Optional: true},
 				{Field: "input.request-templates", Optional: true},
 				{Field: "input.response-parameters", Optional: true},
+			},
+		},
+		"apigatewayv2-authorizer": {
+			Inputs: map[string]typecheck.Type{
+				"api-id":                            typecheck.TString(),
+				"authorizer-credentials-arn":        typecheck.TOptional(typecheck.TString()),
+				"authorizer-payload-format-version": typecheck.TOptional(typecheck.TString()),
+				"authorizer-result-ttl-in-seconds":  typecheck.TOptional(typecheck.TInteger()),
+				"authorizer-type":                   typecheck.TString(),
+				"authorizer-uri":                    typecheck.TOptional(typecheck.TString()),
+				"enable-simple-responses":           typecheck.TOptional(typecheck.TBoolean()),
+				"identity-sources":                  typecheck.TList(typecheck.TString()),
+				"jwt-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "audience", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "issuer", Type: typecheck.TString(), Optional: true},
+				})),
+				"name": typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"api-id":                           typecheck.TString(),
+				"authorizer-id":                    typecheck.TString(),
+				"authorizer-result-ttl-in-seconds": typecheck.TInteger(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(input.authorizer-type == 'JWT' || " +
+						"input.authorizer-type == 'REQUEST')",
+					Message: "authorizer-type must be JWT or REQUEST",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "((input.name != null) && " +
+						"(@core.length(input.name) >= 1))",
+					Message: "name must not be empty",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.authorizer-payload-format-version != null)",
+					Require: "(input.authorizer-payload-format-version == '1.0' || " +
+						"input.authorizer-payload-format-version == '2.0')",
+					Message: "authorizer-payload-format-version must be 1.0 or 2.0",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.authorizer-result-ttl-in-seconds != null)",
+					Require: "(input.authorizer-result-ttl-in-seconds == null || " +
+						"input.authorizer-result-ttl-in-seconds >= 0) && " +
+						"(input.authorizer-result-ttl-in-seconds == null || " +
+						"input.authorizer-result-ttl-in-seconds <= 3600)",
+					Message: "authorizer-result-ttl-in-seconds must be between 0 and 3600",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.authorizer-uri != null)",
+					Require: "((input.authorizer-uri != null) && " +
+						"(@core.length(input.authorizer-uri) >= 1))",
+					Message: "authorizer-uri must not be empty",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.identity-sources", Optional: true},
 			},
 		},
 		"apigatewayv2-route": {

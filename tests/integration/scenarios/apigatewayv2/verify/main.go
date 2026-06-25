@@ -1,13 +1,13 @@
-// verify checks the HTTP API stack the scenario applied against the phase
-// named in the VERIFY_PHASE environment variable. It looks the API up by its
-// stable name because the driver passes no plan outputs into verify, and it
-// reads only cloud state: applied requires the HTTP API, its AWS_PROXY
-// integration, the GET /hello route targeting that integration, the $default
-// stage, the custom domain name, its API mapping, and the function URL on the
-// backing function; destroyed requires the API, domain name, and function URL
-// to be gone. The scenario is live-only because the emulators do not model API
-// Gateway v2 custom domains with ACM certificates. Tearing the stack down is
-// the destroy plan's job, not the verifier's.
+// verify checks the HTTP API stack for the VERIFY_PHASE environment variable.
+// It looks the API up by its stable name because the driver passes no plan
+// outputs into verify, and it reads only cloud state: applied requires the HTTP
+// API, its AWS_PROXY integration, REQUEST authorizer, the GET /hello route
+// targeting that integration, the $default stage, the custom domain name, its
+// API mapping, and the function URL on the backing function; destroyed requires
+// the API, domain name, and function URL to be gone. The scenario is live-only
+// because the emulators do not model API Gateway v2 custom domains with ACM
+// certificates. Tearing the stack down is the destroy plan's job, not the
+// verifier's.
 package main
 
 import (
@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -26,14 +27,16 @@ import (
 )
 
 const (
-	apiName       = "unobin-it-apigatewayv2"
-	domainName    = "unobin-it-apigatewayv2.example.com"
-	functionName  = "unobin-it-apigatewayv2"
-	markerKey     = "unobin"
-	markerValue   = "apigatewayv2-domain-it"
-	routeKey      = "GET /hello"
-	stageName     = "$default"
-	apiMappingKey = "hello"
+	apiName                  = "unobin-it-apigatewayv2"
+	authorizerName           = "unobin-it-apigatewayv2"
+	authorizerIdentitySource = "$request.header.Authorization"
+	domainName               = "unobin-it-apigatewayv2.example.com"
+	functionName             = "unobin-it-apigatewayv2"
+	markerKey                = "unobin"
+	markerValue              = "apigatewayv2-domain-it"
+	routeKey                 = "GET /hello"
+	stageName                = "$default"
+	apiMappingKey            = "hello"
 )
 
 func main() {
@@ -88,6 +91,17 @@ func verifyApplied(
 		return fmt.Errorf("api %s has no AWS_PROXY integration", apiName)
 	}
 
+	authorizer, err := findAuthorizer(ctx, apiClient, apiID)
+	if err != nil {
+		return err
+	}
+	if authorizer == nil {
+		return fmt.Errorf("api %s has no authorizer %s", apiName, authorizerName)
+	}
+	if err := checkAuthorizer(authorizer); err != nil {
+		return err
+	}
+
 	route, err := findRoute(ctx, apiClient, apiID)
 	if err != nil {
 		return err
@@ -95,9 +109,8 @@ func verifyApplied(
 	if route == nil {
 		return fmt.Errorf("api %s has no route %s", apiName, routeKey)
 	}
-	wantTarget := "integrations/" + aws.ToString(integration.IntegrationId)
-	if got := aws.ToString(route.Target); got != wantTarget {
-		return fmt.Errorf("route %s target is %q, want %q", routeKey, got, wantTarget)
+	if err := checkRoute(route, integration, authorizer); err != nil {
+		return err
 	}
 
 	stage, err := findStage(ctx, apiClient, apiID)
@@ -145,6 +158,47 @@ func verifyApplied(
 	}
 	if got := urlConfig.AuthType; got != lambdatypes.FunctionUrlAuthTypeNone {
 		return fmt.Errorf("function url auth type is %s, want NONE", got)
+	}
+	return nil
+}
+
+func checkAuthorizer(authorizer *apigatewayv2types.Authorizer) error {
+	if got := authorizer.AuthorizerType; got != apigatewayv2types.AuthorizerTypeRequest {
+		return fmt.Errorf("authorizer %s type is %s, want REQUEST", authorizerName, got)
+	}
+	if got := aws.ToString(authorizer.AuthorizerId); got == "" {
+		return fmt.Errorf("authorizer %s id is empty", authorizerName)
+	}
+	if got := aws.ToInt32(authorizer.AuthorizerResultTtlInSeconds); got != 300 {
+		return fmt.Errorf("authorizer %s ttl is %d, want 300", authorizerName, got)
+	}
+	if !aws.ToBool(authorizer.EnableSimpleResponses) {
+		return fmt.Errorf("authorizer %s simple responses is false", authorizerName)
+	}
+	if !slices.Contains(authorizer.IdentitySource, authorizerIdentitySource) {
+		return fmt.Errorf("authorizer %s identity sources omit %s",
+			authorizerName, authorizerIdentitySource)
+	}
+	return nil
+}
+
+func checkRoute(
+	route *apigatewayv2types.Route,
+	integration *apigatewayv2types.Integration,
+	authorizer *apigatewayv2types.Authorizer,
+) error {
+	wantTarget := "integrations/" + aws.ToString(integration.IntegrationId)
+	if got := aws.ToString(route.Target); got != wantTarget {
+		return fmt.Errorf("route %s target is %q, want %q", routeKey, got, wantTarget)
+	}
+	if got := route.AuthorizationType; got != apigatewayv2types.AuthorizationTypeCustom {
+		return fmt.Errorf("route %s authorization type is %s, want CUSTOM", routeKey, got)
+	}
+	gotAuthorizerID := aws.ToString(route.AuthorizerId)
+	wantAuthorizerID := aws.ToString(authorizer.AuthorizerId)
+	if gotAuthorizerID != wantAuthorizerID {
+		return fmt.Errorf("route %s authorizer id is %s, want %s",
+			routeKey, gotAuthorizerID, wantAuthorizerID)
 	}
 	return nil
 }
@@ -259,6 +313,32 @@ func findIntegration(
 		}
 		for i := range resp.Items {
 			if resp.Items[i].IntegrationType == apigatewayv2types.IntegrationTypeAwsProxy {
+				return &resp.Items[i], nil
+			}
+		}
+		if resp.NextToken == nil {
+			return nil, nil
+		}
+		next = resp.NextToken
+	}
+}
+
+// findAuthorizer returns the API's authorizer matched by name, or nil when
+// none exists.
+func findAuthorizer(
+	ctx context.Context, client *apigatewayv2.Client, apiID string,
+) (*apigatewayv2types.Authorizer, error) {
+	var next *string
+	for {
+		resp, err := client.GetAuthorizers(ctx, &apigatewayv2.GetAuthorizersInput{
+			ApiId:     aws.String(apiID),
+			NextToken: next,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("get authorizers: %w", err)
+		}
+		for i := range resp.Items {
+			if aws.ToString(resp.Items[i].Name) == authorizerName {
 				return &resp.Items[i], nil
 			}
 		}

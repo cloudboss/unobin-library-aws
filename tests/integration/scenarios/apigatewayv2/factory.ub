@@ -1,11 +1,11 @@
 factory: {
   description: '''>-
-    Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a GET route, an
-    auto-deploying $default stage, a custom domain name, an API mapping, and a function
-    URL on the same function with public-access permissions. The API description,
-    integration timeout, route operation name, stage variable, API mapping key, domain
-    tag, and function URL CORS max age come from inputs so the update pass changes each in
-    place through its own call path: UpdateApi, UpdateIntegration, UpdateRoute,
+    Manages an HTTP API end to end: a Lambda-backed AWS_PROXY integration, a REQUEST
+    authorizer, a GET route, an auto-deploying $default stage, a custom domain name, an API
+    mapping, and a function URL on the same function with public-access permissions. The API
+    description, integration timeout, route operation name, stage variable, API mapping key,
+    domain tag, and function URL CORS max age come from inputs so the update pass changes
+    each in place through its own call path: UpdateApi, UpdateIntegration, UpdateRoute,
     UpdateStage, UpdateApiMapping, domain tag sync, and UpdateFunctionUrlConfig.
     '''
 
@@ -85,11 +85,22 @@ factory: {
       payload-format-version: '2.0'
       timeout-in-millis:      input.integration-timeout
     }
+    apigatewayv2-authorizer-it: aws.apigatewayv2-authorizer {
+      api-id:                            resource.apigatewayv2-api-it.api-id
+      authorizer-type:                   'REQUEST'
+      identity-sources:                  ['$request.header.Authorization']
+      name:                              'unobin-it-apigatewayv2'
+      authorizer-payload-format-version: '2.0'
+      authorizer-uri:                    resource.lambda-function-fn.invoke-arn
+      enable-simple-responses:           true
+    }
     apigatewayv2-route-it: aws.apigatewayv2-route {
-      api-id:         resource.apigatewayv2-api-it.api-id
-      route-key:      'GET /hello'
-      operation-name: input.operation-name
-      target:         $'''integrations/{{ resource.apigatewayv2-integration-it.integration-id }}'''
+      api-id:             resource.apigatewayv2-api-it.api-id
+      route-key:          'GET /hello'
+      authorization-type: 'CUSTOM'
+      authorizer-id:      resource.apigatewayv2-authorizer-it.authorizer-id
+      operation-name:     input.operation-name
+      target:             $'''integrations/{{ resource.apigatewayv2-integration-it.integration-id }}'''
     }
     apigatewayv2-stage-it: aws.apigatewayv2-stage {
       api-id:          resource.apigatewayv2-api-it.api-id
@@ -198,6 +209,7 @@ factory: {
     api-endpoint:   { value: resource.apigatewayv2-api-it.api-endpoint }
     integration-id: { value: resource.apigatewayv2-integration-it.integration-id }
     route-id:       { value: resource.apigatewayv2-route-it.route-id }
+    authorizer-id:  { value: resource.apigatewayv2-authorizer-it.authorizer-id }
     invoke-url:     { value: resource.apigatewayv2-stage-it.invoke-url }
     domain-api-gateway-name: {
       value: resource.apigatewayv2-domain-name-it.api-gateway-domain-name
