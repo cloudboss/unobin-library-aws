@@ -103,6 +103,13 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 	if !attached {
 		return fmt.Errorf("policy %s is not attached to role %s", policyName, roleName)
 	}
+	attached, err = groupHasPolicy(ctx, client, policyArn, groupName)
+	if err != nil {
+		return err
+	}
+	if !attached {
+		return fmt.Errorf("policy %s is not attached to group %s", policyName, groupName)
+	}
 
 	profile, err := client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
 		InstanceProfileName: aws.String(profileName),
@@ -277,6 +284,25 @@ func groupPathOf(group *iamtypes.Group) string {
 		return ""
 	}
 	return aws.ToString(group.Path)
+}
+
+func groupHasPolicy(
+	ctx context.Context, client *iam.Client, policyArn string, name string,
+) (bool, error) {
+	pager := iam.NewListAttachedGroupPoliciesPaginator(client,
+		&iam.ListAttachedGroupPoliciesInput{GroupName: aws.String(name)})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, fmt.Errorf("list attached group policies: %w", err)
+		}
+		for _, p := range page.AttachedPolicies {
+			if aws.ToString(p.PolicyArn) == policyArn {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // profileHasRole reports whether the instance profile holds a role named name.

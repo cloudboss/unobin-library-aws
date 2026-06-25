@@ -1,6 +1,6 @@
 factory: {
   description: '''>-
-    Manages an IAM role, group, managed policy, attachment, instance profile, and OIDC
+    Manages an IAM role, group, managed policy, attachments, instance profile, and OIDC
     provider. The session duration, group identity, policy document, and provider thumbprints
     come from inputs so the update pass can change them in place: the role through
     UpdateRole, the group through UpdateGroup, the policy through a new default version,
@@ -62,6 +62,10 @@ factory: {
     }
     iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
+      policy-arn: resource.iam-policy-it.arn
+    }
+    iam-group-policy-attachment-it: aws.iam-group-policy-attachment {
+      group-name: resource.iam-group-it.name
       policy-arn: resource.iam-policy-it.arn
     }
     iam-role-policy-it: aws.iam-role-policy {

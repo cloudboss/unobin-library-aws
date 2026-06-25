@@ -45,8 +45,9 @@ func region(client *iam.Client) string {
 // race, such as attaching several policies to a role at once. It clears on
 // its own, so a caller retries the operation.
 func isConcurrentModification(err error) bool {
-	var concurrent *iamtypes.ConcurrentModificationException
-	return errors.As(err, &concurrent)
+	var apiErr smithy.APIError
+	return errors.As(err, &apiErr) &&
+		apiErr.ErrorCode() == (&iamtypes.ConcurrentModificationException{}).ErrorCode()
 }
 
 // isDeleteConflict reports whether err is IAM's DeleteConflict error. IAM

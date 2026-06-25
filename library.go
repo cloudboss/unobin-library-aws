@@ -112,6 +112,9 @@ func Library() *runtime.Library {
 			"iam-role-policy-attachment": makeResource[
 				iam.RolePolicyAttachment,
 				*iam.RolePolicyAttachmentOutput](),
+			"iam-group-policy-attachment": makeResource[
+				iam.GroupPolicyAttachment,
+				*iam.GroupPolicyAttachmentOutput](),
 			"iam-role-policy": makeResource[
 				iam.RolePolicy, *iam.RolePolicyOutput](),
 			"iam-group-policy": makeResource[
