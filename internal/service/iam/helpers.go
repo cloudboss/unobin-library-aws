@@ -59,6 +59,14 @@ func isDeleteConflict(err error) bool {
 	return errors.As(err, &conflict)
 }
 
+// isEntityTemporarilyUnmodifiable reports whether an IAM entity is briefly
+// locked against updates or deletion. The condition clears on its own, so a
+// caller retries the operation that hit it.
+func isEntityTemporarilyUnmodifiable(err error) bool {
+	var unmodifiable *iamtypes.EntityTemporarilyUnmodifiableException
+	return errors.As(err, &unmodifiable)
+}
+
 // isUnpropagatedPrincipal reports whether err is the malformed-policy error
 // IAM returns when a trust policy names a principal that was created moments
 // earlier and has not propagated. The role create or its trust-policy update

@@ -102,6 +102,8 @@ func Library() *runtime.Library {
 				iam.Role, *iam.RoleOutput](),
 			"iam-group": makeResource[
 				iam.Group, *iam.GroupOutput](),
+			"iam-user": makeResource[
+				iam.User, *iam.UserOutput](),
 			"iam-policy": makeResource[
 				iam.Policy, *iam.PolicyOutput](),
 			"iam-instance-profile": makeResource[

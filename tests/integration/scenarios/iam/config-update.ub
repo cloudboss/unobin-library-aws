@@ -4,6 +4,9 @@ stack: {
       max-session-duration: 7200
       group-name:           'unobin-it-group-updated'
       group-path:           '/unobin-updated/'
+      user-name:            'unobin-it-user-updated'
+      user-path:            '/unobin-updated/'
+      user-tag-value:       'updated'
       policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
         "Action":["s3:GetObject","s3:ListBucket"],"Resource":"*"}]}

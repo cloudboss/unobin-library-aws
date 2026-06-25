@@ -21,6 +21,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 	cases := map[string]reflect.Type{
 		"iam-role":                    reflect.TypeFor[*iam.RoleOutput](),
 		"iam-group":                   reflect.TypeFor[*iam.GroupOutput](),
+		"iam-user":                    reflect.TypeFor[*iam.UserOutput](),
 		"iam-policy":                  reflect.TypeFor[*iam.PolicyOutput](),
 		"iam-instance-profile":        reflect.TypeFor[*iam.InstanceProfileOutput](),
 		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
@@ -87,6 +88,37 @@ func TestIamSchemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.path", Value: "'/'"},
+			},
+		},
+		"iam-user": {
+			Inputs: map[string]typecheck.Type{
+				"name":                 typecheck.TString(),
+				"path":                 typecheck.TString(),
+				"permissions-boundary": typecheck.TOptional(typecheck.TString()),
+				"force-destroy":        typecheck.TBoolean(),
+				"tags":                 typecheck.TMap(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":                  typecheck.TString(),
+				"unique-id":            typecheck.TString(),
+				"name":                 typecheck.TString(),
+				"path":                 typecheck.TString(),
+				"permissions-boundary": typecheck.TOptional(typecheck.TString()),
+				"tags":                 typecheck.TMap(typecheck.TString()),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "predicate",
+					When: "(input.permissions-boundary != null)",
+					Require: "(input.permissions-boundary == null || " +
+						"@core.length(input.permissions-boundary) <= 2048)",
+					Message: "permissions-boundary must be at most 2048 characters",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.path", Value: "'/'"},
+				{Field: "input.force-destroy", Value: "false"},
+				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-policy": {

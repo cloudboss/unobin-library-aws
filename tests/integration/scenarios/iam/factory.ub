@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages an IAM role, group, managed policy, attachments, instance profile, and OIDC
-    provider. The session duration, group identity, policy document, and provider thumbprints
-    come from inputs so the update pass can change them in place: the role through
+    Manages an IAM role, group, user, managed policy, attachments, instance profile, and OIDC
+    provider. The session duration, group and user identities, policy document, and provider
+    thumbprints come from inputs so the update pass can change them in place: the role through
     UpdateRole, the group through UpdateGroup, the policy through a new default version,
     inline policies through Put calls, and the thumbprints through the rotation call.
     '''
@@ -36,6 +36,21 @@ factory: {
       default:     '/unobin/'
       description: 'IAM group path; the update pass changes it in place'
     }
+    user-name: {
+      type:        string
+      default:     'unobin-it-user'
+      description: 'IAM user name; the update pass changes it in place'
+    }
+    user-path: {
+      type:        string
+      default:     '/unobin/'
+      description: 'IAM user path; the update pass changes it in place'
+    }
+    user-tag-value: {
+      type:        string
+      default:     'initial'
+      description: 'IAM user tag value; the update pass changes it in place'
+    }
     oidc-thumbprints: {
       type:        list(string)
       default:     ['990f4193972f2becf12ddeda5237f9c952f20d9e']
@@ -60,12 +75,22 @@ factory: {
       name: input.group-name
       path: input.group-path
     }
+    iam-user-it: aws.iam-user {
+      name:          input.user-name
+      path:          input.user-path
+      force-destroy: true
+      tags:          { Scenario: 'iam', Mutable: input.user-tag-value }
+    }
     iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
       policy-arn: resource.iam-policy-it.arn
     }
     iam-group-policy-attachment-it: aws.iam-group-policy-attachment {
       group-name: resource.iam-group-it.name
+      policy-arn: resource.iam-policy-it.arn
+    }
+    iam-user-policy-attachment-it: aws.iam-user-policy-attachment {
+      user:       resource.iam-user-it.name
       policy-arn: resource.iam-policy-it.arn
     }
     iam-role-policy-it: aws.iam-role-policy {
@@ -76,6 +101,11 @@ factory: {
     iam-group-policy-it: aws.iam-group-policy {
       group-name:      resource.iam-group-it.name
       policy-name:     'unobin-it-group-inline'
+      policy-document: input.inline-policy-document
+    }
+    iam-user-policy-it: aws.iam-user-policy {
+      user-name:       resource.iam-user-it.name
+      policy-name:     'unobin-it-user-inline'
       policy-document: input.inline-policy-document
     }
     iam-instance-profile-it: aws.iam-instance-profile {
@@ -100,6 +130,8 @@ factory: {
     policy-arn:        { value: resource.iam-policy-it.arn }
     group-arn:         { value: resource.iam-group-it.arn }
     group-id:          { value: resource.iam-group-it.unique-id }
+    user-arn:          { value: resource.iam-user-it.arn }
+    user-id:           { value: resource.iam-user-it.unique-id }
     profile-arn:       { value: resource.iam-instance-profile-it.arn }
     oidc-provider-url: { value: data-source.iam-openid-connect-provider-lookup.url }
     oidc-client-ids:   { value: data-source.iam-openid-connect-provider-lookup.client-id-list }

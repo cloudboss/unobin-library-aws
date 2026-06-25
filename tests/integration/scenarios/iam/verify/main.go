@@ -25,10 +25,13 @@ const (
 	roleName              = "unobin-it-role"
 	groupName             = "unobin-it-group"
 	updatedGroupName      = "unobin-it-group-updated"
-	groupPath             = "/unobin/"
+	userName              = "unobin-it-user"
+	updatedUserName       = "unobin-it-user-updated"
+	identityPath          = "/unobin/"
 	policyName            = "unobin-it-policy"
 	inlinePolicyName      = "unobin-it-inline"
 	groupInlinePolicyName = "unobin-it-group-inline"
+	userInlinePolicyName  = "unobin-it-user-inline"
 	profileName           = "unobin-it-profile"
 	oidcURL               = "https://oidc.unobin-it.example.com"
 )
@@ -71,8 +74,21 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 	if err != nil {
 		return fmt.Errorf("get group %s: %w", groupName, err)
 	}
-	if got := groupPathOf(group.Group); got != groupPath {
-		return fmt.Errorf("group %s path is %q, want %q", groupName, got, groupPath)
+	if got := groupPathOf(group.Group); got != identityPath {
+		return fmt.Errorf("group %s path is %q, want %q", groupName, got, identityPath)
+	}
+
+	user, err := client.GetUser(ctx, &iam.GetUserInput{UserName: aws.String(userName)})
+	if err != nil {
+		return fmt.Errorf("get user %s: %w", userName, err)
+	}
+	if got := userPathOf(user.User); got != identityPath {
+		return fmt.Errorf("user %s path is %q, want %q", userName, got, identityPath)
+	}
+	if got := userTagValue(user.User, "Scenario"); got == "" {
+		fmt.Printf("skip: user %s tags are not available from this IAM endpoint\n", userName)
+	} else if got != "iam" {
+		return fmt.Errorf("user %s Scenario tag is %q, want iam", userName, got)
 	}
 
 	if _, err := client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
@@ -86,6 +102,12 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		PolicyName: aws.String(groupInlinePolicyName),
 	}); err != nil {
 		return fmt.Errorf("get inline group policy %s: %w", groupInlinePolicyName, err)
+	}
+	if _, err := client.GetUserPolicy(ctx, &iam.GetUserPolicyInput{
+		UserName:   aws.String(userName),
+		PolicyName: aws.String(userInlinePolicyName),
+	}); err != nil {
+		return fmt.Errorf("get inline user policy %s: %w", userInlinePolicyName, err)
 	}
 
 	policyArn, err := findPolicyArn(ctx, client)
@@ -110,6 +132,13 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 	if !attached {
 		return fmt.Errorf("policy %s is not attached to group %s", policyName, groupName)
 	}
+	attached, err = userHasPolicy(ctx, client, policyArn, userName)
+	if err != nil {
+		return err
+	}
+	if !attached {
+		return fmt.Errorf("policy %s is not attached to user %s", policyName, userName)
+	}
 
 	profile, err := client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
 		InstanceProfileName: aws.String(profileName),
@@ -129,8 +158,9 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("no OIDC provider for url %s", oidcURL)
 	}
 
-	fmt.Printf("ok: role %s, group %s, policy %s attached, profile %s, OIDC provider %s present\n",
-		roleName, groupName, policyName, profileName, oidcArn)
+	fmt.Printf(
+		"ok: role %s, group %s, user %s, policy %s attached, profile %s, OIDC provider %s present\n",
+		roleName, groupName, userName, policyName, profileName, oidcArn)
 	return nil
 }
 
@@ -147,10 +177,22 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 	if err := requireGroupInlinePolicyGone(ctx, client, updatedGroupName); err != nil {
 		return err
 	}
+	if err := requireUserInlinePolicyGone(ctx, client, userName); err != nil {
+		return err
+	}
+	if err := requireUserInlinePolicyGone(ctx, client, updatedUserName); err != nil {
+		return err
+	}
 	if err := requireGroupGone(ctx, client, groupName); err != nil {
 		return err
 	}
 	if err := requireGroupGone(ctx, client, updatedGroupName); err != nil {
+		return err
+	}
+	if err := requireUserGone(ctx, client, userName); err != nil {
+		return err
+	}
+	if err := requireUserGone(ctx, client, updatedUserName); err != nil {
 		return err
 	}
 	if err := requireProfileGone(ctx, client); err != nil {
@@ -170,7 +212,8 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 	if oidcArn != "" {
 		return fmt.Errorf("OIDC provider for url %s still exists at %s", oidcURL, oidcArn)
 	}
-	fmt.Printf("ok: role %s, groups, policy %s, instance profile %s, and the OIDC provider are gone\n",
+	fmt.Printf(
+		"ok: role %s, groups, users, policy %s, instance profile %s, and the OIDC provider are gone\n",
 		roleName, policyName, profileName)
 	return nil
 }
@@ -214,6 +257,17 @@ func requireGroupGone(ctx context.Context, client *iam.Client, name string) erro
 	return fmt.Errorf("get group %s: %w", name, err)
 }
 
+func requireUserGone(ctx context.Context, client *iam.Client, name string) error {
+	_, err := client.GetUser(ctx, &iam.GetUserInput{UserName: aws.String(name)})
+	if err == nil {
+		return fmt.Errorf("user %s still exists", name)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get user %s: %w", name, err)
+}
+
 func requireGroupInlinePolicyGone(ctx context.Context, client *iam.Client, name string) error {
 	_, err := client.GetGroupPolicy(ctx, &iam.GetGroupPolicyInput{
 		GroupName:  aws.String(name),
@@ -226,6 +280,20 @@ func requireGroupInlinePolicyGone(ctx context.Context, client *iam.Client, name 
 		return nil
 	}
 	return fmt.Errorf("get inline group policy %s on %s: %w", groupInlinePolicyName, name, err)
+}
+
+func requireUserInlinePolicyGone(ctx context.Context, client *iam.Client, name string) error {
+	_, err := client.GetUserPolicy(ctx, &iam.GetUserPolicyInput{
+		UserName:   aws.String(name),
+		PolicyName: aws.String(userInlinePolicyName),
+	})
+	if err == nil {
+		return fmt.Errorf("inline user policy %s still exists on %s", userInlinePolicyName, name)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get inline user policy %s on %s: %w", userInlinePolicyName, name, err)
 }
 
 func requireProfileGone(ctx context.Context, client *iam.Client) error {
@@ -286,6 +354,25 @@ func groupPathOf(group *iamtypes.Group) string {
 	return aws.ToString(group.Path)
 }
 
+func userPathOf(user *iamtypes.User) string {
+	if user == nil {
+		return ""
+	}
+	return aws.ToString(user.Path)
+}
+
+func userTagValue(user *iamtypes.User, key string) string {
+	if user == nil {
+		return ""
+	}
+	for _, tag := range user.Tags {
+		if aws.ToString(tag.Key) == key {
+			return aws.ToString(tag.Value)
+		}
+	}
+	return ""
+}
+
 func groupHasPolicy(
 	ctx context.Context, client *iam.Client, policyArn string, name string,
 ) (bool, error) {
@@ -295,6 +382,25 @@ func groupHasPolicy(
 		page, err := pager.NextPage(ctx)
 		if err != nil {
 			return false, fmt.Errorf("list attached group policies: %w", err)
+		}
+		for _, p := range page.AttachedPolicies {
+			if aws.ToString(p.PolicyArn) == policyArn {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func userHasPolicy(
+	ctx context.Context, client *iam.Client, policyArn string, name string,
+) (bool, error) {
+	pager := iam.NewListAttachedUserPoliciesPaginator(client,
+		&iam.ListAttachedUserPoliciesInput{UserName: aws.String(name)})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return false, fmt.Errorf("list attached user policies: %w", err)
 		}
 		for _, p := range page.AttachedPolicies {
 			if aws.ToString(p.PolicyArn) == policyArn {
