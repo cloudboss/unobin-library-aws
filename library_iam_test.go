@@ -26,6 +26,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
 		"iam-role-policy-attachment":  reflect.TypeFor[*iam.RolePolicyAttachmentOutput](),
 		"iam-group-policy-attachment": reflect.TypeFor[*iam.GroupPolicyAttachmentOutput](),
+		"iam-user-policy-attachment":  reflect.TypeFor[*iam.UserPolicyAttachmentOutput](),
 		"iam-role-policy":             reflect.TypeFor[*iam.RolePolicyOutput](),
 		"iam-group-policy":            reflect.TypeFor[*iam.GroupPolicyOutput](),
 		"iam-user-policy":             reflect.TypeFor[*iam.UserPolicyOutput](),
@@ -156,6 +157,16 @@ func TestIamSchemas(t *testing.T) {
 			Outputs: map[string]typecheck.Type{
 				"group-name": typecheck.TString(),
 				"policy-arn": typecheck.TString(),
+			},
+		},
+		"iam-user-policy-attachment": {
+			Inputs: map[string]typecheck.Type{
+				"policy-arn": typecheck.TString(),
+				"user":       typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"policy-arn": typecheck.TString(),
+				"user":       typecheck.TString(),
 			},
 		},
 		"iam-role-policy": {
