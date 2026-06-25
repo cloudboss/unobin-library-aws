@@ -119,6 +119,8 @@ func Library() *runtime.Library {
 				iam.RolePolicy, *iam.RolePolicyOutput](),
 			"iam-group-policy": makeResource[
 				iam.GroupPolicy, *iam.GroupPolicyOutput](),
+			"iam-user-policy": makeResource[
+				iam.UserPolicy, *iam.UserPolicyOutput](),
 			"kms-key": makeResource[kms.Key, *kms.KeyOutput](),
 			"kms-alias": makeResource[
 				kms.Alias, *kms.AliasOutput](),
