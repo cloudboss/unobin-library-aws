@@ -1,7 +1,7 @@
 // verify checks the IAM resources the scenario applied against the phase named
 // in the VERIFY_PHASE environment variable, looking each resource up by its
 // stable name because the test driver does not pass plan outputs into verify.
-// It only reads cloud state: applied requires the role, group, policy,
+// It only reads cloud state: applied requires the role, group, policies,
 // attachment, instance profile, and OIDC provider to be present and joined
 // together; destroyed requires them all to be gone. Tearing resources down is
 // the destroy plan's job, not the verifier's.
@@ -22,14 +22,15 @@ import (
 )
 
 const (
-	roleName         = "unobin-it-role"
-	groupName        = "unobin-it-group"
-	updatedGroupName = "unobin-it-group-updated"
-	groupPath        = "/unobin/"
-	policyName       = "unobin-it-policy"
-	inlinePolicyName = "unobin-it-inline"
-	profileName      = "unobin-it-profile"
-	oidcURL          = "https://oidc.unobin-it.example.com"
+	roleName              = "unobin-it-role"
+	groupName             = "unobin-it-group"
+	updatedGroupName      = "unobin-it-group-updated"
+	groupPath             = "/unobin/"
+	policyName            = "unobin-it-policy"
+	inlinePolicyName      = "unobin-it-inline"
+	groupInlinePolicyName = "unobin-it-group-inline"
+	profileName           = "unobin-it-profile"
+	oidcURL               = "https://oidc.unobin-it.example.com"
 )
 
 func main() {
@@ -80,6 +81,12 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 	}); err != nil {
 		return fmt.Errorf("get inline role policy %s: %w", inlinePolicyName, err)
 	}
+	if _, err := client.GetGroupPolicy(ctx, &iam.GetGroupPolicyInput{
+		GroupName:  aws.String(groupName),
+		PolicyName: aws.String(groupInlinePolicyName),
+	}); err != nil {
+		return fmt.Errorf("get inline group policy %s: %w", groupInlinePolicyName, err)
+	}
 
 	policyArn, err := findPolicyArn(ctx, client)
 	if err != nil {
@@ -125,6 +132,12 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 		return err
 	}
 	if err := requireInlinePolicyGone(ctx, client); err != nil {
+		return err
+	}
+	if err := requireGroupInlinePolicyGone(ctx, client, groupName); err != nil {
+		return err
+	}
+	if err := requireGroupInlinePolicyGone(ctx, client, updatedGroupName); err != nil {
 		return err
 	}
 	if err := requireGroupGone(ctx, client, groupName); err != nil {
@@ -192,6 +205,20 @@ func requireGroupGone(ctx context.Context, client *iam.Client, name string) erro
 		return nil
 	}
 	return fmt.Errorf("get group %s: %w", name, err)
+}
+
+func requireGroupInlinePolicyGone(ctx context.Context, client *iam.Client, name string) error {
+	_, err := client.GetGroupPolicy(ctx, &iam.GetGroupPolicyInput{
+		GroupName:  aws.String(name),
+		PolicyName: aws.String(groupInlinePolicyName),
+	})
+	if err == nil {
+		return fmt.Errorf("inline group policy %s still exists on %s", groupInlinePolicyName, name)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get inline group policy %s on %s: %w", groupInlinePolicyName, name, err)
 }
 
 func requireProfileGone(ctx context.Context, client *iam.Client) error {
