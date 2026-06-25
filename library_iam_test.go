@@ -22,6 +22,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 		"iam-role":                    reflect.TypeFor[*iam.RoleOutput](),
 		"iam-group":                   reflect.TypeFor[*iam.GroupOutput](),
 		"iam-user":                    reflect.TypeFor[*iam.UserOutput](),
+		"iam-access-key":              reflect.TypeFor[*iam.AccessKeyOutput](),
 		"iam-policy":                  reflect.TypeFor[*iam.PolicyOutput](),
 		"iam-instance-profile":        reflect.TypeFor[*iam.InstanceProfileOutput](),
 		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
@@ -41,9 +42,9 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 }
 
 // TestIamSchemas checks what the dev CLI reads from this library's source for
-// each IAM resource: the input and output field types, that nothing is marked
-// sensitive, and the cross-field constraints derived from each Constraints
-// method. The whole TypeSchema is asserted so a stray field or tag is caught.
+// each IAM resource: the input and output field types, sensitive fields, and
+// the cross-field constraints derived from each Constraints method. The whole
+// TypeSchema is asserted so a stray field or tag is caught.
 func TestIamSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -119,6 +120,37 @@ func TestIamSchemas(t *testing.T) {
 				{Field: "input.path", Value: "'/'"},
 				{Field: "input.force-destroy", Value: "false"},
 				{Field: "input.tags", Optional: true},
+			},
+		},
+		"iam-access-key": {
+			Inputs: map[string]typecheck.Type{
+				"user-name": typecheck.TString(),
+				"pgp-key":   typecheck.TString(),
+				"status":    typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"access-key-id":                  typecheck.TString(),
+				"user-name":                      typecheck.TString(),
+				"create-date":                    typecheck.TString(),
+				"status":                         typecheck.TString(),
+				"secret":                         typecheck.TOptional(typecheck.TString()),
+				"ses-smtp-password-v4":           typecheck.TOptional(typecheck.TString()),
+				"encrypted-secret":               typecheck.TOptional(typecheck.TString()),
+				"encrypted-ses-smtp-password-v4": typecheck.TOptional(typecheck.TString()),
+				"key-fingerprint":                typecheck.TOptional(typecheck.TString()),
+			},
+			SensitiveOutputs: []string{"secret", "ses-smtp-password-v4"},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(input.status == 'Active' || input.status == 'Inactive')",
+					Message: "status must be Active or Inactive",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.pgp-key", Value: "''"},
+				{Field: "input.status", Value: "'Active'"},
 			},
 		},
 		"iam-policy": {

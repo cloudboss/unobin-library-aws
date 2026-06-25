@@ -7,6 +7,7 @@ stack: {
       user-name:            'unobin-it-user-updated'
       user-path:            '/unobin-updated/'
       user-tag-value:       'updated'
+      access-key-status:    'Active'
       policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
         "Action":["s3:GetObject","s3:ListBucket"],"Resource":"*"}]}

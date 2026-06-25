@@ -27,6 +27,7 @@ const (
 	updatedGroupName      = "unobin-it-group-updated"
 	userName              = "unobin-it-user"
 	updatedUserName       = "unobin-it-user-updated"
+	accessKeyUserName     = "unobin-it-access-key-user"
 	identityPath          = "/unobin/"
 	policyName            = "unobin-it-policy"
 	inlinePolicyName      = "unobin-it-inline"
@@ -89,6 +90,19 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		fmt.Printf("skip: user %s tags are not available from this IAM endpoint\n", userName)
 	} else if got != "iam" {
 		return fmt.Errorf("user %s Scenario tag is %q, want iam", userName, got)
+	}
+
+	accessKeyUser, err := client.GetUser(ctx,
+		&iam.GetUserInput{UserName: aws.String(accessKeyUserName)})
+	if err != nil {
+		return fmt.Errorf("get user %s: %w", accessKeyUserName, err)
+	}
+	if got := userPathOf(accessKeyUser.User); got != identityPath {
+		return fmt.Errorf("user %s path is %q, want %q", accessKeyUserName, got, identityPath)
+	}
+	if err := requireAccessKeyStatus(ctx, client,
+		accessKeyUserName, iamtypes.StatusTypeInactive); err != nil {
+		return err
 	}
 
 	if _, err := client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
@@ -183,6 +197,9 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 	if err := requireUserInlinePolicyGone(ctx, client, updatedUserName); err != nil {
 		return err
 	}
+	if err := requireAccessKeysGone(ctx, client, accessKeyUserName); err != nil {
+		return err
+	}
 	if err := requireGroupGone(ctx, client, groupName); err != nil {
 		return err
 	}
@@ -193,6 +210,9 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 		return err
 	}
 	if err := requireUserGone(ctx, client, updatedUserName); err != nil {
+		return err
+	}
+	if err := requireUserGone(ctx, client, accessKeyUserName); err != nil {
 		return err
 	}
 	if err := requireProfileGone(ctx, client); err != nil {
@@ -266,6 +286,55 @@ func requireUserGone(ctx context.Context, client *iam.Client, name string) error
 		return nil
 	}
 	return fmt.Errorf("get user %s: %w", name, err)
+}
+
+func requireAccessKeyStatus(
+	ctx context.Context, client *iam.Client, name string, status iamtypes.StatusType,
+) error {
+	pager := iam.NewListAccessKeysPaginator(client,
+		&iam.ListAccessKeysInput{UserName: aws.String(name)})
+	found := false
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("list access keys for %s: %w", name, err)
+		}
+		for _, key := range page.AccessKeyMetadata {
+			keyID := aws.ToString(key.AccessKeyId)
+			if keyID == "" {
+				continue
+			}
+			found = true
+			if key.Status != status {
+				return fmt.Errorf("access key %s status is %s, want %s", keyID, key.Status, status)
+			}
+		}
+	}
+	if !found {
+		return fmt.Errorf("no access key exists for user %s", name)
+	}
+	return nil
+}
+
+func requireAccessKeysGone(ctx context.Context, client *iam.Client, name string) error {
+	pager := iam.NewListAccessKeysPaginator(client,
+		&iam.ListAccessKeysInput{UserName: aws.String(name)})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			if isNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("list access keys for %s: %w", name, err)
+		}
+		for _, key := range page.AccessKeyMetadata {
+			keyID := aws.ToString(key.AccessKeyId)
+			if keyID != "" {
+				return fmt.Errorf("access key %s still exists for user %s", keyID, name)
+			}
+		}
+	}
+	return nil
 }
 
 func requireGroupInlinePolicyGone(ctx context.Context, client *iam.Client, name string) error {

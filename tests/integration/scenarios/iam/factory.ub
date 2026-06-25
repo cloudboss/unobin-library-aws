@@ -51,6 +51,11 @@ factory: {
       default:     'initial'
       description: 'IAM user tag value; the update pass changes it in place'
     }
+    access-key-status: {
+      type:        string
+      default:     'Inactive'
+      description: 'IAM access key status; the update pass changes it in place'
+    }
     oidc-thumbprints: {
       type:        list(string)
       default:     ['990f4193972f2becf12ddeda5237f9c952f20d9e']
@@ -80,6 +85,16 @@ factory: {
       path:          input.user-path
       force-destroy: true
       tags:          { Scenario: 'iam', Mutable: input.user-tag-value }
+    }
+    iam-access-key-user-it: aws.iam-user {
+      name:          'unobin-it-access-key-user'
+      path:          '/unobin/'
+      force-destroy: true
+      tags:          { Scenario: 'iam-access-key' }
+    }
+    iam-access-key-it: aws.iam-access-key {
+      user-name: resource.iam-access-key-user-it.name
+      status:    input.access-key-status
     }
     iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
@@ -132,6 +147,8 @@ factory: {
     group-id:          { value: resource.iam-group-it.unique-id }
     user-arn:          { value: resource.iam-user-it.arn }
     user-id:           { value: resource.iam-user-it.unique-id }
+    access-key-id:     { value: resource.iam-access-key-it.access-key-id }
+    access-key-status: { value: resource.iam-access-key-it.status }
     profile-arn:       { value: resource.iam-instance-profile-it.arn }
     oidc-provider-url: { value: data-source.iam-openid-connect-provider-lookup.url }
     oidc-client-ids:   { value: data-source.iam-openid-connect-provider-lookup.client-id-list }
