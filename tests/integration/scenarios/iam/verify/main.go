@@ -1,10 +1,10 @@
-// verify checks the IAM group the scenario applied against the phase named in
-// the VERIFY_PHASE environment variable, looking each resource up by its stable
-// name because the test driver does not pass plan outputs into verify. It only
-// reads cloud state: applied requires the role, policy, attachment, instance
-// profile, and OIDC provider to be present and joined together; destroyed
-// requires them all to be gone. Tearing the group down is the destroy plan's
-// job, not the verifier's.
+// verify checks the IAM resources the scenario applied against the phase named
+// in the VERIFY_PHASE environment variable, looking each resource up by its
+// stable name because the test driver does not pass plan outputs into verify.
+// It only reads cloud state: applied requires the role, group, policy,
+// attachment, instance profile, and OIDC provider to be present and joined
+// together; destroyed requires them all to be gone. Tearing resources down is
+// the destroy plan's job, not the verifier's.
 package main
 
 import (
@@ -23,6 +23,9 @@ import (
 
 const (
 	roleName         = "unobin-it-role"
+	groupName        = "unobin-it-group"
+	updatedGroupName = "unobin-it-group-updated"
+	groupPath        = "/unobin/"
 	policyName       = "unobin-it-policy"
 	inlinePolicyName = "unobin-it-inline"
 	profileName      = "unobin-it-profile"
@@ -59,6 +62,16 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		RoleName: aws.String(roleName),
 	}); err != nil {
 		return fmt.Errorf("get role %s: %w", roleName, err)
+	}
+
+	group, err := client.GetGroup(ctx, &iam.GetGroupInput{
+		GroupName: aws.String(groupName),
+	})
+	if err != nil {
+		return fmt.Errorf("get group %s: %w", groupName, err)
+	}
+	if got := groupPathOf(group.Group); got != groupPath {
+		return fmt.Errorf("group %s path is %q, want %q", groupName, got, groupPath)
 	}
 
 	if _, err := client.GetRolePolicy(ctx, &iam.GetRolePolicyInput{
@@ -102,8 +115,8 @@ func verifyApplied(ctx context.Context, client *iam.Client) error {
 		return fmt.Errorf("no OIDC provider for url %s", oidcURL)
 	}
 
-	fmt.Printf("ok: role %s, policy %s attached, profile %s, OIDC provider %s present\n",
-		roleName, policyName, profileName, oidcArn)
+	fmt.Printf("ok: role %s, group %s, policy %s attached, profile %s, OIDC provider %s present\n",
+		roleName, groupName, policyName, profileName, oidcArn)
 	return nil
 }
 
@@ -112,6 +125,12 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 		return err
 	}
 	if err := requireInlinePolicyGone(ctx, client); err != nil {
+		return err
+	}
+	if err := requireGroupGone(ctx, client, groupName); err != nil {
+		return err
+	}
+	if err := requireGroupGone(ctx, client, updatedGroupName); err != nil {
 		return err
 	}
 	if err := requireProfileGone(ctx, client); err != nil {
@@ -131,7 +150,7 @@ func verifyDestroyed(ctx context.Context, client *iam.Client) error {
 	if oidcArn != "" {
 		return fmt.Errorf("OIDC provider for url %s still exists at %s", oidcURL, oidcArn)
 	}
-	fmt.Printf("ok: role %s, policy %s, instance profile %s, and the OIDC provider are gone\n",
+	fmt.Printf("ok: role %s, groups, policy %s, instance profile %s, and the OIDC provider are gone\n",
 		roleName, policyName, profileName)
 	return nil
 }
@@ -162,6 +181,17 @@ func requireInlinePolicyGone(ctx context.Context, client *iam.Client) error {
 		return nil
 	}
 	return fmt.Errorf("get inline role policy %s: %w", inlinePolicyName, err)
+}
+
+func requireGroupGone(ctx context.Context, client *iam.Client, name string) error {
+	_, err := client.GetGroup(ctx, &iam.GetGroupInput{GroupName: aws.String(name)})
+	if err == nil {
+		return fmt.Errorf("group %s still exists", name)
+	}
+	if isNotFound(err) {
+		return nil
+	}
+	return fmt.Errorf("get group %s: %w", name, err)
 }
 
 func requireProfileGone(ctx context.Context, client *iam.Client) error {
@@ -213,6 +243,13 @@ func roleHasPolicy(ctx context.Context, client *iam.Client, policyArn string) (b
 		}
 	}
 	return false, nil
+}
+
+func groupPathOf(group *iamtypes.Group) string {
+	if group == nil {
+		return ""
+	}
+	return aws.ToString(group.Path)
 }
 
 // profileHasRole reports whether the instance profile holds a role named name.

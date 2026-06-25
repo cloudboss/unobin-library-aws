@@ -20,6 +20,7 @@ func TestLibraryRegistersIamResources(t *testing.T) {
 	lib := library.Library()
 	cases := map[string]reflect.Type{
 		"iam-role":                    reflect.TypeFor[*iam.RoleOutput](),
+		"iam-group":                   reflect.TypeFor[*iam.GroupOutput](),
 		"iam-policy":                  reflect.TypeFor[*iam.PolicyOutput](),
 		"iam-instance-profile":        reflect.TypeFor[*iam.InstanceProfileOutput](),
 		"iam-openid-connect-provider": reflect.TypeFor[*iam.OpenIDConnectProviderOutput](),
@@ -68,6 +69,20 @@ func TestIamSchemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.tags", Optional: true},
+			},
+		},
+		"iam-group": {
+			Inputs: map[string]typecheck.Type{
+				"name": typecheck.TString(),
+				"path": typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":       typecheck.TString(),
+				"unique-id": typecheck.TString(),
+				"name":      typecheck.TString(),
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.path", Value: "'/'"},
 			},
 		},
 		"iam-policy": {
