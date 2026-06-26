@@ -20,6 +20,7 @@ func TestOf(t *testing.T) {
 		{"us-gov-east-1", "aws-us-gov"},
 		{"cn-north-1", "aws-cn"},
 		{"cn-northwest-1", "aws-cn"},
+		{"eusc-de-east-1", "aws-eusc"},
 		{"us-iso-east-1", "aws-iso"},
 		{"us-isob-east-1", "aws-iso-b"},
 		{"eu-isoe-west-1", "aws-iso-e"},

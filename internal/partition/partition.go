@@ -15,14 +15,16 @@ import (
 )
 
 // Of returns the AWS partition id for a region, such as aws, aws-us-gov,
-// aws-cn, or one of the aws-iso partitions. A region that matches none of
-// the special prefixes belongs to the standard aws partition.
+// aws-cn, aws-eusc, or one of the aws-iso partitions. A region that matches
+// none of the special prefixes belongs to the standard aws partition.
 func Of(region string) string {
 	switch {
 	case strings.HasPrefix(region, "us-gov-"):
 		return "aws-us-gov"
 	case strings.HasPrefix(region, "cn-"):
 		return "aws-cn"
+	case strings.HasPrefix(region, "eusc-"):
+		return "aws-eusc"
 	case strings.HasPrefix(region, "us-iso-"):
 		return "aws-iso"
 	case strings.HasPrefix(region, "us-isob-"):

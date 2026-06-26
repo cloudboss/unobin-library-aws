@@ -251,6 +251,8 @@ func Library() *runtime.Library {
 				ec2.AvailabilityZones, *ec2.AvailabilityZonesOutput](),
 			"ec2-subnets": makeDataSource[
 				ec2.Subnets, *ec2.SubnetsOutput](),
+			"ec2-vpc-data": makeDataSource[
+				ec2.VpcData, *ec2.VpcDataOutput](),
 			"sts-caller-identity": makeDataSource[
 				sts.CallerIdentity, *sts.CallerIdentityOutput](),
 			"iam-openid-connect-provider": makeDataSource[
