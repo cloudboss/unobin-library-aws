@@ -22,6 +22,7 @@ func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 	cases := map[string]reflect.Type{
 		"cloudwatchlogs-log-group":           reflect.TypeFor[*cloudwatchlogs.LogGroupOutput](),
 		"cloudwatchlogs-metric-filter":       reflect.TypeFor[*cloudwatchlogs.MetricFilterOutput](),
+		"cloudwatchlogs-resource-policy":     reflect.TypeFor[*cloudwatchlogs.ResourcePolicyOutput](),
 		"cloudwatchlogs-subscription-filter": reflect.TypeFor[*cloudwatchlogs.SubscriptionFilterOutput](),
 	}
 	for key, outputType := range cases {
@@ -91,6 +92,26 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.tags", Optional: true},
+			},
+		},
+		"cloudwatchlogs-resource-policy": {
+			Inputs: map[string]typecheck.Type{
+				"policy-document": typecheck.TString(),
+				"policy-name":     typecheck.TOptional(typecheck.TString()),
+				"resource-arn":    typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"policy-document": typecheck.TString(),
+				"policy-name":     typecheck.TOptional(typecheck.TString()),
+				"policy-scope":    typecheck.TString(),
+				"resource-arn":    typecheck.TOptional(typecheck.TString()),
+				"revision-id":     typecheck.TOptional(typecheck.TString()),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:   "exactly-one-of",
+					Fields: []string{"input.policy-name", "input.resource-arn"},
+				},
 			},
 		},
 		"cloudwatchlogs-subscription-filter": {
