@@ -21,8 +21,10 @@ import (
 )
 
 const (
-	ruleName = "unobin-it-rule"
-	targetID = "unobin-it-target"
+	eventBusName        = "unobin-it-event-bus"
+	eventBusDescription = "unobin eventbridge integration test bus"
+	ruleName            = "unobin-it-rule"
+	targetID            = "unobin-it-target"
 )
 
 func main() {
@@ -51,6 +53,9 @@ func run() error {
 }
 
 func verifyApplied(ctx context.Context, client *eventbridge.Client) error {
+	if err := verifyEventBusApplied(ctx, client); err != nil {
+		return err
+	}
 	resp, err := client.DescribeRule(ctx, &eventbridge.DescribeRuleInput{
 		Name: aws.String(ruleName),
 	})
@@ -73,6 +78,9 @@ func verifyApplied(ctx context.Context, client *eventbridge.Client) error {
 }
 
 func verifyDestroyed(ctx context.Context, client *eventbridge.Client) error {
+	if err := verifyEventBusDestroyed(ctx, client); err != nil {
+		return err
+	}
 	_, err := client.DescribeRule(ctx, &eventbridge.DescribeRuleInput{
 		Name: aws.String(ruleName),
 	})
@@ -83,6 +91,36 @@ func verifyDestroyed(ctx context.Context, client *eventbridge.Client) error {
 		return fmt.Errorf("describe rule %s: %w", ruleName, err)
 	}
 	fmt.Printf("ok: rule %s is gone\n", ruleName)
+	return nil
+}
+
+func verifyEventBusApplied(ctx context.Context, client *eventbridge.Client) error {
+	resp, err := client.DescribeEventBus(ctx, &eventbridge.DescribeEventBusInput{
+		Name: aws.String(eventBusName),
+	})
+	if err != nil {
+		return fmt.Errorf("describe event bus %s: %w", eventBusName, err)
+	}
+	if aws.ToString(resp.Arn) == "" {
+		return fmt.Errorf("event bus %s has no arn", eventBusName)
+	}
+	if got := aws.ToString(resp.Description); got != eventBusDescription {
+		return fmt.Errorf("event bus %s description = %q, want %q",
+			eventBusName, got, eventBusDescription)
+	}
+	return nil
+}
+
+func verifyEventBusDestroyed(ctx context.Context, client *eventbridge.Client) error {
+	_, err := client.DescribeEventBus(ctx, &eventbridge.DescribeEventBusInput{
+		Name: aws.String(eventBusName),
+	})
+	if err == nil {
+		return fmt.Errorf("event bus %s still exists", eventBusName)
+	}
+	if !isNotFound(err) {
+		return fmt.Errorf("describe event bus %s: %w", eventBusName, err)
+	}
 	return nil
 }
 

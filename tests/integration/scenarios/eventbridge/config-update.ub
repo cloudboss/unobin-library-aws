@@ -1,6 +1,11 @@
 stack: {
   factory: {
-    inputs: { schedule: 'rate(10 minutes)', rule-state: 'DISABLED' }
+    inputs: {
+      schedule:              'rate(10 minutes)'
+      rule-state:            'DISABLED'
+      event-bus-description: ''
+      event-bus-tag-value:   'updated'
+    }
   }
 
   state: local {

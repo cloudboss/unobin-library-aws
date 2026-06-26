@@ -21,6 +21,12 @@ factory: {
       description: 'Schedule expression of the rule'
     }
     rule-state: { type: string, default: 'ENABLED', description: 'Whether the rule is enabled' }
+    event-bus-description: {
+      type:        string
+      default:     'unobin eventbridge integration test bus'
+      description: 'Description of the custom event bus'
+    }
+    event-bus-tag-value: { type: string, default: 'initial', description: 'Custom bus tag value' }
   }
 
   resources: {
@@ -50,6 +56,11 @@ factory: {
       code:          { zip-file-path: '/tmp/unobin-it-eventbridge.zip' }
       tags:          { unobin: 'eventbridge-it' }
     }
+    eventbridge-event-bus-it: aws.eventbridge-event-bus {
+      name:        'unobin-it-event-bus'
+      description: input.event-bus-description
+      tags:        { unobin: input.event-bus-tag-value }
+    }
     eventbridge-rule-it: aws.eventbridge-rule {
       name:                'unobin-it-rule'
       schedule-expression: input.schedule
@@ -73,7 +84,8 @@ factory: {
   }
 
   outputs: {
-    rule-arn:  { value: resource.eventbridge-rule-it.arn }
-    target-id: { value: resource.eventbridge-target-it.target-id }
+    event-bus-arn: { value: resource.eventbridge-event-bus-it.arn }
+    rule-arn:      { value: resource.eventbridge-rule-it.arn }
+    target-id:     { value: resource.eventbridge-target-it.target-id }
   }
 }

@@ -14,14 +14,15 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
 )
 
-// TestLibraryRegistersEventbridge checks the runtime registration: the rule and
-// target resources are present under Resources and dispatch to their output
-// types.
+// TestLibraryRegistersEventbridge checks the runtime registration: the event
+// bus, rule, and target resources are present under Resources and dispatch to
+// their output types.
 func TestLibraryRegistersEventbridge(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
-		"eventbridge-rule":   reflect.TypeFor[*eventbridge.RuleOutput](),
-		"eventbridge-target": reflect.TypeFor[*eventbridge.TargetOutput](),
+		"eventbridge-event-bus": reflect.TypeFor[*eventbridge.EventBusOutput](),
+		"eventbridge-rule":      reflect.TypeFor[*eventbridge.RuleOutput](),
+		"eventbridge-target":    reflect.TypeFor[*eventbridge.TargetOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -32,10 +33,11 @@ func TestLibraryRegistersEventbridge(t *testing.T) {
 }
 
 // TestEventbridgeSchemas asserts the whole TypeSchema goschema reads from this
-// library's source for the rule and target: the input and output field types,
-// that nothing is marked sensitive, and the cross-field constraints derived from
-// each Constraints method. A target's parameter blocks are nested objects, and
-// the only rule goschema can derive over them is the top-level at-most-one-of on
+// library's source for the event bus, rule, and target: the input and output
+// field types, that nothing is marked sensitive, and the cross-field
+// constraints derived from each Constraints method. A target's parameter blocks
+// are nested objects, and the only rule goschema can derive over them is the
+// top-level at-most-one-of on
 // the three input forms; every inner bound is enforced by the EventBridge API.
 // Nested object fields are listed in goschema's declaration order, which the
 // comparison checks directly.
@@ -43,6 +45,53 @@ func TestEventbridgeSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
+		"eventbridge-event-bus": {
+			Inputs: map[string]typecheck.Type{
+				"name": typecheck.TString(),
+				"dead-letter-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "arn", Type: typecheck.TString(), Optional: true},
+				})),
+				"description":        typecheck.TOptional(typecheck.TString()),
+				"event-source-name":  typecheck.TOptional(typecheck.TString()),
+				"kms-key-identifier": typecheck.TOptional(typecheck.TString()),
+				"log-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "include-detail", Type: typecheck.TString(), Optional: true},
+					{Name: "level", Type: typecheck.TString(), Optional: true},
+				})),
+				"tags": typecheck.TMap(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":  typecheck.TString(),
+				"name": typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(input.name != 'default')",
+					Message: "name cannot be default",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.log-config.include-detail != null)",
+					Require: "(input.log-config.include-detail == 'NONE' || " +
+						"input.log-config.include-detail == 'FULL')",
+					Message: "log-config.include-detail must be NONE or FULL",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.log-config.level != null)",
+					Require: "(input.log-config.level == 'OFF' || " +
+						"input.log-config.level == 'ERROR' || " +
+						"input.log-config.level == 'INFO' || " +
+						"input.log-config.level == 'TRACE')",
+					Message: "log-config.level must be OFF, ERROR, INFO, or TRACE",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.tags", Optional: true},
+			},
+		},
 		"eventbridge-rule": {
 			Inputs: map[string]typecheck.Type{
 				"name":                typecheck.TString(),

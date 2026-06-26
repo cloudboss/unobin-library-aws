@@ -145,6 +145,8 @@ func Library() *runtime.Library {
 				lambda.EventSourceMapping, *lambda.EventSourceMappingOutput](),
 			"lambda-function-url": makeResource[
 				lambda.FunctionUrl, *lambda.FunctionUrlOutput](),
+			"eventbridge-event-bus": makeResource[
+				eventbridge.EventBus, *eventbridge.EventBusOutput](),
 			"eventbridge-rule": makeResource[
 				eventbridge.Rule, *eventbridge.RuleOutput](),
 			"eventbridge-target": makeResource[
