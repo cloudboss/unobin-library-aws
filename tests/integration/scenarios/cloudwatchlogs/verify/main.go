@@ -22,6 +22,7 @@ const (
 	logGroupName           = "unobin-it-log-group"
 	metricFilterName       = "unobin-it-metric-filter"
 	subscriptionFilterName = "unobin-it-subscription-filter"
+	resourcePolicyName     = "unobin-it-cwl-resource-policy"
 	metricName             = "UnobinMetricFilterCount"
 	metricNamespace        = "Unobin/Integration"
 	functionName           = "unobin-it-cwl-sink"
@@ -83,6 +84,17 @@ func verifyApplied(
 		return err
 	}
 
+	policy, err := findResourcePolicy(ctx, logsClient)
+	if err != nil {
+		return err
+	}
+	if policy == nil {
+		return fmt.Errorf("resource policy %s not found", resourcePolicyName)
+	}
+	if !strings.Contains(aws.ToString(policy.PolicyDocument), "UnobinCWLResourcePolicy") {
+		return fmt.Errorf("resource policy %s has unexpected document", resourcePolicyName)
+	}
+
 	filter, err := findSubscriptionFilter(ctx, logsClient)
 	if err != nil {
 		return err
@@ -122,6 +134,7 @@ func verifyApplied(
 		fmt.Printf("ok: metric filter %s emits %s/%s\n",
 			metricFilterName, metricNamespace, metricName)
 	}
+	fmt.Printf("ok: resource policy %s present\n", resourcePolicyName)
 	fmt.Printf("ok: subscription filter %s sends to %s\n",
 		subscriptionFilterName, functionName)
 	return nil
@@ -143,6 +156,13 @@ func verifyDestroyed(
 	}
 	if metricFilter != nil {
 		return fmt.Errorf("metric filter %s still exists", metricFilterName)
+	}
+	policy, err := findResourcePolicy(ctx, logsClient)
+	if err != nil {
+		return err
+	}
+	if policy != nil {
+		return fmt.Errorf("resource policy %s still exists", resourcePolicyName)
 	}
 	filter, err := findSubscriptionFilter(ctx, logsClient)
 	if err != nil {
@@ -208,6 +228,27 @@ func findMetricFilter(
 		}
 	}
 	return nil, nil
+}
+
+func findResourcePolicy(
+	ctx context.Context, client *cloudwatchlogs.Client,
+) (*cloudwatchlogstypes.ResourcePolicy, error) {
+	in := &cloudwatchlogs.DescribeResourcePoliciesInput{}
+	for {
+		page, err := client.DescribeResourcePolicies(ctx, in)
+		if err != nil {
+			return nil, fmt.Errorf("describe resource policies: %w", err)
+		}
+		for i := range page.ResourcePolicies {
+			if aws.ToString(page.ResourcePolicies[i].PolicyName) == resourcePolicyName {
+				return &page.ResourcePolicies[i], nil
+			}
+		}
+		if aws.ToString(page.NextToken) == "" {
+			return nil, nil
+		}
+		in.NextToken = page.NextToken
+	}
 }
 
 func verifyMetricFilter(filter *cloudwatchlogstypes.MetricFilter) error {

@@ -5,6 +5,11 @@ stack: {
       retention:             60
       filter-pattern:        '{ $.level = "info" }'
       metric-filter-pattern: '{ $.metric = "two" }'
+      resource-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Sid":"UnobinCWLResourcePolicyUpdated",
+        "Effect":"Allow","Principal":{"Service":"route53.amazonaws.com"},"Action":
+        ["logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
+        '''
     }
   }
 

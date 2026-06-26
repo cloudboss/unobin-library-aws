@@ -30,6 +30,14 @@ factory: {
       default:     '{ $.metric = "one" }'
       description: 'Metric filter pattern; the update pass changes it in place'
     }
+    resource-policy-document: {
+      type: string
+      default: '''\-
+        {"Version":"2012-10-17","Statement":[{"Sid":"UnobinCWLResourcePolicy","Effect":"Allow","Prin
+        cipal":{"Service":"route53.amazonaws.com"},"Action":["logs:PutLogEvents"],"Resource":"*"}]}
+        '''
+      description: 'Resource policy document; the update pass changes it in place'
+    }
   }
 
   resources: {
@@ -48,6 +56,10 @@ factory: {
         metric-namespace: 'Unobin/Integration'
         metric-value:     '1'
       }
+    }
+    cloudwatchlogs-resource-policy-it: aws.cloudwatchlogs-resource-policy {
+      policy-name:     'unobin-it-cwl-resource-policy'
+      policy-document: input.resource-policy-document
     }
     iam-role-subscription-sink: aws.iam-role {
       role-name: 'unobin-it-cwl-lambda-role'
@@ -90,8 +102,9 @@ factory: {
   }
 
   outputs: {
-    log-group-arn:     { value: resource.cloudwatchlogs-log-group-it.arn }
-    metric-filter:     { value: resource.cloudwatchlogs-metric-filter-it.filter-name }
-    subscription-name: { value: resource.cloudwatchlogs-subscription-filter-it.name }
+    log-group-arn:         { value: resource.cloudwatchlogs-log-group-it.arn }
+    metric-filter:         { value: resource.cloudwatchlogs-metric-filter-it.filter-name }
+    resource-policy-scope: { value: resource.cloudwatchlogs-resource-policy-it.policy-scope }
+    subscription-name:     { value: resource.cloudwatchlogs-subscription-filter-it.name }
   }
 }
