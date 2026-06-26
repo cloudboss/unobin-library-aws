@@ -1581,3 +1581,172 @@ func TestEc2SubnetsSchema(t *testing.T) {
 	}
 	assert.Equal(t, want, schema.DataSources["ec2-subnets"])
 }
+
+// TestLibraryRegistersEc2SubnetData checks the runtime registration:
+// ec2-subnet-data is present under DataSources and dispatches to SubnetDataOutput.
+func TestLibraryRegistersEc2SubnetData(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-subnet-data")
+	assert.Equal(t, reflect.TypeFor[*ec2.SubnetDataOutput](),
+		lib.DataSources["ec2-subnet-data"].OutputType())
+}
+
+// TestEc2SubnetDataSchema asserts the whole derived TypeSchema for the
+// ec2-subnet-data data source: its query inputs, subnet outputs, and declared
+// optional defaults.
+func TestEc2SubnetDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "ec2-subnet-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"availability-zone":    typecheck.TOptional(typecheck.TString()),
+			"availability-zone-id": typecheck.TOptional(typecheck.TString()),
+			"cidr-block":           typecheck.TOptional(typecheck.TString()),
+			"default-for-az":       typecheck.TOptional(typecheck.TBoolean()),
+			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			})),
+			"id":              typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block": typecheck.TOptional(typecheck.TString()),
+			"state":           typecheck.TOptional(typecheck.TString()),
+			"tags":            typecheck.TMap(typecheck.TString()),
+			"vpc-id":          typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":                             typecheck.TString(),
+			"assign-ipv6-address-on-creation": typecheck.TBoolean(),
+			"availability-zone":               typecheck.TString(),
+			"availability-zone-id":            typecheck.TString(),
+			"available-ip-address-count":      typecheck.TInteger(),
+			"cidr-block":                      typecheck.TString(),
+			"customer-owned-ipv4-pool":        typecheck.TString(),
+			"default-for-az":                  typecheck.TBoolean(),
+			"enable-dns64":                    typecheck.TBoolean(),
+			"enable-lni-at-device-index":      typecheck.TInteger(),
+			"enable-resource-name-dns-a-record-on-launch": typecheck.TOptional(
+				typecheck.TBoolean()),
+			"enable-resource-name-dns-aaaa-record-on-launch": typecheck.TOptional(
+				typecheck.TBoolean()),
+			"id":                              typecheck.TString(),
+			"ipv6-cidr-block":                 typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block-association-id":  typecheck.TOptional(typecheck.TString()),
+			"ipv6-native":                     typecheck.TBoolean(),
+			"map-customer-owned-ip-on-launch": typecheck.TBoolean(),
+			"map-public-ip-on-launch":         typecheck.TBoolean(),
+			"outpost-arn":                     typecheck.TString(),
+			"owner-id":                        typecheck.TString(),
+			"private-dns-hostname-type-on-launch": typecheck.TOptional(
+				typecheck.TString()),
+			"state":  typecheck.TString(),
+			"tags":   typecheck.TMap(typecheck.TString()),
+			"vpc-id": typecheck.TString(),
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "input.tags", Optional: true},
+			{Field: "input.filter", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["ec2-subnet-data"])
+}
+
+// TestLibraryRegistersEc2SecurityGroupData checks the runtime registration:
+// ec2-security-group-data is present under DataSources and dispatches to
+// SecurityGroupDataOutput.
+func TestLibraryRegistersEc2SecurityGroupData(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-security-group-data")
+	assert.Equal(t, reflect.TypeFor[*ec2.SecurityGroupDataOutput](),
+		lib.DataSources["ec2-security-group-data"].OutputType())
+}
+
+// TestEc2SecurityGroupDataSchema asserts the whole derived TypeSchema for the
+// ec2-security-group-data data source: its query inputs, security group outputs,
+// and declared optional defaults.
+func TestEc2SecurityGroupDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "ec2-security-group-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			})),
+			"id":     typecheck.TOptional(typecheck.TString()),
+			"name":   typecheck.TOptional(typecheck.TString()),
+			"tags":   typecheck.TMap(typecheck.TString()),
+			"vpc-id": typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":         typecheck.TString(),
+			"description": typecheck.TString(),
+			"id":          typecheck.TString(),
+			"name":        typecheck.TString(),
+			"tags":        typecheck.TMap(typecheck.TString()),
+			"vpc-id":      typecheck.TString(),
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "input.tags", Optional: true},
+			{Field: "input.filter", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["ec2-security-group-data"])
+}
+
+// TestLibraryRegistersEc2VpcData checks the runtime registration:
+// ec2-vpc-data is present under DataSources and dispatches to VpcDataOutput.
+func TestLibraryRegistersEc2VpcData(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "ec2-vpc-data")
+	assert.Equal(t, reflect.TypeFor[*ec2.VpcDataOutput](),
+		lib.DataSources["ec2-vpc-data"].OutputType())
+}
+
+// TestEc2VpcDataSchema asserts the whole derived TypeSchema for the
+// ec2-vpc-data data source: its query inputs, enriched VPC outputs, and the
+// declared optional defaults.
+func TestEc2VpcDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "ec2-vpc-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"vpc-id":          typecheck.TOptional(typecheck.TString()),
+			"cidr-block":      typecheck.TOptional(typecheck.TString()),
+			"dhcp-options-id": typecheck.TOptional(typecheck.TString()),
+			"default":         typecheck.TOptional(typecheck.TBoolean()),
+			"state":           typecheck.TOptional(typecheck.TString()),
+			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			})),
+			"tags": typecheck.TMap(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"vpc-id":     typecheck.TString(),
+			"arn":        typecheck.TString(),
+			"cidr-block": typecheck.TString(),
+			"cidr-block-associations": typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "association-id", Type: typecheck.TString()},
+					{Name: "cidr-block", Type: typecheck.TString()},
+					{Name: "state", Type: typecheck.TString()},
+				})),
+			"default":                              typecheck.TBoolean(),
+			"dhcp-options-id":                      typecheck.TString(),
+			"enable-dns-hostnames":                 typecheck.TBoolean(),
+			"enable-dns-support":                   typecheck.TBoolean(),
+			"enable-network-address-usage-metrics": typecheck.TBoolean(),
+			"instance-tenancy":                     typecheck.TString(),
+			"ipv6-association-id":                  typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block":                      typecheck.TOptional(typecheck.TString()),
+			"main-route-table-id":                  typecheck.TOptional(typecheck.TString()),
+			"owner-id":                             typecheck.TString(),
+			"tags":                                 typecheck.TMap(typecheck.TString()),
+		},
+		Defaults: []lang.DefaultSpec{
+			{Field: "input.filter", Optional: true},
+			{Field: "input.tags", Optional: true},
+		},
+	}
+	assert.Equal(t, want, schema.DataSources["ec2-vpc-data"])
+}

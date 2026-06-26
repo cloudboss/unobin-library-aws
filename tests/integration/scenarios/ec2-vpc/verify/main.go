@@ -2,10 +2,10 @@
 // the VERIFY_PHASE environment variable. The test driver passes no plan outputs
 // in, so resources are found by stable attributes: the VPC by its CIDR, the
 // security group by its name, and each rule by reading the rules of that group.
-// It only reads cloud state: applied requires the VPC, the security group, and
-// the ssh ingress and https egress rules to be present; destroyed requires the
-// VPC and the security group to be gone. Tearing the group down is the destroy
-// plan's job, not the verifier's.
+// It only reads cloud state: applied requires the VPC, the security group, its
+// marker tag, and the ssh ingress and https egress rules to be present;
+// destroyed requires the VPC and the security group to be gone. Tearing the
+// group down is the destroy plan's job, not the verifier's.
 package main
 
 import (
@@ -71,6 +71,9 @@ func verifyApplied(ctx context.Context, client *ec2.Client) error {
 	if aws.ToString(sg.VpcId) != vpcID {
 		return fmt.Errorf("security group %s is in vpc %s, want %s",
 			sgName, aws.ToString(sg.VpcId), vpcID)
+	}
+	if !securityGroupHasTag(sg, "unobin", "ec2-it") {
+		return fmt.Errorf("security group %s is missing its unobin marker tag", sgName)
 	}
 	sgID := aws.ToString(sg.GroupId)
 
@@ -144,6 +147,15 @@ func findSecurityGroup(ctx context.Context, client *ec2.Client) (*ec2types.Secur
 		return nil, nil
 	}
 	return &out.SecurityGroups[0], nil
+}
+
+func securityGroupHasTag(group *ec2types.SecurityGroup, key, value string) bool {
+	for _, tag := range group.Tags {
+		if aws.ToString(tag.Key) == key && aws.ToString(tag.Value) == value {
+			return true
+		}
+	}
+	return false
 }
 
 // requireRule returns an error unless the group has a rule matching the given
