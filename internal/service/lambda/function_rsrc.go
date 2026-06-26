@@ -101,6 +101,21 @@ func (r *Function) ReplaceFields() []string {
 	return []string{"function-name", "package-type"}
 }
 
+func (r *Function) ModifyResourcePlan(
+	req runtime.ResourcePlanRequest[Function, *FunctionOutput, *awsCfg],
+	resp *runtime.ResourcePlanResponse,
+) error {
+	if !req.HasPriorState {
+		return nil
+	}
+	current := req.CurrentInputs
+	if !current.publishesVersion(req.PriorInputs) {
+		return nil
+	}
+	resp.MarkOutputUnknown("qualified-arn", "qualified-invoke-arn", "version")
+	return nil
+}
+
 // Defaults marks the collection inputs a function may omit.
 func (r Function) Defaults() []defaults.Default {
 	return []defaults.Default{
@@ -315,11 +330,10 @@ func (r *Function) Update(
 			return nil, err
 		}
 	}
-	publishChanged := runtime.Changed(prior.Inputs.Publish, r.Publish)
 	// A version is published only on request, and only when there is something
 	// new to capture: a code or configuration change, or the publish flag itself
 	// turning on. Publishing on every apply would pile up identical versions.
-	if aws.ToBool(r.Publish) && (configChanged || codeChanged || publishChanged) {
+	if r.publishesVersion(prior.Inputs) {
 		if err := r.publishVersion(ctx, client); err != nil {
 			return nil, err
 		}
@@ -615,6 +629,11 @@ func (r *Function) latestVersion(
 
 // configChanged reports whether any input that UpdateFunctionConfiguration
 // sends differs from the prior inputs.
+func (r *Function) publishesVersion(prior Function) bool {
+	return aws.ToBool(r.Publish) && (r.configChanged(prior) ||
+		r.codeChanged(prior) || runtime.Changed(prior.Publish, r.Publish))
+}
+
 func (r *Function) configChanged(prior Function) bool {
 	return runtime.Changed(prior.Role, r.Role) ||
 		runtime.Changed(prior.Description, r.Description) ||

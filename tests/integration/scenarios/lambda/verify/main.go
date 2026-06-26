@@ -24,6 +24,7 @@ import (
 
 const (
 	functionName    = "unobin-it-function"
+	aliasName       = "live"
 	statementID     = "unobin-it-allow-invoke"
 	eventsQueueName = "unobin-it-lambda-events"
 )
@@ -47,10 +48,12 @@ func run() error {
 	switch phase {
 	case "applied":
 		return verifyApplied(ctx, client, sqsClient)
+	case "updated":
+		return verifyUpdated(ctx, client)
 	case "destroyed":
 		return verifyDestroyed(ctx, client)
 	default:
-		return fmt.Errorf("VERIFY_PHASE must be applied or destroyed, got %q", phase)
+		return fmt.Errorf("VERIFY_PHASE must be applied, updated, or destroyed, got %q", phase)
 	}
 }
 
@@ -66,6 +69,9 @@ func verifyApplied(ctx context.Context, client *lambda.Client, sqsClient *sqs.Cl
 	}
 	if state := resp.Configuration.State; state != lambdatypes.StateActive {
 		return fmt.Errorf("function %s is %s, not Active", functionName, state)
+	}
+	if err := verifyAlias(ctx, client); err != nil {
+		return err
 	}
 
 	hasStatement, err := policyHasStatement(ctx, client)
@@ -93,6 +99,74 @@ func verifyApplied(ctx context.Context, client *lambda.Client, sqsClient *sqs.Cl
 
 	fmt.Printf("ok: function %s is active and grants invoke via %s\n", functionName, statementID)
 	return nil
+}
+
+func verifyAlias(ctx context.Context, client *lambda.Client) error {
+	resp, err := getAlias(ctx, client)
+	if err != nil {
+		return err
+	}
+	version := aws.ToString(resp.FunctionVersion)
+	if version == "" || version == "$LATEST" {
+		return fmt.Errorf("alias %s points to invalid version %q", aliasName, version)
+	}
+	fmt.Printf("ok: alias %s points %s to version %s\n", aliasName, functionName, version)
+	return nil
+}
+
+func verifyUpdated(ctx context.Context, client *lambda.Client) error {
+	alias, err := getAlias(ctx, client)
+	if err != nil {
+		return err
+	}
+	latest, err := latestFunctionVersion(ctx, client)
+	if err != nil {
+		return err
+	}
+	if version := aws.ToString(alias.FunctionVersion); version != latest {
+		return fmt.Errorf("alias %s points to %s, want %s", aliasName, version, latest)
+	}
+	if description := aws.ToString(alias.Description); description != "" {
+		return fmt.Errorf("alias %s description is %q, want empty", aliasName, description)
+	}
+	fmt.Printf("ok: alias %s points to latest version %s\n", aliasName, latest)
+	return nil
+}
+
+func getAlias(ctx context.Context, client *lambda.Client) (*lambda.GetAliasOutput, error) {
+	resp, err := client.GetAlias(ctx, &lambda.GetAliasInput{
+		FunctionName: aws.String(functionName),
+		Name:         aws.String(aliasName),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get alias %s on %s: %w", aliasName, functionName, err)
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("alias %s on %s returned no response", aliasName, functionName)
+	}
+	if aws.ToString(resp.AliasArn) == "" {
+		return nil, fmt.Errorf("alias %s on %s has no arn", aliasName, functionName)
+	}
+	return resp, nil
+}
+
+func latestFunctionVersion(ctx context.Context, client *lambda.Client) (string, error) {
+	pager := lambda.NewListVersionsByFunctionPaginator(client,
+		&lambda.ListVersionsByFunctionInput{FunctionName: aws.String(functionName)})
+	var latest string
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return "", fmt.Errorf("list versions %s: %w", functionName, err)
+		}
+		if n := len(page.Versions); n > 0 {
+			latest = aws.ToString(page.Versions[n-1].Version)
+		}
+	}
+	if latest == "" || latest == "$LATEST" {
+		return "", fmt.Errorf("function %s latest version is invalid: %q", functionName, latest)
+	}
+	return latest, nil
 }
 
 // hasEventSourceMapping reports whether the function has at least one event

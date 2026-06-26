@@ -21,6 +21,7 @@ func TestLibraryRegistersLambda(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
 		"lambda-function":             reflect.TypeFor[*lambda.FunctionOutput](),
+		"lambda-alias":                reflect.TypeFor[*lambda.AliasOutput](),
 		"lambda-permission":           reflect.TypeFor[*lambda.PermissionOutput](),
 		"lambda-event-source-mapping": reflect.TypeFor[*lambda.EventSourceMappingOutput](),
 		"lambda-function-url":         reflect.TypeFor[*lambda.FunctionUrlOutput](),
@@ -269,6 +270,27 @@ func TestLambdaSchemas(t *testing.T) {
 				{Field: "input.layers", Optional: true},
 				{Field: "input.file-system-configs", Optional: true},
 				{Field: "input.tags", Optional: true},
+			},
+		},
+		"lambda-alias": {
+			Inputs: map[string]typecheck.Type{
+				"description":      typecheck.TOptional(typecheck.TString()),
+				"function-name":    typecheck.TString(),
+				"function-version": typecheck.TString(),
+				"name":             typecheck.TString(),
+				"routing-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+					{
+						Name:     "additional-version-weights",
+						Type:     typecheck.TMap(typecheck.TNumber()),
+						Optional: true,
+					},
+				})),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":           typecheck.TString(),
+				"function-name": typecheck.TString(),
+				"invoke-arn":    typecheck.TString(),
+				"name":          typecheck.TString(),
 			},
 		},
 		"lambda-permission": {

@@ -250,6 +250,14 @@ for sdir in "${@}"; do
         ) || failed_step="apply-update"
     fi
 
+    if [ -z "${failed_step}" ] && [ -d "${sdir}/verify" ] && [ -f "${sdir}/.verify-updated" ]; then
+        (
+            [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
+            cd "${REPO_DIR}"
+            VERIFY_PHASE=updated go run "./${rel}/verify"
+        ) || failed_step="verify-updated"
+    fi
+
     # Destroy runs whenever apply was attempted, even after an earlier failure,
     # so a failed run still cleans up what it created. verify-destroyed runs only
     # on an otherwise-clean run, since a run that already failed keeps its first

@@ -139,6 +139,8 @@ func Library() *runtime.Library {
 			"s3-object": makeResource[s3.Object, *s3.ObjectOutput](),
 			"lambda-function": makeResource[
 				lambda.Function, *lambda.FunctionOutput](),
+			"lambda-alias": makeResource[
+				lambda.Alias, *lambda.AliasOutput](),
 			"lambda-permission": makeResource[
 				lambda.Permission, *lambda.PermissionOutput](),
 			"lambda-event-source-mapping": makeResource[

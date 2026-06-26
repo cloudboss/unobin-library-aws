@@ -26,6 +26,11 @@ factory: {
       default:     10
       description: 'Batch size of the event source mapping; the update pass changes it'
     }
+    alias-description: {
+      type:        string
+      default:     'live alias for the published function version'
+      description: 'Description of the Lambda alias; the update pass clears it'
+    }
   }
 
   resources: {
@@ -56,8 +61,15 @@ factory: {
       code:          { zip-file-path: '/tmp/unobin-it-lambda.zip' }
       memory-size:   input.memory-size
       timeout:       input.timeout
+      publish:       true
       environment:   { variables: { GREETING: input.greeting } }
       tags:          { unobin: 'lambda-it' }
+    }
+    lambda-alias-it: aws.lambda-alias {
+      name:             'live'
+      function-name:    resource.lambda-function-it.function-name
+      function-version: resource.lambda-function-it.version
+      description:      input.alias-description
     }
     lambda-permission-it: aws.lambda-permission {
       function-name: resource.lambda-function-it.function-name
@@ -90,6 +102,8 @@ factory: {
   outputs: {
     function-arn:     { value: resource.lambda-function-it.arn }
     function-version: { value: resource.lambda-function-it.version }
+    alias-arn:        { value: resource.lambda-alias-it.arn }
+    alias-invoke-arn: { value: resource.lambda-alias-it.invoke-arn }
     invoke-status:    { value: action.lambda-invoke-it.status-code }
     invoke-payload:   { value: action.lambda-invoke-it.payload }
     events-queue-arn: { value: resource.sqs-queue-events.arn }

@@ -1,10 +1,11 @@
 stack: {
   factory: {
     inputs: {
-      memory-size: 256
-      timeout:     10
-      greeting:    'hello from unobin, updated'
-      batch-size:  20
+      memory-size:       256
+      timeout:           10
+      greeting:          'hello from unobin, updated'
+      batch-size:        20
+      alias-description: ''
     }
   }
 
