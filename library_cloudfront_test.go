@@ -15,7 +15,7 @@ import (
 )
 
 // TestLibraryRegistersCloudfront checks the runtime registration: each CloudFront
-// resource is present under Resources and dispatches to its output type.
+// construct is present in its category and dispatches to its output type.
 func TestLibraryRegistersCloudfront(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
@@ -28,6 +28,18 @@ func TestLibraryRegistersCloudfront(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, lib.Resources, key)
 			assert.Equal(t, outputType, lib.Resources[key].OutputType())
+		})
+	}
+
+	originRequestPolicyDataOutput := reflect.TypeFor[*cloudfront.OriginRequestPolicyDataOutput]()
+	dataSources := map[string]reflect.Type{
+		"cloudfront-cache-policy-data":          reflect.TypeFor[*cloudfront.CachePolicyDataOutput](),
+		"cloudfront-origin-request-policy-data": originRequestPolicyDataOutput,
+	}
+	for key, outputType := range dataSources {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, lib.DataSources, key)
+			assert.Equal(t, outputType, lib.DataSources[key].OutputType())
 		})
 	}
 }
@@ -471,6 +483,78 @@ func TestCloudfrontSchemas(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assert.Equal(t, want, schema.Resources[key])
+		})
+	}
+
+	nameItems := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "items", Type: typecheck.TList(typecheck.TString())},
+	})
+	cookiesConfig := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "cookie-behavior", Type: typecheck.TString()},
+		{Name: "cookies", Type: nameItems, Optional: true},
+	})
+	headersConfig := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "header-behavior", Type: typecheck.TString()},
+		{Name: "headers", Type: nameItems, Optional: true},
+	})
+	queryStringsConfig := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "query-string-behavior", Type: typecheck.TString()},
+		{Name: "query-strings", Type: nameItems, Optional: true},
+	})
+	cachePolicyParameters := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "cookies-config", Type: cookiesConfig, Optional: true},
+		{Name: "enable-accept-encoding-gzip", Type: typecheck.TBoolean()},
+		{Name: "headers-config", Type: headersConfig, Optional: true},
+		{Name: "query-strings-config", Type: queryStringsConfig, Optional: true},
+		{Name: "enable-accept-encoding-brotli", Type: typecheck.TBoolean()},
+	})
+
+	dataSources := map[string]*runtime.TypeSchema{
+		"cloudfront-cache-policy-data": {
+			Inputs: map[string]typecheck.Type{
+				"id":   typecheck.TOptional(typecheck.TString()),
+				"name": typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":         typecheck.TString(),
+				"comment":     typecheck.TString(),
+				"default-ttl": typecheck.TInteger(),
+				"etag":        typecheck.TString(),
+				"id":          typecheck.TString(),
+				"max-ttl":     typecheck.TInteger(),
+				"min-ttl":     typecheck.TInteger(),
+				"name":        typecheck.TString(),
+				"parameters-in-cache-key-and-forwarded-to-origin": typecheck.TOptional(
+					cachePolicyParameters),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{Kind: "exactly-one-of", Fields: []string{"input.id", "input.name"}},
+			},
+		},
+		"cloudfront-origin-request-policy-data": {
+			Inputs: map[string]typecheck.Type{
+				"id":   typecheck.TOptional(typecheck.TString()),
+				"name": typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":                  typecheck.TString(),
+				"comment":              typecheck.TString(),
+				"cookies-config":       typecheck.TOptional(cookiesConfig),
+				"etag":                 typecheck.TString(),
+				"headers-config":       typecheck.TOptional(headersConfig),
+				"id":                   typecheck.TString(),
+				"name":                 typecheck.TString(),
+				"query-strings-config": typecheck.TOptional(queryStringsConfig),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{Kind: "exactly-one-of", Fields: []string{"input.id", "input.name"}},
+			},
+		},
+	}
+	for key, want := range dataSources {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.DataSources, key)
+			assert.Equal(t, want, schema.DataSources[key])
 		})
 	}
 }

@@ -267,6 +267,9 @@ func Library() *runtime.Library {
 			"cloudfront-cache-policy-data": makeDataSource[
 				cloudfront.CachePolicyData,
 				*cloudfront.CachePolicyDataOutput](),
+			"cloudfront-origin-request-policy-data": makeDataSource[
+				cloudfront.OriginRequestPolicyData,
+				*cloudfront.OriginRequestPolicyDataOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": makeAction[

@@ -1,11 +1,12 @@
 factory: {
   description: '''>-
-    Manages a CloudFront distribution and the pieces it composes: an S3 bucket origin, an
-    origin access control that fronts it, a CloudFront function and a response headers policy
-    attached to the default behavior, and the distribution itself on the default certificate.
-    The distribution comment comes from an input so the update pass changes it in place
-    through UpdateDistribution, exercising create, the deployed wait, the in-place update, and
-    the disable-then-delete teardown. Caching uses the AWS managed CachingOptimized policy.
+    Manages a CloudFront distribution and the pieces it composes: an S3 bucket origin,
+    an origin access control that fronts it, a CloudFront function and a response
+    headers policy attached to the default behavior, and the distribution itself on the
+    default certificate. The distribution comment comes from an input so the update pass
+    changes it in place through UpdateDistribution, exercising create, the deployed
+    wait, the in-place update, and the disable-then-delete teardown. Caching and origin
+    forwarding use AWS managed policies resolved by the CloudFront policy data sources.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -21,6 +22,15 @@ factory: {
       type:        string
       default:     'unobin cloudfront integration test'
       description: 'Distribution comment; the update pass changes it'
+    }
+  }
+
+  data-sources: {
+    cloudfront-cache-policy-caching-optimized: aws.cloudfront-cache-policy-data {
+      name: 'Managed-CachingOptimized'
+    }
+    cloudfront-origin-request-policy-cors-s3: aws.cloudfront-origin-request-policy-data {
+      name: 'Managed-CORS-S3Origin'
     }
   }
 
@@ -70,7 +80,8 @@ factory: {
       default-cache-behavior: {
         target-origin-id:           's3-origin'
         viewer-protocol-policy:     'redirect-to-https'
-        cache-policy-id:            '658327ea-f89d-4fab-a63d-7e88639e58f6'
+        cache-policy-id:            data-source.cloudfront-cache-policy-caching-optimized.id
+        origin-request-policy-id:   data-source.cloudfront-origin-request-policy-cors-s3.id
         response-headers-policy-id: resource.cloudfront-response-headers-policy-headers.id
         allowed-methods:            ['GET', 'HEAD']
         cached-methods:             ['GET', 'HEAD']
@@ -90,5 +101,9 @@ factory: {
     distribution-domain-name: { value: resource.cloudfront-distribution-it.domain-name }
     oac-id:                   { value: resource.cloudfront-origin-access-control-oac.id }
     function-arn:             { value: resource.cloudfront-function-viewer.arn }
+    cache-policy-arn:         { value: data-source.cloudfront-cache-policy-caching-optimized.arn }
+    origin-request-policy-arn: {
+      value: data-source.cloudfront-origin-request-policy-cors-s3.arn
+    }
   }
 }
