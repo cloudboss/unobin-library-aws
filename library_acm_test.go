@@ -30,10 +30,19 @@ func TestLibraryRegistersAcmResources(t *testing.T) {
 	}
 }
 
-// TestAcmSchemas asserts the whole derived TypeSchema for the acm-certificate
-// resource: the request-mode and import-mode inputs, the computed outputs
-// including the domain-validation-options downstream validation reads, the
-// mutually-exclusive and enum constraints, and the optional defaults.
+// TestLibraryRegistersAcmDataSources checks the runtime registration of the
+// certificate lookup under DataSources.
+func TestLibraryRegistersAcmDataSources(t *testing.T) {
+	lib := library.Library()
+	require.Contains(t, lib.DataSources, "acm-certificate-data")
+	assert.Equal(t, reflect.TypeFor[*acm.CertificateDataOutput](),
+		lib.DataSources["acm-certificate-data"].OutputType())
+}
+
+// TestAcmSchemas asserts the derived TypeSchema for the ACM resources and data
+// source: the certificate resource's request and import modes, the validation
+// resource, and the certificate lookup's filters, outputs, constraints, and
+// defaults.
 func TestAcmSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -181,6 +190,82 @@ func TestAcmSchemas(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assert.Equal(t, want, schema.Resources[key])
+		})
+	}
+
+	dataSources := map[string]*runtime.TypeSchema{
+		"acm-certificate-data": {
+			Inputs: map[string]typecheck.Type{
+				"domain":      typecheck.TOptional(typecheck.TString()),
+				"key-types":   typecheck.TList(typecheck.TString()),
+				"most-recent": typecheck.TBoolean(),
+				"statuses":    typecheck.TList(typecheck.TString()),
+				"tags":        typecheck.TMap(typecheck.TString()),
+				"types":       typecheck.TList(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":               typecheck.TString(),
+				"certificate":       typecheck.TOptional(typecheck.TString()),
+				"certificate-chain": typecheck.TOptional(typecheck.TString()),
+				"domain":            typecheck.TString(),
+				"status":            typecheck.TString(),
+				"tags":              typecheck.TMap(typecheck.TString()),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:   "at-least-one-of",
+					Fields: []string{"input.domain", "input.tags"},
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value == 'RSA_1024' || " +
+						"@each.value == 'RSA_2048' || " +
+						"@each.value == 'RSA_3072' || " +
+						"@each.value == 'RSA_4096' || " +
+						"@each.value == 'EC_prime256v1' || " +
+						"@each.value == 'EC_secp384r1' || " +
+						"@each.value == 'EC_secp521r1')",
+					Message: "key-types entries must be valid ACM key algorithms",
+					ForEach: "input.key-types",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value == 'PENDING_VALIDATION' || " +
+						"@each.value == 'ISSUED' || " +
+						"@each.value == 'INACTIVE' || " +
+						"@each.value == 'EXPIRED' || " +
+						"@each.value == 'VALIDATION_TIMED_OUT' || " +
+						"@each.value == 'REVOKED' || " +
+						"@each.value == 'FAILED')",
+					Message: "statuses entries must be valid ACM certificate statuses",
+					ForEach: "input.statuses",
+				},
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@each.value == 'IMPORTED' || " +
+						"@each.value == 'AMAZON_ISSUED' || " +
+						"@each.value == 'PRIVATE')",
+					Message: "types entries must be valid ACM certificate types",
+					ForEach: "input.types",
+				},
+			},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.most-recent", Value: "false"},
+				{Field: "input.tags", Optional: true},
+				{Field: "input.key-types", Optional: true},
+				{Field: "input.statuses", Optional: true},
+				{Field: "input.types", Optional: true},
+			},
+		},
+	}
+
+	for key, want := range dataSources {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.DataSources, key)
+			assert.Equal(t, want, schema.DataSources[key])
 		})
 	}
 }

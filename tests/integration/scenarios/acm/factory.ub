@@ -36,10 +36,22 @@ factory: {
     }
   }
 
+  data-sources: {
+    acm-certificate-lookup: aws.acm-certificate-data {
+      domain:      resource.acm-certificate-it.domain-name
+      tags:        { unobin: 'acm-it' }
+      statuses:    ['PENDING_VALIDATION']
+      most-recent: true
+    }
+  }
+
   outputs: {
-    certificate-arn:    { value: resource.acm-certificate-it.arn }
-    certificate-status: { value: resource.acm-certificate-it.status }
-    certificate-type:   { value: resource.acm-certificate-it.type }
-    validation-options: { value: resource.acm-certificate-it.domain-validation-options }
+    certificate-arn:           { value: resource.acm-certificate-it.arn }
+    certificate-status:        { value: resource.acm-certificate-it.status }
+    certificate-type:          { value: resource.acm-certificate-it.type }
+    validation-options:        { value: resource.acm-certificate-it.domain-validation-options }
+    lookup-certificate-arn:    { value: data-source.acm-certificate-lookup.arn }
+    lookup-certificate-status: { value: data-source.acm-certificate-lookup.status }
+    lookup-certificate-tags:   { value: data-source.acm-certificate-lookup.tags }
   }
 }

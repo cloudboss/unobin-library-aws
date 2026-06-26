@@ -450,7 +450,13 @@ func describeCertificate(
 		}
 		return nil, fmt.Errorf("describe certificate: %w", err)
 	}
-	if resp.Certificate == nil {
+	return certificateDetailFromDescribe(resp)
+}
+
+func certificateDetailFromDescribe(
+	resp *acm.DescribeCertificateOutput,
+) (*acmtypes.CertificateDetail, error) {
+	if resp == nil || resp.Certificate == nil {
 		return nil, runtime.ErrNotFound
 	}
 	return resp.Certificate, nil

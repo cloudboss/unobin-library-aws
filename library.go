@@ -245,6 +245,8 @@ func Library() *runtime.Library {
 				apigatewayv2.ApiMapping, *apigatewayv2.ApiMappingOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
+			"acm-certificate-data": makeDataSource[
+				acm.CertificateData, *acm.CertificateDataOutput](),
 			"route53-zone": makeDataSource[route53.ZoneData, *route53.ZoneDataOutput](),
 			"ec2-ami":      makeDataSource[ec2.AMI, *ec2.AMIOutput](),
 			"ec2-availability-zones": makeDataSource[
