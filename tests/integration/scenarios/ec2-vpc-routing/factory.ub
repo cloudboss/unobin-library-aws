@@ -41,6 +41,14 @@ factory: {
     ec2-subnets-empty: aws.ec2-subnets {
       filter: [{ name: 'tag:unobin', values: ['vpc-routing-it-missing'] }]
     }
+    ec2-subnet-data-public: aws.ec2-subnet-data {
+      id:                resource.ec2-subnet-public.id
+      availability-zone: resource.ec2-subnet-public.availability-zone
+      default-for-az:    false
+      vpc-id:            resource.ec2-vpc-it.vpc-id
+      cidr-block:        '10.62.1.0/24'
+      filter:            [{ name: 'subnet-id', values: [resource.ec2-subnet-public.id] }]
+    }
   }
 
   locals: {
@@ -119,13 +127,15 @@ factory: {
   }
 
   outputs: {
-    internet-gateway-id:    { value: resource.ec2-internet-gateway-it.internet-gateway-id }
-    public-route-table-id:  { value: resource.ec2-route-table-public.route-table-id }
-    private-route-table-id: { value: resource.ec2-route-table-private.route-table-id }
-    eip-public-ip:          { value: resource.ec2-eip-nat.public-ip }
-    nat-gateway-id:         { value: resource.ec2-nat-gateway-it.nat-gateway-id }
-    vpc-endpoint-id:        { value: resource.ec2-vpc-endpoint-s3.vpc-endpoint-id }
-    subnet-ids-by-lookup:   { value: data-source.ec2-subnets-it.ids }
-    empty-subnet-ids:       { value: data-source.ec2-subnets-empty.ids }
+    internet-gateway-id:          { value: resource.ec2-internet-gateway-it.internet-gateway-id }
+    public-route-table-id:        { value: resource.ec2-route-table-public.route-table-id }
+    private-route-table-id:       { value: resource.ec2-route-table-private.route-table-id }
+    eip-public-ip:                { value: resource.ec2-eip-nat.public-ip }
+    nat-gateway-id:               { value: resource.ec2-nat-gateway-it.nat-gateway-id }
+    vpc-endpoint-id:              { value: resource.ec2-vpc-endpoint-s3.vpc-endpoint-id }
+    subnet-ids-by-lookup:         { value: data-source.ec2-subnets-it.ids }
+    empty-subnet-ids:             { value: data-source.ec2-subnets-empty.ids }
+    public-subnet-id-by-lookup:   { value: data-source.ec2-subnet-data-public.id }
+    public-subnet-cidr-by-lookup: { value: data-source.ec2-subnet-data-public.cidr-block }
   }
 }
