@@ -264,6 +264,9 @@ func Library() *runtime.Library {
 			"iam-openid-connect-provider": makeDataSource[
 				iam.OpenIDConnectProviderData,
 				*iam.OpenIDConnectProviderDataOutput](),
+			"cloudfront-cache-policy-data": makeDataSource[
+				cloudfront.CachePolicyData,
+				*cloudfront.CachePolicyDataOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": makeAction[
