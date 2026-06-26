@@ -60,6 +60,13 @@ func TestDiff(t *testing.T) {
 			wantRemove: nil,
 		},
 		{
+			name:       "reserved desired ignored",
+			current:    map[string]string{},
+			desired:    map[string]string{"aws:owner": "system", "env": "prod"},
+			wantUpsert: map[string]string{"env": "prod"},
+			wantRemove: nil,
+		},
+		{
 			name:       "mixed",
 			current:    map[string]string{"keep": "1", "drop": "2", "change": "old", "aws:x": "y"},
 			desired:    map[string]string{"keep": "1", "change": "new", "add": "3"},

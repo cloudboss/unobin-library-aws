@@ -13,17 +13,20 @@ import (
 )
 
 // reservedPrefix marks tags AWS attaches itself (e.g. aws:cloudformation:...).
-// They are never removed: they are not user-managed and would read as drift.
+// They are not user-managed and cannot be created, updated, or removed.
 const reservedPrefix = "aws:"
 
 // Diff compares the tags currently on a resource against the desired set.
 // upsert holds the desired entries that are absent or hold a different value
 // and must be written; remove holds the keys present on the resource but no
 // longer desired, sorted for deterministic calls. Keys with the reserved
-// "aws:" prefix are never removed.
+// "aws:" prefix are never upserted or removed.
 func Diff(current, desired map[string]string) (upsert map[string]string, remove []string) {
 	upsert = make(map[string]string)
 	for k, v := range desired {
+		if strings.HasPrefix(k, reservedPrefix) {
+			continue
+		}
 		if cur, ok := current[k]; !ok || cur != v {
 			upsert[k] = v
 		}
