@@ -1,11 +1,12 @@
 factory: {
   description: '''>-
     Manages the container stack end to end: an ECR repository whose URI feeds the task definition's
-    container image, an ECS cluster with a Fargate default capacity provider strategy, a Fargate
-    task definition, and a service in a small VPC at a desired count of zero so no task has to
-    launch. The scan-on-push flag, the strategy weight, and the service's deployment maximum
-    percent come from inputs so the update pass changes each in place through its own call path:
-    PutImageScanningConfiguration, PutClusterCapacityProviders, and UpdateService.
+    container image, an Auto Scaling backed ECS capacity provider, an ECS cluster with a Fargate
+    default capacity provider strategy, a Fargate task definition, and a service in a small VPC at a
+    desired count of zero so no task has to launch. The scan-on-push flag, capacity provider managed
+    draining, the strategy weight, and the service's deployment maximum percent come from inputs so
+    the update pass changes each in place through its own call path: PutImageScanningConfiguration,
+    UpdateCapacityProvider, PutClusterCapacityProviders, and UpdateService.
     '''
 
   imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
@@ -32,9 +33,23 @@ factory: {
       default:     200
       description: 'Service deployment maximum percent; the update pass changes it'
     }
+    provider-managed-draining: {
+      type:        string
+      default:     'ENABLED'
+      description: 'Capacity provider managed draining; the update pass disables it'
+    }
+    provider-stage: {
+      type:        optional(string)
+      description: 'Capacity provider tag value; omitted, the provider is tagged initial'
+    }
   }
 
   data-sources: {
+    ec2-ami-al2023: aws.ec2-ami {
+      owners:      ['amazon']
+      most-recent: true
+      filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
+    }
     ec2-availability-zones-available: aws.ec2-availability-zones {
       state: 'available'
     }
@@ -49,6 +64,42 @@ factory: {
       cidr-block:        '10.64.1.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'ecs-it' }
+    }
+    ec2-launch-template-cp: aws.ec2-launch-template {
+      name: 'unobin-it-ecs-cp-lt'
+      data: {
+        image-id:         data-source.ec2-ami-al2023.image-id
+        instance-type:    't3.micro'
+        metadata-options: { http-tokens: 'required' }
+      }
+      tags: { unobin: 'ecs-it' }
+    }
+    autoscaling-group-cp: aws.autoscaling-group {
+      name:                'unobin-it-ecs-cp-asg'
+      min-size:            0
+      max-size:            1
+      desired-capacity:    0
+      vpc-zone-identifier: [resource.ec2-subnet-a.id]
+      launch-template: {
+        id:      resource.ec2-launch-template-cp.launch-template-id
+        version: '$Latest'
+      }
+      health-check-type: 'EC2'
+      tags:              [{ key: 'unobin', value: 'ecs-it', propagate-at-launch: true }]
+    }
+    ecs-capacity-provider-it: aws.ecs-capacity-provider {
+      name: 'unobin-it-ecs-cp'
+      auto-scaling-group-provider: {
+        auto-scaling-group-arn:         resource.autoscaling-group-cp.arn
+        managed-draining:               input.provider-managed-draining
+        managed-termination-protection: 'DISABLED'
+        managed-scaling:                { status: 'ENABLED', target-capacity: 100 }
+      }
+      tags: {
+        unobin: 'ecs-it'
+        role:   'capacity-provider'
+        stage:  input.provider-stage ?? 'initial'
+      }
     }
     ecr-repository-repo: aws.ecr-repository {
       name:         'unobin-it-ecs'
@@ -106,9 +157,10 @@ factory: {
   }
 
   outputs: {
-    repository-uri:      { value: resource.ecr-repository-repo.repository-uri }
-    cluster-arn:         { value: resource.ecs-cluster-it.arn }
-    task-definition-arn: { value: resource.ecs-task-definition-it.arn }
-    service-arn:         { value: resource.ecs-service-it.arn }
+    repository-uri:        { value: resource.ecr-repository-repo.repository-uri }
+    cluster-arn:           { value: resource.ecs-cluster-it.arn }
+    task-definition-arn:   { value: resource.ecs-task-definition-it.arn }
+    service-arn:           { value: resource.ecs-service-it.arn }
+    capacity-provider-arn: { value: resource.ecs-capacity-provider-it.arn }
   }
 }

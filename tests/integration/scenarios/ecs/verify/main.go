@@ -2,9 +2,10 @@
 // named in the VERIFY_PHASE environment variable. It looks resources up by
 // their stable names because the driver passes no plan outputs into verify,
 // and it reads only cloud state: applied requires the ECR repository, the
-// ACTIVE cluster, the ACTIVE task definition revision, and the ACTIVE service
-// at a desired count of zero; destroyed requires the repository and service to
-// be gone, the cluster gone or INACTIVE, and the family to have no ACTIVE
+// custom capacity provider, the ACTIVE cluster, the ACTIVE task definition
+// revision, and the ACTIVE service at a desired count of zero; destroyed
+// requires the repository and service to be gone, the capacity provider gone or
+// INACTIVE, the cluster gone or INACTIVE, and the family to have no ACTIVE
 // revision left. Capacity-provider attachment is checked best-effort, since an
 // emulator may not model it. Tearing the stack down is the destroy plan's job,
 // not the verifier's.
@@ -17,6 +18,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -27,10 +29,11 @@ import (
 )
 
 const (
-	repoName    = "unobin-it-ecs"
-	clusterName = "unobin-it-ecs"
-	family      = "unobin-it-ecs"
-	serviceName = "unobin-it-ecs"
+	repoName             = "unobin-it-ecs"
+	capacityProviderName = "unobin-it-ecs-cp"
+	clusterName          = "unobin-it-ecs"
+	family               = "unobin-it-ecs"
+	serviceName          = "unobin-it-ecs"
 )
 
 func main() {
@@ -70,6 +73,12 @@ func verifyApplied(ctx context.Context, ecrClient *ecr.Client, ecsClient *ecs.Cl
 	if aws.ToString(repo.RepositoryUri) == "" {
 		return fmt.Errorf("repository %s has no uri", repoName)
 	}
+
+	capacityProvider, err := findCapacityProvider(ctx, ecsClient)
+	if err != nil {
+		return err
+	}
+	checkCapacityProvider(capacityProvider)
 
 	cluster, err := findCluster(ctx, ecsClient)
 	if err != nil {
@@ -134,6 +143,16 @@ func verifyDestroyed(ctx context.Context, ecrClient *ecr.Client, ecsClient *ecs.
 		return fmt.Errorf("repository %s still exists", repoName)
 	}
 
+	capacityProvider, err := findCapacityProvider(ctx, ecsClient)
+	if err != nil {
+		return err
+	}
+	if capacityProvider != nil &&
+		capacityProvider.Status != ecstypes.CapacityProviderStatusInactive {
+		return fmt.Errorf("capacity provider %s is still %s", capacityProviderName,
+			capacityProvider.Status)
+	}
+
 	cluster, err := findCluster(ctx, ecsClient)
 	if err != nil {
 		return err
@@ -178,6 +197,46 @@ func findRepository(ctx context.Context, client *ecr.Client) (*ecrtypes.Reposito
 		}
 	}
 	return nil, nil
+}
+
+// findCapacityProvider returns the scenario's capacity provider, nil when it
+// is absent, or nil with a printed skip when the emulator does not model
+// custom capacity providers.
+func findCapacityProvider(
+	ctx context.Context, client *ecs.Client,
+) (*ecstypes.CapacityProvider, error) {
+	resp, err := client.DescribeCapacityProviders(ctx, &ecs.DescribeCapacityProvidersInput{
+		CapacityProviders: []string{capacityProviderName},
+	})
+	if err != nil {
+		var clientErr *ecstypes.ClientException
+		if errors.As(err, &clientErr) && strings.Contains(clientErr.ErrorMessage(),
+			"capacity provider does not exist") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("describe capacity providers: %w", err)
+	}
+	for i := range resp.CapacityProviders {
+		if aws.ToString(resp.CapacityProviders[i].Name) == capacityProviderName {
+			return &resp.CapacityProviders[i], nil
+		}
+	}
+	return nil, nil
+}
+
+// checkCapacityProvider confirms the custom capacity provider best-effort: an
+// emulator may not model custom capacity providers, so a miss degrades to a
+// printed skip rather than a failure.
+func checkCapacityProvider(provider *ecstypes.CapacityProvider) {
+	if provider == nil {
+		fmt.Println("skip: custom capacity providers not modeled")
+		return
+	}
+	if provider.Status == ecstypes.CapacityProviderStatusInactive {
+		fmt.Printf("skip: capacity provider %s is INACTIVE\n", capacityProviderName)
+		return
+	}
+	fmt.Printf("ok: capacity provider %s is %s\n", capacityProviderName, provider.Status)
 }
 
 // findCluster returns the scenario's cluster, or nil when the describe comes

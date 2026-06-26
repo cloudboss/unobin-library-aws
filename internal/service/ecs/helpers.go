@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ecs "github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -51,15 +52,21 @@ func region(client *ecs.Client) string {
 }
 
 // tagsSDK converts a desired tag map into the ECS SDK tag list, ordered by
-// key so requests are deterministic. It returns nil for an empty map so an
-// untagged request sends no Tags member.
+// key so requests are deterministic. AWS system tags with the aws: prefix are
+// ignored because callers cannot create, update, or delete them.
 func tagsSDK(tags map[string]string) []ecstypes.Tag {
 	if len(tags) == 0 {
 		return nil
 	}
 	out := make([]ecstypes.Tag, 0, len(tags))
 	for _, k := range slices.Sorted(maps.Keys(tags)) {
+		if strings.HasPrefix(k, "aws:") {
+			continue
+		}
 		out = append(out, ecstypes.Tag{Key: aws.String(k), Value: aws.String(tags[k])})
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }

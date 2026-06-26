@@ -14,15 +14,16 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/ecs"
 )
 
-// TestLibraryRegistersEcs checks the runtime registration: the cluster, task
-// definition, and service resources are present under Resources and dispatch
-// to their output types.
+// TestLibraryRegistersEcs checks the runtime registration: the capacity
+// provider, cluster, task definition, and service resources are present under
+// Resources and dispatch to their output types.
 func TestLibraryRegistersEcs(t *testing.T) {
 	lib := library.Library()
 	resources := map[string]reflect.Type{
-		"ecs-cluster":         reflect.TypeFor[*ecs.ClusterOutput](),
-		"ecs-task-definition": reflect.TypeFor[*ecs.TaskDefinitionOutput](),
-		"ecs-service":         reflect.TypeFor[*ecs.ServiceOutput](),
+		"ecs-capacity-provider": reflect.TypeFor[*ecs.CapacityProviderOutput](),
+		"ecs-cluster":           reflect.TypeFor[*ecs.ClusterOutput](),
+		"ecs-task-definition":   reflect.TypeFor[*ecs.TaskDefinitionOutput](),
+		"ecs-service":           reflect.TypeFor[*ecs.ServiceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -32,7 +33,94 @@ func TestLibraryRegistersEcs(t *testing.T) {
 	}
 }
 
-// TestEcsSchemas asserts the whole derived TypeSchema for the three ECS
+// TestEcsCapacityProviderSchema checks the derived schema for the capacity
+// provider resource: the top-level inputs and computed outputs, the critical
+// provider-selection constraints, and the nested optional collection defaults.
+func TestEcsCapacityProviderSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	got := schema.Resources["ecs-capacity-provider"]
+	require.NotNil(t, got)
+
+	assert.Equal(t, typecheck.TString(), got.Inputs["name"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()), got.Inputs["cluster"])
+	assert.Equal(t, typecheck.TMap(typecheck.TString()), got.Inputs["tags"])
+	require.Contains(t, got.Inputs, "auto-scaling-group-provider")
+	require.Contains(t, got.Inputs, "managed-instances-provider")
+
+	assert.Equal(t, typecheck.TString(), got.Outputs["arn"])
+	assert.Equal(t, typecheck.TString(), got.Outputs["capacity-provider-arn"])
+	assert.Equal(t, typecheck.TString(), got.Outputs["status"])
+	assert.Equal(t, typecheck.TString(), got.Outputs["update-status"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()), got.Outputs["update-status-reason"])
+	assert.Equal(t, typecheck.TMap(typecheck.TString()), got.Outputs["tags"])
+	require.Contains(t, got.Outputs, "auto-scaling-group-provider")
+	require.Contains(t, got.Outputs, "managed-instances-provider")
+
+	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+		Kind: "exactly-one-of",
+		Fields: []string{
+			"input.auto-scaling-group-provider",
+			"input.managed-instances-provider",
+		},
+	})
+	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+		Kind:    "predicate",
+		When:    "(input.managed-instances-provider != null)",
+		Require: "(input.cluster != null)",
+		Message: "cluster is required with managed-instances-provider",
+	})
+	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+		Kind:   "forbidden-with",
+		Fields: []string{"input.auto-scaling-group-provider", "input.cluster"},
+	})
+	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+		Kind: "predicate",
+		When: "(input.managed-instances-provider.infrastructure-optimization" +
+			".scale-in-after != null)",
+		Require: "(input.managed-instances-provider.infrastructure-optimization" +
+			".scale-in-after == null || input.managed-instances-provider" +
+			".infrastructure-optimization.scale-in-after >= -1) && " +
+			"(input.managed-instances-provider.infrastructure-optimization" +
+			".scale-in-after == null || input.managed-instances-provider" +
+			".infrastructure-optimization.scale-in-after <= 3600)",
+		Message: "scale-in-after must be between -1 and 3600",
+	})
+	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+		Kind: "predicate",
+		When: "(input.managed-instances-provider.instance-launch-template" +
+			".capacity-option-type != null)",
+		Require: "(input.managed-instances-provider.instance-launch-template" +
+			".capacity-option-type == 'ON_DEMAND' || input.managed-instances-provider" +
+			".instance-launch-template.capacity-option-type == 'SPOT' || " +
+			"input.managed-instances-provider.instance-launch-template" +
+			".capacity-option-type == 'RESERVED')",
+		Message: "capacity-option-type must be ON_DEMAND, SPOT, or RESERVED",
+	})
+
+	assert.Equal(t, []lang.DefaultSpec{
+		{Field: "input.tags", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".network-configuration.security-groups", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.accelerator-manufacturers", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.accelerator-names", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.accelerator-types", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.allowed-instance-types", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.cpu-manufacturers", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.excluded-instance-types", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.instance-generations", Optional: true},
+		{Field: "input.managed-instances-provider.instance-launch-template" +
+			".instance-requirements.local-storage-types", Optional: true},
+	}, got.Defaults)
+}
+
+// TestEcsSchemas asserts the whole derived TypeSchema for the core ECS
 // resources: input and output field types (including the task definition's
 // container and volume models), the enum and placement rules, and the
 // optional defaults.

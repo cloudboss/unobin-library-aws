@@ -232,6 +232,8 @@ func Library() *runtime.Library {
 				secretsmanager.SecretVersion, *secretsmanager.SecretVersionOutput](),
 			"ecr-repository": makeResource[
 				ecr.Repository, *ecr.RepositoryOutput](),
+			"ecs-capacity-provider": makeResource[
+				ecs.CapacityProvider, *ecs.CapacityProviderOutput](),
 			"ecs-cluster": makeResource[ecs.Cluster, *ecs.ClusterOutput](),
 			"ecs-task-definition": makeResource[
 				ecs.TaskDefinition, *ecs.TaskDefinitionOutput](),
