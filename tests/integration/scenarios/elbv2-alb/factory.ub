@@ -83,9 +83,10 @@ factory: {
       tags:                          { unobin: 'alb-it' }
     }
     elbv2-target-group-attachment-it: aws.elbv2-target-group-attachment {
-      target-group-arn: resource.elbv2-target-group-it.arn
-      target-id:        '10.20.1.50'
-      port:             8080
+      target-group-arn:  resource.elbv2-target-group-it.arn
+      availability-zone: resource.ec2-subnet-a.availability-zone
+      target-id:         '10.20.1.50'
+      port:              8080
     }
     elbv2-load-balancer-it: aws.elbv2-load-balancer {
       name:                       'unobin-it-alb'
