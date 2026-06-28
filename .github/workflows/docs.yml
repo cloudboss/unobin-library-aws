@@ -18,6 +18,6 @@ jobs:
       id-token: write
     uses: cloudboss/cloudboss-docs/.github/workflows/docs.yml@v0.2.0
     with:
-      version: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.event.release.tag_name }}
+      version: ${{ inputs.version || github.ref_name }}
       setup-go: true
       generate: make docs
