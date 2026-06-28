@@ -1,8 +1,9 @@
 name: docs
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "*"
   workflow_dispatch:
     inputs:
       version:
@@ -15,7 +16,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    uses: cloudboss/cloudboss-docs/.github/workflows/docs.yml@main
+    uses: cloudboss/cloudboss-docs/.github/workflows/docs.yml@v0.1.0
     with:
       version: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.event.release.tag_name }}
       setup-go: true
