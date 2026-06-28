@@ -14,16 +14,18 @@ LOCALSTACK_NAME := $(PROJECT)-localstack
 MINISTACK_NAME  := $(PROJECT)-ministack
 
 UNOBIN_VERSION := $(shell awk '/github.com[/]cloudboss[/]unobin v/{print $$2}' go.mod)
+DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.1.0
 
 .DEFAULT_GOAL := help
 
-.PHONY: help lint emulators-down emulators-up \
+.PHONY: help docs lint emulators-down emulators-up \
 	test test-integration-live test-integration-emulator
 
 help:
 	@echo 'Targets:'
 	@echo '  emulators-down               Stop the emulator containers and remove the network.'
 	@echo '  emulators-up                 Start the pinned LocalStack and ministack containers.'
+	@echo '  docs                         Generate the reference manual.'
 	@echo '  test                         Run unit tests on the host.'
 	@echo '  test-integration-live        Run integration tests against real AWS (UNOBIN_AWS_LIVE=1).'
 	@echo '  test-integration-emulator    Run integration tests against the emulators.'
@@ -42,6 +44,9 @@ $(DIR_OUT)/.command-%:
 	}
 
 HAS_COMMAND_CURL := $(DIR_OUT)/.command-curl
+
+docs:
+	@$(DOCGEN) --root $(DIR_ROOT) --out docs/reference
 
 test:
 	@go test -v ./...
