@@ -24,6 +24,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	"github.com/cloudboss/unobin-library-aws/internal/service/kms"
 	"github.com/cloudboss/unobin-library-aws/internal/service/lambda"
+	"github.com/cloudboss/unobin-library-aws/internal/service/lambdamicrovms"
 	"github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	"github.com/cloudboss/unobin-library-aws/internal/service/route53"
 	"github.com/cloudboss/unobin-library-aws/internal/service/s3"
@@ -147,6 +148,9 @@ func Library() *runtime.Library {
 				lambda.EventSourceMapping, *lambda.EventSourceMappingOutput](),
 			"lambda-function-url": makeResource[
 				lambda.FunctionUrl, *lambda.FunctionUrlOutput](),
+			"lambdamicrovms-microvm-image": makeResource[
+				lambdamicrovms.MicrovmImage,
+				*lambdamicrovms.MicrovmImageOutput](),
 			"eventbridge-event-bus": makeResource[
 				eventbridge.EventBus, *eventbridge.EventBusOutput](),
 			"eventbridge-rule": makeResource[
@@ -279,10 +283,61 @@ func Library() *runtime.Library {
 			"cloudfront-origin-request-policy-data": makeDataSource[
 				cloudfront.OriginRequestPolicyData,
 				*cloudfront.OriginRequestPolicyDataOutput](),
+			"lambdamicrovms-microvm-image": makeDataSource[
+				lambdamicrovms.MicrovmImageData,
+				*lambdamicrovms.MicrovmImageDataOutput](),
+			"lambdamicrovms-microvm-images": makeDataSource[
+				lambdamicrovms.MicrovmImages,
+				*lambdamicrovms.MicrovmImagesOutput](),
+			"lambdamicrovms-microvm-image-version": makeDataSource[
+				lambdamicrovms.MicrovmImageVersionData,
+				*lambdamicrovms.MicrovmImageVersionDataOutput](),
+			"lambdamicrovms-microvm-image-versions": makeDataSource[
+				lambdamicrovms.MicrovmImageVersions,
+				*lambdamicrovms.MicrovmImageVersionsOutput](),
+			"lambdamicrovms-microvm-image-build": makeDataSource[
+				lambdamicrovms.MicrovmImageBuildData,
+				*lambdamicrovms.MicrovmImageBuildDataOutput](),
+			"lambdamicrovms-microvm-image-builds": makeDataSource[
+				lambdamicrovms.MicrovmImageBuilds,
+				*lambdamicrovms.MicrovmImageBuildsOutput](),
+			"lambdamicrovms-managed-microvm-images": makeDataSource[
+				lambdamicrovms.ManagedMicrovmImages,
+				*lambdamicrovms.ManagedMicrovmImagesOutput](),
+			"lambdamicrovms-managed-microvm-image-versions": makeDataSource[
+				lambdamicrovms.ManagedMicrovmImageVersions,
+				*lambdamicrovms.ManagedMicrovmImageVersionsOutput](),
+			"lambdamicrovms-microvm": makeDataSource[
+				lambdamicrovms.MicrovmData,
+				*lambdamicrovms.MicrovmDataOutput](),
+			"lambdamicrovms-microvms": makeDataSource[
+				lambdamicrovms.Microvms,
+				*lambdamicrovms.MicrovmsOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"lambda-invoke": makeAction[
 				lambda.Invoke, *lambda.InvokeOutput](),
+			"lambdamicrovms-run-microvm": makeAction[
+				lambdamicrovms.RunMicrovm,
+				*lambdamicrovms.MicrovmDataOutput](),
+			"lambdamicrovms-create-microvm-auth-token": makeAction[
+				lambdamicrovms.MicrovmAuthToken,
+				*lambdamicrovms.MicrovmAuthTokenOutput](),
+			"lambdamicrovms-create-microvm-shell-auth-token": makeAction[
+				lambdamicrovms.MicrovmShellAuthToken,
+				*lambdamicrovms.MicrovmShellAuthTokenOutput](),
+			"lambdamicrovms-suspend-microvm": makeAction[
+				lambdamicrovms.SuspendMicrovm,
+				*lambdamicrovms.SuspendMicrovmOutput](),
+			"lambdamicrovms-resume-microvm": makeAction[
+				lambdamicrovms.ResumeMicrovm,
+				*lambdamicrovms.ResumeMicrovmOutput](),
+			"lambdamicrovms-terminate-microvm": makeAction[
+				lambdamicrovms.TerminateMicrovm,
+				*lambdamicrovms.TerminateMicrovmOutput](),
+			"lambdamicrovms-update-microvm-image-version-status": makeAction[
+				lambdamicrovms.UpdateMicrovmImageVersionStatus,
+				*lambdamicrovms.MicrovmImageVersionDataOutput](),
 		},
 	}
 }
