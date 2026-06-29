@@ -2,9 +2,16 @@ package lambdamicrovms
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
+
+const maxRunHookPayloadBytes = 16_384
 
 type RunMicrovm struct {
 	ImageIdentifier          string      `ub:"image-identifier"`
@@ -43,5 +50,58 @@ func (r RunMicrovm) Constraints() []constraint.Constraint {
 }
 
 func (r *RunMicrovm) Run(ctx context.Context, cfg *awsCfg) (*MicrovmDataOutput, error) {
-	panic("unimplemented")
+	payload, err := r.payload()
+	if err != nil {
+		return nil, err
+	}
+	maximumDuration, err := int32PtrFromOptionalInt64(
+		"maximum-duration-in-seconds", r.MaximumDurationInSeconds)
+	if err != nil {
+		return nil, err
+	}
+	idlePolicy, err := idlePolicyToSDK(r.IdlePolicy)
+	if err != nil {
+		return nil, err
+	}
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	out, err := client.RunMicrovm(ctx, &awslambdamicrovms.RunMicrovmInput{
+		ImageIdentifier:          aws.String(r.ImageIdentifier),
+		ImageVersion:             r.ImageVersion,
+		ExecutionRoleArn:         r.ExecutionRoleArn,
+		IngressNetworkConnectors: stringSliceValue(r.IngressNetworkConnectors),
+		EgressNetworkConnectors:  stringSliceValue(r.EgressNetworkConnectors),
+		IdlePolicy:               idlePolicy,
+		Logging:                  loggingToSDK(r.Logging),
+		MaximumDurationInSeconds: maximumDuration,
+		RunHookPayload:           payload,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("run Microvm from image %s: %w", r.ImageIdentifier, err)
+	}
+	return microvmOutputFromRun(out), nil
+}
+
+func (r *RunMicrovm) payload() (*string, error) {
+	if r.RunHookPayloadContent != nil && r.RunHookPayloadPath != nil {
+		return nil, errors.New("at most one run-hook payload source may be set")
+	}
+	var payload *string
+	if r.RunHookPayloadContent != nil {
+		payload = r.RunHookPayloadContent
+	}
+	if r.RunHookPayloadPath != nil {
+		content, err := os.ReadFile(*r.RunHookPayloadPath)
+		if err != nil {
+			return nil, fmt.Errorf("read run-hook-payload-path: %w", err)
+		}
+		value := string(content)
+		payload = &value
+	}
+	if payload != nil && len(*payload) > maxRunHookPayloadBytes {
+		return nil, fmt.Errorf("run-hook-payload exceeds %d bytes", maxRunHookPayloadBytes)
+	}
+	return payload, nil
 }

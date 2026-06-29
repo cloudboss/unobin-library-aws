@@ -2,7 +2,10 @@ package lambdamicrovms
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
@@ -23,5 +26,21 @@ func (r *MicrovmShellAuthToken) Run(
 	ctx context.Context,
 	cfg *awsCfg,
 ) (*MicrovmShellAuthTokenOutput, error) {
-	panic("unimplemented")
+	expiration, err := int32FromInt64("expiration-in-minutes", r.ExpirationInMinutes)
+	if err != nil {
+		return nil, err
+	}
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	out, err := client.CreateMicrovmShellAuthToken(ctx,
+		&awslambdamicrovms.CreateMicrovmShellAuthTokenInput{
+			MicrovmIdentifier:   aws.String(r.MicrovmIdentifier),
+			ExpirationInMinutes: aws.Int32(expiration),
+		})
+	if err != nil {
+		return nil, fmt.Errorf("create Microvm shell auth token %s: %w", r.MicrovmIdentifier, err)
+	}
+	return &MicrovmShellAuthTokenOutput{AuthToken: out.AuthToken}, nil
 }

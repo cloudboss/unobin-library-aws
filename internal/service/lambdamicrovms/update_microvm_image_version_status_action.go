@@ -2,7 +2,11 @@ package lambdamicrovms
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
+	lambdamicrovmstypes "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
@@ -23,5 +27,18 @@ func (r *UpdateMicrovmImageVersionStatus) Run(
 	ctx context.Context,
 	cfg *awsCfg,
 ) (*MicrovmImageVersionDataOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	out, err := client.UpdateMicrovmImageVersion(ctx,
+		&awslambdamicrovms.UpdateMicrovmImageVersionInput{
+			ImageIdentifier: aws.String(r.ImageIdentifier),
+			ImageVersion:    aws.String(r.ImageVersion),
+			Status:          lambdamicrovmstypes.MicrovmImageVersionStatus(r.Status),
+		})
+	if err != nil {
+		return nil, fmt.Errorf("update Microvm image version %s: %w", r.ImageVersion, err)
+	}
+	return microvmImageVersionOutputFromUpdate(out)
 }

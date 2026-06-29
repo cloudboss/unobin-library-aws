@@ -461,35 +461,108 @@ func microvmImageDataOutputFromGet(
 func microvmImageVersionOutputFromGet(
 	in *awslambdamicrovms.GetMicrovmImageVersionOutput,
 ) (*MicrovmImageVersionDataOutput, error) {
-	codeArtifact, err := codeArtifactFromSDK(in.CodeArtifact)
+	return microvmImageVersionDataOutput(
+		aws.ToString(in.ImageArn),
+		aws.ToString(in.ImageVersion),
+		string(in.State),
+		string(in.Status),
+		aws.ToString(in.BaseImageArn),
+		aws.ToString(in.BaseImageVersion),
+		aws.ToString(in.BuildRoleArn),
+		in.CodeArtifact,
+		in.AdditionalOsCapabilities,
+		in.CpuConfigurations,
+		aws.ToString(in.Description),
+		in.EgressNetworkConnectors,
+		in.EnvironmentVariables,
+		in.Hooks,
+		in.Logging,
+		in.Resources,
+		aws.ToString(in.StateReason),
+		in.Tags,
+		in.CreatedAt,
+		in.UpdatedAt,
+	)
+}
+
+func microvmImageVersionOutputFromUpdate(
+	in *awslambdamicrovms.UpdateMicrovmImageVersionOutput,
+) (*MicrovmImageVersionDataOutput, error) {
+	return microvmImageVersionDataOutput(
+		aws.ToString(in.ImageArn),
+		aws.ToString(in.ImageVersion),
+		string(in.State),
+		string(in.Status),
+		aws.ToString(in.BaseImageArn),
+		aws.ToString(in.BaseImageVersion),
+		aws.ToString(in.BuildRoleArn),
+		in.CodeArtifact,
+		in.AdditionalOsCapabilities,
+		in.CpuConfigurations,
+		aws.ToString(in.Description),
+		in.EgressNetworkConnectors,
+		in.EnvironmentVariables,
+		in.Hooks,
+		in.Logging,
+		in.Resources,
+		aws.ToString(in.StateReason),
+		in.Tags,
+		in.CreatedAt,
+		in.UpdatedAt,
+	)
+}
+
+func microvmImageVersionDataOutput(
+	imageArn string,
+	imageVersion string,
+	state string,
+	status string,
+	baseImageArn string,
+	baseImageVersion string,
+	buildRoleArn string,
+	codeArtifactIn lambdamicrovmstypes.CodeArtifact,
+	additionalOsCapabilities []lambdamicrovmstypes.Capability,
+	cpuConfigurations []lambdamicrovmstypes.CpuConfiguration,
+	description string,
+	egressNetworkConnectors []string,
+	environmentVariables map[string]string,
+	hooksIn *lambdamicrovmstypes.Hooks,
+	loggingIn lambdamicrovmstypes.Logging,
+	resourcesIn []lambdamicrovmstypes.Resources,
+	stateReason string,
+	tags map[string]string,
+	createdAt *time.Time,
+	updatedAt *time.Time,
+) (*MicrovmImageVersionDataOutput, error) {
+	codeArtifact, err := codeArtifactFromSDK(codeArtifactIn)
 	if err != nil {
 		return nil, err
 	}
-	logging, err := loggingFromSDK(in.Logging)
+	logging, err := loggingFromSDK(loggingIn)
 	if err != nil {
 		return nil, err
 	}
 	return &MicrovmImageVersionDataOutput{
-		ImageArn:                 aws.ToString(in.ImageArn),
-		ImageVersion:             aws.ToString(in.ImageVersion),
-		State:                    string(in.State),
-		Status:                   string(in.Status),
-		BaseImageArn:             aws.ToString(in.BaseImageArn),
-		BaseImageVersion:         aws.ToString(in.BaseImageVersion),
-		BuildRoleArn:             aws.ToString(in.BuildRoleArn),
+		ImageArn:                 imageArn,
+		ImageVersion:             imageVersion,
+		State:                    state,
+		Status:                   status,
+		BaseImageArn:             baseImageArn,
+		BaseImageVersion:         baseImageVersion,
+		BuildRoleArn:             buildRoleArn,
 		CodeArtifact:             codeArtifact,
-		AdditionalOsCapabilities: capabilitiesFromSDK(in.AdditionalOsCapabilities),
-		CpuConfigurations:        cpuConfigurationsFromSDK(in.CpuConfigurations),
-		Description:              aws.ToString(in.Description),
-		EgressNetworkConnectors:  in.EgressNetworkConnectors,
-		EnvironmentVariables:     in.EnvironmentVariables,
-		Hooks:                    hooksFromSDK(in.Hooks),
+		AdditionalOsCapabilities: capabilitiesFromSDK(additionalOsCapabilities),
+		CpuConfigurations:        cpuConfigurationsFromSDK(cpuConfigurations),
+		Description:              description,
+		EgressNetworkConnectors:  egressNetworkConnectors,
+		EnvironmentVariables:     environmentVariables,
+		Hooks:                    hooksFromSDK(hooksIn),
 		Logging:                  logging,
-		Resources:                resourcesFromSDK(in.Resources),
-		StateReason:              aws.ToString(in.StateReason),
-		Tags:                     in.Tags,
-		CreatedAt:                formatTime(in.CreatedAt),
-		UpdatedAt:                formatTime(in.UpdatedAt),
+		Resources:                resourcesFromSDK(resourcesIn),
+		StateReason:              stateReason,
+		Tags:                     tags,
+		CreatedAt:                formatTime(createdAt),
+		UpdatedAt:                formatTime(updatedAt),
 	}, nil
 }
 
@@ -573,20 +646,70 @@ func snapshotBuildFromSDK(in *lambdamicrovmstypes.SnapshotBuild) *SnapshotBuild 
 }
 
 func microvmOutputFromGet(in *awslambdamicrovms.GetMicrovmOutput) *MicrovmDataOutput {
+	return microvmDataOutput(
+		aws.ToString(in.MicrovmId),
+		aws.ToString(in.Endpoint),
+		aws.ToString(in.ImageArn),
+		aws.ToString(in.ImageVersion),
+		string(in.State),
+		in.StartedAt,
+		in.TerminatedAt,
+		in.MaximumDurationInSeconds,
+		aws.ToString(in.ExecutionRoleArn),
+		in.IngressNetworkConnectors,
+		in.EgressNetworkConnectors,
+		in.IdlePolicy,
+		aws.ToString(in.StateReason),
+	)
+}
+
+func microvmOutputFromRun(in *awslambdamicrovms.RunMicrovmOutput) *MicrovmDataOutput {
+	return microvmDataOutput(
+		aws.ToString(in.MicrovmId),
+		aws.ToString(in.Endpoint),
+		aws.ToString(in.ImageArn),
+		aws.ToString(in.ImageVersion),
+		string(in.State),
+		in.StartedAt,
+		in.TerminatedAt,
+		in.MaximumDurationInSeconds,
+		aws.ToString(in.ExecutionRoleArn),
+		in.IngressNetworkConnectors,
+		in.EgressNetworkConnectors,
+		in.IdlePolicy,
+		aws.ToString(in.StateReason),
+	)
+}
+
+func microvmDataOutput(
+	microvmID string,
+	endpoint string,
+	imageArn string,
+	imageVersion string,
+	state string,
+	startedAt *time.Time,
+	terminatedAt *time.Time,
+	maximumDurationInSeconds *int32,
+	executionRoleArn string,
+	ingressNetworkConnectors []string,
+	egressNetworkConnectors []string,
+	idlePolicy *lambdamicrovmstypes.IdlePolicy,
+	stateReason string,
+) *MicrovmDataOutput {
 	return &MicrovmDataOutput{
-		MicrovmId:                aws.ToString(in.MicrovmId),
-		Endpoint:                 aws.ToString(in.Endpoint),
-		ImageArn:                 aws.ToString(in.ImageArn),
-		ImageVersion:             aws.ToString(in.ImageVersion),
-		State:                    string(in.State),
-		StartedAt:                formatTime(in.StartedAt),
-		TerminatedAt:             formatTime(in.TerminatedAt),
-		MaximumDurationInSeconds: int64(aws.ToInt32(in.MaximumDurationInSeconds)),
-		ExecutionRoleArn:         aws.ToString(in.ExecutionRoleArn),
-		IngressNetworkConnectors: in.IngressNetworkConnectors,
-		EgressNetworkConnectors:  in.EgressNetworkConnectors,
-		IdlePolicy:               idlePolicyFromSDK(in.IdlePolicy),
-		StateReason:              aws.ToString(in.StateReason),
+		MicrovmId:                microvmID,
+		Endpoint:                 endpoint,
+		ImageArn:                 imageArn,
+		ImageVersion:             imageVersion,
+		State:                    state,
+		StartedAt:                formatTime(startedAt),
+		TerminatedAt:             formatTime(terminatedAt),
+		MaximumDurationInSeconds: int64(aws.ToInt32(maximumDurationInSeconds)),
+		ExecutionRoleArn:         executionRoleArn,
+		IngressNetworkConnectors: ingressNetworkConnectors,
+		EgressNetworkConnectors:  egressNetworkConnectors,
+		IdlePolicy:               idlePolicyFromSDK(idlePolicy),
+		StateReason:              stateReason,
 	}
 }
 
