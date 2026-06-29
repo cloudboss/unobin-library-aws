@@ -2,9 +2,24 @@ package lambdamicrovms
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
+	lambdamicrovmstypes "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
+
+	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
+	"github.com/cloudboss/unobin-library-aws/internal/wait"
+)
+
+const (
+	microvmImageReadyTimeout  = 2 * time.Hour
+	microvmImageDeleteTimeout = 30 * time.Minute
+	microvmImagePollInterval  = 15 * time.Second
 )
 
 type MicrovmImage struct {
@@ -112,7 +127,26 @@ func (r MicrovmImage) Constraints() []constraint.Constraint {
 }
 
 func (r *MicrovmImage) Create(ctx context.Context, cfg *awsCfg) (*MicrovmImageOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	in, err := r.createInput()
+	if err != nil {
+		return nil, err
+	}
+	created, err := client.CreateMicrovmImage(ctx, in)
+	if err != nil {
+		return nil, fmt.Errorf("create Microvm image %s: %w", r.Name, err)
+	}
+	imageArn := aws.ToString(created.ImageArn)
+	if imageArn == "" {
+		return nil, fmt.Errorf("create Microvm image %s: response holds no image arn", r.Name)
+	}
+	if err := r.waitReady(ctx, client, imageArn); err != nil {
+		return nil, err
+	}
+	return r.read(ctx, client, imageArn)
 }
 
 func (r *MicrovmImage) Read(
@@ -120,7 +154,18 @@ func (r *MicrovmImage) Read(
 	cfg *awsCfg,
 	prior *MicrovmImageOutput,
 ) (*MicrovmImageOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	out, err := r.read(ctx, client, prior.ImageArn)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, runtime.ErrNotFound
+		}
+		return nil, err
+	}
+	return out, nil
 }
 
 func (r *MicrovmImage) Update(
@@ -128,7 +173,30 @@ func (r *MicrovmImage) Update(
 	cfg *awsCfg,
 	prior runtime.Prior[MicrovmImage, *MicrovmImageOutput],
 ) (*MicrovmImageOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	imageArn := prior.Outputs.ImageArn
+	if r.nonTagInputsChanged(prior.Inputs) {
+		in, err := r.updateInput(imageArn)
+		if err != nil {
+			return nil, err
+		}
+		_, err = client.UpdateMicrovmImage(ctx, in)
+		if err != nil {
+			return nil, fmt.Errorf("update Microvm image %s: %w", imageArn, err)
+		}
+		if err := r.waitUpdated(ctx, client, imageArn); err != nil {
+			return nil, err
+		}
+	}
+	if r.tagsChanged(prior.Inputs) {
+		if err := r.syncTags(ctx, client, imageArn); err != nil {
+			return nil, err
+		}
+	}
+	return r.read(ctx, client, imageArn)
 }
 
 func (r *MicrovmImage) Delete(
@@ -136,5 +204,253 @@ func (r *MicrovmImage) Delete(
 	cfg *awsCfg,
 	prior *MicrovmImageOutput,
 ) error {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	imageArn := prior.ImageArn
+	_, err = client.DeleteMicrovmImage(ctx, &awslambdamicrovms.DeleteMicrovmImageInput{
+		ImageIdentifier: aws.String(imageArn),
+	})
+	if err != nil {
+		if isNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("delete Microvm image %s: %w", imageArn, err)
+	}
+	return wait.Until(ctx, "Microvm image "+imageArn, func(ctx context.Context) (bool, error) {
+		out, err := client.GetMicrovmImage(ctx, &awslambdamicrovms.GetMicrovmImageInput{
+			ImageIdentifier: aws.String(imageArn),
+		})
+		if err != nil {
+			if isNotFound(err) {
+				return true, nil
+			}
+			return false, fmt.Errorf("read Microvm image %s: %w", imageArn, err)
+		}
+		switch out.State {
+		case lambdamicrovmstypes.MicrovmImageStateDeleted:
+			return true, nil
+		case lambdamicrovmstypes.MicrovmImageStateDeleteFailed:
+			return false, fmt.Errorf("Microvm image %s entered state %s", imageArn, out.State)
+		default:
+			return false, nil
+		}
+	}, wait.WithTimeout(microvmImageDeleteTimeout), wait.WithInterval(microvmImagePollInterval))
+}
+
+func (r *MicrovmImage) createInput() (*awslambdamicrovms.CreateMicrovmImageInput, error) {
+	hooks, resources, err := r.hooksAndResources()
+	if err != nil {
+		return nil, err
+	}
+	in := &awslambdamicrovms.CreateMicrovmImageInput{
+		Name:                     aws.String(r.Name),
+		BaseImageArn:             aws.String(r.BaseImageArn),
+		BuildRoleArn:             aws.String(r.BuildRoleArn),
+		CodeArtifact:             codeArtifactToSDK(r.CodeArtifact),
+		BaseImageVersion:         r.BaseImageVersion,
+		AdditionalOsCapabilities: capabilitiesToSDK(r.AdditionalOsCapabilities),
+		CpuConfigurations:        cpuConfigurationsToSDK(r.CpuConfigurations),
+		Description:              r.Description,
+		EgressNetworkConnectors:  stringSliceValue(r.EgressNetworkConnectors),
+		EnvironmentVariables:     stringMapValue(r.EnvironmentVariables),
+		Hooks:                    hooks,
+		Logging:                  loggingToSDK(r.Logging),
+		Resources:                resources,
+	}
+	if r.Tags != nil {
+		in.Tags = *r.Tags
+	}
+	return in, nil
+}
+
+func (r *MicrovmImage) updateInput(
+	imageArn string,
+) (*awslambdamicrovms.UpdateMicrovmImageInput, error) {
+	hooks, resources, err := r.hooksAndResources()
+	if err != nil {
+		return nil, err
+	}
+	return &awslambdamicrovms.UpdateMicrovmImageInput{
+		ImageIdentifier:          aws.String(imageArn),
+		BaseImageArn:             aws.String(r.BaseImageArn),
+		BuildRoleArn:             aws.String(r.BuildRoleArn),
+		CodeArtifact:             codeArtifactToSDK(r.CodeArtifact),
+		BaseImageVersion:         r.BaseImageVersion,
+		AdditionalOsCapabilities: capabilitiesToSDK(r.AdditionalOsCapabilities),
+		CpuConfigurations:        cpuConfigurationsToSDK(r.CpuConfigurations),
+		Description:              r.Description,
+		EgressNetworkConnectors:  stringSliceValue(r.EgressNetworkConnectors),
+		EnvironmentVariables:     stringMapValue(r.EnvironmentVariables),
+		Hooks:                    hooks,
+		Logging:                  loggingToSDK(r.Logging),
+		Resources:                resources,
+	}, nil
+}
+
+func (r *MicrovmImage) hooksAndResources() (
+	*lambdamicrovmstypes.Hooks,
+	[]lambdamicrovmstypes.Resources,
+	error,
+) {
+	hooks, err := hooksToSDK(r.Hooks)
+	if err != nil {
+		return nil, nil, err
+	}
+	resources, err := resourcesToSDK(r.Resources)
+	if err != nil {
+		return nil, nil, err
+	}
+	return hooks, resources, nil
+}
+
+func (r *MicrovmImage) waitReady(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) error {
+	return r.waitForState(ctx, client, imageArn,
+		map[lambdamicrovmstypes.MicrovmImageState]bool{
+			lambdamicrovmstypes.MicrovmImageStateCreated: true,
+		},
+		map[lambdamicrovmstypes.MicrovmImageState]bool{
+			lambdamicrovmstypes.MicrovmImageStateCreateFailed: true,
+		},
+		microvmImageReadyTimeout)
+}
+
+func (r *MicrovmImage) waitUpdated(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) error {
+	return r.waitForState(ctx, client, imageArn,
+		map[lambdamicrovmstypes.MicrovmImageState]bool{
+			lambdamicrovmstypes.MicrovmImageStateCreated: true,
+			lambdamicrovmstypes.MicrovmImageStateUpdated: true,
+		},
+		map[lambdamicrovmstypes.MicrovmImageState]bool{
+			lambdamicrovmstypes.MicrovmImageStateUpdateFailed: true,
+		},
+		microvmImageReadyTimeout)
+}
+
+func (r *MicrovmImage) waitForState(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+	ready map[lambdamicrovmstypes.MicrovmImageState]bool,
+	failed map[lambdamicrovmstypes.MicrovmImageState]bool,
+	timeout time.Duration,
+) error {
+	return wait.Until(ctx, "Microvm image "+imageArn, func(ctx context.Context) (bool, error) {
+		out, err := client.GetMicrovmImage(ctx, &awslambdamicrovms.GetMicrovmImageInput{
+			ImageIdentifier: aws.String(imageArn),
+		})
+		if err != nil {
+			if isNotFound(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("read Microvm image %s: %w", imageArn, err)
+		}
+		if failed[out.State] {
+			name := aws.ToString(out.Name)
+			if name == "" {
+				name = imageArn
+			}
+			return false, fmt.Errorf("Microvm image %s entered state %s", name, out.State)
+		}
+		return ready[out.State], nil
+	}, wait.WithTimeout(timeout), wait.WithInterval(microvmImagePollInterval))
+}
+
+func (r *MicrovmImage) read(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) (*MicrovmImageOutput, error) {
+	out, err := client.GetMicrovmImage(ctx, &awslambdamicrovms.GetMicrovmImageInput{
+		ImageIdentifier: aws.String(imageArn),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return microvmImageOutputFromGet(out), nil
+}
+
+func (r *MicrovmImage) syncTags(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) error {
+	if r.Tags == nil {
+		return nil
+	}
+	return tagsync.Sync(ctx, *r.Tags,
+		func(ctx context.Context) (map[string]string, error) {
+			out, err := client.ListTags(ctx, &awslambdamicrovms.ListTagsInput{
+				Resource: aws.String(imageArn),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("list Microvm image tags %s: %w", imageArn, err)
+			}
+			return out.Tags, nil
+		},
+		func(ctx context.Context, tags map[string]string) error {
+			_, err := client.TagResource(ctx, &awslambdamicrovms.TagResourceInput{
+				Resource: aws.String(imageArn),
+				Tags:     tags,
+			})
+			if err != nil {
+				return fmt.Errorf("tag Microvm image %s: %w", imageArn, err)
+			}
+			return nil
+		},
+		func(ctx context.Context, keys []string) error {
+			_, err := client.UntagResource(ctx, &awslambdamicrovms.UntagResourceInput{
+				Resource: aws.String(imageArn),
+				TagKeys:  keys,
+			})
+			if err != nil {
+				return fmt.Errorf("untag Microvm image %s: %w", imageArn, err)
+			}
+			return nil
+		})
+}
+
+func (r *MicrovmImage) nonTagInputsChanged(prior MicrovmImage) bool {
+	current := *r
+	current.Tags = nil
+	prior.Tags = nil
+	return !reflect.DeepEqual(prior, current)
+}
+
+func (r *MicrovmImage) tagsChanged(prior MicrovmImage) bool {
+	return r.Tags != nil && !reflect.DeepEqual(prior.Tags, r.Tags)
+}
+
+func capabilitiesToSDK(in *[]string) []lambdamicrovmstypes.Capability {
+	if in == nil {
+		return nil
+	}
+	out := make([]lambdamicrovmstypes.Capability, 0, len(*in))
+	for _, value := range *in {
+		out = append(out, lambdamicrovmstypes.Capability(value))
+	}
+	return out
+}
+
+func stringSliceValue(in *[]string) []string {
+	if in == nil {
+		return nil
+	}
+	return *in
+}
+
+func stringMapValue(in *map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	return *in
 }
