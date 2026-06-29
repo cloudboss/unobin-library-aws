@@ -17,6 +17,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
@@ -40,15 +41,15 @@ const (
 // the pattern, distribution, system fields, role, and transformed-log flag are
 // reconciled in place by PutSubscriptionFilter.
 type SubscriptionFilter struct {
-	DestinationArn         string   `ub:"destination-arn"`
-	LogGroupName           string   `ub:"log-group-name"`
-	Name                   string   `ub:"name"`
-	FilterPattern          string   `ub:"filter-pattern"`
-	Distribution           string   `ub:"distribution"`
-	EmitSystemFields       []string `ub:"emit-system-fields"`
-	FieldSelectionCriteria *string  `ub:"field-selection-criteria"`
-	RoleArn                *string  `ub:"role-arn"`
-	ApplyOnTransformedLogs *bool    `ub:"apply-on-transformed-logs"`
+	DestinationArn         string    `ub:"destination-arn"`
+	LogGroupName           string    `ub:"log-group-name"`
+	Name                   string    `ub:"name"`
+	FilterPattern          string    `ub:"filter-pattern"`
+	Distribution           string    `ub:"distribution"`
+	EmitSystemFields       *[]string `ub:"emit-system-fields"`
+	FieldSelectionCriteria *string   `ub:"field-selection-criteria"`
+	RoleArn                *string   `ub:"role-arn"`
+	ApplyOnTransformedLogs *bool     `ub:"apply-on-transformed-logs"`
 }
 
 // SubscriptionFilterOutput records the two-part handle plus values the service
@@ -74,7 +75,6 @@ func (r *SubscriptionFilter) ReplaceFields() []string {
 func (r SubscriptionFilter) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.Distribution, "ByLogStream"),
-		defaults.Optional(r.EmitSystemFields),
 	}
 }
 
@@ -188,7 +188,7 @@ func (r *SubscriptionFilter) putInput() *cloudwatchlogs.PutSubscriptionFilterInp
 		Distribution: cloudwatchlogstypes.Distribution(
 			effectiveDistribution(r.Distribution)),
 	}
-	if fields := normalizedEmitSystemFields(r.EmitSystemFields); len(fields) > 0 {
+	if fields := normalizedEmitSystemFields(ptr.Value(r.EmitSystemFields)); len(fields) > 0 {
 		in.EmitSystemFields = fields
 	}
 	if r.FieldSelectionCriteria != nil {
@@ -250,7 +250,7 @@ func (r *SubscriptionFilter) shouldPut(
 func (r *SubscriptionFilter) mutableInputChanged(prior SubscriptionFilter) bool {
 	return runtime.Changed(prior.FilterPattern, r.FilterPattern) ||
 		effectiveDistribution(prior.Distribution) != effectiveDistribution(r.Distribution) ||
-		!sameStringSet(prior.EmitSystemFields, r.EmitSystemFields) ||
+		!sameStringSet(ptr.Value(prior.EmitSystemFields), ptr.Value(r.EmitSystemFields)) ||
 		runtime.Changed(prior.FieldSelectionCriteria, r.FieldSelectionCriteria) ||
 		effectiveOptionalString(prior.RoleArn) != effectiveOptionalString(r.RoleArn) ||
 		runtime.Changed(prior.ApplyOnTransformedLogs, r.ApplyOnTransformedLogs)
@@ -306,7 +306,7 @@ func (r *SubscriptionFilter) validate() error {
 	if !validSubscriptionFilterDistribution(effectiveDistribution(r.Distribution)) {
 		return errors.New("distribution must be ByLogStream or Random")
 	}
-	for _, field := range r.EmitSystemFields {
+	for _, field := range ptr.Value(r.EmitSystemFields) {
 		if !validEmitSystemField(field) {
 			return fmt.Errorf("emit-system-fields entry %q must be @aws.account or @aws.region",
 				field)

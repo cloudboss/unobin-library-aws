@@ -7,15 +7,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // Subnets looks up every EC2 subnet matching tag filters and generic
 // DescribeSubnets filters. Empty matches are successful and return an empty ids
 // list; AWS errors fail the read as ordinary data-source errors.
 type Subnets struct {
-	Tags   map[string]string `ub:"tags"`
-	Filter []SubnetsFilter   `ub:"filter"`
+	Tags   *map[string]string `ub:"tags"`
+	Filter *[]SubnetsFilter   `ub:"filter"`
 }
 
 // SubnetsFilter is one DescribeSubnets filter. The name is passed to EC2
@@ -28,14 +28,6 @@ type SubnetsFilter struct {
 // SubnetsOutput holds the matching subnet ids in the order EC2 returns them.
 type SubnetsOutput struct {
 	Ids []string `ub:"ids"`
-}
-
-// Defaults marks the optional collection inputs.
-func (r Subnets) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-		defaults.Optional(r.Filter),
-	}
 }
 
 // Read pages DescribeSubnets in full and returns the matching subnet ids in
@@ -78,14 +70,14 @@ func (r *Subnets) describeInput() *ec2.DescribeSubnetsInput {
 }
 
 func (r *Subnets) describeFilters() []ec2types.Filter {
-	filters := make([]ec2types.Filter, 0, len(r.Tags)+len(r.Filter))
-	for key, value := range r.Tags {
+	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter)))
+	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("tag:" + key),
 			Values: []string{value},
 		})
 	}
-	for _, filter := range r.Filter {
+	for _, filter := range ptr.Value(r.Filter) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String(filter.Name),
 			Values: filter.Values,

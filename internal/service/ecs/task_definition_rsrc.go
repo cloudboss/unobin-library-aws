@@ -14,10 +14,10 @@ import (
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // taskDefinitionFamilyRegexp matches a valid task definition family: 1 to
@@ -42,23 +42,23 @@ var taskDefinitionFamilyRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 // example "1024", "1GB"); both are required for Fargate. The execution-role
 // and task-role inputs take role ARNs.
 type TaskDefinition struct {
-	Family                  string                              `ub:"family"`
-	ContainerDefinitions    []TaskDefinitionContainerDefinition `ub:"container-definitions"`
-	Cpu                     *string                             `ub:"cpu"`
-	EnableFaultInjection    *bool                               `ub:"enable-fault-injection"`
-	EphemeralStorage        *TaskDefinitionEphemeralStorage     `ub:"ephemeral-storage"`
-	ExecutionRoleArn        *string                             `ub:"execution-role-arn"`
-	IpcMode                 *string                             `ub:"ipc-mode"`
-	Memory                  *string                             `ub:"memory"`
-	NetworkMode             *string                             `ub:"network-mode"`
-	PidMode                 *string                             `ub:"pid-mode"`
-	PlacementConstraints    []TaskDefinitionPlacementConstraint `ub:"placement-constraints"`
-	ProxyConfiguration      *TaskDefinitionProxyConfiguration   `ub:"proxy-configuration"`
-	RequiresCompatibilities []string                            `ub:"requires-compatibilities"`
-	RuntimePlatform         *TaskDefinitionRuntimePlatform      `ub:"runtime-platform"`
-	TaskRoleArn             *string                             `ub:"task-role-arn"`
-	Volumes                 []TaskDefinitionVolume              `ub:"volumes"`
-	Tags                    map[string]string                   `ub:"tags"`
+	Family                  string                               `ub:"family"`
+	ContainerDefinitions    []TaskDefinitionContainerDefinition  `ub:"container-definitions"`
+	Cpu                     *string                              `ub:"cpu"`
+	EnableFaultInjection    *bool                                `ub:"enable-fault-injection"`
+	EphemeralStorage        *TaskDefinitionEphemeralStorage      `ub:"ephemeral-storage"`
+	ExecutionRoleArn        *string                              `ub:"execution-role-arn"`
+	IpcMode                 *string                              `ub:"ipc-mode"`
+	Memory                  *string                              `ub:"memory"`
+	NetworkMode             *string                              `ub:"network-mode"`
+	PidMode                 *string                              `ub:"pid-mode"`
+	PlacementConstraints    *[]TaskDefinitionPlacementConstraint `ub:"placement-constraints"`
+	ProxyConfiguration      *TaskDefinitionProxyConfiguration    `ub:"proxy-configuration"`
+	RequiresCompatibilities *[]string                            `ub:"requires-compatibilities"`
+	RuntimePlatform         *TaskDefinitionRuntimePlatform       `ub:"runtime-platform"`
+	TaskRoleArn             *string                              `ub:"task-role-arn"`
+	Volumes                 *[]TaskDefinitionVolume              `ub:"volumes"`
+	Tags                    *map[string]string                   `ub:"tags"`
 }
 
 // TaskDefinitionOutput holds the values ECS computes at registration. The
@@ -95,16 +95,6 @@ func (r *TaskDefinition) ReplaceFields() []string {
 		"runtime-platform",
 		"task-role-arn",
 		"volumes",
-	}
-}
-
-// Defaults marks the collection inputs a task definition may omit.
-func (r TaskDefinition) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.PlacementConstraints),
-		defaults.Optional(r.RequiresCompatibilities),
-		defaults.Optional(r.Volumes),
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -251,10 +241,10 @@ func (r *TaskDefinition) Create(ctx context.Context, cfg *awsCfg) (*TaskDefiniti
 		return nil, errors.New("register task definition: response holds no task definition")
 	}
 	pinned := aws.ToString(resp.TaskDefinition.TaskDefinitionArn)
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if _, err := client.TagResource(ctx, &ecs.TagResourceInput{
 			ResourceArn: aws.String(pinned),
-			Tags:        tagsSDK(r.Tags),
+			Tags:        tagsSDK(ptr.Value(r.Tags)),
 		}); err != nil {
 			return nil, fmt.Errorf("tag task definition: %w", err)
 		}
@@ -308,12 +298,12 @@ func (r *TaskDefinition) Read(
 func (r *TaskDefinition) Update(
 	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TaskDefinition, *TaskDefinitionOutput],
 ) (*TaskDefinitionOutput, error) {
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		client, err := newClient(ctx, cfg)
 		if err != nil {
 			return nil, err
 		}
-		if err := syncResourceTags(ctx, client, prior.Outputs.Arn, r.Tags); err != nil {
+		if err := syncResourceTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -363,11 +353,11 @@ func (r *TaskDefinition) registerInput() *ecs.RegisterTaskDefinitionInput {
 		EphemeralStorage:     r.EphemeralStorage.sdk(),
 		ExecutionRoleArn:     r.ExecutionRoleArn,
 		TaskRoleArn:          r.TaskRoleArn,
-		PlacementConstraints: taskDefinitionPlacementConstraintsSDK(r.PlacementConstraints),
+		PlacementConstraints: taskDefinitionPlacementConstraintsSDK(ptr.Value(r.PlacementConstraints)),
 		ProxyConfiguration:   r.ProxyConfiguration.sdk(),
 		RuntimePlatform:      r.RuntimePlatform.sdk(),
-		Volumes:              taskDefinitionVolumesSDK(r.Volumes),
-		Tags:                 tagsSDK(r.Tags),
+		Volumes:              taskDefinitionVolumesSDK(ptr.Value(r.Volumes)),
+		Tags:                 tagsSDK(ptr.Value(r.Tags)),
 	}
 	if r.NetworkMode != nil {
 		in.NetworkMode = ecstypes.NetworkMode(*r.NetworkMode)
@@ -378,7 +368,7 @@ func (r *TaskDefinition) registerInput() *ecs.RegisterTaskDefinitionInput {
 	if r.PidMode != nil {
 		in.PidMode = ecstypes.PidMode(*r.PidMode)
 	}
-	for _, c := range r.RequiresCompatibilities {
+	for _, c := range ptr.Value(r.RequiresCompatibilities) {
 		in.RequiresCompatibilities = append(in.RequiresCompatibilities,
 			ecstypes.Compatibility(c))
 	}

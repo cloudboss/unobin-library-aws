@@ -131,8 +131,8 @@ func (d *TaskDefinitionVolumeDocker) sdk() *ecstypes.DockerVolumeConfiguration {
 	}
 	out := &ecstypes.DockerVolumeConfiguration{
 		Driver:     d.Driver,
-		DriverOpts: derefStringMap(d.DriverOpts),
-		Labels:     derefStringMap(d.Labels),
+		DriverOpts: ptr.Value(d.DriverOpts),
+		Labels:     ptr.Value(d.Labels),
 	}
 	scope := aws.ToString(d.Scope)
 	if d.Scope != nil {

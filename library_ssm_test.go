@@ -44,7 +44,7 @@ func TestSsmSchemas(t *testing.T) {
 				"insecure-value":  typecheck.TOptional(typecheck.TString()),
 				"key-id":          typecheck.TOptional(typecheck.TString()),
 				"name":            typecheck.TString(),
-				"tags":            typecheck.TMap(typecheck.TString()),
+				"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"tier":            typecheck.TOptional(typecheck.TString()),
 				"type":            typecheck.TString(),
 				"value":           typecheck.TOptional(typecheck.TString()),
@@ -90,15 +90,12 @@ func TestSsmSchemas(t *testing.T) {
 					Message: "data-type must be text, aws:ec2:image, or aws:ssm:integration",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

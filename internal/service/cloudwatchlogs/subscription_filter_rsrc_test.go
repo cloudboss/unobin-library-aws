@@ -30,7 +30,7 @@ func TestSubscriptionFilterPutInput(t *testing.T) {
 		Name:                   "filter",
 		FilterPattern:          "",
 		Distribution:           distributionRandom,
-		EmitSystemFields:       []string{"@aws.region", "@aws.account", "@aws.region"},
+		EmitSystemFields:       &[]string{"@aws.region", "@aws.account", "@aws.region"},
 		FieldSelectionCriteria: &criteria,
 		RoleArn:                &roleArn,
 		ApplyOnTransformedLogs: &applyOnTransformedLogs,
@@ -77,12 +77,12 @@ func TestSubscriptionFilterMutableInputChanged(t *testing.T) {
 			name: "effective defaults and set order match",
 			prior: SubscriptionFilter{
 				FilterPattern:    "",
-				EmitSystemFields: []string{"@aws.region", "@aws.account"},
+				EmitSystemFields: &[]string{"@aws.region", "@aws.account"},
 			},
 			current: SubscriptionFilter{
 				FilterPattern:    "",
 				Distribution:     distributionByLogStream,
-				EmitSystemFields: []string{"@aws.account", "@aws.region", "@aws.account"},
+				EmitSystemFields: &[]string{"@aws.account", "@aws.region", "@aws.account"},
 				RoleArn:          &empty,
 			},
 			want: false,
@@ -100,10 +100,10 @@ func TestSubscriptionFilterMutableInputChanged(t *testing.T) {
 		{
 			name: "system field set changes",
 			prior: SubscriptionFilter{
-				EmitSystemFields: []string{"@aws.account"},
+				EmitSystemFields: &[]string{"@aws.account"},
 			},
 			current: SubscriptionFilter{
-				EmitSystemFields: []string{"@aws.region"},
+				EmitSystemFields: &[]string{"@aws.region"},
 			},
 			want: true,
 		},
@@ -241,7 +241,7 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 		{
 			name: "invalid system field",
 			mutate: func(r *SubscriptionFilter) {
-				r.EmitSystemFields = []string{"@aws.partition"}
+				r.EmitSystemFields = &[]string{"@aws.partition"}
 			},
 			wantErr: "emit-system-fields entry \"@aws.partition\"",
 		},
@@ -349,7 +349,7 @@ func TestSubscriptionFilterValidate(t *testing.T) {
 		{
 			name: "invalid system field",
 			mutate: func(r *SubscriptionFilter) {
-				r.EmitSystemFields = []string{"@aws.partition"}
+				r.EmitSystemFields = &[]string{"@aws.partition"}
 			},
 			wantErr: "emit-system-fields entry \"@aws.partition\"",
 		},

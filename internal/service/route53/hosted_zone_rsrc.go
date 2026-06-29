@@ -11,9 +11,9 @@ import (
 	route53 "github.com/aws/aws-sdk-go-v2/service/route53"
 	route53types "github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
@@ -31,12 +31,12 @@ const zoneRecordDeleteBatch = 100
 // is set, the zone's own records are purged before the zone is deleted, since
 // Route 53 refuses to delete a zone that still holds records.
 type HostedZone struct {
-	Name            string            `ub:"name"`
-	Comment         *string           `ub:"comment"`
-	DelegationSetId *string           `ub:"delegation-set-id"`
-	Vpcs            []HostedZoneVpc   `ub:"vpcs"`
-	ForceDestroy    *bool             `ub:"force-destroy"`
-	Tags            map[string]string `ub:"tags"`
+	Name            string             `ub:"name"`
+	Comment         *string            `ub:"comment"`
+	DelegationSetId *string            `ub:"delegation-set-id"`
+	Vpcs            *[]HostedZoneVpc   `ub:"vpcs"`
+	ForceDestroy    *bool              `ub:"force-destroy"`
+	Tags            *map[string]string `ub:"tags"`
 }
 
 // HostedZoneVpc is one VPC associated with a private hosted zone. The id names
@@ -74,14 +74,6 @@ func (r *HostedZone) ReplaceFields() []string {
 	return []string{"name", "delegation-set-id"}
 }
 
-// Defaults marks the collection inputs a zone may omit.
-func (r HostedZone) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Vpcs),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules Route 53 places on a zone's inputs. A reusable
 // delegation set belongs to a public zone, while any VPC makes the zone
 // private, so the two are mutually exclusive, and every VPC association must
@@ -90,7 +82,10 @@ func (r HostedZone) Defaults() []defaults.Default {
 // are checked in validate rather than declared here.
 func (r HostedZone) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.AtMostOneOf(r.DelegationSetId, r.Vpcs),
+		constraint.Must(constraint.Any(
+			constraint.Absent(r.DelegationSetId),
+			constraint.Not(constraint.NotEmpty(r.Vpcs)))).
+			Message("delegation-set-id and vpcs are mutually exclusive"),
 		constraint.ForEach(r.Vpcs, func(v HostedZoneVpc) []constraint.Constraint {
 			return []constraint.Constraint{
 				constraint.Must(constraint.NotEmpty(v.VpcId)).
@@ -140,8 +135,8 @@ func (r *HostedZone) Create(ctx context.Context, cfg *awsCfg) (*HostedZoneOutput
 	// A private zone can be created with only its first VPC; the rest are
 	// associated after the zone exists. Setting any VPC on the create is what
 	// makes the zone private.
-	if len(r.Vpcs) > 0 {
-		in.VPC = r.Vpcs[0].toSDK(region)
+	if len(ptr.Value(r.Vpcs)) > 0 {
+		in.VPC = ptr.Value(r.Vpcs)[0].toSDK(region)
 	}
 	resp, err := client.CreateHostedZone(ctx, in)
 	if err != nil {
@@ -160,14 +155,14 @@ func (r *HostedZone) Create(ctx context.Context, cfg *awsCfg) (*HostedZoneOutput
 	// every association is in place before the create returns. A public zone has
 	// no VPCs and a private zone's first one rode the create, so there is nothing
 	// to do unless more than one was given.
-	if len(r.Vpcs) > 1 {
-		for _, v := range r.Vpcs[1:] {
+	if len(ptr.Value(r.Vpcs)) > 1 {
+		for _, v := range ptr.Value(r.Vpcs)[1:] {
 			if err := r.associateVPC(ctx, client, zoneID, v.toSDK(region)); err != nil {
 				return nil, err
 			}
 		}
 	}
-	if len(r.Tags) > 0 {
+	if len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client, zoneID); err != nil {
 			return nil, err
 		}
@@ -263,11 +258,11 @@ func (r *HostedZone) Update(
 	// A private zone must always keep at least one VPC, so a changed VPC set adds
 	// the new associations before removing the old ones.
 	if runtime.Changed(prior.Inputs.Vpcs, r.Vpcs) {
-		if err := r.reconcileVPCs(ctx, client, zoneID, region, prior.Inputs.Vpcs); err != nil {
+		if err := r.reconcileVPCs(ctx, client, zoneID, region, ptr.Value(prior.Inputs.Vpcs)); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, zoneID); err != nil {
 			return nil, err
 		}
@@ -326,8 +321,8 @@ func (r *HostedZone) reconcileVPCs(
 	ctx context.Context, client *route53.Client, zoneID, region string, prior []HostedZoneVpc,
 ) error {
 	priorByID := zoneVPCsByID(prior)
-	desiredByID := zoneVPCsByID(r.Vpcs)
-	for _, v := range r.Vpcs {
+	desiredByID := zoneVPCsByID(ptr.Value(r.Vpcs))
+	for _, v := range ptr.Value(r.Vpcs) {
 		if _, ok := priorByID[v.VpcId]; ok {
 			continue
 		}
@@ -510,7 +505,7 @@ func (r *HostedZone) zoneApexName(
 func (r *HostedZone) syncTags(
 	ctx context.Context, client *route53.Client, zoneID string,
 ) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &route53.ListTagsForResourceInput{
 				ResourceId:   aws.String(zoneID),

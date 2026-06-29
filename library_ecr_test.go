@@ -44,15 +44,15 @@ func TestEcrSchemas(t *testing.T) {
 				})),
 				"force-delete":         typecheck.TOptional(typecheck.TBoolean()),
 				"image-tag-mutability": typecheck.TOptional(typecheck.TString()),
-				"image-tag-mutability-exclusion-filters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"image-tag-mutability-exclusion-filters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "filter", Type: typecheck.TString()},
 					{Name: "filter-type", Type: typecheck.TString()},
-				})),
+				}))),
 				"lifecycle-policy":  typecheck.TOptional(typecheck.TString()),
 				"name":              typecheck.TString(),
 				"repository-policy": typecheck.TOptional(typecheck.TString()),
 				"scan-on-push":      typecheck.TOptional(typecheck.TBoolean()),
-				"tags":              typecheck.TMap(typecheck.TString()),
+				"tags":              typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":            typecheck.TString(),
@@ -72,17 +72,15 @@ func TestEcrSchemas(t *testing.T) {
 				},
 				{
 					Kind: "predicate",
-					When: "((input.image-tag-mutability-exclusion-filters != null) && " +
-						"(@core.length(input.image-tag-mutability-exclusion-filters) >= 1))",
+					When: "(@core.length(input.image-tag-mutability-exclusion-filters ?? []) >= 1)",
 					Require: "(input.image-tag-mutability == 'MUTABLE_WITH_EXCLUSION' || " +
 						"input.image-tag-mutability == 'IMMUTABLE_WITH_EXCLUSION')",
 					Message: "exclusion filters require a WITH_EXCLUSION image-tag-mutability",
 				},
 				{
-					Kind: "predicate",
-					When: "true",
-					Require: "(input.image-tag-mutability-exclusion-filters == null || " +
-						"@core.length(input.image-tag-mutability-exclusion-filters) <= 5)",
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.image-tag-mutability-exclusion-filters ?? []) <= 5)",
 					Message: "image-tag-mutability-exclusion-filters holds at most 5 filters",
 				},
 				{
@@ -90,7 +88,7 @@ func TestEcrSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.filter-type == 'WILDCARD')",
 					Message: "a filter type must be WILDCARD",
-					ForEach: "input.image-tag-mutability-exclusion-filters",
+					ForEach: "input.image-tag-mutability-exclusion-filters ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -101,16 +99,12 @@ func TestEcrSchemas(t *testing.T) {
 					Message: "encryption-type must be AES256, KMS, or KMS_DSSE",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.image-tag-mutability-exclusion-filters", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

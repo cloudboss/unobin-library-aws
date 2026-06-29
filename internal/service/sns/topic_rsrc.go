@@ -12,10 +12,10 @@ import (
 	sns "github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
@@ -89,33 +89,33 @@ var standardNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,256}$`)
 // pattern depends on whether the topic is FIFO: a FIFO name must match
 // ^[0-9A-Za-z_-]{1,251}\.fifo$ and a standard name ^[0-9A-Za-z_-]{1,256}$.
 type Topic struct {
-	Name                                 string            `ub:"name"`
-	FifoTopic                            *bool             `ub:"fifo-topic"`
-	FifoThroughputScope                  *string           `ub:"fifo-throughput-scope"`
-	ContentBasedDeduplication            *bool             `ub:"content-based-deduplication"`
-	ArchivePolicy                        *string           `ub:"archive-policy"`
-	DisplayName                          *string           `ub:"display-name"`
-	Policy                               *string           `ub:"policy"`
-	DeliveryPolicy                       *string           `ub:"delivery-policy"`
-	KmsMasterKeyID                       *string           `ub:"kms-master-key-id"`
-	SignatureVersion                     *string           `ub:"signature-version"`
-	TracingConfig                        *string           `ub:"tracing-config"`
-	HTTPSuccessFeedbackRoleArn           *string           `ub:"http-success-feedback-role-arn"`
-	HTTPSuccessFeedbackSampleRate        *int64            `ub:"http-success-feedback-sample-rate"`
-	HTTPFailureFeedbackRoleArn           *string           `ub:"http-failure-feedback-role-arn"`
-	SQSSuccessFeedbackRoleArn            *string           `ub:"sqs-success-feedback-role-arn"`
-	SQSSuccessFeedbackSampleRate         *int64            `ub:"sqs-success-feedback-sample-rate"`
-	SQSFailureFeedbackRoleArn            *string           `ub:"sqs-failure-feedback-role-arn"`
-	ApplicationSuccessFeedbackRoleArn    *string           `ub:"application-success-feedback-role-arn"`
-	ApplicationSuccessFeedbackSampleRate *int64            `ub:"application-success-feedback-sample-rate"`
-	ApplicationFailureFeedbackRoleArn    *string           `ub:"application-failure-feedback-role-arn"`
-	FirehoseSuccessFeedbackRoleArn       *string           `ub:"firehose-success-feedback-role-arn"`
-	FirehoseSuccessFeedbackSampleRate    *int64            `ub:"firehose-success-feedback-sample-rate"`
-	FirehoseFailureFeedbackRoleArn       *string           `ub:"firehose-failure-feedback-role-arn"`
-	LambdaSuccessFeedbackRoleArn         *string           `ub:"lambda-success-feedback-role-arn"`
-	LambdaSuccessFeedbackSampleRate      *int64            `ub:"lambda-success-feedback-sample-rate"`
-	LambdaFailureFeedbackRoleArn         *string           `ub:"lambda-failure-feedback-role-arn"`
-	Tags                                 map[string]string `ub:"tags"`
+	Name                                 string             `ub:"name"`
+	FifoTopic                            *bool              `ub:"fifo-topic"`
+	FifoThroughputScope                  *string            `ub:"fifo-throughput-scope"`
+	ContentBasedDeduplication            *bool              `ub:"content-based-deduplication"`
+	ArchivePolicy                        *string            `ub:"archive-policy"`
+	DisplayName                          *string            `ub:"display-name"`
+	Policy                               *string            `ub:"policy"`
+	DeliveryPolicy                       *string            `ub:"delivery-policy"`
+	KmsMasterKeyID                       *string            `ub:"kms-master-key-id"`
+	SignatureVersion                     *string            `ub:"signature-version"`
+	TracingConfig                        *string            `ub:"tracing-config"`
+	HTTPSuccessFeedbackRoleArn           *string            `ub:"http-success-feedback-role-arn"`
+	HTTPSuccessFeedbackSampleRate        *int64             `ub:"http-success-feedback-sample-rate"`
+	HTTPFailureFeedbackRoleArn           *string            `ub:"http-failure-feedback-role-arn"`
+	SQSSuccessFeedbackRoleArn            *string            `ub:"sqs-success-feedback-role-arn"`
+	SQSSuccessFeedbackSampleRate         *int64             `ub:"sqs-success-feedback-sample-rate"`
+	SQSFailureFeedbackRoleArn            *string            `ub:"sqs-failure-feedback-role-arn"`
+	ApplicationSuccessFeedbackRoleArn    *string            `ub:"application-success-feedback-role-arn"`
+	ApplicationSuccessFeedbackSampleRate *int64             `ub:"application-success-feedback-sample-rate"`
+	ApplicationFailureFeedbackRoleArn    *string            `ub:"application-failure-feedback-role-arn"`
+	FirehoseSuccessFeedbackRoleArn       *string            `ub:"firehose-success-feedback-role-arn"`
+	FirehoseSuccessFeedbackSampleRate    *int64             `ub:"firehose-success-feedback-sample-rate"`
+	FirehoseFailureFeedbackRoleArn       *string            `ub:"firehose-failure-feedback-role-arn"`
+	LambdaSuccessFeedbackRoleArn         *string            `ub:"lambda-success-feedback-role-arn"`
+	LambdaSuccessFeedbackSampleRate      *int64             `ub:"lambda-success-feedback-sample-rate"`
+	LambdaFailureFeedbackRoleArn         *string            `ub:"lambda-failure-feedback-role-arn"`
+	Tags                                 *map[string]string `ub:"tags"`
 }
 
 // TopicOutput holds the values SNS computes for a topic. The ARN is the topic's
@@ -138,13 +138,6 @@ func (r *Topic) ReplaceFields() []string {
 	return []string{
 		"name",
 		"fifo-topic",
-	}
-}
-
-// Defaults marks the collection inputs a topic may omit.
-func (r Topic) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -209,7 +202,7 @@ func (r *Topic) Create(ctx context.Context, cfg *awsCfg) (*TopicOutput, error) {
 	in := &sns.CreateTopicInput{
 		Name:       aws.String(r.Name),
 		Attributes: r.createAttributes(),
-		Tags:       topicTags(r.Tags),
+		Tags:       topicTags(ptr.Value(r.Tags)),
 	}
 	// Some partitions, such as the ISO partitions, cannot tag a topic as it is
 	// created. When the tagged create fails for that reason, create the topic
@@ -231,7 +224,7 @@ func (r *Topic) Create(ctx context.Context, cfg *awsCfg) (*TopicOutput, error) {
 	if err := r.putAttributes(ctx, client, topicArn, r.followOnAttributes()); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client, topicArn); err != nil {
 			return nil, err
 		}
@@ -292,7 +285,7 @@ func (r *Topic) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, topicArn); err != nil {
 			return nil, err
 		}
@@ -514,7 +507,7 @@ func (r *Topic) putAttribute(
 // tags through ListTagsForResource and writing changes with TagResource and
 // UntagResource. SNS addresses a topic's tags by its ARN.
 func (r *Topic) syncTags(ctx context.Context, client *sns.Client, topicArn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,
 				&sns.ListTagsForResourceInput{ResourceArn: aws.String(topicArn)})

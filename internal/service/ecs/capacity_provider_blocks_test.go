@@ -135,7 +135,8 @@ func TestCapacityProviderManagedInstancesOutputIncludesCompleteDefaultedBlock(t 
 	assert.Equal(t, "ON_DEMAND", aws.ToString(got.InstanceLaunchTemplate.CapacityOptionType))
 	assert.Equal(t, "arn:aws:iam::123456789012:instance-profile/ecs",
 		got.InstanceLaunchTemplate.Ec2InstanceProfileArn)
-	assert.Equal(t, []string{"sg-1"}, got.InstanceLaunchTemplate.NetworkConfiguration.SecurityGroups)
+	require.NotNil(t, got.InstanceLaunchTemplate.NetworkConfiguration.SecurityGroups)
+	assert.Equal(t, []string{"sg-1"}, *got.InstanceLaunchTemplate.NetworkConfiguration.SecurityGroups)
 	assert.Equal(t, []string{"subnet-1"}, got.InstanceLaunchTemplate.NetworkConfiguration.Subnets)
 }
 
@@ -184,9 +185,9 @@ func TestCapacityProviderTagsNeedSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &CapacityProvider{Tags: tt.desired}
+			r := &CapacityProvider{Tags: &tt.desired}
 			prior := runtime.Prior[CapacityProvider, *CapacityProviderOutput]{
-				Inputs:   CapacityProvider{Tags: tt.previous},
+				Inputs:   CapacityProvider{Tags: &tt.previous},
 				Observed: &CapacityProviderOutput{Tags: tt.observed},
 			}
 

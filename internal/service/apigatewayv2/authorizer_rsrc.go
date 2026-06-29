@@ -13,7 +13,6 @@ import (
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -44,7 +43,7 @@ var (
 type Authorizer struct {
 	ApiId                          string                      `ub:"api-id"`
 	AuthorizerType                 string                      `ub:"authorizer-type"`
-	IdentitySources                []string                    `ub:"identity-sources"`
+	IdentitySources                *[]string                   `ub:"identity-sources"`
 	Name                           string                      `ub:"name"`
 	AuthorizerCredentialsArn       *string                     `ub:"authorizer-credentials-arn"`
 	AuthorizerPayloadFormatVersion *string                     `ub:"authorizer-payload-format-version"`
@@ -76,11 +75,6 @@ func (r *Authorizer) SchemaVersion() int { return 1 }
 // ReplaceFields lists the one field API Gateway cannot change in place.
 func (r *Authorizer) ReplaceFields() []string {
 	return []string{"api-id"}
-}
-
-// Defaults marks the identity source list optional.
-func (r Authorizer) Defaults() []defaults.Default {
-	return []defaults.Default{defaults.Optional(r.IdentitySources)}
 }
 
 // Constraints declares the local authorizer rules. The ARN syntax and
@@ -253,7 +247,7 @@ func (r *Authorizer) getParentAPI(
 func (r *Authorizer) createInput(
 	protocol apigatewayv2types.ProtocolType,
 ) *apigatewayv2.CreateAuthorizerInput {
-	identitySources := authorizerStringSet(r.IdentitySources)
+	identitySources := authorizerStringSet(ptr.Value(r.IdentitySources))
 	in := &apigatewayv2.CreateAuthorizerInput{
 		ApiId:          aws.String(r.ApiId),
 		AuthorizerType: apigatewayv2types.AuthorizerType(r.AuthorizerType),
@@ -322,8 +316,8 @@ func (r *Authorizer) updateInput(
 		in.EnableSimpleResponses = aws.Bool(aws.ToBool(r.EnableSimpleResponses))
 		changed = true
 	}
-	if authorizerStringSetChanged(prior.Inputs.IdentitySources, r.IdentitySources) {
-		in.IdentitySource = authorizerStringSet(r.IdentitySources)
+	if authorizerStringSetChanged(ptr.Value(prior.Inputs.IdentitySources), ptr.Value(r.IdentitySources)) {
+		in.IdentitySource = authorizerStringSet(ptr.Value(r.IdentitySources))
 		changed = true
 	}
 	if authorizerJwtConfigurationChanged(

@@ -51,7 +51,7 @@ func TestLambdaSchemas(t *testing.T) {
 	resources := map[string]*runtime.TypeSchema{
 		"lambda-function": {
 			Inputs: map[string]typecheck.Type{
-				"architectures": typecheck.TList(typecheck.TString()),
+				"architectures": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"code": typecheck.TObject([]typecheck.ObjectField{
 					{Name: "zip-file-content", Type: typecheck.TString(), Optional: true},
 					{Name: "zip-file-path", Type: typecheck.TString(), Optional: true},
@@ -72,10 +72,10 @@ func TestLambdaSchemas(t *testing.T) {
 				"ephemeral-storage": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "size", Type: typecheck.TInteger(), Optional: true},
 				})),
-				"file-system-configs": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"file-system-configs": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "arn", Type: typecheck.TString()},
 					{Name: "local-mount-path", Type: typecheck.TString()},
-				})),
+				}))),
 				"function-name": typecheck.TString(),
 				"handler":       typecheck.TOptional(typecheck.TString()),
 				"image-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
@@ -84,7 +84,7 @@ func TestLambdaSchemas(t *testing.T) {
 					{Name: "working-directory", Type: typecheck.TString(), Optional: true},
 				})),
 				"kms-key-arn": typecheck.TOptional(typecheck.TString()),
-				"layers":      typecheck.TList(typecheck.TString()),
+				"layers":      typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"logging-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "log-format", Type: typecheck.TString(), Optional: true},
 					{Name: "log-group", Type: typecheck.TString(), Optional: true},
@@ -101,7 +101,7 @@ func TestLambdaSchemas(t *testing.T) {
 				"snap-start": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "apply-on", Type: typecheck.TString(), Optional: true},
 				})),
-				"tags":    typecheck.TMap(typecheck.TString()),
+				"tags":    typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"timeout": typecheck.TOptional(typecheck.TInteger()),
 				"tracing-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "mode", Type: typecheck.TString(), Optional: true},
@@ -175,6 +175,15 @@ func TestLambdaSchemas(t *testing.T) {
 					When:    "(input.package-type != null)",
 					Require: "(input.package-type == 'Zip' || input.package-type == 'Image')",
 					Message: "package-type must be Zip or Image",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.architectures != null)",
+					Require: "(input.architectures == null || " +
+						"@core.length(input.architectures) >= 1) && " +
+						"(input.architectures == null || " +
+						"@core.length(input.architectures) <= 1)",
+					Message: "architectures must hold exactly one value when given",
 				},
 				{
 					Kind: "predicate",
@@ -265,12 +274,6 @@ func TestLambdaSchemas(t *testing.T) {
 					Message: "ephemeral-storage size must be between 512 and 10240",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.architectures", Optional: true},
-				{Field: "input.layers", Optional: true},
-				{Field: "input.file-system-configs", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"lambda-alias": {
 			Inputs: map[string]typecheck.Type{
@@ -356,7 +359,7 @@ func TestLambdaSchemas(t *testing.T) {
 					}))},
 				})),
 				"function-name":           typecheck.TString(),
-				"function-response-types": typecheck.TList(typecheck.TString()),
+				"function-response-types": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"kms-key-arn":             typecheck.TOptional(typecheck.TString()),
 				"logging-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "system-log-level", Type: typecheck.TString(), Optional: true},
@@ -373,7 +376,7 @@ func TestLambdaSchemas(t *testing.T) {
 					{Name: "maximum-pollers", Type: typecheck.TInteger(), Optional: true},
 					{Name: "poller-group-name", Type: typecheck.TString(), Optional: true},
 				})),
-				"queues": typecheck.TList(typecheck.TString()),
+				"queues": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"scaling-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "maximum-concurrency", Type: typecheck.TInteger(), Optional: true},
 				})),
@@ -394,14 +397,14 @@ func TestLambdaSchemas(t *testing.T) {
 						}))},
 					}), Optional: true},
 				})),
-				"source-access-configurations": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"source-access-configurations": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "type", Type: typecheck.TString(), Optional: true},
 					{Name: "uri", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 				"starting-position":           typecheck.TOptional(typecheck.TString()),
 				"starting-position-timestamp": typecheck.TOptional(typecheck.TString()),
-				"tags":                        typecheck.TMap(typecheck.TString()),
-				"topics":                      typecheck.TList(typecheck.TString()),
+				"tags":                        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"topics":                      typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"tumbling-window-in-seconds":  typecheck.TOptional(typecheck.TInteger()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -558,7 +561,7 @@ func TestLambdaSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value == 'ReportBatchItemFailures')",
 					Message: "function-response-types values must be ReportBatchItemFailures",
-					ForEach: "input.function-response-types",
+					ForEach: "input.function-response-types ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -581,7 +584,7 @@ func TestLambdaSchemas(t *testing.T) {
 						"@each.value.type == 'CLIENT_CERTIFICATE_TLS_AUTH' || " +
 						"@each.value.type == 'SERVER_ROOT_CA_CERTIFICATE')",
 					Message: "a source-access-configuration type must be a valid auth or VPC type",
-					ForEach: "input.source-access-configurations",
+					ForEach: "input.source-access-configurations ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -617,13 +620,6 @@ func TestLambdaSchemas(t *testing.T) {
 					Message: "a schema-registry validation attribute must be KEY or VALUE",
 					ForEach: "input.self-managed-kafka-event-source-config.schema-registry-config.schema-validation-configs",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.function-response-types", Optional: true},
-				{Field: "input.queues", Optional: true},
-				{Field: "input.topics", Optional: true},
-				{Field: "input.source-access-configurations", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"lambda-function-url": {
@@ -676,7 +672,7 @@ func TestLambdaSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 
@@ -722,7 +718,7 @@ func TestLambdaSchemas(t *testing.T) {
 	for key, want := range actions {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Actions, key)
-			assert.Equal(t, want, schema.Actions[key])
+			assertTypeSchemaEqual(t, want, schema.Actions[key])
 		})
 	}
 }

@@ -13,9 +13,9 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // AMI looks up a single EC2 AMI with DescribeImages and selects one
@@ -40,14 +40,14 @@ import (
 // instance id is expected, and nothing downstream consumes it, so uefi-data is
 // omitted from the output.
 type AMI struct {
-	Owners            []string    `ub:"owners"`
-	ExecutableUsers   []string    `ub:"executable-users"`
-	Filters           []AMIFilter `ub:"filters"`
-	ImageIds          []string    `ub:"image-ids"`
-	IncludeDeprecated *bool       `ub:"include-deprecated"`
-	MostRecent        *bool       `ub:"most-recent"`
-	NameRegex         *string     `ub:"name-regex"`
-	AllowUnsafeFilter *bool       `ub:"allow-unsafe-filter"`
+	Owners            *[]string    `ub:"owners"`
+	ExecutableUsers   *[]string    `ub:"executable-users"`
+	Filters           *[]AMIFilter `ub:"filters"`
+	ImageIds          *[]string    `ub:"image-ids"`
+	IncludeDeprecated *bool        `ub:"include-deprecated"`
+	MostRecent        *bool        `ub:"most-recent"`
+	NameRegex         *string      `ub:"name-regex"`
+	AllowUnsafeFilter *bool        `ub:"allow-unsafe-filter"`
 }
 
 // AMIFilter is one DescribeImages filter: a filter name and the values to match,
@@ -84,16 +84,6 @@ type AMIOutput struct {
 	EnaSupport         bool   `ub:"ena-support"`
 	SriovNetSupport    string `ub:"sriov-net-support"`
 	State              string `ub:"state"`
-}
-
-// Defaults marks the collection inputs an AMI lookup may omit.
-func (r AMI) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Owners),
-		defaults.Optional(r.ExecutableUsers),
-		defaults.Optional(r.Filters),
-		defaults.Optional(r.ImageIds),
-	}
 }
 
 // Constraints declares the input rules expressible as a derived schema. The
@@ -164,7 +154,7 @@ func (r *AMI) compileNameRegex() (*regexp.Regexp, error) {
 // the second half of Terraform's owners validation that a derived constraint
 // cannot express.
 func (r *AMI) checkOwnersElements() error {
-	if slices.Contains(r.Owners, "") {
+	if r.Owners != nil && slices.Contains(*r.Owners, "") {
 		return errors.New("owners must not contain an empty value")
 	}
 	return nil
@@ -180,10 +170,10 @@ func (r *AMI) checkUnsafeFilter() error {
 	if !aws.ToBool(r.MostRecent) || aws.ToBool(r.AllowUnsafeFilter) {
 		return nil
 	}
-	if len(r.Owners) > 0 || len(r.ImageIds) > 0 {
+	if (r.Owners != nil && len(*r.Owners) > 0) || len(ptr.Value(r.ImageIds)) > 0 {
 		return nil
 	}
-	for _, f := range r.Filters {
+	for _, f := range ptr.Value(r.Filters) {
 		if f.Name == "image-id" || f.Name == "owner-id" {
 			return nil
 		}
@@ -205,17 +195,17 @@ func (r *AMI) findImages(
 	in := &ec2.DescribeImagesInput{
 		IncludeDeprecated: aws.Bool(aws.ToBool(r.IncludeDeprecated)),
 	}
-	if len(r.ExecutableUsers) > 0 {
-		in.ExecutableUsers = r.ExecutableUsers
+	if len(ptr.Value(r.ExecutableUsers)) > 0 {
+		in.ExecutableUsers = ptr.Value(r.ExecutableUsers)
 	}
-	if len(r.Owners) > 0 {
-		in.Owners = r.Owners
+	if r.Owners != nil && len(*r.Owners) > 0 {
+		in.Owners = *r.Owners
 	}
-	if len(r.ImageIds) > 0 {
-		in.ImageIds = r.ImageIds
+	if len(ptr.Value(r.ImageIds)) > 0 {
+		in.ImageIds = ptr.Value(r.ImageIds)
 	}
-	if len(r.Filters) > 0 {
-		in.Filters = toFilters(r.Filters)
+	if len(ptr.Value(r.Filters)) > 0 {
+		in.Filters = toFilters(ptr.Value(r.Filters))
 	}
 	var images []ec2types.Image
 	paginator := ec2.NewDescribeImagesPaginator(client, in)

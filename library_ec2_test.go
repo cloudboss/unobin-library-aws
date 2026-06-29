@@ -91,7 +91,7 @@ func TestEc2VpcSchema(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, want, schema.Resources["ec2-vpc"])
+	assertTypeSchemaEqual(t, want, schema.Resources["ec2-vpc"])
 }
 
 // TestLibraryRegistersEc2SecurityGroups checks the runtime registration: the
@@ -129,7 +129,7 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 			"prefix-list-id":               typecheck.TOptional(typecheck.TString()),
 			"referenced-security-group-id": typecheck.TOptional(typecheck.TString()),
 			"description":                  typecheck.TOptional(typecheck.TString()),
-			"tags":                         typecheck.TMap(typecheck.TString()),
+			"tags":                         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"security-group-rule-id": typecheck.TString(),
@@ -158,9 +158,6 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 				Message: "to-port must be between -1 and 65535",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
 
 	cases := map[string]*runtime.TypeSchema{
@@ -170,7 +167,7 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 				"name-prefix":            typecheck.TOptional(typecheck.TString()),
 				"description":            typecheck.TString(),
 				"vpc-id":                 typecheck.TOptional(typecheck.TString()),
-				"tags":                   typecheck.TMap(typecheck.TString()),
+				"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"revoke-rules-on-delete": typecheck.TOptional(typecheck.TBoolean()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -184,9 +181,6 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 					Fields: []string{"input.name", "input.name-prefix"},
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"ec2-security-group-ingress-rule": ruleSchema,
 		"ec2-security-group-egress-rule":  ruleSchema,
@@ -195,7 +189,7 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }
@@ -236,7 +230,7 @@ func TestEc2SubnetSchema(t *testing.T) {
 			"map-public-ip-on-launch":                        typecheck.TOptional(typecheck.TBoolean()),
 			"outpost-arn":                                    typecheck.TOptional(typecheck.TString()),
 			"private-dns-hostname-type-on-launch":            typecheck.TOptional(typecheck.TString()),
-			"tags":                                           typecheck.TMap(typecheck.TString()),
+			"tags":                                           typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"vpc-id":                                         typecheck.TString(),
 		},
 		Outputs: map[string]typecheck.Type{
@@ -315,11 +309,8 @@ func TestEc2SubnetSchema(t *testing.T) {
 				Message: "enable-lni-at-device-index must be a positive device position",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.Resources["ec2-subnet"])
+	assertTypeSchemaEqual(t, want, schema.Resources["ec2-subnet"])
 }
 
 // TestLibraryRegistersEc2Volume checks the runtime registration: ec2-volume
@@ -349,7 +340,7 @@ func TestEc2VolumeSchema(t *testing.T) {
 			"outpost-arn":                typecheck.TOptional(typecheck.TString()),
 			"size":                       typecheck.TOptional(typecheck.TInteger()),
 			"snapshot-id":                typecheck.TOptional(typecheck.TString()),
-			"tags":                       typecheck.TMap(typecheck.TString()),
+			"tags":                       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"throughput":                 typecheck.TOptional(typecheck.TInteger()),
 			"type":                       typecheck.TOptional(typecheck.TString()),
 			"volume-initialization-rate": typecheck.TOptional(typecheck.TInteger()),
@@ -416,11 +407,8 @@ func TestEc2VolumeSchema(t *testing.T) {
 				Message: "volume-initialization-rate requires snapshot-id and must be 100 to 300",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.Resources["ec2-volume"])
+	assertTypeSchemaEqual(t, want, schema.Resources["ec2-volume"])
 }
 
 // TestLibraryRegistersEc2LaunchTemplate checks the runtime registration:
@@ -582,7 +570,7 @@ func TestEc2LaunchTemplateSchema(t *testing.T) {
 			}),
 			"default-version":        typecheck.TOptional(typecheck.TInteger()),
 			"name":                   typecheck.TString(),
-			"tags":                   typecheck.TMap(typecheck.TString()),
+			"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"update-default-version": typecheck.TOptional(typecheck.TBoolean()),
 			"version-description":    typecheck.TOptional(typecheck.TString()),
 		},
@@ -756,11 +744,8 @@ func TestEc2LaunchTemplateSchema(t *testing.T) {
 				Message: "metadata-options http-put-response-hop-limit must be between 1 and 64",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want,
+	assertTypeSchemaEqual(t, want,
 		schema.Resources["ec2-launch-template"])
 }
 
@@ -782,16 +767,16 @@ func TestEc2AmiSchema(t *testing.T) {
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
 			"allow-unsafe-filter": typecheck.TOptional(typecheck.TBoolean()),
-			"executable-users":    typecheck.TList(typecheck.TString()),
-			"filters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"executable-users":    typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"filters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "name", Type: typecheck.TString()},
 				{Name: "values", Type: typecheck.TList(typecheck.TString())},
-			})),
-			"image-ids":          typecheck.TList(typecheck.TString()),
+			}))),
+			"image-ids":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			"include-deprecated": typecheck.TOptional(typecheck.TBoolean()),
 			"most-recent":        typecheck.TOptional(typecheck.TBoolean()),
 			"name-regex":         typecheck.TOptional(typecheck.TString()),
-			"owners":             typecheck.TList(typecheck.TString()),
+			"owners":             typecheck.TOptional(typecheck.TList(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"architecture":        typecheck.TString(),
@@ -810,20 +795,15 @@ func TestEc2AmiSchema(t *testing.T) {
 		},
 		Constraints: []lang.ConstraintSpec{
 			{
-				Kind:    "predicate",
-				When:    "(input.owners != null)",
-				Require: "(input.owners == null || @core.length(input.owners) >= 1)",
+				Kind: "predicate",
+				When: "(input.owners != null)",
+				Require: "(input.owners == null || " +
+					"@core.length(input.owners) >= 1)",
 				Message: "owners must list at least one owner when given",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.owners", Optional: true},
-			{Field: "input.executable-users", Optional: true},
-			{Field: "input.filters", Optional: true},
-			{Field: "input.image-ids", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-ami"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-ami"])
 }
 
 // TestLibraryRegistersEc2Routing checks the runtime registration: the seven
@@ -867,7 +847,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 			key: "ec2-internet-gateway",
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
-					"tags":   typecheck.TMap(typecheck.TString()),
+					"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"vpc-id": typecheck.TOptional(typecheck.TString()),
 				},
 				Outputs: map[string]typecheck.Type{
@@ -875,24 +855,18 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"owner-id":            typecheck.TString(),
 					"vpc-id":              typecheck.TString(),
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
 			key: "ec2-route-table",
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
-					"tags":   typecheck.TMap(typecheck.TString()),
+					"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"vpc-id": typecheck.TString(),
 				},
 				Outputs: map[string]typecheck.Type{
 					"owner-id":       typecheck.TString(),
 					"route-table-id": typecheck.TString(),
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -1004,7 +978,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"ipam-pool-id":             typecheck.TOptional(typecheck.TString()),
 					"network-border-group":     typecheck.TOptional(typecheck.TString()),
 					"public-ipv4-pool":         typecheck.TOptional(typecheck.TString()),
-					"tags":                     typecheck.TMap(typecheck.TString()),
+					"tags":                     typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"allocation-id":  typecheck.TString(),
@@ -1020,9 +994,6 @@ func TestEc2RoutingSchemas(t *testing.T) {
 						Message: "domain must be vpc or standard",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
@@ -1032,14 +1003,14 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"allocation-id":     typecheck.TOptional(typecheck.TString()),
 					"connectivity-type": typecheck.TOptional(typecheck.TString()),
 					"private-ip":        typecheck.TOptional(typecheck.TString()),
-					"secondary-allocation-ids": typecheck.TList(
-						typecheck.TString()),
+					"secondary-allocation-ids": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
 					"secondary-private-ip-address-count": typecheck.TOptional(
 						typecheck.TInteger()),
-					"secondary-private-ip-addresses": typecheck.TList(
-						typecheck.TString()),
+					"secondary-private-ip-addresses": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
 					"subnet-id": typecheck.TString(),
-					"tags":      typecheck.TMap(typecheck.TString()),
+					"tags":      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"nat-gateway-id":       typecheck.TString(),
@@ -1069,9 +1040,10 @@ func TestEc2RoutingSchemas(t *testing.T) {
 						Message: "allocation-id is not supported with connectivity-type private",
 					},
 					{
-						Kind:    "predicate",
-						When:    "(input.connectivity-type == 'private')",
-						Require: "(input.secondary-allocation-ids == null)",
+						Kind: "predicate",
+						When: "(input.connectivity-type == 'private')",
+						Require: "(input.secondary-allocation-ids == null || " +
+							"@core.length(input.secondary-allocation-ids) <= 0)",
 						Message: "secondary-allocation-ids is not supported with " +
 							"connectivity-type private",
 					},
@@ -1083,17 +1055,14 @@ func TestEc2RoutingSchemas(t *testing.T) {
 							"connectivity-type private",
 					},
 					{
-						Kind: "at-most-one-of",
-						Fields: []string{
-							"input.secondary-private-ip-address-count",
-							"input.secondary-private-ip-addresses",
-						},
+						Kind: "predicate",
+						When: "true",
+						Require: "((input.secondary-private-ip-address-count == null) || " +
+							"!((input.secondary-private-ip-addresses != null) && " +
+							"(@core.length(input.secondary-private-ip-addresses) >= 1)))",
+						Message: "secondary-private-ip-address-count and " +
+							"secondary-private-ip-addresses are mutually exclusive",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.secondary-allocation-ids", Optional: true},
-					{Field: "input.secondary-private-ip-addresses", Optional: true},
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -1117,11 +1086,11 @@ func TestEc2RoutingSchemas(t *testing.T) {
 					"ip-address-type":     typecheck.TOptional(typecheck.TString()),
 					"policy":              typecheck.TOptional(typecheck.TString()),
 					"private-dns-enabled": typecheck.TOptional(typecheck.TBoolean()),
-					"route-table-ids":     typecheck.TList(typecheck.TString()),
-					"security-group-ids":  typecheck.TList(typecheck.TString()),
+					"route-table-ids":     typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"security-group-ids":  typecheck.TOptional(typecheck.TList(typecheck.TString())),
 					"service-name":        typecheck.TString(),
-					"subnet-ids":          typecheck.TList(typecheck.TString()),
-					"tags":                typecheck.TMap(typecheck.TString()),
+					"subnet-ids":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"vpc-endpoint-type":   typecheck.TOptional(typecheck.TString()),
 					"vpc-id":              typecheck.TString(),
 				},
@@ -1168,19 +1137,13 @@ func TestEc2RoutingSchemas(t *testing.T) {
 							"dualstack, ipv6, or service-defined",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.route-table-ids", Optional: true},
-					{Field: "input.security-group-ids", Optional: true},
-					{Field: "input.subnet-ids", Optional: true},
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, tt.key)
-			assert.Equal(t, tt.want, schema.Resources[tt.key],
+			assertTypeSchemaEqual(t, tt.want, schema.Resources[tt.key],
 				tt.key)
 		})
 	}
@@ -1204,18 +1167,15 @@ func TestEc2KeyPairSchema(t *testing.T) {
 		Inputs: map[string]typecheck.Type{
 			"key-name":   typecheck.TString(),
 			"public-key": typecheck.TString(),
-			"tags":       typecheck.TMap(typecheck.TString()),
+			"tags":       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"fingerprint": typecheck.TString(),
 			"key-pair-id": typecheck.TString(),
 			"key-type":    typecheck.TString(),
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.Resources["ec2-key-pair"])
+	assertTypeSchemaEqual(t, want, schema.Resources["ec2-key-pair"])
 }
 
 // TestLibraryRegistersEc2Instance checks the runtime registration: ec2-instance
@@ -1242,7 +1202,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 			"availability-zone":           typecheck.TOptional(typecheck.TString()),
 			"disable-api-stop":            typecheck.TOptional(typecheck.TBoolean()),
 			"disable-api-termination":     typecheck.TOptional(typecheck.TBoolean()),
-			"ebs-block-device": typecheck.TList(typecheck.TObject(
+			"ebs-block-device": typecheck.TOptional(typecheck.TList(typecheck.TObject(
 				[]typecheck.ObjectField{
 					{Name: "device-name", Type: typecheck.TString()},
 					{
@@ -1257,14 +1217,14 @@ func TestEc2InstanceSchema(t *testing.T) {
 					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
 					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
 					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 			"ebs-optimized": typecheck.TOptional(typecheck.TBoolean()),
-			"ephemeral-block-device": typecheck.TList(typecheck.TObject(
+			"ephemeral-block-device": typecheck.TOptional(typecheck.TList(typecheck.TObject(
 				[]typecheck.ObjectField{
 					{Name: "device-name", Type: typecheck.TString()},
 					{Name: "no-device", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "virtual-name", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 			"force-destroy":        typecheck.TOptional(typecheck.TBoolean()),
 			"iam-instance-profile": typecheck.TOptional(typecheck.TString()),
 			"instance-initiated-shutdown-behavior": typecheck.TOptional(
@@ -1320,12 +1280,12 @@ func TestEc2InstanceSchema(t *testing.T) {
 				})),
 			"source-dest-check":      typecheck.TOptional(typecheck.TBoolean()),
 			"subnet-id":              typecheck.TOptional(typecheck.TString()),
-			"tags":                   typecheck.TMap(typecheck.TString()),
+			"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"tenancy":                typecheck.TOptional(typecheck.TString()),
 			"user-data":              typecheck.TOptional(typecheck.TString()),
 			"user-data-base64":       typecheck.TOptional(typecheck.TString()),
-			"volume-tags":            typecheck.TMap(typecheck.TString()),
-			"vpc-security-group-ids": typecheck.TList(typecheck.TString()),
+			"volume-tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"vpc-security-group-ids": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"availability-zone":            typecheck.TString(),
@@ -1368,6 +1328,13 @@ func TestEc2InstanceSchema(t *testing.T) {
 				Require: "(input.tenancy == 'default' || input.tenancy == 'dedicated' || " +
 					"input.tenancy == 'host')",
 				Message: "tenancy must be default, dedicated, or host",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.vpc-security-group-ids != null)",
+				Require: "(input.vpc-security-group-ids == null || " +
+					"@core.length(input.vpc-security-group-ids) >= 1)",
+				Message: "vpc-security-group-ids must list at least one group when given",
 			},
 			{
 				Kind: "predicate",
@@ -1444,9 +1411,10 @@ func TestEc2InstanceSchema(t *testing.T) {
 				Message: "root-block-device throughput is valid only for gp3 volumes",
 			},
 			{
-				Kind:    "predicate",
-				When:    "(input.root-block-device.tags != null)",
-				Require: "(input.volume-tags == null)",
+				Kind: "predicate",
+				When: "(input.root-block-device.tags != null)",
+				Require: "(input.volume-tags == null || " +
+					"@core.length(input.volume-tags) <= 0)",
 				Message: "root-block-device tags cannot combine with volume-tags",
 			},
 			{
@@ -1457,7 +1425,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"@each.value.volume-type == 'io1' || " +
 					"@each.value.volume-type == 'io2')",
 				Message: "iops is valid only for gp3, io1, or io2 volume types",
-				ForEach: "input.ebs-block-device",
+				ForEach: "input.ebs-block-device ?? []",
 			},
 			{
 				Kind: "predicate",
@@ -1465,7 +1433,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"@each.value.volume-type == 'io2')",
 				Require: "(@each.value.iops != null)",
 				Message: "iops is required when volume-type is io1 or io2",
-				ForEach: "input.ebs-block-device",
+				ForEach: "input.ebs-block-device ?? []",
 			},
 			{
 				Kind: "predicate",
@@ -1473,7 +1441,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 					"(@each.value.volume-type != null))",
 				Require: "(@each.value.volume-type == 'gp3')",
 				Message: "throughput is valid only for gp3 volumes",
-				ForEach: "input.ebs-block-device",
+				ForEach: "input.ebs-block-device ?? []",
 			},
 			{
 				Kind: "predicate",
@@ -1481,18 +1449,11 @@ func TestEc2InstanceSchema(t *testing.T) {
 				Require: "((@each.value.virtual-name != null) && " +
 					"(@core.length(@each.value.virtual-name) >= 1))",
 				Message: "virtual-name is required unless no-device is true",
-				ForEach: "input.ephemeral-block-device",
+				ForEach: "input.ephemeral-block-device ?? []",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.vpc-security-group-ids", Optional: true},
-			{Field: "input.ebs-block-device", Optional: true},
-			{Field: "input.ephemeral-block-device", Optional: true},
-			{Field: "input.volume-tags", Optional: true},
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.Resources["ec2-instance"])
+	assertTypeSchemaEqual(t, want, schema.Resources["ec2-instance"])
 }
 
 // TestLibraryRegistersEc2AvailabilityZones checks the runtime registration:
@@ -1514,13 +1475,13 @@ func TestEc2AvailabilityZonesSchema(t *testing.T) {
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
 			"all-availability-zones": typecheck.TOptional(typecheck.TBoolean()),
-			"exclude-names":          typecheck.TList(typecheck.TString()),
-			"exclude-zone-ids":       typecheck.TList(typecheck.TString()),
-			"filters": typecheck.TList(typecheck.TObject(
+			"exclude-names":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"exclude-zone-ids":       typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"filters": typecheck.TOptional(typecheck.TList(typecheck.TObject(
 				[]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "values", Type: typecheck.TList(typecheck.TString())},
-				})),
+				}))),
 			"state": typecheck.TOptional(typecheck.TString()),
 		},
 		Outputs: map[string]typecheck.Type{
@@ -1539,13 +1500,8 @@ func TestEc2AvailabilityZonesSchema(t *testing.T) {
 					"unavailable, or constrained",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.filters", Optional: true},
-			{Field: "input.exclude-names", Optional: true},
-			{Field: "input.exclude-zone-ids", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-availability-zones"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-availability-zones"])
 }
 
 // TestLibraryRegistersEc2Subnets checks the runtime registration: ec2-subnets
@@ -1565,21 +1521,17 @@ func TestEc2SubnetsSchema(t *testing.T) {
 	require.Contains(t, schema.DataSources, "ec2-subnets")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
-			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "name", Type: typecheck.TString()},
 				{Name: "values", Type: typecheck.TList(typecheck.TString())},
-			})),
-			"tags": typecheck.TMap(typecheck.TString()),
+			}))),
+			"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"ids": typecheck.TList(typecheck.TString()),
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-			{Field: "input.filter", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-subnets"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-subnets"])
 }
 
 // TestLibraryRegistersEc2SubnetData checks the runtime registration:
@@ -1603,14 +1555,14 @@ func TestEc2SubnetDataSchema(t *testing.T) {
 			"availability-zone-id": typecheck.TOptional(typecheck.TString()),
 			"cidr-block":           typecheck.TOptional(typecheck.TString()),
 			"default-for-az":       typecheck.TOptional(typecheck.TBoolean()),
-			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "name", Type: typecheck.TString()},
 				{Name: "values", Type: typecheck.TList(typecheck.TString())},
-			})),
+			}))),
 			"id":              typecheck.TOptional(typecheck.TString()),
 			"ipv6-cidr-block": typecheck.TOptional(typecheck.TString()),
 			"state":           typecheck.TOptional(typecheck.TString()),
-			"tags":            typecheck.TMap(typecheck.TString()),
+			"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"vpc-id":          typecheck.TOptional(typecheck.TString()),
 		},
 		Outputs: map[string]typecheck.Type{
@@ -1642,12 +1594,8 @@ func TestEc2SubnetDataSchema(t *testing.T) {
 			"tags":   typecheck.TMap(typecheck.TString()),
 			"vpc-id": typecheck.TString(),
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-			{Field: "input.filter", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-subnet-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-subnet-data"])
 }
 
 // TestLibraryRegistersEc2SecurityGroupData checks the runtime registration:
@@ -1668,13 +1616,13 @@ func TestEc2SecurityGroupDataSchema(t *testing.T) {
 	require.Contains(t, schema.DataSources, "ec2-security-group-data")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
-			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "name", Type: typecheck.TString()},
 				{Name: "values", Type: typecheck.TList(typecheck.TString())},
-			})),
+			}))),
 			"id":     typecheck.TOptional(typecheck.TString()),
 			"name":   typecheck.TOptional(typecheck.TString()),
-			"tags":   typecheck.TMap(typecheck.TString()),
+			"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			"vpc-id": typecheck.TOptional(typecheck.TString()),
 		},
 		Outputs: map[string]typecheck.Type{
@@ -1685,12 +1633,8 @@ func TestEc2SecurityGroupDataSchema(t *testing.T) {
 			"tags":        typecheck.TMap(typecheck.TString()),
 			"vpc-id":      typecheck.TString(),
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-			{Field: "input.filter", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-security-group-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-security-group-data"])
 }
 
 // TestLibraryRegistersEc2VpcData checks the runtime registration:
@@ -1715,11 +1659,11 @@ func TestEc2VpcDataSchema(t *testing.T) {
 			"dhcp-options-id": typecheck.TOptional(typecheck.TString()),
 			"default":         typecheck.TOptional(typecheck.TBoolean()),
 			"state":           typecheck.TOptional(typecheck.TString()),
-			"filter": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "name", Type: typecheck.TString()},
 				{Name: "values", Type: typecheck.TList(typecheck.TString())},
-			})),
-			"tags": typecheck.TMap(typecheck.TString()),
+			}))),
+			"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"vpc-id":     typecheck.TString(),
@@ -1743,10 +1687,6 @@ func TestEc2VpcDataSchema(t *testing.T) {
 			"owner-id":                             typecheck.TString(),
 			"tags":                                 typecheck.TMap(typecheck.TString()),
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.filter", Optional: true},
-			{Field: "input.tags", Optional: true},
-		},
 	}
-	assert.Equal(t, want, schema.DataSources["ec2-vpc-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["ec2-vpc-data"])
 }

@@ -12,9 +12,9 @@ import (
 	route53types "github.com/aws/aws-sdk-go-v2/service/route53/types"
 
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
@@ -36,7 +36,7 @@ type RecordSet struct {
 	Name                          string                             `ub:"name"`
 	Type                          string                             `ub:"type"`
 	SetIdentifier                 *string                            `ub:"set-identifier"`
-	Records                       []string                           `ub:"records"`
+	Records                       *[]string                          `ub:"records"`
 	Ttl                           *int64                             `ub:"ttl"`
 	HealthCheckId                 *string                            `ub:"health-check-id"`
 	Alias                         *RecordSetAlias                    `ub:"alias"`
@@ -78,15 +78,6 @@ func (r *RecordSet) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the one collection input a record set may omit. The routing
-// policy and alias blocks are pointers and are omittable through the pointer
-// itself, so they are not marked here.
-func (r RecordSet) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Records),
-	}
-}
-
 // Constraints declares the rules Route 53 places on a record set's inputs. The
 // hosted zone id must be a non-empty string. Exactly one of alias and records
 // supplies the answer. A TTL belongs to plain records and is meaningless on an
@@ -97,9 +88,18 @@ func (r RecordSet) Defaults() []defaults.Default {
 func (r RecordSet) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.NotEmpty(r.ZoneId)),
-		constraint.ExactlyOneOf(r.Alias, r.Records),
+		constraint.Must(constraint.Any(
+			constraint.All(
+				constraint.Present(r.Alias),
+				constraint.Not(constraint.NotEmpty(r.Records))),
+			constraint.All(
+				constraint.Absent(r.Alias),
+				constraint.NotEmpty(r.Records)))).
+			Message("exactly one of alias or records is required"),
 		constraint.ForbiddenWith(r.Ttl, r.Alias),
-		constraint.RequiredWith(r.Ttl, r.Records),
+		constraint.When(constraint.Present(r.Ttl)).
+			Require(constraint.NotEmpty(r.Records)).
+			Message("ttl requires records"),
 		constraint.AtMostOneOf(
 			r.WeightedRoutingPolicy,
 			r.LatencyRoutingPolicy,
@@ -409,12 +409,12 @@ func (r *RecordSet) resourceRecordSet(zoneName string) *route53types.ResourceRec
 // values are stored quoted by Route 53, so each is wrapped in double quotes on
 // the way out.
 func (r *RecordSet) resourceRecords() []route53types.ResourceRecord {
-	if len(r.Records) == 0 {
+	if len(ptr.Value(r.Records)) == 0 {
 		return nil
 	}
 	quote := isQuotedType(r.Type)
-	records := make([]route53types.ResourceRecord, 0, len(r.Records))
-	for _, value := range r.Records {
+	records := make([]route53types.ResourceRecord, 0, len(ptr.Value(r.Records)))
+	for _, value := range ptr.Value(r.Records) {
 		v := value
 		if quote {
 			v = strconvQuote(v)
@@ -471,7 +471,7 @@ func (r *RecordSet) fqdn(zoneName string) string {
 // from the prior apply. The identity fields are ReplaceFields and never reach
 // Update, so only these can change.
 func (r *RecordSet) recordChanged(old RecordSet) bool {
-	return runtime.Changed(old.Records, r.Records) ||
+	return runtime.Changed(ptr.Value(old.Records), ptr.Value(r.Records)) ||
 		runtime.Changed(old.Ttl, r.Ttl) ||
 		runtime.Changed(old.HealthCheckId, r.HealthCheckId) ||
 		runtime.Changed(old.Alias, r.Alias) ||

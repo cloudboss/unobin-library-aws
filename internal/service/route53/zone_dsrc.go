@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	route53 "github.com/aws/aws-sdk-go-v2/service/route53"
 	route53types "github.com/aws/aws-sdk-go-v2/service/route53/types"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 )
 
 // ZoneData resolves one existing Route 53 hosted zone. A zone-id reads that
@@ -20,11 +20,11 @@ import (
 // normalized name, public/private kind, optional VPC id, and optional tag subset
 // until exactly one zone remains.
 type ZoneData struct {
-	ZoneId      *string           `ub:"zone-id"`
-	Name        *string           `ub:"name"`
-	PrivateZone *bool             `ub:"private-zone"`
-	VpcId       *string           `ub:"vpc-id"`
-	Tags        map[string]string `ub:"tags"`
+	ZoneId      *string            `ub:"zone-id"`
+	Name        *string            `ub:"name"`
+	PrivateZone *bool              `ub:"private-zone"`
+	VpcId       *string            `ub:"vpc-id"`
+	Tags        *map[string]string `ub:"tags"`
 }
 
 // ZoneDataOutput holds the hosted zone attributes returned by the lookup.
@@ -42,13 +42,6 @@ type ZoneDataOutput struct {
 	LinkedServiceDescription  string            `ub:"linked-service-description"`
 	LinkedServicePrincipal    string            `ub:"linked-service-principal"`
 	Tags                      map[string]string `ub:"tags"`
-}
-
-// Defaults marks the tag filter map as optional.
-func (r ZoneData) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the mutually exclusive hosted zone selectors. Name and
@@ -105,7 +98,7 @@ func (r *ZoneData) findZoneByFilters(
 	ctx context.Context, client *route53.Client,
 ) (route53types.HostedZone, error) {
 	wantPrivate := aws.ToBool(r.PrivateZone) || r.VpcId != nil
-	wantTags := userTags(r.Tags)
+	wantTags := userTags(ptr.Value(r.Tags))
 	var matches []route53types.HostedZone
 	pager := route53.NewListHostedZonesPaginator(client, &route53.ListHostedZonesInput{})
 	for pager.HasMorePages() {

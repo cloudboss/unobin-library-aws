@@ -65,12 +65,12 @@ func TestSecurityGroupDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 		Id:    aws.String(securityGroupDataID),
 		Name:  aws.String("unobin-it-sg"),
 		VpcId: aws.String("vpc-0123456789abcdef0"),
-		Tags:  map[string]string{"unobin": "ec2-security-group-data"},
-		Filter: []SecurityGroupDataFilter{
+		Tags:  new(map[string]string{"unobin": "ec2-security-group-data"}),
+		Filter: new([]SecurityGroupDataFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
-		},
+		}),
 	}
 	out, err := r.Read(context.Background(), cfg)
 	require.NoError(t, err)

@@ -12,10 +12,10 @@ import (
 	ecs "github.com/aws/aws-sdk-go-v2/service/ecs"
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -62,13 +62,13 @@ var clusterNameRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 // regular-expression and byte-length check enforced in Create rather than a
 // declarative constraint.
 type Cluster struct {
-	Name                            string                                `ub:"name"`
-	Configuration                   *ClusterConfiguration                 `ub:"configuration"`
-	ServiceConnectDefaults          *ClusterServiceConnectDefaults        `ub:"service-connect-defaults"`
-	Settings                        []ClusterSetting                      `ub:"settings"`
-	CapacityProviders               []string                              `ub:"capacity-providers"`
-	DefaultCapacityProviderStrategy []ClusterCapacityProviderStrategyItem `ub:"default-capacity-provider-strategy"`
-	Tags                            map[string]string                     `ub:"tags"`
+	Name                            string                                 `ub:"name"`
+	Configuration                   *ClusterConfiguration                  `ub:"configuration"`
+	ServiceConnectDefaults          *ClusterServiceConnectDefaults         `ub:"service-connect-defaults"`
+	Settings                        *[]ClusterSetting                      `ub:"settings"`
+	CapacityProviders               *[]string                              `ub:"capacity-providers"`
+	DefaultCapacityProviderStrategy *[]ClusterCapacityProviderStrategyItem `ub:"default-capacity-provider-strategy"`
+	Tags                            *map[string]string                     `ub:"tags"`
 }
 
 // ClusterOutput holds the one value ECS computes for a cluster: the ARN that
@@ -86,16 +86,6 @@ func (r *Cluster) SchemaVersion() int { return 1 }
 // settings, capacity provider fields, and tags all change in place.
 func (r *Cluster) ReplaceFields() []string {
 	return []string{"name"}
-}
-
-// Defaults marks the collection inputs a cluster may omit.
-func (r Cluster) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Settings),
-		defaults.Optional(r.CapacityProviders),
-		defaults.Optional(r.DefaultCapacityProviderStrategy),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules ECS places on a cluster's inputs. The
@@ -150,8 +140,8 @@ func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, erro
 		ClusterName:            aws.String(r.Name),
 		Configuration:          r.Configuration.sdk(),
 		ServiceConnectDefaults: r.ServiceConnectDefaults.sdk(),
-		Settings:               clusterSettingsSDK(r.Settings),
-		Tags:                   clusterTags(r.Tags),
+		Settings:               clusterSettingsSDK(ptr.Value(r.Settings)),
+		Tags:                   clusterTags(ptr.Value(r.Tags)),
 	}
 	// The first ECS provision in an account creates the AWSServiceRoleForECS
 	// service-linked role asynchronously, and CreateCluster fails until IAM
@@ -187,12 +177,12 @@ func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, erro
 	if err := waitClusterAvailable(ctx, client, arn); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client, arn); err != nil {
 			return nil, err
 		}
 	}
-	if len(r.CapacityProviders) > 0 || len(r.DefaultCapacityProviderStrategy) > 0 {
+	if len(ptr.Value(r.CapacityProviders)) > 0 || len(ptr.Value(r.DefaultCapacityProviderStrategy)) > 0 {
 		if err := r.putCapacityProviders(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -237,7 +227,7 @@ func (r *Cluster) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -297,9 +287,9 @@ func (r *Cluster) updateClusterInput(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.Settings, r.Settings) && len(r.Settings) > 0 {
+	if runtime.Changed(prior.Inputs.Settings, r.Settings) && len(ptr.Value(r.Settings)) > 0 {
 		needed = true
-		in.Settings = clusterSettingsSDK(r.Settings)
+		in.Settings = clusterSettingsSDK(ptr.Value(r.Settings))
 	}
 	return in, needed
 }
@@ -308,7 +298,7 @@ func (r *Cluster) updateClusterInput(
 // PutClusterCapacityProviders reconciles differs from the prior inputs. The
 // two ride one whole-state call, so a change to either resends both.
 func (r *Cluster) capacityProvidersChanged(prior runtime.Prior[Cluster, *ClusterOutput]) bool {
-	return runtime.Changed(prior.Inputs.CapacityProviders, r.CapacityProviders) ||
+	return runtime.Changed(ptr.Value(prior.Inputs.CapacityProviders), ptr.Value(r.CapacityProviders)) ||
 		runtime.Changed(prior.Inputs.DefaultCapacityProviderStrategy,
 			r.DefaultCapacityProviderStrategy)
 }
@@ -326,13 +316,13 @@ func (r *Cluster) putCapacityProviders(
 	ctx context.Context, client *ecs.Client, arn string,
 ) error {
 	providers := []string{}
-	if r.CapacityProviders != nil {
-		providers = r.CapacityProviders
+	if ptr.Value(r.CapacityProviders) != nil {
+		providers = ptr.Value(r.CapacityProviders)
 	}
 	in := &ecs.PutClusterCapacityProvidersInput{
 		Cluster:                         aws.String(arn),
 		CapacityProviders:               providers,
-		DefaultCapacityProviderStrategy: clusterStrategySDK(r.DefaultCapacityProviderStrategy),
+		DefaultCapacityProviderStrategy: clusterStrategySDK(ptr.Value(r.DefaultCapacityProviderStrategy)),
 	}
 	err := retry.OnError(ctx, clusterPutRetryable, func(ctx context.Context) error {
 		_, err := client.PutClusterCapacityProviders(ctx, in)
@@ -348,7 +338,7 @@ func (r *Cluster) putCapacityProviders(
 // live tags with ListTagsForResource and writing changes with TagResource
 // and UntagResource against the cluster ARN.
 func (r *Cluster) syncTags(ctx context.Context, client *ecs.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{
 				ResourceArn: aws.String(arn),

@@ -54,7 +54,7 @@ func TestSqsSchemas(t *testing.T) {
 				"redrive-allow-policy":              typecheck.TOptional(typecheck.TString()),
 				"redrive-policy":                    typecheck.TOptional(typecheck.TString()),
 				"sqs-managed-sse-enabled":           typecheck.TOptional(typecheck.TBoolean()),
-				"tags":                              typecheck.TMap(typecheck.TString()),
+				"tags":                              typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"visibility-timeout":                typecheck.TOptional(typecheck.TInteger()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -141,9 +141,6 @@ func TestSqsSchemas(t *testing.T) {
 					Message: "kms-data-key-reuse-period-seconds must be between 60 and 86400",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 
 		"sqs-queue-policy": {
@@ -157,7 +154,7 @@ func TestSqsSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

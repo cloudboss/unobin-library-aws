@@ -36,5 +36,5 @@ func TestStsCallerIdentitySchema(t *testing.T) {
 			"user-id": typecheck.TString(),
 		},
 	}
-	assert.Equal(t, want, schema.DataSources["sts-caller-identity"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["sts-caller-identity"])
 }

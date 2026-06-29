@@ -39,13 +39,13 @@ func TestDynamodbSchemas(t *testing.T) {
 	resources := map[string]*runtime.TypeSchema{
 		"dynamodb-table": {
 			Inputs: map[string]typecheck.Type{
-				"attribute": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"attribute": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "type", Type: typecheck.TString()},
-				})),
+				}))),
 				"billing-mode":                typecheck.TOptional(typecheck.TString()),
 				"deletion-protection-enabled": typecheck.TOptional(typecheck.TBoolean()),
-				"global-secondary-index": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"global-secondary-index": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "hash-key", Type: typecheck.TString()},
 					{Name: "range-key", Type: typecheck.TString(), Optional: true},
@@ -61,14 +61,14 @@ func TestDynamodbSchemas(t *testing.T) {
 						{Name: "read-units-per-second", Type: typecheck.TInteger(), Optional: true},
 						{Name: "write-units-per-second", Type: typecheck.TInteger(), Optional: true},
 					}), Optional: true},
-				})),
+				}))),
 				"hash-key": typecheck.TString(),
-				"local-secondary-index": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"local-secondary-index": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "range-key", Type: typecheck.TString()},
 					{Name: "projection-type", Type: typecheck.TString()},
 					{Name: "non-key-attributes", Type: typecheck.TList(typecheck.TString())},
-				})),
+				}))),
 				"name": typecheck.TString(),
 				"on-demand-throughput": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "max-read-request-units", Type: typecheck.TInteger(), Optional: true},
@@ -87,7 +87,7 @@ func TestDynamodbSchemas(t *testing.T) {
 				"stream-enabled":   typecheck.TOptional(typecheck.TBoolean()),
 				"stream-view-type": typecheck.TOptional(typecheck.TString()),
 				"table-class":      typecheck.TOptional(typecheck.TString()),
-				"tags":             typecheck.TMap(typecheck.TString()),
+				"tags":             typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"ttl": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "attribute-name", Type: typecheck.TString(), Optional: true},
@@ -193,7 +193,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.type == 'N' || " +
 						"@each.value.type == 'B')",
 					Message: "attribute type must be S, N, or B",
-					ForEach: "input.attribute",
+					ForEach: "input.attribute ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -203,7 +203,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.projection-type == 'KEYS_ONLY')",
 					Message: "local-secondary-index projection-type must be ALL, " +
 						"INCLUDE, or KEYS_ONLY",
-					ForEach: "input.local-secondary-index",
+					ForEach: "input.local-secondary-index ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -213,7 +213,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.projection-type == 'KEYS_ONLY')",
 					Message: "global-secondary-index projection-type must be ALL, " +
 						"INCLUDE, or KEYS_ONLY",
-					ForEach: "input.global-secondary-index",
+					ForEach: "input.global-secondary-index ?? []",
 				},
 				{
 					Kind: "at-most-one-of",
@@ -240,7 +240,7 @@ func TestDynamodbSchemas(t *testing.T) {
 						"@each.value.write-capacity >= 1)",
 					Message: "global-secondary-index read-capacity and write-capacity " +
 						"are required and at least 1 when billing-mode is PROVISIONED",
-					ForEach: "input.global-secondary-index",
+					ForEach: "input.global-secondary-index ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -249,21 +249,15 @@ func TestDynamodbSchemas(t *testing.T) {
 						"(@each.value.write-capacity == null)",
 					Message: "global-secondary-index read-capacity and write-capacity " +
 						"must be unset when billing-mode is PAY_PER_REQUEST",
-					ForEach: "input.global-secondary-index",
+					ForEach: "input.global-secondary-index ?? []",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.attribute", Optional: true},
-				{Field: "input.local-secondary-index", Optional: true},
-				{Field: "input.global-secondary-index", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

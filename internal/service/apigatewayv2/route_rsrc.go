@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -30,7 +30,7 @@ type Route struct {
 	ApiKeyRequired *bool `ub:"api-key-required"`
 	// AuthorizationScopes lists the scopes a JWT authorizer matches against
 	// the caller's access token. HTTP APIs with a JWT authorizer only.
-	AuthorizationScopes []string `ub:"authorization-scopes"`
+	AuthorizationScopes *[]string `ub:"authorization-scopes"`
 	// AuthorizationType is how callers are authorized: NONE, AWS_IAM, CUSTOM,
 	// or JWT. JWT applies to HTTP APIs only; WebSocket APIs accept the other
 	// three. Unset means NONE.
@@ -46,11 +46,11 @@ type Route struct {
 	OperationName *string `ub:"operation-name"`
 	// RequestModels maps a content type to the name of the model that
 	// validates request bodies. WebSocket APIs only.
-	RequestModels map[string]string `ub:"request-models"`
+	RequestModels *map[string]string `ub:"request-models"`
 	// RequestParameters maps a request parameter key, such as
 	// route.request.header.x-api-key, to whether the parameter is required.
 	// WebSocket APIs only.
-	RequestParameters map[string]bool `ub:"request-parameters"`
+	RequestParameters *map[string]bool `ub:"request-parameters"`
 	// RouteResponseSelectionExpression picks the route response for a
 	// request. WebSocket APIs only.
 	RouteResponseSelectionExpression *string `ub:"route-response-selection-expression"`
@@ -75,15 +75,6 @@ func (r *Route) SchemaVersion() int { return 1 }
 // naming the route, updates in place.
 func (r *Route) ReplaceFields() []string {
 	return []string{"api-id"}
-}
-
-// Defaults marks the collection inputs a route may omit.
-func (r Route) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.AuthorizationScopes),
-		defaults.Optional(r.RequestModels),
-		defaults.Optional(r.RequestParameters),
-	}
 }
 
 // Constraints declares the rules on a route's inputs. The authorization type
@@ -122,8 +113,8 @@ func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 		ApiKeyRequired:    aws.Bool(aws.ToBool(r.ApiKeyRequired)),
 		AuthorizationType: routeAuthorizationType(r.AuthorizationType),
 	}
-	if len(r.AuthorizationScopes) > 0 {
-		in.AuthorizationScopes = r.AuthorizationScopes
+	if len(ptr.Value(r.AuthorizationScopes)) > 0 {
+		in.AuthorizationScopes = ptr.Value(r.AuthorizationScopes)
 	}
 	if v := aws.ToString(r.AuthorizerId); v != "" {
 		in.AuthorizerId = aws.String(v)
@@ -134,11 +125,11 @@ func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 	if v := aws.ToString(r.OperationName); v != "" {
 		in.OperationName = aws.String(v)
 	}
-	if len(r.RequestModels) > 0 {
-		in.RequestModels = r.RequestModels
+	if len(ptr.Value(r.RequestModels)) > 0 {
+		in.RequestModels = ptr.Value(r.RequestModels)
 	}
-	if len(r.RequestParameters) > 0 {
-		in.RequestParameters = routeParameterConstraints(r.RequestParameters)
+	if len(ptr.Value(r.RequestParameters)) > 0 {
+		in.RequestParameters = routeParameterConstraints(ptr.Value(r.RequestParameters))
 	}
 	if v := aws.ToString(r.RouteResponseSelectionExpression); v != "" {
 		in.RouteResponseSelectionExpression = aws.String(v)
@@ -206,20 +197,20 @@ func (r *Route) Update(
 	if err != nil {
 		return nil, err
 	}
-	parametersChanged := runtime.Changed(prior.Inputs.RequestParameters, r.RequestParameters)
+	parametersChanged := runtime.Changed(ptr.Value(prior.Inputs.RequestParameters), ptr.Value(r.RequestParameters))
 	if parametersChanged {
 		if err := r.removeDepartedParameters(ctx, client, prior); err != nil {
 			return nil, err
 		}
 	}
 	apiKeyRequiredChanged := runtime.Changed(prior.Inputs.ApiKeyRequired, r.ApiKeyRequired)
-	scopesChanged := runtime.Changed(prior.Inputs.AuthorizationScopes, r.AuthorizationScopes)
+	scopesChanged := runtime.Changed(ptr.Value(prior.Inputs.AuthorizationScopes), ptr.Value(r.AuthorizationScopes))
 	authTypeChanged := runtime.Changed(prior.Inputs.AuthorizationType, r.AuthorizationType)
 	authorizerChanged := runtime.Changed(prior.Inputs.AuthorizerId, r.AuthorizerId)
 	modelSelectionChanged := runtime.Changed(
 		prior.Inputs.ModelSelectionExpression, r.ModelSelectionExpression)
 	operationNameChanged := runtime.Changed(prior.Inputs.OperationName, r.OperationName)
-	modelsChanged := runtime.Changed(prior.Inputs.RequestModels, r.RequestModels)
+	modelsChanged := runtime.Changed(ptr.Value(prior.Inputs.RequestModels), ptr.Value(r.RequestModels))
 	routeKeyChanged := runtime.Changed(prior.Inputs.RouteKey, r.RouteKey)
 	responseSelectionChanged := runtime.Changed(
 		prior.Inputs.RouteResponseSelectionExpression, r.RouteResponseSelectionExpression)
@@ -229,7 +220,7 @@ func (r *Route) Update(
 		modelsChanged || routeKeyChanged || responseSelectionChanged || targetChanged
 	// When the only change is the removal of the last request parameters,
 	// the deletes above are the whole update.
-	if !otherChanged && (!parametersChanged || len(r.RequestParameters) == 0) {
+	if !otherChanged && (!parametersChanged || len(ptr.Value(r.RequestParameters)) == 0) {
 		return prior.Outputs, nil
 	}
 	in := &apigatewayv2.UpdateRouteInput{
@@ -242,7 +233,7 @@ func (r *Route) Update(
 	if scopesChanged {
 		// A scope list cleared from the configuration is sent as the empty
 		// list, which removes every scope from the route.
-		in.AuthorizationScopes = r.AuthorizationScopes
+		in.AuthorizationScopes = ptr.Value(r.AuthorizationScopes)
 		if in.AuthorizationScopes == nil {
 			in.AuthorizationScopes = []string{}
 		}
@@ -265,13 +256,13 @@ func (r *Route) Update(
 	if modelsChanged {
 		// A model map cleared from the configuration is sent as the empty
 		// map, which removes every request model from the route.
-		in.RequestModels = r.RequestModels
+		in.RequestModels = ptr.Value(r.RequestModels)
 		if in.RequestModels == nil {
 			in.RequestModels = map[string]string{}
 		}
 	}
-	if parametersChanged && len(r.RequestParameters) > 0 {
-		in.RequestParameters = routeParameterConstraints(r.RequestParameters)
+	if parametersChanged && len(ptr.Value(r.RequestParameters)) > 0 {
+		in.RequestParameters = routeParameterConstraints(ptr.Value(r.RequestParameters))
 	}
 	if routeKeyChanged {
 		in.RouteKey = aws.String(r.RouteKey)
@@ -326,8 +317,8 @@ func (r *Route) removeDepartedParameters(
 	ctx context.Context, client *apigatewayv2.Client, prior runtime.Prior[Route, *RouteOutput],
 ) error {
 	var keys []string
-	for key, required := range prior.Inputs.RequestParameters {
-		if current, ok := r.RequestParameters[key]; !ok || current != required {
+	for key, required := range ptr.Value(prior.Inputs.RequestParameters) {
+		if current, ok := ptr.Value(r.RequestParameters)[key]; !ok || current != required {
 			keys = append(keys, key)
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // SubnetData resolves exactly one existing EC2 subnet with DescribeSubnets. The
@@ -18,16 +18,16 @@ import (
 // normal data-source error, not runtime.ErrNotFound. The selected subnet's IPv6
 // association and private-DNS launch options are flattened into the output.
 type SubnetData struct {
-	Id                 *string            `ub:"id"`
-	AvailabilityZone   *string            `ub:"availability-zone"`
-	AvailabilityZoneId *string            `ub:"availability-zone-id"`
-	DefaultForAz       *bool              `ub:"default-for-az"`
-	State              *string            `ub:"state"`
-	VpcId              *string            `ub:"vpc-id"`
-	CidrBlock          *string            `ub:"cidr-block"`
-	Ipv6CidrBlock      *string            `ub:"ipv6-cidr-block"`
-	Tags               map[string]string  `ub:"tags"`
-	Filter             []SubnetDataFilter `ub:"filter"`
+	Id                 *string             `ub:"id"`
+	AvailabilityZone   *string             `ub:"availability-zone"`
+	AvailabilityZoneId *string             `ub:"availability-zone-id"`
+	DefaultForAz       *bool               `ub:"default-for-az"`
+	State              *string             `ub:"state"`
+	VpcId              *string             `ub:"vpc-id"`
+	CidrBlock          *string             `ub:"cidr-block"`
+	Ipv6CidrBlock      *string             `ub:"ipv6-cidr-block"`
+	Tags               *map[string]string  `ub:"tags"`
+	Filter             *[]SubnetDataFilter `ub:"filter"`
 }
 
 // SubnetDataFilter is one DescribeSubnets filter. The name and values pass to
@@ -65,14 +65,6 @@ type SubnetDataOutput struct {
 	State                                   string            `ub:"state"`
 	Tags                                    map[string]string `ub:"tags"`
 	VpcId                                   string            `ub:"vpc-id"`
-}
-
-// Defaults marks the collection inputs a subnet lookup may omit.
-func (r SubnetData) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-		defaults.Optional(r.Filter),
-	}
 }
 
 // Read resolves the subnet data source. DescribeSubnets is paginated in full
@@ -141,7 +133,7 @@ func (r *SubnetData) describeInput() *ec2.DescribeSubnetsInput {
 }
 
 func (r *SubnetData) describeFilters() []ec2types.Filter {
-	filters := make([]ec2types.Filter, 0, len(r.Tags)+len(r.Filter)+7)
+	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter))+7)
 	filters = appendSubnetDataStringFilter(filters, "availabilityZone", r.AvailabilityZone)
 	filters = appendSubnetDataStringFilter(filters, "availabilityZoneId", r.AvailabilityZoneId)
 	if r.DefaultForAz != nil && *r.DefaultForAz {
@@ -155,13 +147,13 @@ func (r *SubnetData) describeFilters() []ec2types.Filter {
 	filters = appendSubnetDataStringFilter(filters, "cidrBlock", r.CidrBlock)
 	filters = appendSubnetDataStringFilter(filters,
 		"ipv6-cidr-block-association.ipv6-cidr-block", r.Ipv6CidrBlock)
-	for key, value := range r.Tags {
+	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("tag:" + key),
 			Values: []string{value},
 		})
 	}
-	for _, filter := range r.Filter {
+	for _, filter := range ptr.Value(r.Filter) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String(filter.Name),
 			Values: filter.Values,

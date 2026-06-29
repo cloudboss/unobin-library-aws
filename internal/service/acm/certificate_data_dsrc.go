@@ -16,6 +16,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
@@ -32,12 +33,12 @@ var errCertificateDataNoSummaries = errors.New("no matching ACM certificate summ
 // requested-subset match, and the data source returns either the sole match or
 // the most recent match according to ACM's status-specific timestamps.
 type CertificateData struct {
-	Domain     *string           `ub:"domain"`
-	Tags       map[string]string `ub:"tags"`
-	KeyTypes   []string          `ub:"key-types"`
-	Statuses   []string          `ub:"statuses"`
-	Types      []string          `ub:"types"`
-	MostRecent bool              `ub:"most-recent"`
+	Domain     *string            `ub:"domain"`
+	Tags       *map[string]string `ub:"tags"`
+	KeyTypes   *[]string          `ub:"key-types"`
+	Statuses   *[]string          `ub:"statuses"`
+	Types      *[]string          `ub:"types"`
+	MostRecent bool               `ub:"most-recent"`
 }
 
 // CertificateDataOutput holds the selected certificate attributes. Certificate
@@ -59,10 +60,6 @@ type CertificateDataOutput struct {
 func (r CertificateData) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.MostRecent, false),
-		defaults.Optional(r.Tags),
-		defaults.Optional(r.KeyTypes),
-		defaults.Optional(r.Statuses),
-		defaults.Optional(r.Types),
 	}
 }
 
@@ -71,7 +68,10 @@ func (r CertificateData) Defaults() []defaults.Default {
 // values.
 func (r CertificateData) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.AtLeastOneOf(r.Domain, r.Tags),
+		constraint.Must(constraint.Any(
+			constraint.Present(r.Domain),
+			constraint.NotEmpty(r.Tags))).
+			Message("a certificate lookup needs domain or tags"),
 		constraint.ForEach(r.KeyTypes, func(t string) []constraint.Constraint {
 			return []constraint.Constraint{
 				constraint.Must(constraint.OneOf(t,
@@ -125,7 +125,7 @@ func (r *CertificateData) Read(ctx context.Context, cfg *awsCfg) (*CertificateDa
 func (r *CertificateData) checkLookupKeys() error {
 	// The lookup-key rule is syntactic: explicitly empty domain or tags values
 	// count as supplied, but the empty values do not filter candidates later.
-	if r.Domain != nil || r.Tags != nil {
+	if r.Domain != nil || ptr.Value(r.Tags) != nil {
 		return nil
 	}
 	return errors.New("at least one of domain or tags must be supplied")
@@ -186,11 +186,11 @@ func (r *CertificateData) listInput() *acm.ListCertificatesInput {
 	in := &acm.ListCertificatesInput{
 		CertificateStatuses: []acmtypes.CertificateStatus{acmtypes.CertificateStatusIssued},
 	}
-	if len(r.Statuses) > 0 {
-		in.CertificateStatuses = certificateDataStatuses(r.Statuses)
+	if len(ptr.Value(r.Statuses)) > 0 {
+		in.CertificateStatuses = certificateDataStatuses(ptr.Value(r.Statuses))
 	}
-	if len(r.KeyTypes) > 0 {
-		in.Includes = &acmtypes.Filters{KeyTypes: certificateDataKeyTypes(r.KeyTypes)}
+	if len(ptr.Value(r.KeyTypes)) > 0 {
+		in.Includes = &acmtypes.Filters{KeyTypes: certificateDataKeyTypes(ptr.Value(r.KeyTypes))}
 	}
 	return in
 }
@@ -199,7 +199,7 @@ func (r *CertificateData) summaryMatches(summary acmtypes.CertificateSummary) bo
 	if r.Domain != nil && *r.Domain != "" && aws.ToString(summary.DomainName) != *r.Domain {
 		return false
 	}
-	if len(r.Types) > 0 && !slices.Contains(r.Types, string(summary.Type)) {
+	if len(ptr.Value(r.Types)) > 0 && !slices.Contains(ptr.Value(r.Types), string(summary.Type)) {
 		return false
 	}
 	return true
@@ -246,7 +246,7 @@ func (r *CertificateData) findCandidates(
 		if detail.Status == acmtypes.CertificateStatusValidationTimedOut {
 			continue
 		}
-		if len(r.Tags) > 0 {
+		if len(ptr.Value(r.Tags)) > 0 {
 			// Candidate filtering deliberately uses the strict tag reader. Only the
 			// final output tag listing suppresses unsupported-tagging errors.
 			tags, err := certificateDataTags(ctx, client, arn)
@@ -256,7 +256,7 @@ func (r *CertificateData) findCandidates(
 				}
 				return nil, err
 			}
-			if !certificateDataContainsTags(tags, r.Tags) {
+			if !certificateDataContainsTags(tags, ptr.Value(r.Tags)) {
 				continue
 			}
 		}

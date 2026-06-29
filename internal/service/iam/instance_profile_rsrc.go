@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -25,10 +25,10 @@ import (
 // exists and can be swapped in place. Tags are reconciled to match the
 // configuration on every apply.
 type InstanceProfile struct {
-	InstanceProfileName string            `ub:"instance-profile-name"`
-	Path                *string           `ub:"path"`
-	Role                *string           `ub:"role"`
-	Tags                map[string]string `ub:"tags"`
+	InstanceProfileName string             `ub:"instance-profile-name"`
+	Path                *string            `ub:"path"`
+	Role                *string            `ub:"role"`
+	Tags                *map[string]string `ub:"tags"`
 }
 
 // InstanceProfileOutput holds the values the IAM API computes for an
@@ -53,13 +53,6 @@ func (r *InstanceProfile) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs an instance profile may omit.
-func (r InstanceProfile) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 func (r *InstanceProfile) Create(
 	ctx context.Context, cfg *awsCfg,
 ) (*InstanceProfileOutput, error) {
@@ -70,7 +63,7 @@ func (r *InstanceProfile) Create(
 	in := &iam.CreateInstanceProfileInput{
 		InstanceProfileName: aws.String(r.InstanceProfileName),
 		Path:                r.Path,
-		Tags:                instanceProfileTags(r.Tags),
+		Tags:                instanceProfileTags(ptr.Value(r.Tags)),
 	}
 	_, err = client.CreateInstanceProfile(ctx, in)
 	// Some partitions, such as the ISO partitions, cannot tag a profile as
@@ -91,7 +84,7 @@ func (r *InstanceProfile) Create(
 			return nil, err
 		}
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -181,7 +174,7 @@ func (r *InstanceProfile) Update(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -252,7 +245,7 @@ func (r *InstanceProfile) removeRole(
 // current tags with the list-tags paginator and applying changes through
 // the IAM tag and untag calls, which upsert and remove by key.
 func (r *InstanceProfile) syncTags(ctx context.Context, client *iam.Client) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			out := make(map[string]string)
 			pages := iam.NewListInstanceProfileTagsPaginator(

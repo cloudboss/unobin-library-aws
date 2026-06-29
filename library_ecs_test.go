@@ -43,7 +43,7 @@ func TestEcsCapacityProviderSchema(t *testing.T) {
 
 	assert.Equal(t, typecheck.TString(), got.Inputs["name"])
 	assert.Equal(t, typecheck.TOptional(typecheck.TString()), got.Inputs["cluster"])
-	assert.Equal(t, typecheck.TMap(typecheck.TString()), got.Inputs["tags"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())), got.Inputs["tags"])
 	require.Contains(t, got.Inputs, "auto-scaling-group-provider")
 	require.Contains(t, got.Inputs, "managed-instances-provider")
 
@@ -56,24 +56,24 @@ func TestEcsCapacityProviderSchema(t *testing.T) {
 	require.Contains(t, got.Outputs, "auto-scaling-group-provider")
 	require.Contains(t, got.Outputs, "managed-instances-provider")
 
-	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+	assertConstraintsContain(t, got.Constraints, lang.ConstraintSpec{
 		Kind: "exactly-one-of",
 		Fields: []string{
 			"input.auto-scaling-group-provider",
 			"input.managed-instances-provider",
 		},
 	})
-	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+	assertConstraintsContain(t, got.Constraints, lang.ConstraintSpec{
 		Kind:    "predicate",
 		When:    "(input.managed-instances-provider != null)",
 		Require: "(input.cluster != null)",
 		Message: "cluster is required with managed-instances-provider",
 	})
-	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+	assertConstraintsContain(t, got.Constraints, lang.ConstraintSpec{
 		Kind:   "forbidden-with",
 		Fields: []string{"input.auto-scaling-group-provider", "input.cluster"},
 	})
-	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+	assertConstraintsContain(t, got.Constraints, lang.ConstraintSpec{
 		Kind: "predicate",
 		When: "(input.managed-instances-provider.infrastructure-optimization" +
 			".scale-in-after != null)",
@@ -85,7 +85,7 @@ func TestEcsCapacityProviderSchema(t *testing.T) {
 			".infrastructure-optimization.scale-in-after <= 3600)",
 		Message: "scale-in-after must be between -1 and 3600",
 	})
-	assert.Contains(t, got.Constraints, lang.ConstraintSpec{
+	assertConstraintsContain(t, got.Constraints, lang.ConstraintSpec{
 		Kind: "predicate",
 		When: "(input.managed-instances-provider.instance-launch-template" +
 			".capacity-option-type != null)",
@@ -97,27 +97,7 @@ func TestEcsCapacityProviderSchema(t *testing.T) {
 		Message: "capacity-option-type must be ON_DEMAND, SPOT, or RESERVED",
 	})
 
-	assert.Equal(t, []lang.DefaultSpec{
-		{Field: "input.tags", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".network-configuration.security-groups", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.accelerator-manufacturers", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.accelerator-names", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.accelerator-types", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.allowed-instance-types", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.cpu-manufacturers", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.excluded-instance-types", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.instance-generations", Optional: true},
-		{Field: "input.managed-instances-provider.instance-launch-template" +
-			".instance-requirements.local-storage-types", Optional: true},
-	}, got.Defaults)
+	assert.Empty(t, got.Defaults)
 }
 
 // TestEcsSchemas asserts the whole derived TypeSchema for the core ECS
@@ -130,7 +110,7 @@ func TestEcsSchemas(t *testing.T) {
 	resources := map[string]*runtime.TypeSchema{
 		"ecs-cluster": {
 			Inputs: map[string]typecheck.Type{
-				"capacity-providers": typecheck.TList(typecheck.TString()),
+				"capacity-providers": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "execute-command-configuration", Type: typecheck.TObject([]typecheck.ObjectField{
 						{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
@@ -148,20 +128,20 @@ func TestEcsSchemas(t *testing.T) {
 						{Name: "fargate-ephemeral-storage-kms-key-id", Type: typecheck.TString(), Optional: true},
 					}), Optional: true},
 				})),
-				"default-capacity-provider-strategy": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"default-capacity-provider-strategy": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "capacity-provider", Type: typecheck.TString()},
 					{Name: "base", Type: typecheck.TInteger(), Optional: true},
 					{Name: "weight", Type: typecheck.TInteger(), Optional: true},
-				})),
+				}))),
 				"name": typecheck.TString(),
 				"service-connect-defaults": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "namespace", Type: typecheck.TString()},
 				})),
-				"settings": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"settings": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "value", Type: typecheck.TString()},
-				})),
-				"tags": typecheck.TMap(typecheck.TString()),
+				}))),
+				"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn": typecheck.TString(),
@@ -186,7 +166,7 @@ func TestEcsSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.name == 'containerInsights')",
 					Message: "name must be containerInsights",
-					ForEach: "input.settings",
+					ForEach: "input.settings ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -196,7 +176,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.base == null || " +
 						"@each.value.base <= 100000)",
 					Message: "base must be between 0 and 100000",
-					ForEach: "input.default-capacity-provider-strategy",
+					ForEach: "input.default-capacity-provider-strategy ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -206,14 +186,8 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.weight == null || " +
 						"@each.value.weight <= 1000)",
 					Message: "weight must be between 0 and 1000",
-					ForEach: "input.default-capacity-provider-strategy",
+					ForEach: "input.default-capacity-provider-strategy ?? []",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.settings", Optional: true},
-				{Field: "input.capacity-providers", Optional: true},
-				{Field: "input.default-capacity-provider-strategy", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"ecs-task-definition": {
@@ -350,23 +324,23 @@ func TestEcsSchemas(t *testing.T) {
 				"memory":             typecheck.TOptional(typecheck.TString()),
 				"network-mode":       typecheck.TOptional(typecheck.TString()),
 				"pid-mode":           typecheck.TOptional(typecheck.TString()),
-				"placement-constraints": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"placement-constraints": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "type", Type: typecheck.TString()},
 					{Name: "expression", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 				"proxy-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "container-name", Type: typecheck.TString()},
 					{Name: "properties", Type: typecheck.TMap(typecheck.TString()), Optional: true},
 					{Name: "type", Type: typecheck.TString(), Optional: true},
 				})),
-				"requires-compatibilities": typecheck.TList(typecheck.TString()),
+				"requires-compatibilities": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"runtime-platform": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "cpu-architecture", Type: typecheck.TString(), Optional: true},
 					{Name: "operating-system-family", Type: typecheck.TString(), Optional: true},
 				})),
-				"tags":          typecheck.TMap(typecheck.TString()),
+				"tags":          typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"task-role-arn": typecheck.TOptional(typecheck.TString()),
-				"volumes": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"volumes": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "name", Type: typecheck.TString()},
 					{Name: "configured-at-launch", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "host", Type: typecheck.TObject([]typecheck.ObjectField{
@@ -403,7 +377,7 @@ func TestEcsSchemas(t *testing.T) {
 						{Name: "root-directory", Type: typecheck.TString(), Optional: true},
 						{Name: "transit-encryption-port", Type: typecheck.TInteger(), Optional: true},
 					}), Optional: true},
-				})),
+				}))),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                  typecheck.TString(),
@@ -442,7 +416,7 @@ func TestEcsSchemas(t *testing.T) {
 						"@each.value == 'EXTERNAL' || " +
 						"@each.value == 'MANAGED_INSTANCES')",
 					Message: "a compatibility must be EC2, FARGATE, EXTERNAL, or MANAGED_INSTANCES",
-					ForEach: "input.requires-compatibilities",
+					ForEach: "input.requires-compatibilities ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -482,10 +456,9 @@ func TestEcsSchemas(t *testing.T) {
 					Message: "runtime-platform operating-system-family must be LINUX or a WINDOWS_SERVER family",
 				},
 				{
-					Kind: "predicate",
-					When: "true",
-					Require: "(input.placement-constraints == null || " +
-						"@core.length(input.placement-constraints) <= 10)",
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.placement-constraints ?? []) <= 10)",
 					Message: "placement-constraints allows at most 10 entries",
 				},
 				{
@@ -493,14 +466,14 @@ func TestEcsSchemas(t *testing.T) {
 					When:    "true",
 					Require: "(@each.value.type == 'memberOf')",
 					Message: "a task definition placement constraint type must be memberOf",
-					ForEach: "input.placement-constraints",
+					ForEach: "input.placement-constraints ?? []",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'memberOf')",
 					Require: "(@each.value.expression != null)",
 					Message: "a memberOf placement constraint requires an expression",
-					ForEach: "input.placement-constraints",
+					ForEach: "input.placement-constraints ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -516,7 +489,7 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.docker-volume-configuration.scope == 'task' || " +
 						"@each.value.docker-volume-configuration.scope == 'shared')",
 					Message: "a docker volume scope must be task or shared",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -524,7 +497,7 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.efs-volume-configuration.transit-encryption == 'ENABLED' || " +
 						"@each.value.efs-volume-configuration.transit-encryption == 'DISABLED')",
 					Message: "efs transit-encryption must be ENABLED or DISABLED",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -534,7 +507,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.efs-volume-configuration.transit-encryption-port == null || " +
 						"@each.value.efs-volume-configuration.transit-encryption-port <= 65535)",
 					Message: "efs transit-encryption-port must be between 1 and 65535",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -542,14 +515,14 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.efs-volume-configuration.authorization-config.iam == 'ENABLED' || " +
 						"@each.value.efs-volume-configuration.authorization-config.iam == 'DISABLED')",
 					Message: "efs authorization-config iam must be ENABLED or DISABLED",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.fsx-windows-file-server-volume-configuration != null)",
 					Require: "(@each.value.fsx-windows-file-server-volume-configuration.authorization-config != null)",
 					Message: "an fsx-windows-file-server volume requires authorization-config",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -559,24 +532,18 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.s3files-volume-configuration.transit-encryption-port == null || " +
 						"@each.value.s3files-volume-configuration.transit-encryption-port <= 65535)",
 					Message: "s3files transit-encryption-port must be between 1 and 65535",
-					ForEach: "input.volumes",
+					ForEach: "input.volumes ?? []",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.placement-constraints", Optional: true},
-				{Field: "input.requires-compatibilities", Optional: true},
-				{Field: "input.volumes", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"ecs-service": {
 			Inputs: map[string]typecheck.Type{
 				"availability-zone-rebalancing": typecheck.TOptional(typecheck.TString()),
-				"capacity-provider-strategy": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"capacity-provider-strategy": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "capacity-provider", Type: typecheck.TString()},
 					{Name: "base", Type: typecheck.TInteger(), Optional: true},
 					{Name: "weight", Type: typecheck.TInteger(), Optional: true},
-				})),
+				}))),
 				"cluster": typecheck.TOptional(typecheck.TString()),
 				"deployment-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "maximum-percent", Type: typecheck.TInteger(), Optional: true},
@@ -592,29 +559,29 @@ func TestEcsSchemas(t *testing.T) {
 				"force-delete":                      typecheck.TOptional(typecheck.TBoolean()),
 				"health-check-grace-period-seconds": typecheck.TOptional(typecheck.TInteger()),
 				"launch-type":                       typecheck.TOptional(typecheck.TString()),
-				"load-balancers": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"load-balancers": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "container-name", Type: typecheck.TString()},
 					{Name: "container-port", Type: typecheck.TInteger()},
 					{Name: "target-group-arn", Type: typecheck.TString()},
-				})),
+				}))),
 				"name": typecheck.TString(),
 				"network-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "subnets", Type: typecheck.TList(typecheck.TString())},
 					{Name: "security-groups", Type: typecheck.TList(typecheck.TString()), Optional: true},
 					{Name: "assign-public-ip", Type: typecheck.TString(), Optional: true},
 				})),
-				"placement-constraints": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"placement-constraints": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "type", Type: typecheck.TString()},
 					{Name: "expression", Type: typecheck.TString(), Optional: true},
-				})),
-				"placement-strategy": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				}))),
+				"placement-strategy": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "type", Type: typecheck.TString()},
 					{Name: "field", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 				"platform-version":    typecheck.TOptional(typecheck.TString()),
 				"propagate-tags":      typecheck.TOptional(typecheck.TString()),
 				"scheduling-strategy": typecheck.TOptional(typecheck.TString()),
-				"tags":                typecheck.TMap(typecheck.TString()),
+				"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"task-definition":     typecheck.TString(),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -623,8 +590,11 @@ func TestEcsSchemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind:   "at-most-one-of",
-					Fields: []string{"input.launch-type", "input.capacity-provider-strategy"},
+					Kind: "predicate",
+					When: "true",
+					Require: "((input.launch-type == null) || " +
+						"!(@core.length(input.capacity-provider-strategy ?? []) >= 1))",
+					Message: "launch-type and capacity-provider-strategy are mutually exclusive",
 				},
 				{
 					Kind: "predicate",
@@ -687,7 +657,7 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.base == null || " +
 						"@each.value.base <= 100000)",
 					Message: "base must be between 0 and 100000",
-					ForEach: "input.capacity-provider-strategy",
+					ForEach: "input.capacity-provider-strategy ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -697,23 +667,20 @@ func TestEcsSchemas(t *testing.T) {
 						"(@each.value.weight == null || " +
 						"@each.value.weight <= 1000)",
 					Message: "weight must be between 0 and 1000",
-					ForEach: "input.capacity-provider-strategy",
+					ForEach: "input.capacity-provider-strategy ?? []",
 				},
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(@each.value.container-port == null || " +
-						"@each.value.container-port >= 0) && " +
-						"(@each.value.container-port == null || " +
-						"@each.value.container-port <= 65536)",
+					Require: "(@each.value.container-port >= 0) && " +
+						"(@each.value.container-port <= 65536)",
 					Message: "container-port must be between 0 and 65536",
-					ForEach: "input.load-balancers",
+					ForEach: "input.load-balancers ?? []",
 				},
 				{
-					Kind: "predicate",
-					When: "true",
-					Require: "(input.placement-constraints == null || " +
-						"@core.length(input.placement-constraints) <= 10)",
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.placement-constraints ?? []) <= 10)",
 					Message: "placement-constraints allows at most 10 entries",
 				},
 				{
@@ -722,27 +689,26 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.type == 'distinctInstance' || " +
 						"@each.value.type == 'memberOf')",
 					Message: "type must be distinctInstance or memberOf",
-					ForEach: "input.placement-constraints",
+					ForEach: "input.placement-constraints ?? []",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'memberOf')",
 					Require: "(@each.value.expression != null)",
 					Message: "a memberOf placement constraint requires an expression",
-					ForEach: "input.placement-constraints",
+					ForEach: "input.placement-constraints ?? []",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'distinctInstance')",
 					Require: "(@each.value.expression == null)",
 					Message: "a distinctInstance placement constraint takes no expression",
-					ForEach: "input.placement-constraints",
+					ForEach: "input.placement-constraints ?? []",
 				},
 				{
-					Kind: "predicate",
-					When: "true",
-					Require: "(input.placement-strategy == null || " +
-						"@core.length(input.placement-strategy) <= 5)",
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.placement-strategy ?? []) <= 5)",
 					Message: "placement-strategy allows at most 5 entries",
 				},
 				{
@@ -752,14 +718,14 @@ func TestEcsSchemas(t *testing.T) {
 						"@each.value.type == 'spread' || " +
 						"@each.value.type == 'binpack')",
 					Message: "type must be random, spread, or binpack",
-					ForEach: "input.placement-strategy",
+					ForEach: "input.placement-strategy ?? []",
 				},
 				{
 					Kind:    "predicate",
 					When:    "(@each.value.type == 'random')",
 					Require: "(@each.value.field == null)",
 					Message: "a random placement strategy must omit field",
-					ForEach: "input.placement-strategy",
+					ForEach: "input.placement-strategy ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -767,22 +733,15 @@ func TestEcsSchemas(t *testing.T) {
 					Require: "(@each.value.field == 'cpu' || " +
 						"@each.value.field == 'memory')",
 					Message: "a binpack placement strategy field must be cpu or memory",
-					ForEach: "input.placement-strategy",
+					ForEach: "input.placement-strategy ?? []",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.capacity-provider-strategy", Optional: true},
-				{Field: "input.load-balancers", Optional: true},
-				{Field: "input.placement-constraints", Optional: true},
-				{Field: "input.placement-strategy", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

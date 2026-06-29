@@ -32,13 +32,13 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 	require.Contains(t, schema.Resources, "autoscaling-group")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
-			"availability-zones":        typecheck.TList(typecheck.TString()),
+			"availability-zones":        typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			"capacity-rebalance":        typecheck.TOptional(typecheck.TBoolean()),
 			"default-cooldown":          typecheck.TOptional(typecheck.TInteger()),
 			"default-instance-warmup":   typecheck.TOptional(typecheck.TInteger()),
 			"desired-capacity":          typecheck.TOptional(typecheck.TInteger()),
 			"desired-capacity-type":     typecheck.TOptional(typecheck.TString()),
-			"enabled-metrics":           typecheck.TList(typecheck.TString()),
+			"enabled-metrics":           typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			"force-delete":              typecheck.TOptional(typecheck.TBoolean()),
 			"health-check-grace-period": typecheck.TOptional(typecheck.TInteger()),
 			"health-check-type":         typecheck.TOptional(typecheck.TString()),
@@ -59,15 +59,15 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 			"placement-group":         typecheck.TOptional(typecheck.TString()),
 			"protect-from-scale-in":   typecheck.TOptional(typecheck.TBoolean()),
 			"service-linked-role-arn": typecheck.TOptional(typecheck.TString()),
-			"suspended-processes":     typecheck.TList(typecheck.TString()),
-			"tags": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+			"suspended-processes":     typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"tags": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 				{Name: "key", Type: typecheck.TString()},
 				{Name: "value", Type: typecheck.TString()},
 				{Name: "propagate-at-launch", Type: typecheck.TBoolean()},
-			})),
-			"target-group-arns":         typecheck.TList(typecheck.TString()),
-			"termination-policies":      typecheck.TList(typecheck.TString()),
-			"vpc-zone-identifier":       typecheck.TList(typecheck.TString()),
+			}))),
+			"target-group-arns":         typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"termination-policies":      typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"vpc-zone-identifier":       typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			"wait-for-capacity-timeout": typecheck.TOptional(typecheck.TString()),
 		},
 		Outputs: map[string]typecheck.Type{
@@ -83,23 +83,31 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "(input.min-size == null || input.min-size >= 0)",
+				Require: "(input.min-size >= 0)",
 				Message: "min-size must be zero or greater",
 			},
 			{
 				Kind:    "predicate",
 				When:    "true",
-				Require: "(input.max-size == null || input.max-size >= 0)",
+				Require: "(input.max-size >= 0)",
 				Message: "max-size must be zero or greater",
 			},
 			{
-				Kind:   "at-most-one-of",
-				Fields: []string{"input.availability-zones", "input.vpc-zone-identifier"},
+				Kind: "predicate",
+				When: "true",
+				Require: "(!((input.availability-zones != null) && " +
+					"(@core.length(input.availability-zones) >= 1)) || " +
+					"!((input.vpc-zone-identifier != null) && " +
+					"(@core.length(input.vpc-zone-identifier) >= 1)))",
+				Message: "availability-zones and vpc-zone-identifier are mutually exclusive",
 			},
 			{
-				Kind:    "predicate",
-				When:    "true",
-				Require: "((input.availability-zones != null) || (input.vpc-zone-identifier != null))",
+				Kind: "predicate",
+				When: "true",
+				Require: "(((input.availability-zones != null) && " +
+					"(@core.length(input.availability-zones) >= 1)) || " +
+					"((input.vpc-zone-identifier != null) && " +
+					"(@core.length(input.vpc-zone-identifier) >= 1)))",
 				Message: "one of availability-zones or vpc-zone-identifier is required",
 			},
 			{
@@ -133,17 +141,8 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 				Message: "metrics-granularity must be 1Minute",
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.availability-zones", Optional: true},
-			{Field: "input.vpc-zone-identifier", Optional: true},
-			{Field: "input.termination-policies", Optional: true},
-			{Field: "input.tags", Optional: true},
-			{Field: "input.suspended-processes", Optional: true},
-			{Field: "input.enabled-metrics", Optional: true},
-			{Field: "input.target-group-arns", Optional: true},
-		},
 	}
-	assert.Equal(t, want,
+	assertTypeSchemaEqual(t, want,
 		schema.Resources["autoscaling-group"])
 }
 
@@ -182,11 +181,11 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 				"name":                      typecheck.TString(),
 				"policy-type":               typecheck.TOptional(typecheck.TString()),
 				"scaling-adjustment":        typecheck.TOptional(typecheck.TInteger()),
-				"step-adjustments": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"step-adjustments": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "scaling-adjustment", Type: typecheck.TInteger()},
 					{Name: "metric-interval-lower-bound", Type: typecheck.TNumber(), Optional: true},
 					{Name: "metric-interval-upper-bound", Type: typecheck.TNumber(), Optional: true},
-				})),
+				}))),
 				"target-tracking-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "target-value", Type: typecheck.TNumber()},
 					{Name: "disable-scale-in", Type: typecheck.TBoolean(), Optional: true},
@@ -245,8 +244,12 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 						"TargetTrackingScaling, or PredictiveScaling",
 				},
 				{
-					Kind:   "at-most-one-of",
-					Fields: []string{"input.scaling-adjustment", "input.step-adjustments"},
+					Kind: "predicate",
+					When: "true",
+					Require: "((input.scaling-adjustment == null) || " +
+						"!((input.step-adjustments != null) && " +
+						"(@core.length(input.step-adjustments) >= 1)))",
+					Message: "scaling-adjustment and step-adjustments are mutually exclusive",
 				},
 				{
 					Kind: "predicate",
@@ -263,14 +266,16 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 					Message: "scaling-adjustment is valid only when policy-type is SimpleScaling",
 				},
 				{
-					Kind:    "predicate",
-					When:    "(input.policy-type == 'StepScaling')",
-					Require: "(input.step-adjustments != null)",
+					Kind: "predicate",
+					When: "(input.policy-type == 'StepScaling')",
+					Require: "((input.step-adjustments != null) && " +
+						"(@core.length(input.step-adjustments) >= 1))",
 					Message: "step-adjustments is required when policy-type is StepScaling",
 				},
 				{
-					Kind:    "predicate",
-					When:    "(input.step-adjustments != null)",
+					Kind: "predicate",
+					When: "((input.step-adjustments != null) && " +
+						"(@core.length(input.step-adjustments) >= 1))",
 					Require: "(input.policy-type == 'StepScaling')",
 					Message: "step-adjustments is valid only when policy-type is StepScaling",
 				},
@@ -310,9 +315,6 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 						"input.min-adjustment-magnitude >= 1)",
 					Message: "min-adjustment-magnitude must be at least 1",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.step-adjustments", Optional: true},
 			},
 		},
 		"autoscaling-lifecycle-hook": {
@@ -362,7 +364,7 @@ func TestAutoscalingScalingSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

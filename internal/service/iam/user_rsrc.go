@@ -18,6 +18,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -36,11 +37,11 @@ var userNameRe = regexp.MustCompile(`^[0-9A-Za-z=,.@_+-]+$`)
 // reconciled through the IAM tag calls, and force destroy controls delete-time
 // cleanup of dependent IAM credentials and policies.
 type User struct {
-	Name                string            `ub:"name"`
-	Path                string            `ub:"path"`
-	PermissionsBoundary *string           `ub:"permissions-boundary"`
-	ForceDestroy        bool              `ub:"force-destroy"`
-	Tags                map[string]string `ub:"tags"`
+	Name                string             `ub:"name"`
+	Path                string             `ub:"path"`
+	PermissionsBoundary *string            `ub:"permissions-boundary"`
+	ForceDestroy        bool               `ub:"force-destroy"`
+	Tags                *map[string]string `ub:"tags"`
 }
 
 // UserOutput holds the values IAM reports for a user. Name is the current cloud
@@ -66,7 +67,6 @@ func (r User) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.Path, "/"),
 		defaults.Value(r.ForceDestroy, false),
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -91,7 +91,7 @@ func (r *User) Create(ctx context.Context, cfg *awsCfg) (*UserOutput, error) {
 	in := &iam.CreateUserInput{
 		UserName: aws.String(r.Name),
 		Path:     aws.String(r.Path),
-		Tags:     userTags(r.Tags),
+		Tags:     userTags(ptr.Value(r.Tags)),
 	}
 	if permissionsBoundaryPresent(r.PermissionsBoundary) {
 		in.PermissionsBoundary = r.PermissionsBoundary
@@ -119,8 +119,8 @@ func (r *User) Create(ctx context.Context, cfg *awsCfg) (*UserOutput, error) {
 		return nil, errors.New("create user: response holds no user name")
 	}
 	name := aws.ToString(resp.User.UserName)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := tagUser(ctx, client, name, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := tagUser(ctx, client, name, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -180,12 +180,12 @@ func (r *User) Update(
 		}
 		updated = true
 	}
-	oldTags := prior.Inputs.Tags
+	oldTags := ptr.Value(prior.Inputs.Tags)
 	if prior.Observed != nil {
 		oldTags = prior.Observed.Tags
 	}
-	if userTagsNeedSync(oldTags, r.Tags) {
-		if err := syncUserTags(ctx, client, handle, oldTags, r.Tags, true); err != nil {
+	if userTagsNeedSync(oldTags, ptr.Value(r.Tags)) {
+		if err := syncUserTags(ctx, client, handle, oldTags, ptr.Value(r.Tags), true); err != nil {
 			return nil, err
 		}
 		updated = true

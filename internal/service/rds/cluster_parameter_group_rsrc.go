@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
@@ -51,11 +51,11 @@ var clusterParameterDependencyGroups = [][]string{
 // removed from the list is reset to its engine default, so the group holds only
 // the parameters the configuration names.
 type ClusterParameterGroup struct {
-	Name        string                           `ub:"name"`
-	Family      string                           `ub:"family"`
-	Description string                           `ub:"description"`
-	Parameters  []ClusterParameterGroupParameter `ub:"parameters"`
-	Tags        map[string]string                `ub:"tags"`
+	Name        string                            `ub:"name"`
+	Family      string                            `ub:"family"`
+	Description string                            `ub:"description"`
+	Parameters  *[]ClusterParameterGroupParameter `ub:"parameters"`
+	Tags        *map[string]string                `ub:"tags"`
 }
 
 // ClusterParameterGroupParameter is one engine setting in a cluster parameter
@@ -84,15 +84,6 @@ func (r *ClusterParameterGroup) SchemaVersion() int { return 1 }
 // the tags reconcile in place by Update.
 func (r *ClusterParameterGroup) ReplaceFields() []string {
 	return []string{"name", "family", "description"}
-}
-
-// Defaults marks the inputs a group may omit. A group with no parameters and no
-// tags is a valid group, so both collections are optional.
-func (r ClusterParameterGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Parameters),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules RDS places on a group's inputs. A parameter's
@@ -127,7 +118,7 @@ func (r *ClusterParameterGroup) Create(
 		DBClusterParameterGroupName: aws.String(r.Name),
 		DBParameterGroupFamily:      aws.String(r.Family),
 		Description:                 aws.String(r.Description),
-		Tags:                        tagList(r.Tags),
+		Tags:                        tagList(ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateDBClusterParameterGroup(ctx, in)
 	if err != nil {
@@ -205,12 +196,12 @@ func (r *ClusterParameterGroup) Update(
 	// declaration are reset. The whole reconcile runs only when the declared
 	// parameters changed.
 	if runtime.Changed(prior.Inputs.Parameters, r.Parameters) {
-		if err := r.reconcileParameters(ctx, client, prior.Inputs.Parameters); err != nil {
+		if err := r.reconcileParameters(ctx, client, ptr.Value(prior.Inputs.Parameters)); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -253,7 +244,7 @@ func (r *ClusterParameterGroup) Delete(
 func (r *ClusterParameterGroup) reconcileParameters(
 	ctx context.Context, client *rds.Client, prior []ClusterParameterGroupParameter,
 ) error {
-	desired := expandClusterParameters(r.Parameters)
+	desired := expandClusterParameters(ptr.Value(r.Parameters))
 	before := expandClusterParameters(prior)
 	changed := changedClusterParameters(before, desired)
 	if err := r.modifyParameters(ctx, client, changed); err != nil {

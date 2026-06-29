@@ -13,10 +13,10 @@ import (
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -55,17 +55,17 @@ var unsupportedAttributeKey = regexp.MustCompile(
 // the name is at most 32 characters matching ^[0-9A-Za-z-]+$, must not begin or
 // end with a hyphen, and must not begin with "internal-".
 type LoadBalancer struct {
-	Name                  string                      `ub:"name"`
-	LoadBalancerType      *string                     `ub:"load-balancer-type"`
-	Internal              *bool                       `ub:"internal"`
-	IpAddressType         *string                     `ub:"ip-address-type"`
-	CustomerOwnedIpv4Pool *string                     `ub:"customer-owned-ipv4-pool"`
-	SecurityGroups        []string                    `ub:"security-groups"`
-	Subnets               []string                    `ub:"subnets"`
-	SubnetMappings        []LoadBalancerSubnetMapping `ub:"subnet-mappings"`
-	AccessLogs            *LoadBalancerAccessLogs     `ub:"access-logs"`
-	ConnectionLogs        *LoadBalancerConnectionLogs `ub:"connection-logs"`
-	Tags                  map[string]string           `ub:"tags"`
+	Name                  string                       `ub:"name"`
+	LoadBalancerType      *string                      `ub:"load-balancer-type"`
+	Internal              *bool                        `ub:"internal"`
+	IpAddressType         *string                      `ub:"ip-address-type"`
+	CustomerOwnedIpv4Pool *string                      `ub:"customer-owned-ipv4-pool"`
+	SecurityGroups        *[]string                    `ub:"security-groups"`
+	Subnets               *[]string                    `ub:"subnets"`
+	SubnetMappings        *[]LoadBalancerSubnetMapping `ub:"subnet-mappings"`
+	AccessLogs            *LoadBalancerAccessLogs      `ub:"access-logs"`
+	ConnectionLogs        *LoadBalancerConnectionLogs  `ub:"connection-logs"`
+	Tags                  *map[string]string           `ub:"tags"`
 
 	IdleTimeout                           *int64  `ub:"idle-timeout"`
 	EnableDeletionProtection              *bool   `ub:"enable-deletion-protection"`
@@ -117,16 +117,6 @@ func (r *LoadBalancer) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a load balancer may omit.
-func (r LoadBalancer) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.SecurityGroups),
-		defaults.Optional(r.Subnets),
-		defaults.Optional(r.SubnetMappings),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules ELBv2 places on a load balancer's inputs. A
 // load balancer's subnets are given as either a plain subnet list or a list of
 // subnet mappings, never both. The type and the several enum-valued attributes
@@ -136,7 +126,14 @@ func (r LoadBalancer) Defaults() []defaults.Default {
 // each attribute, are enforced by the API and in code.
 func (r LoadBalancer) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.ExactlyOneOf(r.Subnets, r.SubnetMappings),
+		constraint.Must(constraint.Any(
+			constraint.All(
+				constraint.NotEmpty(r.Subnets),
+				constraint.Not(constraint.NotEmpty(r.SubnetMappings))),
+			constraint.All(
+				constraint.Not(constraint.NotEmpty(r.Subnets)),
+				constraint.NotEmpty(r.SubnetMappings)))).
+			Message("exactly one of subnets or subnet-mappings is required"),
 		constraint.When(constraint.Present(r.LoadBalancerType)).
 			Require(constraint.OneOf(r.LoadBalancerType, "application", "network", "gateway")).
 			Message("load-balancer-type must be application, network, or gateway"),
@@ -195,8 +192,8 @@ func (r *LoadBalancer) Create(ctx context.Context, cfg *awsCfg) (*LoadBalancerOu
 	if err := r.waitActive(ctx, client, arn); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -272,13 +269,14 @@ func (r *LoadBalancer) Update(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.SecurityGroups, r.SecurityGroups) {
+	if ptr.Value(r.SecurityGroups) != nil && runtime.Changed(ptr.Value(prior.Inputs.SecurityGroups), ptr.Value(r.SecurityGroups)) {
 		if err := r.setSecurityGroups(ctx, client, arn); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Subnets, r.Subnets) ||
-		runtime.Changed(prior.Inputs.SubnetMappings, r.SubnetMappings) {
+	if (ptr.Value(r.Subnets) != nil && runtime.Changed(ptr.Value(prior.Inputs.Subnets), ptr.Value(r.Subnets))) ||
+		(ptr.Value(r.SubnetMappings) != nil &&
+			runtime.Changed(ptr.Value(prior.Inputs.SubnetMappings), ptr.Value(r.SubnetMappings))) {
 		if err := r.setSubnets(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -288,8 +286,8 @@ func (r *LoadBalancer) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -331,10 +329,10 @@ func (r *LoadBalancer) createInput() *elbv2.CreateLoadBalancerInput {
 	in := &elbv2.CreateLoadBalancerInput{
 		Name:                  aws.String(r.Name),
 		CustomerOwnedIpv4Pool: r.CustomerOwnedIpv4Pool,
-		SecurityGroups:        r.SecurityGroups,
-		Subnets:               r.Subnets,
-		SubnetMappings:        subnetMappings(r.SubnetMappings),
-		Tags:                  tagList(r.Tags),
+		SecurityGroups:        ptr.Value(r.SecurityGroups),
+		Subnets:               ptr.Value(r.Subnets),
+		SubnetMappings:        subnetMappings(ptr.Value(r.SubnetMappings)),
+		Tags:                  tagList(ptr.Value(r.Tags)),
 	}
 	if r.LoadBalancerType != nil {
 		in.Type = elbv2types.LoadBalancerTypeEnum(*r.LoadBalancerType)
@@ -487,8 +485,8 @@ func (r *LoadBalancer) modifyAttributes(
 func (r *LoadBalancer) setSubnets(ctx context.Context, client *elbv2.Client, arn string) error {
 	in := &elbv2.SetSubnetsInput{
 		LoadBalancerArn: aws.String(arn),
-		Subnets:         r.Subnets,
-		SubnetMappings:  subnetMappings(r.SubnetMappings),
+		Subnets:         ptr.Value(r.Subnets),
+		SubnetMappings:  subnetMappings(ptr.Value(r.SubnetMappings)),
 	}
 	if r.IpAddressType != nil {
 		in.IpAddressType = elbv2types.IpAddressType(*r.IpAddressType)
@@ -505,7 +503,7 @@ func (r *LoadBalancer) setSecurityGroups(
 ) error {
 	_, err := client.SetSecurityGroups(ctx, &elbv2.SetSecurityGroupsInput{
 		LoadBalancerArn: aws.String(arn),
-		SecurityGroups:  r.SecurityGroups,
+		SecurityGroups:  ptr.Value(r.SecurityGroups),
 	})
 	if err != nil {
 		return fmt.Errorf("set security groups: %w", err)

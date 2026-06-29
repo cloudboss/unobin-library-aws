@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -32,8 +32,8 @@ const internetGatewayAttachStateAvailable = "available"
 // the old VPC and attaches the new one in place, so nothing on the gateway forces
 // a replacement.
 type InternetGateway struct {
-	VpcId *string           `ub:"vpc-id"`
-	Tags  map[string]string `ub:"tags"`
+	VpcId *string            `ub:"vpc-id"`
+	Tags  *map[string]string `ub:"tags"`
 }
 
 // InternetGatewayOutput holds the values EC2 computes for an internet gateway.
@@ -56,20 +56,13 @@ func (r *InternetGateway) SchemaVersion() int { return 1 }
 // reconciled by detach and attach rather than by replacing the gateway.
 func (r *InternetGateway) ReplaceFields() []string { return nil }
 
-// Defaults marks the collection inputs an internet gateway may omit.
-func (r InternetGateway) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 func (r *InternetGateway) Create(ctx context.Context, cfg *awsCfg) (*InternetGatewayOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 	resp, err := client.CreateInternetGateway(ctx, &ec2.CreateInternetGatewayInput{
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeInternetGateway, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeInternetGateway, ptr.Value(r.Tags)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create internet gateway: %w", err)
@@ -119,8 +112,8 @@ func (r *InternetGateway) Update(
 	}
 	// The attachment calls do not touch tags, so reconcile them as a set whenever
 	// they changed, the same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

@@ -39,18 +39,18 @@ func TestCloudwatchSchemas(t *testing.T) {
 		"cloudwatch-metric-alarm": {
 			Inputs: map[string]typecheck.Type{
 				"actions-enabled":                      typecheck.TOptional(typecheck.TBoolean()),
-				"alarm-actions":                        typecheck.TList(typecheck.TString()),
+				"alarm-actions":                        typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"alarm-description":                    typecheck.TOptional(typecheck.TString()),
 				"alarm-name":                           typecheck.TString(),
 				"comparison-operator":                  typecheck.TOptional(typecheck.TString()),
 				"datapoints-to-alarm":                  typecheck.TOptional(typecheck.TInteger()),
-				"dimensions":                           typecheck.TMap(typecheck.TString()),
+				"dimensions":                           typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"evaluate-low-sample-count-percentile": typecheck.TOptional(typecheck.TString()),
 				"evaluation-periods":                   typecheck.TOptional(typecheck.TInteger()),
 				"extended-statistic":                   typecheck.TOptional(typecheck.TString()),
-				"insufficient-data-actions":            typecheck.TList(typecheck.TString()),
+				"insufficient-data-actions":            typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"metric-name":                          typecheck.TOptional(typecheck.TString()),
-				"metric-query": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"metric-query": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "id", Type: typecheck.TString()},
 					{Name: "account-id", Type: typecheck.TString(), Optional: true},
 					{Name: "expression", Type: typecheck.TString(), Optional: true},
@@ -65,12 +65,12 @@ func TestCloudwatchSchemas(t *testing.T) {
 					}), Optional: true},
 					{Name: "period", Type: typecheck.TInteger(), Optional: true},
 					{Name: "return-data", Type: typecheck.TBoolean(), Optional: true},
-				})),
+				}))),
 				"namespace":           typecheck.TOptional(typecheck.TString()),
-				"ok-actions":          typecheck.TList(typecheck.TString()),
+				"ok-actions":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"period":              typecheck.TOptional(typecheck.TInteger()),
 				"statistic":           typecheck.TOptional(typecheck.TString()),
-				"tags":                typecheck.TMap(typecheck.TString()),
+				"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"threshold":           typecheck.TOptional(typecheck.TNumber()),
 				"threshold-metric-id": typecheck.TOptional(typecheck.TString()),
 				"treat-missing-data":  typecheck.TOptional(typecheck.TString()),
@@ -83,15 +83,23 @@ func TestCloudwatchSchemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind:   "exactly-one-of",
-					Fields: []string{"input.metric-name", "input.metric-query"},
+					Kind: "predicate",
+					When: "true",
+					Require: "(((input.metric-name != null) && " +
+						"!(@core.length(input.metric-query ?? []) >= 1)) || " +
+						"((input.metric-name == null) && " +
+						"(@core.length(input.metric-query ?? []) >= 1)))",
+					Message: "exactly one of metric-name or metric-query is required",
 				},
 				{
-					Kind: "forbidden-with",
-					Fields: []string{
-						"input.metric-query", "input.namespace", "input.dimensions", "input.period",
-						"input.unit", "input.statistic", "input.extended-statistic",
-					},
+					Kind: "predicate",
+					When: "(@core.length(input.metric-query ?? []) >= 1)",
+					Require: "(input.namespace == null) && " +
+						"!((input.dimensions != null) && " +
+						"(@core.length(input.dimensions) >= 1)) && " +
+						"(input.period == null) && (input.unit == null) && " +
+						"(input.statistic == null) && (input.extended-statistic == null)",
+					Message: "metric-query cannot combine with single-metric fields",
 				},
 				{
 					Kind:   "at-most-one-of",
@@ -111,8 +119,7 @@ func TestCloudwatchSchemas(t *testing.T) {
 				},
 				{
 					Kind: "predicate",
-					When: "((input.metric-query != null) && " +
-						"(@core.length(input.metric-query) >= 1))",
+					When: "(@core.length(input.metric-query ?? []) >= 1)",
 					Require: "(input.comparison-operator != null) && " +
 						"(input.evaluation-periods != null)",
 					Message: "comparison-operator and evaluation-periods are required " +
@@ -235,20 +242,12 @@ func TestCloudwatchSchemas(t *testing.T) {
 					},
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.alarm-actions", Optional: true},
-				{Field: "input.ok-actions", Optional: true},
-				{Field: "input.insufficient-data-actions", Optional: true},
-				{Field: "input.dimensions", Optional: true},
-				{Field: "input.metric-query", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

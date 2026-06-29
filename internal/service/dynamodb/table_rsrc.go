@@ -9,9 +9,9 @@ import (
 	dynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
@@ -35,25 +35,25 @@ const billingModeProvisioned = "PROVISIONED"
 // treated by DynamoDB as PROVISIONED, which then requires capacity; it is sent
 // only when set so an omitted value does not read as drift.
 type Table struct {
-	Name                      string                      `ub:"name"`
-	BillingMode               *string                     `ub:"billing-mode"`
-	HashKey                   string                      `ub:"hash-key"`
-	RangeKey                  *string                     `ub:"range-key"`
-	Attribute                 []TableAttribute            `ub:"attribute"`
-	ReadCapacity              *int64                      `ub:"read-capacity"`
-	WriteCapacity             *int64                      `ub:"write-capacity"`
-	LocalSecondaryIndex       []TableLocalSecondaryIndex  `ub:"local-secondary-index"`
-	GlobalSecondaryIndex      []TableGlobalSecondaryIndex `ub:"global-secondary-index"`
-	OnDemandThroughput        *TableOnDemandThroughput    `ub:"on-demand-throughput"`
-	StreamEnabled             *bool                       `ub:"stream-enabled"`
-	StreamViewType            *string                     `ub:"stream-view-type"`
-	ServerSideEncryption      *TableServerSideEncryption  `ub:"server-side-encryption"`
-	TableClass                *string                     `ub:"table-class"`
-	WarmThroughput            *TableWarmThroughput        `ub:"warm-throughput"`
-	Ttl                       *TableTtl                   `ub:"ttl"`
-	PointInTimeRecovery       *TablePointInTimeRecovery   `ub:"point-in-time-recovery"`
-	DeletionProtectionEnabled *bool                       `ub:"deletion-protection-enabled"`
-	Tags                      map[string]string           `ub:"tags"`
+	Name                      string                       `ub:"name"`
+	BillingMode               *string                      `ub:"billing-mode"`
+	HashKey                   string                       `ub:"hash-key"`
+	RangeKey                  *string                      `ub:"range-key"`
+	Attribute                 *[]TableAttribute            `ub:"attribute"`
+	ReadCapacity              *int64                       `ub:"read-capacity"`
+	WriteCapacity             *int64                       `ub:"write-capacity"`
+	LocalSecondaryIndex       *[]TableLocalSecondaryIndex  `ub:"local-secondary-index"`
+	GlobalSecondaryIndex      *[]TableGlobalSecondaryIndex `ub:"global-secondary-index"`
+	OnDemandThroughput        *TableOnDemandThroughput     `ub:"on-demand-throughput"`
+	StreamEnabled             *bool                        `ub:"stream-enabled"`
+	StreamViewType            *string                      `ub:"stream-view-type"`
+	ServerSideEncryption      *TableServerSideEncryption   `ub:"server-side-encryption"`
+	TableClass                *string                      `ub:"table-class"`
+	WarmThroughput            *TableWarmThroughput         `ub:"warm-throughput"`
+	Ttl                       *TableTtl                    `ub:"ttl"`
+	PointInTimeRecovery       *TablePointInTimeRecovery    `ub:"point-in-time-recovery"`
+	DeletionProtectionEnabled *bool                        `ub:"deletion-protection-enabled"`
+	Tags                      *map[string]string           `ub:"tags"`
 }
 
 // TableOutput holds the values DynamoDB computes for a table. Arn identifies the
@@ -75,17 +75,6 @@ func (r *Table) SchemaVersion() int { return 1 }
 // increase is applied in place, so it stays API-enforced.
 func (r *Table) ReplaceFields() []string {
 	return []string{"name", "hash-key", "range-key", "local-secondary-index"}
-}
-
-// Defaults marks the collection and map inputs a table may omit. The pointer
-// blocks are already optional and take no marker.
-func (r Table) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Attribute),
-		defaults.Optional(r.LocalSecondaryIndex),
-		defaults.Optional(r.GlobalSecondaryIndex),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules DynamoDB places on a table's inputs. The
@@ -194,7 +183,7 @@ func (r *Table) Create(ctx context.Context, cfg *awsCfg) (*TableOutput, error) {
 			return nil, err
 		}
 	}
-	for _, gsi := range r.GlobalSecondaryIndex {
+	for _, gsi := range ptr.Value(r.GlobalSecondaryIndex) {
 		if err := waitGSIActive(ctx, client, r.Name, gsi.Name); err != nil {
 			return nil, err
 		}
@@ -218,15 +207,15 @@ func (r *Table) Create(ctx context.Context, cfg *awsCfg) (*TableOutput, error) {
 func (r *Table) createTable(ctx context.Context, client *dynamodb.Client) error {
 	in := &dynamodb.CreateTableInput{
 		TableName:                 aws.String(r.Name),
-		AttributeDefinitions:      attributeDefinitions(r.Attribute),
+		AttributeDefinitions:      attributeDefinitions(ptr.Value(r.Attribute)),
 		KeySchema:                 keySchema(r.HashKey, r.RangeKey),
-		LocalSecondaryIndexes:     localSecondaryIndexes(r.HashKey, r.LocalSecondaryIndex),
-		GlobalSecondaryIndexes:    globalSecondaryIndexes(r.GlobalSecondaryIndex),
+		LocalSecondaryIndexes:     localSecondaryIndexes(r.HashKey, ptr.Value(r.LocalSecondaryIndex)),
+		GlobalSecondaryIndexes:    globalSecondaryIndexes(ptr.Value(r.GlobalSecondaryIndex)),
 		OnDemandThroughput:        onDemandThroughput(r.OnDemandThroughput),
 		StreamSpecification:       streamSpecification(r.StreamEnabled, r.StreamViewType),
 		WarmThroughput:            warmThroughput(r.WarmThroughput),
 		DeletionProtectionEnabled: r.DeletionProtectionEnabled,
-		Tags:                      tableTags(r.Tags),
+		Tags:                      tableTags(ptr.Value(r.Tags)),
 	}
 	// Provisioned capacity is sent only in provisioned mode; DynamoDB rejects it
 	// in on-demand mode, where capacity is fixed at zero.
@@ -280,7 +269,7 @@ func (r *Table) Update(
 	if err := r.reconcile(ctx, client, prior); err != nil {
 		return nil, err
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -331,7 +320,8 @@ func (r *Table) Delete(ctx context.Context, cfg *awsCfg, prior *TableOutput) err
 // reference a defined attribute.
 func (r *Table) validate() error {
 	return validateAttributesIndexed(
-		r.Attribute, r.HashKey, r.RangeKey, r.LocalSecondaryIndex, r.GlobalSecondaryIndex)
+		ptr.Value(r.Attribute), r.HashKey, r.RangeKey, ptr.Value(r.LocalSecondaryIndex),
+		ptr.Value(r.GlobalSecondaryIndex))
 }
 
 // streamSpecification builds the SDK stream spec from the stream-enabled flag
@@ -360,7 +350,7 @@ func tableOutput(desc *dynamodbtypes.TableDescription) *TableOutput {
 // syncTags reconciles the table's tags with the desired set. DynamoDB addresses
 // table tags by ARN and lists them through a token-paged ListTagsOfResource.
 func (r *Table) syncTags(ctx context.Context, client *dynamodb.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}
 			var token *string

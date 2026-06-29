@@ -93,8 +93,8 @@ type CapacityProviderCapacityReservationRequest struct {
 // CapacityProviderManagedInstancesNetworkConfiguration names the subnets and
 // optional security groups used for managed instances.
 type CapacityProviderManagedInstancesNetworkConfiguration struct {
-	SecurityGroups []string `ub:"security-groups"`
-	Subnets        []string `ub:"subnets"`
+	SecurityGroups *[]string `ub:"security-groups"`
+	Subnets        []string  `ub:"subnets"`
 }
 
 // CapacityProviderManagedInstancesLocalStorageConfiguration controls whether
@@ -117,19 +117,19 @@ type CapacityProviderInstanceRequirementsRequest struct {
 	MemoryMiB                                      CapacityProviderMemoryMiBRequest                  `ub:"memory-mib"`
 	VCpuCount                                      CapacityProviderVCpuCountRangeRequest             `ub:"vcpu-count"`
 	AcceleratorCount                               *CapacityProviderAcceleratorCountRequest          `ub:"accelerator-count"`
-	AcceleratorManufacturers                       []string                                          `ub:"accelerator-manufacturers"`
-	AcceleratorNames                               []string                                          `ub:"accelerator-names"`
+	AcceleratorManufacturers                       *[]string                                         `ub:"accelerator-manufacturers"`
+	AcceleratorNames                               *[]string                                         `ub:"accelerator-names"`
 	AcceleratorTotalMemoryMiB                      *CapacityProviderAcceleratorTotalMemoryMiBRequest `ub:"accelerator-total-memory-mib"`
-	AcceleratorTypes                               []string                                          `ub:"accelerator-types"`
-	AllowedInstanceTypes                           []string                                          `ub:"allowed-instance-types"`
+	AcceleratorTypes                               *[]string                                         `ub:"accelerator-types"`
+	AllowedInstanceTypes                           *[]string                                         `ub:"allowed-instance-types"`
 	BareMetal                                      *string                                           `ub:"bare-metal"`
 	BaselineEbsBandwidthMbps                       *CapacityProviderBaselineEbsBandwidthMbpsRequest  `ub:"baseline-ebs-bandwidth-mbps"`
 	BurstablePerformance                           *string                                           `ub:"burstable-performance"`
-	CpuManufacturers                               []string                                          `ub:"cpu-manufacturers"`
-	ExcludedInstanceTypes                          []string                                          `ub:"excluded-instance-types"`
-	InstanceGenerations                            []string                                          `ub:"instance-generations"`
+	CpuManufacturers                               *[]string                                         `ub:"cpu-manufacturers"`
+	ExcludedInstanceTypes                          *[]string                                         `ub:"excluded-instance-types"`
+	InstanceGenerations                            *[]string                                         `ub:"instance-generations"`
 	LocalStorage                                   *string                                           `ub:"local-storage"`
-	LocalStorageTypes                              []string                                          `ub:"local-storage-types"`
+	LocalStorageTypes                              *[]string                                         `ub:"local-storage-types"`
 	MaxSpotPriceAsPercentageOfOptimalOnDemandPrice *int64                                            `ub:"max-spot-price-as-percentage-of-optimal-on-demand-price"`
 	MemoryGiBPerVCpu                               *CapacityProviderMemoryGiBPerVCpuRequest          `ub:"memory-gib-per-vcpu"`
 	NetworkBandwidthGbps                           *CapacityProviderNetworkBandwidthGbpsRequest      `ub:"network-bandwidth-gbps"`
@@ -345,7 +345,7 @@ func (r *CapacityProviderCapacityReservationRequest) sdk() *ecstypes.CapacityRes
 
 func (n CapacityProviderManagedInstancesNetworkConfiguration) sdk() *ecsMINetworkConfiguration {
 	return &ecstypes.ManagedInstancesNetworkConfiguration{
-		SecurityGroups: nilIfEmpty(n.SecurityGroups),
+		SecurityGroups: nilIfEmpty(ptr.Value(n.SecurityGroups)),
 		Subnets:        n.Subnets,
 	}
 }
@@ -374,16 +374,16 @@ func (r *CapacityProviderInstanceRequirementsRequest) sdk() *ecstypes.InstanceRe
 		MemoryMiB:                 r.MemoryMiB.sdk(),
 		VCpuCount:                 r.VCpuCount.sdk(),
 		AcceleratorCount:          r.AcceleratorCount.sdk(),
-		AcceleratorManufacturers:  acceleratorManufacturersSDK(r.AcceleratorManufacturers),
-		AcceleratorNames:          acceleratorNamesSDK(r.AcceleratorNames),
+		AcceleratorManufacturers:  acceleratorManufacturersSDK(ptr.Value(r.AcceleratorManufacturers)),
+		AcceleratorNames:          acceleratorNamesSDK(ptr.Value(r.AcceleratorNames)),
 		AcceleratorTotalMemoryMiB: r.AcceleratorTotalMemoryMiB.sdk(),
-		AcceleratorTypes:          acceleratorTypesSDK(r.AcceleratorTypes),
-		AllowedInstanceTypes:      nilIfEmpty(r.AllowedInstanceTypes),
+		AcceleratorTypes:          acceleratorTypesSDK(ptr.Value(r.AcceleratorTypes)),
+		AllowedInstanceTypes:      nilIfEmpty(ptr.Value(r.AllowedInstanceTypes)),
 		BaselineEbsBandwidthMbps:  r.BaselineEbsBandwidthMbps.sdk(),
-		CpuManufacturers:          cpuManufacturersSDK(r.CpuManufacturers),
-		ExcludedInstanceTypes:     nilIfEmpty(r.ExcludedInstanceTypes),
-		InstanceGenerations:       instanceGenerationsSDK(r.InstanceGenerations),
-		LocalStorageTypes:         localStorageTypesSDK(r.LocalStorageTypes),
+		CpuManufacturers:          cpuManufacturersSDK(ptr.Value(r.CpuManufacturers)),
+		ExcludedInstanceTypes:     nilIfEmpty(ptr.Value(r.ExcludedInstanceTypes)),
+		InstanceGenerations:       instanceGenerationsSDK(ptr.Value(r.InstanceGenerations)),
+		LocalStorageTypes:         localStorageTypesSDK(ptr.Value(r.LocalStorageTypes)),
 		MaxSpotPriceAsPercentageOfOptimalOnDemandPrice: positiveInt32(
 			r.MaxSpotPriceAsPercentageOfOptimalOnDemandPrice),
 		MemoryGiBPerVCpu:      r.MemoryGiBPerVCpu.sdk(),
@@ -601,7 +601,7 @@ func capacityProviderNetworkConfigurationOutput(
 		return CapacityProviderManagedInstancesNetworkConfiguration{}
 	}
 	return CapacityProviderManagedInstancesNetworkConfiguration{
-		SecurityGroups: stringSliceOutput(n.SecurityGroups),
+		SecurityGroups: ptr.To(stringSliceOutput(n.SecurityGroups)),
 		Subnets:        stringSliceOutput(n.Subnets),
 	}
 }
@@ -638,21 +638,21 @@ func capacityProviderInstanceRequirementsOutput(
 		MemoryMiB:                capacityProviderMemoryMiBOutput(r.MemoryMiB),
 		VCpuCount:                capacityProviderVCpuCountOutput(r.VCpuCount),
 		AcceleratorCount:         capacityProviderAcceleratorCountOutput(r.AcceleratorCount),
-		AcceleratorManufacturers: enumStringSliceOutput(r.AcceleratorManufacturers),
-		AcceleratorNames:         enumStringSliceOutput(r.AcceleratorNames),
+		AcceleratorManufacturers: ptr.To(enumStringSliceOutput(r.AcceleratorManufacturers)),
+		AcceleratorNames:         ptr.To(enumStringSliceOutput(r.AcceleratorNames)),
 		AcceleratorTotalMemoryMiB: capacityProviderAcceleratorTotalMemoryOutput(
 			r.AcceleratorTotalMemoryMiB),
-		AcceleratorTypes:     enumStringSliceOutput(r.AcceleratorTypes),
-		AllowedInstanceTypes: stringSliceOutput(r.AllowedInstanceTypes),
+		AcceleratorTypes:     ptr.To(enumStringSliceOutput(r.AcceleratorTypes)),
+		AllowedInstanceTypes: ptr.To(stringSliceOutput(r.AllowedInstanceTypes)),
 		BareMetal:            enumOutput(string(r.BareMetal)),
 		BaselineEbsBandwidthMbps: capacityProviderBaselineEbsBandwidthOutput(
 			r.BaselineEbsBandwidthMbps),
 		BurstablePerformance:  enumOutput(string(r.BurstablePerformance)),
-		CpuManufacturers:      enumStringSliceOutput(r.CpuManufacturers),
-		ExcludedInstanceTypes: stringSliceOutput(r.ExcludedInstanceTypes),
-		InstanceGenerations:   enumStringSliceOutput(r.InstanceGenerations),
+		CpuManufacturers:      ptr.To(enumStringSliceOutput(r.CpuManufacturers)),
+		ExcludedInstanceTypes: ptr.To(stringSliceOutput(r.ExcludedInstanceTypes)),
+		InstanceGenerations:   ptr.To(enumStringSliceOutput(r.InstanceGenerations)),
 		LocalStorage:          enumOutput(string(r.LocalStorage)),
-		LocalStorageTypes:     enumStringSliceOutput(r.LocalStorageTypes),
+		LocalStorageTypes:     ptr.To(enumStringSliceOutput(r.LocalStorageTypes)),
 		MaxSpotPriceAsPercentageOfOptimalOnDemandPrice: int64FromInt32(
 			r.MaxSpotPriceAsPercentageOfOptimalOnDemandPrice),
 		MemoryGiBPerVCpu:     capacityProviderMemoryGiBPerVCpuOutput(r.MemoryGiBPerVCpu),

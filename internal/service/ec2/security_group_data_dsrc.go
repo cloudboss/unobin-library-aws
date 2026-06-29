@@ -9,9 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // SecurityGroupData resolves exactly one existing EC2 security group with
@@ -19,11 +19,11 @@ import (
 // filters, tag filters, and generic filters as one query. A missing or
 // ambiguous lookup is a normal data-source error, not runtime.ErrNotFound.
 type SecurityGroupData struct {
-	Id     *string                   `ub:"id"`
-	Name   *string                   `ub:"name"`
-	VpcId  *string                   `ub:"vpc-id"`
-	Tags   map[string]string         `ub:"tags"`
-	Filter []SecurityGroupDataFilter `ub:"filter"`
+	Id     *string                    `ub:"id"`
+	Name   *string                    `ub:"name"`
+	VpcId  *string                    `ub:"vpc-id"`
+	Tags   *map[string]string         `ub:"tags"`
+	Filter *[]SecurityGroupDataFilter `ub:"filter"`
 }
 
 // SecurityGroupDataFilter is one DescribeSecurityGroups filter. The name and
@@ -44,14 +44,6 @@ type SecurityGroupDataOutput struct {
 	Name        string            `ub:"name"`
 	VpcId       string            `ub:"vpc-id"`
 	Tags        map[string]string `ub:"tags"`
-}
-
-// Defaults marks the collection inputs a security group lookup may omit.
-func (r SecurityGroupData) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-		defaults.Optional(r.Filter),
-	}
 }
 
 // Read resolves the security group data source. DescribeSecurityGroups is
@@ -123,16 +115,16 @@ func (r *SecurityGroupData) describeInput() *ec2.DescribeSecurityGroupsInput {
 }
 
 func (r *SecurityGroupData) describeFilters() []ec2types.Filter {
-	filters := make([]ec2types.Filter, 0, len(r.Tags)+len(r.Filter)+2)
+	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter))+2)
 	filters = appendSecurityGroupDataStringFilter(filters, "group-name", r.Name)
 	filters = appendSecurityGroupDataStringFilter(filters, "vpc-id", r.VpcId)
-	for key, value := range r.Tags {
+	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("tag:" + key),
 			Values: []string{value},
 		})
 	}
-	for _, filter := range r.Filter {
+	for _, filter := range ptr.Value(r.Filter) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String(filter.Name),
 			Values: filter.Values,

@@ -14,7 +14,6 @@ import (
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -148,29 +147,29 @@ var clusterInstanceDeletedPending = map[string]bool{
 // A member of a cluster never owns a snapshot, so there are no final-snapshot,
 // storage, credential, or KMS inputs here; the cluster owns all of those.
 type ClusterInstance struct {
-	ClusterIdentifier                  string            `ub:"cluster-identifier"`
-	InstanceClass                      string            `ub:"instance-class"`
-	Engine                             string            `ub:"engine"`
-	Identifier                         string            `ub:"identifier"`
-	AvailabilityZone                   *string           `ub:"availability-zone"`
-	DBParameterGroupName               *string           `ub:"db-parameter-group-name"`
-	DBSubnetGroupName                  *string           `ub:"db-subnet-group-name"`
-	CustomIamInstanceProfile           *string           `ub:"custom-iam-instance-profile"`
-	EngineVersion                      *string           `ub:"engine-version"`
-	AutoMinorVersionUpgrade            *bool             `ub:"auto-minor-version-upgrade"`
-	CopyTagsToSnapshot                 *bool             `ub:"copy-tags-to-snapshot"`
-	PromotionTier                      *int64            `ub:"promotion-tier"`
-	PubliclyAccessible                 *bool             `ub:"publicly-accessible"`
-	MonitoringInterval                 *int64            `ub:"monitoring-interval"`
-	MonitoringRoleArn                  *string           `ub:"monitoring-role-arn"`
-	PerformanceInsightsEnabled         *bool             `ub:"performance-insights-enabled"`
-	PerformanceInsightsKMSKeyId        *string           `ub:"performance-insights-kms-key-id"`
-	PerformanceInsightsRetentionPeriod *int64            `ub:"performance-insights-retention-period"`
-	PreferredBackupWindow              *string           `ub:"preferred-backup-window"`
-	PreferredMaintenanceWindow         *string           `ub:"preferred-maintenance-window"`
-	CACertificateIdentifier            *string           `ub:"ca-cert-identifier"`
-	ForceDestroy                       *bool             `ub:"force-destroy"`
-	Tags                               map[string]string `ub:"tags"`
+	ClusterIdentifier                  string             `ub:"cluster-identifier"`
+	InstanceClass                      string             `ub:"instance-class"`
+	Engine                             string             `ub:"engine"`
+	Identifier                         string             `ub:"identifier"`
+	AvailabilityZone                   *string            `ub:"availability-zone"`
+	DBParameterGroupName               *string            `ub:"db-parameter-group-name"`
+	DBSubnetGroupName                  *string            `ub:"db-subnet-group-name"`
+	CustomIamInstanceProfile           *string            `ub:"custom-iam-instance-profile"`
+	EngineVersion                      *string            `ub:"engine-version"`
+	AutoMinorVersionUpgrade            *bool              `ub:"auto-minor-version-upgrade"`
+	CopyTagsToSnapshot                 *bool              `ub:"copy-tags-to-snapshot"`
+	PromotionTier                      *int64             `ub:"promotion-tier"`
+	PubliclyAccessible                 *bool              `ub:"publicly-accessible"`
+	MonitoringInterval                 *int64             `ub:"monitoring-interval"`
+	MonitoringRoleArn                  *string            `ub:"monitoring-role-arn"`
+	PerformanceInsightsEnabled         *bool              `ub:"performance-insights-enabled"`
+	PerformanceInsightsKMSKeyId        *string            `ub:"performance-insights-kms-key-id"`
+	PerformanceInsightsRetentionPeriod *int64             `ub:"performance-insights-retention-period"`
+	PreferredBackupWindow              *string            `ub:"preferred-backup-window"`
+	PreferredMaintenanceWindow         *string            `ub:"preferred-maintenance-window"`
+	CACertificateIdentifier            *string            `ub:"ca-cert-identifier"`
+	ForceDestroy                       *bool              `ub:"force-destroy"`
+	Tags                               *map[string]string `ub:"tags"`
 }
 
 // ClusterInstanceOutput holds the values RDS computes or fills for a cluster
@@ -215,14 +214,6 @@ func (r *ClusterInstance) ReplaceFields() []string {
 		"db-subnet-group-name",
 		"engine",
 		"identifier",
-	}
-}
-
-// Defaults marks the optional map input a member may omit. A bare map input is
-// otherwise compile-required.
-func (r ClusterInstance) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -316,7 +307,7 @@ func (r *ClusterInstance) createInput() *rds.CreateDBInstanceInput {
 		PerformanceInsightsRetentionPeriod: ptr.Int32(r.PerformanceInsightsRetentionPeriod),
 		PreferredBackupWindow:              r.PreferredBackupWindow,
 		PreferredMaintenanceWindow:         r.PreferredMaintenanceWindow,
-		Tags:                               tagList(r.Tags),
+		Tags:                               tagList(ptr.Value(r.Tags)),
 	}
 	return in
 }
@@ -469,8 +460,8 @@ func (r *ClusterInstance) Update(
 	if err != nil {
 		return nil, err
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.Arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

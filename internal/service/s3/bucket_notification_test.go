@@ -20,29 +20,29 @@ func TestBucketNotificationConfiguration(t *testing.T) {
 	id := "topic-id"
 	r := &BucketNotification{
 		Eventbridge: aws.Bool(true),
-		LambdaFunction: []BucketNotificationLambdaFunction{
+		LambdaFunction: new([]BucketNotificationLambdaFunction{
 			{
 				LambdaFunctionArn: aws.String("arn:aws:lambda:us-east-1:123:function:f"),
 				Events:            []string{"", "s3:ObjectCreated:*"},
 				FilterPrefix:      &empty,
 				FilterSuffix:      &suffix,
 			},
-		},
-		Queue: []BucketNotificationQueue{
+		}),
+		Queue: new([]BucketNotificationQueue{
 			{
 				Id:           &empty,
 				QueueArn:     "arn:aws:sqs:us-east-1:123:q",
 				Events:       []string{"s3:ObjectRemoved:*", ""},
 				FilterPrefix: &prefix,
 			},
-		},
-		Topic: []BucketNotificationTopic{
+		}),
+		Topic: new([]BucketNotificationTopic{
 			{
 				Id:       &id,
 				TopicArn: "arn:aws:sns:us-east-1:123:t",
 				Events:   []string{"", "s3:ReducedRedundancyLostObject", ""},
 			},
-		},
+		}),
 	}
 	prior := bucketNotificationEffectiveIDSource{
 		prior: &BucketNotificationOutput{
@@ -112,18 +112,18 @@ func TestBucketNotificationConfiguration(t *testing.T) {
 
 func TestBucketNotificationConfigurationUsesObservedEffectiveIDs(t *testing.T) {
 	r := &BucketNotification{
-		Queue: []BucketNotificationQueue{
+		Queue: new([]BucketNotificationQueue{
 			{
 				QueueArn: "arn:aws:sqs:us-east-1:123:q",
 				Events:   []string{"s3:ObjectCreated:*"},
 			},
-		},
-		Topic: []BucketNotificationTopic{
+		}),
+		Topic: new([]BucketNotificationTopic{
 			{
 				TopicArn: "arn:aws:sns:us-east-1:123:t",
 				Events:   []string{"s3:ObjectRemoved:*"},
 			},
-		},
+		}),
 	}
 	source := bucketNotificationEffectiveIDSource{
 		observed: &BucketNotificationOutput{
@@ -175,11 +175,11 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "explicit destination id drift writes full configuration",
 			item: &BucketNotification{
-				LambdaFunction: []BucketNotificationLambdaFunction{{Id: &configured}},
+				LambdaFunction: new([]BucketNotificationLambdaFunction{{Id: &configured}}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					LambdaFunction: []BucketNotificationLambdaFunction{{Id: &configured}},
+					LambdaFunction: new([]BucketNotificationLambdaFunction{{Id: &configured}}),
 				},
 				Observed: &BucketNotificationOutput{
 					LambdaFunctionSummaries: []BucketNotificationLambdaSummary{
@@ -192,15 +192,15 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "omitted destination id drift accepts observed effective id",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
-					},
+					}),
 				},
 				Outputs: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{{Id: "old"}},
@@ -220,15 +220,15 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "destination count drift writes full configuration",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
-					},
+					}),
 				},
 				Outputs: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{{Id: "old"}},
@@ -245,23 +245,23 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "destination arn drift writes full configuration",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{
 						Id:       &configured,
 						QueueArn: "arn:desired",
 						Events:   []string{"s3:ObjectCreated:*"},
 					},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{
 							Id:       &configured,
 							QueueArn: "arn:desired",
 							Events:   []string{"s3:ObjectCreated:*"},
 						},
-					},
+					}),
 				},
 				Observed: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{
@@ -278,23 +278,23 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "destination event drift writes full configuration",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{
 						Id:       &configured,
 						QueueArn: "arn",
 						Events:   []string{"s3:ObjectCreated:*"},
 					},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{
 							Id:       &configured,
 							QueueArn: "arn",
 							Events:   []string{"s3:ObjectCreated:*"},
 						},
-					},
+					}),
 				},
 				Observed: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{
@@ -311,25 +311,25 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "destination filter drift writes full configuration",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{
 						Id:           &configured,
 						QueueArn:     "arn",
 						Events:       []string{"s3:ObjectCreated:*"},
 						FilterPrefix: &prefix,
 					},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{
 							Id:           &configured,
 							QueueArn:     "arn",
 							Events:       []string{"s3:ObjectCreated:*"},
 							FilterPrefix: &prefix,
 						},
-					},
+					}),
 				},
 				Observed: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{
@@ -347,7 +347,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "normalized destination events skip put",
 			item: &BucketNotification{
-				Queue: []BucketNotificationQueue{
+				Queue: new([]BucketNotificationQueue{
 					{
 						Id:       &configured,
 						QueueArn: "arn",
@@ -356,11 +356,11 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 							"s3:ObjectCreated:*",
 						},
 					},
-				},
+				}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
-					Queue: []BucketNotificationQueue{
+					Queue: new([]BucketNotificationQueue{
 						{
 							Id:       &configured,
 							QueueArn: "arn",
@@ -369,7 +369,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 								"s3:ObjectCreated:*",
 							},
 						},
-					},
+					}),
 				},
 				Observed: &BucketNotificationOutput{
 					QueueSummaries: []BucketNotificationQueueSummary{
@@ -389,12 +389,12 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 			name: "matching observed state skips put",
 			item: &BucketNotification{
 				Eventbridge: aws.Bool(true),
-				Topic:       []BucketNotificationTopic{{Id: &configured}},
+				Topic:       new([]BucketNotificationTopic{{Id: &configured}}),
 			},
 			prior: runtime.Prior[BucketNotification, *BucketNotificationOutput]{
 				Inputs: BucketNotification{
 					Eventbridge: aws.Bool(true),
-					Topic:       []BucketNotificationTopic{{Id: &configured}},
+					Topic:       new([]BucketNotificationTopic{{Id: &configured}}),
 				},
 				Observed: &BucketNotificationOutput{
 					Eventbridge: true,

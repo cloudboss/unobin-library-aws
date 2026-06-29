@@ -3,6 +3,20 @@
 // absent from the request rather than arriving as a zero.
 package ptr
 
+// Value returns the value behind p, or the zero value of T when p is nil.
+func Value[T any](p *T) T {
+	if p == nil {
+		var zero T
+		return zero
+	}
+	return *p
+}
+
+// To returns a pointer to v.
+func To[T any](v T) *T {
+	return &v
+}
+
 // Int32 narrows a *int64 to *int32, preserving nil.
 func Int32(v *int64) *int32 {
 	if v == nil {

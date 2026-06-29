@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	autoscalingtypes "github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -46,8 +45,8 @@ type Group struct {
 	DesiredCapacity           *int64                          `ub:"desired-capacity"`
 	DesiredCapacityType       *string                         `ub:"desired-capacity-type"`
 	LaunchTemplate            GroupLaunchTemplate             `ub:"launch-template"`
-	AvailabilityZones         []string                        `ub:"availability-zones"`
-	VPCZoneIdentifier         []string                        `ub:"vpc-zone-identifier"`
+	AvailabilityZones         *[]string                       `ub:"availability-zones"`
+	VPCZoneIdentifier         *[]string                       `ub:"vpc-zone-identifier"`
 	DefaultCooldown           *int64                          `ub:"default-cooldown"`
 	DefaultInstanceWarmup     *int64                          `ub:"default-instance-warmup"`
 	HealthCheckType           *string                         `ub:"health-check-type"`
@@ -57,13 +56,13 @@ type Group struct {
 	PlacementGroup            *string                         `ub:"placement-group"`
 	ServiceLinkedRoleArn      *string                         `ub:"service-linked-role-arn"`
 	ProtectFromScaleIn        *bool                           `ub:"protect-from-scale-in"`
-	TerminationPolicies       []string                        `ub:"termination-policies"`
+	TerminationPolicies       *[]string                       `ub:"termination-policies"`
 	InstanceMaintenancePolicy *GroupInstanceMaintenancePolicy `ub:"instance-maintenance-policy"`
-	Tags                      []GroupTag                      `ub:"tags"`
-	SuspendedProcesses        []string                        `ub:"suspended-processes"`
-	EnabledMetrics            []string                        `ub:"enabled-metrics"`
+	Tags                      *[]GroupTag                     `ub:"tags"`
+	SuspendedProcesses        *[]string                       `ub:"suspended-processes"`
+	EnabledMetrics            *[]string                       `ub:"enabled-metrics"`
 	MetricsGranularity        *string                         `ub:"metrics-granularity"`
-	TargetGroupArns           []string                        `ub:"target-group-arns"`
+	TargetGroupArns           *[]string                       `ub:"target-group-arns"`
 	ForceDelete               *bool                           `ub:"force-delete"`
 	WaitForCapacityTimeout    *string                         `ub:"wait-for-capacity-timeout"`
 }
@@ -92,20 +91,6 @@ func (r *Group) ReplaceFields() []string {
 	return []string{"name"}
 }
 
-// Defaults marks the optional collection inputs a group may omit. A bare list
-// input is otherwise compile-required; these are all optional.
-func (r Group) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.AvailabilityZones),
-		defaults.Optional(r.VPCZoneIdentifier),
-		defaults.Optional(r.TerminationPolicies),
-		defaults.Optional(r.Tags),
-		defaults.Optional(r.SuspendedProcesses),
-		defaults.Optional(r.EnabledMetrics),
-		defaults.Optional(r.TargetGroupArns),
-	}
-}
-
 // Constraints declares the rules the API enforces on a group's inputs. Sizes are
 // non-negative. Exactly one of the Availability Zones and the VPC zone
 // identifier is given; the API fills the other. The launch template names its
@@ -118,10 +103,13 @@ func (r Group) Constraints() []constraint.Constraint {
 			Message("min-size must be zero or greater"),
 		constraint.Must(constraint.AtLeast(r.MaxSize, 0)).
 			Message("max-size must be zero or greater"),
-		constraint.AtMostOneOf(r.AvailabilityZones, r.VPCZoneIdentifier),
 		constraint.Must(constraint.Any(
-			constraint.Present(r.AvailabilityZones),
-			constraint.Present(r.VPCZoneIdentifier))).
+			constraint.Not(constraint.NotEmpty(r.AvailabilityZones)),
+			constraint.Not(constraint.NotEmpty(r.VPCZoneIdentifier)))).
+			Message("availability-zones and vpc-zone-identifier are mutually exclusive"),
+		constraint.Must(constraint.Any(
+			constraint.NotEmpty(r.AvailabilityZones),
+			constraint.NotEmpty(r.VPCZoneIdentifier))).
 			Message("one of availability-zones or vpc-zone-identifier is required"),
 		constraint.AtMostOneOf(r.LaunchTemplate.Id, r.LaunchTemplate.Name),
 		constraint.Must(constraint.Any(
@@ -159,10 +147,10 @@ func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
 	if err := r.waitCapacity(ctx, client, startTime, target, false); err != nil {
 		return nil, err
 	}
-	if err := r.suspendProcesses(ctx, client, r.SuspendedProcesses); err != nil {
+	if err := r.suspendProcesses(ctx, client, ptr.Value(r.SuspendedProcesses)); err != nil {
 		return nil, err
 	}
-	if err := r.enableMetrics(ctx, client, r.EnabledMetrics); err != nil {
+	if err := r.enableMetrics(ctx, client, ptr.Value(r.EnabledMetrics)); err != nil {
 		return nil, err
 	}
 	return r.read(ctx, client)
@@ -194,9 +182,9 @@ func (r *Group) create(ctx context.Context, client *autoscaling.Client) error {
 	if err != nil {
 		return fmt.Errorf("create auto scaling group: %w", err)
 	}
-	if len(r.Tags) > 0 {
+	if len(ptr.Value(r.Tags)) > 0 {
 		if _, err := client.CreateOrUpdateTags(ctx, &autoscaling.CreateOrUpdateTagsInput{
-			Tags: expandTags(r.Name, r.Tags),
+			Tags: expandTags(r.Name, ptr.Value(r.Tags)),
 		}); err != nil {
 			return fmt.Errorf("tag auto scaling group: %w", err)
 		}
@@ -223,23 +211,23 @@ func (r *Group) createInput() *autoscaling.CreateAutoScalingGroupInput {
 		MaxInstanceLifetime:              ptr.Int32(r.MaxInstanceLifetime),
 		PlacementGroup:                   r.PlacementGroup,
 		ServiceLinkedRoleARN:             r.ServiceLinkedRoleArn,
-		TerminationPolicies:              r.TerminationPolicies,
-		TargetGroupARNs:                  r.TargetGroupArns,
+		TerminationPolicies:              ptr.Value(r.TerminationPolicies),
+		TargetGroupARNs:                  ptr.Value(r.TargetGroupArns),
 	}
 	if r.DesiredCapacity != nil && *r.DesiredCapacity > 0 {
 		in.DesiredCapacity = ptr.Int32(r.DesiredCapacity)
 	}
-	if len(r.AvailabilityZones) > 0 {
-		in.AvailabilityZones = r.AvailabilityZones
+	if len(ptr.Value(r.AvailabilityZones)) > 0 {
+		in.AvailabilityZones = ptr.Value(r.AvailabilityZones)
 	}
-	if len(r.VPCZoneIdentifier) > 0 {
-		in.VPCZoneIdentifier = aws.String(strings.Join(r.VPCZoneIdentifier, ","))
+	if len(ptr.Value(r.VPCZoneIdentifier)) > 0 {
+		in.VPCZoneIdentifier = aws.String(strings.Join(ptr.Value(r.VPCZoneIdentifier), ","))
 	}
 	if r.InstanceMaintenancePolicy != nil {
 		in.InstanceMaintenancePolicy = expandMaintenancePolicy(*r.InstanceMaintenancePolicy)
 	}
-	if len(r.Tags) > 0 {
-		in.Tags = expandTags(r.Name, r.Tags)
+	if len(ptr.Value(r.Tags)) > 0 {
+		in.Tags = expandTags(r.Name, ptr.Value(r.Tags))
 	}
 	return in
 }
@@ -286,23 +274,23 @@ func (r *Group) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := r.syncTags(ctx, client, prior.Inputs.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := r.syncTags(ctx, client, ptr.Value(prior.Inputs.Tags)); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.TargetGroupArns, r.TargetGroupArns) {
-		if err := r.syncTargetGroups(ctx, client, prior.Inputs.TargetGroupArns); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.TargetGroupArns), ptr.Value(r.TargetGroupArns)) {
+		if err := r.syncTargetGroups(ctx, client, ptr.Value(prior.Inputs.TargetGroupArns)); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.SuspendedProcesses, r.SuspendedProcesses) {
-		if err := r.syncSuspendedProcesses(ctx, client, prior.Inputs.SuspendedProcesses); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.SuspendedProcesses), ptr.Value(r.SuspendedProcesses)) {
+		if err := r.syncSuspendedProcesses(ctx, client, ptr.Value(prior.Inputs.SuspendedProcesses)); err != nil {
 			return nil, err
 		}
 	}
 	if r.metricsChanged(prior) {
-		if err := r.syncMetrics(ctx, client, prior.Inputs.EnabledMetrics); err != nil {
+		if err := r.syncMetrics(ctx, client, ptr.Value(prior.Inputs.EnabledMetrics)); err != nil {
 			return nil, err
 		}
 	}
@@ -334,8 +322,8 @@ func (r *Group) groupChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
 		runtime.Changed(p.DesiredCapacity, r.DesiredCapacity) ||
 		runtime.Changed(p.DesiredCapacityType, r.DesiredCapacityType) ||
 		runtime.Changed(p.LaunchTemplate, r.LaunchTemplate) ||
-		runtime.Changed(p.AvailabilityZones, r.AvailabilityZones) ||
-		runtime.Changed(p.VPCZoneIdentifier, r.VPCZoneIdentifier) ||
+		runtime.Changed(ptr.Value(p.AvailabilityZones), ptr.Value(r.AvailabilityZones)) ||
+		runtime.Changed(ptr.Value(p.VPCZoneIdentifier), ptr.Value(r.VPCZoneIdentifier)) ||
 		runtime.Changed(p.DefaultCooldown, r.DefaultCooldown) ||
 		runtime.Changed(p.DefaultInstanceWarmup, r.DefaultInstanceWarmup) ||
 		runtime.Changed(p.HealthCheckType, r.HealthCheckType) ||
@@ -345,14 +333,14 @@ func (r *Group) groupChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
 		runtime.Changed(p.PlacementGroup, r.PlacementGroup) ||
 		runtime.Changed(p.ServiceLinkedRoleArn, r.ServiceLinkedRoleArn) ||
 		runtime.Changed(p.ProtectFromScaleIn, r.ProtectFromScaleIn) ||
-		runtime.Changed(p.TerminationPolicies, r.TerminationPolicies) ||
+		runtime.Changed(ptr.Value(p.TerminationPolicies), ptr.Value(r.TerminationPolicies)) ||
 		runtime.Changed(p.InstanceMaintenancePolicy, r.InstanceMaintenancePolicy)
 }
 
 // metricsChanged reports whether the enabled metrics or their granularity
 // differ from the prior inputs; a granularity change re-enables the metrics.
 func (r *Group) metricsChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
-	return runtime.Changed(prior.Inputs.EnabledMetrics, r.EnabledMetrics) ||
+	return runtime.Changed(ptr.Value(prior.Inputs.EnabledMetrics), ptr.Value(r.EnabledMetrics)) ||
 		runtime.Changed(prior.Inputs.MetricsGranularity, r.MetricsGranularity)
 }
 
@@ -388,13 +376,13 @@ func (r *Group) update(
 	if runtime.Changed(p.LaunchTemplate, r.LaunchTemplate) {
 		in.LaunchTemplate = expandLaunchTemplate(r.LaunchTemplate)
 	}
-	if runtime.Changed(p.AvailabilityZones, r.AvailabilityZones) &&
-		len(r.AvailabilityZones) > 0 {
-		in.AvailabilityZones = r.AvailabilityZones
+	if runtime.Changed(ptr.Value(p.AvailabilityZones), ptr.Value(r.AvailabilityZones)) &&
+		len(ptr.Value(r.AvailabilityZones)) > 0 {
+		in.AvailabilityZones = ptr.Value(r.AvailabilityZones)
 	}
-	if runtime.Changed(p.VPCZoneIdentifier, r.VPCZoneIdentifier) &&
-		len(r.VPCZoneIdentifier) > 0 {
-		in.VPCZoneIdentifier = aws.String(strings.Join(r.VPCZoneIdentifier, ","))
+	if runtime.Changed(ptr.Value(p.VPCZoneIdentifier), ptr.Value(r.VPCZoneIdentifier)) &&
+		len(ptr.Value(r.VPCZoneIdentifier)) > 0 {
+		in.VPCZoneIdentifier = aws.String(strings.Join(ptr.Value(r.VPCZoneIdentifier), ","))
 	}
 	if runtime.Changed(p.DefaultCooldown, r.DefaultCooldown) {
 		in.DefaultCooldown = ptr.Int32(r.DefaultCooldown)
@@ -422,7 +410,7 @@ func (r *Group) update(
 	if runtime.Changed(p.CapacityRebalance, r.CapacityRebalance) {
 		r.setCapacityRebalance(in)
 	}
-	if runtime.Changed(p.TerminationPolicies, r.TerminationPolicies) {
+	if runtime.Changed(ptr.Value(p.TerminationPolicies), ptr.Value(r.TerminationPolicies)) {
 		r.setTerminationPolicies(in)
 	}
 	if runtime.Changed(p.InstanceMaintenancePolicy, r.InstanceMaintenancePolicy) {
@@ -472,8 +460,8 @@ func (r *Group) setCapacityRebalance(in *autoscaling.UpdateAutoScalingGroupInput
 // setTerminationPolicies sets the termination policies on the update, sending
 // the default policy when they are omitted, since a null does not reset them.
 func (r *Group) setTerminationPolicies(in *autoscaling.UpdateAutoScalingGroupInput) {
-	if len(r.TerminationPolicies) > 0 {
-		in.TerminationPolicies = r.TerminationPolicies
+	if len(ptr.Value(r.TerminationPolicies)) > 0 {
+		in.TerminationPolicies = ptr.Value(r.TerminationPolicies)
 		return
 	}
 	in.TerminationPolicies = []string{"Default"}
@@ -618,7 +606,7 @@ func (r *Group) resumeProcesses(
 func (r *Group) syncSuspendedProcesses(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
-	added, removed := stringSetDiff(prior, r.SuspendedProcesses)
+	added, removed := stringSetDiff(prior, ptr.Value(r.SuspendedProcesses))
 	if err := r.resumeProcesses(ctx, client, removed); err != nil {
 		return err
 	}
@@ -668,21 +656,21 @@ func (r *Group) disableMetrics(
 func (r *Group) syncMetrics(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
-	if runtime.Changed(prior, r.EnabledMetrics) {
-		added, removed := stringSetDiff(prior, r.EnabledMetrics)
+	if runtime.Changed(prior, ptr.Value(r.EnabledMetrics)) {
+		added, removed := stringSetDiff(prior, ptr.Value(r.EnabledMetrics))
 		if err := r.disableMetrics(ctx, client, removed); err != nil {
 			return err
 		}
 		return r.enableMetrics(ctx, client, added)
 	}
 	// Only the granularity changed; re-enable the full set under it.
-	return r.enableMetrics(ctx, client, r.EnabledMetrics)
+	return r.enableMetrics(ctx, client, ptr.Value(r.EnabledMetrics))
 }
 
 // syncTags reconciles the structured tag set to the declared set: it deletes
 // the tags removed and creates or updates the tags added or changed.
 func (r *Group) syncTags(ctx context.Context, client *autoscaling.Client, prior []GroupTag) error {
-	remove, upsert := diffTags(prior, r.Tags)
+	remove, upsert := diffTags(prior, ptr.Value(r.Tags))
 	if len(remove) > 0 {
 		tags := make([]autoscalingtypes.Tag, 0, len(remove))
 		for _, t := range remove {
@@ -709,7 +697,7 @@ func (r *Group) syncTags(ctx context.Context, client *autoscaling.Client, prior 
 func (r *Group) syncTargetGroups(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
-	added, removed := stringSetDiff(prior, r.TargetGroupArns)
+	added, removed := stringSetDiff(prior, ptr.Value(r.TargetGroupArns))
 	for _, batch := range batches(removed, 10) {
 		_, err := client.DetachLoadBalancerTargetGroups(ctx,
 			&autoscaling.DetachLoadBalancerTargetGroupsInput{

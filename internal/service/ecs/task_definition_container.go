@@ -255,16 +255,16 @@ func (c TaskDefinitionContainerDefinition) sdk() ecstypes.ContainerDefinition {
 	out := ecstypes.ContainerDefinition{
 		Name:                   aws.String(c.Name),
 		Image:                  aws.String(c.Image),
-		Command:                derefStrings(c.Command),
+		Command:                ptr.Value(c.Command),
 		Cpu:                    int32(aws.ToInt64(c.Cpu)),
-		CredentialSpecs:        derefStrings(c.CredentialSpecs),
+		CredentialSpecs:        ptr.Value(c.CredentialSpecs),
 		DependsOn:              taskDefinitionDependenciesSDK(c.DependsOn),
 		DisableNetworking:      c.DisableNetworking,
-		DnsSearchDomains:       derefStrings(c.DnsSearchDomains),
-		DnsServers:             derefStrings(c.DnsServers),
-		DockerLabels:           derefStringMap(c.DockerLabels),
-		DockerSecurityOptions:  derefStrings(c.DockerSecurityOptions),
-		EntryPoint:             derefStrings(c.EntryPoint),
+		DnsSearchDomains:       ptr.Value(c.DnsSearchDomains),
+		DnsServers:             ptr.Value(c.DnsServers),
+		DockerLabels:           ptr.Value(c.DockerLabels),
+		DockerSecurityOptions:  ptr.Value(c.DockerSecurityOptions),
+		EntryPoint:             ptr.Value(c.EntryPoint),
 		Environment:            taskDefinitionKeyValuePairs(c.Environment),
 		EnvironmentFiles:       taskDefinitionEnvironmentFilesSDK(c.EnvironmentFiles),
 		Essential:              c.Essential,
@@ -273,7 +273,7 @@ func (c TaskDefinitionContainerDefinition) sdk() ecstypes.ContainerDefinition {
 		HealthCheck:            c.HealthCheck.sdk(),
 		Hostname:               c.Hostname,
 		Interactive:            c.Interactive,
-		Links:                  derefStrings(c.Links),
+		Links:                  ptr.Value(c.Links),
 		LinuxParameters:        c.LinuxParameters.sdk(),
 		LogConfiguration:       c.LogConfiguration.sdk(),
 		Memory:                 ptr.Int32(c.Memory),
@@ -357,7 +357,7 @@ func (f *TaskDefinitionContainerFirelens) sdk() *ecstypes.FirelensConfiguration 
 	}
 	return &ecstypes.FirelensConfiguration{
 		Type:    ecstypes.FirelensConfigurationType(f.Type),
-		Options: derefStringMap(f.Options),
+		Options: ptr.Value(f.Options),
 	}
 }
 
@@ -392,8 +392,8 @@ func (p *TaskDefinitionContainerLinuxParameters) sdk() *ecstypes.LinuxParameters
 	}
 	if c := p.Capabilities; c != nil {
 		out.Capabilities = &ecstypes.KernelCapabilities{
-			Add:  derefStrings(c.Add),
-			Drop: derefStrings(c.Drop),
+			Add:  ptr.Value(c.Add),
+			Drop: ptr.Value(c.Drop),
 		}
 	}
 	return out
@@ -409,7 +409,7 @@ func taskDefinitionDevicesSDK(devices *[]TaskDefinitionContainerDevice) []ecstyp
 			HostPath:      aws.String(d.HostPath),
 			ContainerPath: d.ContainerPath,
 		}
-		for _, p := range derefStrings(d.Permissions) {
+		for _, p := range ptr.Value(d.Permissions) {
 			device.Permissions = append(device.Permissions,
 				ecstypes.DeviceCgroupPermission(p))
 		}
@@ -427,7 +427,7 @@ func taskDefinitionTmpfsSDK(mounts *[]TaskDefinitionContainerTmpfs) []ecstypes.T
 		out = append(out, ecstypes.Tmpfs{
 			ContainerPath: aws.String(m.ContainerPath),
 			Size:          int32(m.Size),
-			MountOptions:  derefStrings(m.MountOptions),
+			MountOptions:  ptr.Value(m.MountOptions),
 		})
 	}
 	return out
@@ -441,7 +441,7 @@ func (l *TaskDefinitionContainerLogConfiguration) sdk() *ecstypes.LogConfigurati
 	}
 	return &ecstypes.LogConfiguration{
 		LogDriver:     ecstypes.LogDriver(l.LogDriver),
-		Options:       derefStringMap(l.Options),
+		Options:       ptr.Value(l.Options),
 		SecretOptions: taskDefinitionSecretsSDK(l.SecretOptions),
 	}
 }

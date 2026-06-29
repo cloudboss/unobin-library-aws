@@ -55,7 +55,7 @@ func TestRdsSchemas(t *testing.T) {
 					"description": typecheck.TString(),
 					"name":        typecheck.TString(),
 					"subnet-ids":  typecheck.TList(typecheck.TString()),
-					"tags":        typecheck.TMap(typecheck.TString()),
+					"tags":        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn":                     typecheck.TString(),
@@ -64,15 +64,11 @@ func TestRdsSchemas(t *testing.T) {
 				},
 				Constraints: []lang.ConstraintSpec{
 					{
-						Kind: "predicate",
-						When: "true",
-						Require: "((input.subnet-ids != null) && " +
-							"(@core.length(input.subnet-ids) >= 1))",
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(@core.length(input.subnet-ids) >= 1)",
 						Message: "subnet-ids must not be empty",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -83,12 +79,12 @@ func TestRdsSchemas(t *testing.T) {
 					"description": typecheck.TString(),
 					"family":      typecheck.TString(),
 					"name":        typecheck.TString(),
-					"parameters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					"parameters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "name", Type: typecheck.TString()},
 						{Name: "value", Type: typecheck.TString()},
 						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
-					})),
-					"tags": typecheck.TMap(typecheck.TString()),
+					}))),
+					"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn": typecheck.TString(),
@@ -100,12 +96,8 @@ func TestRdsSchemas(t *testing.T) {
 						Require: "(@each.value.apply-method == 'immediate' || " +
 							"@each.value.apply-method == 'pending-reboot')",
 						Message: "apply-method must be immediate or pending-reboot",
-						ForEach: "input.parameters",
+						ForEach: "input.parameters ?? []",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.parameters", Optional: true},
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -116,12 +108,12 @@ func TestRdsSchemas(t *testing.T) {
 					"description": typecheck.TString(),
 					"family":      typecheck.TString(),
 					"name":        typecheck.TString(),
-					"parameters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					"parameters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "name", Type: typecheck.TString()},
 						{Name: "value", Type: typecheck.TString()},
 						{Name: "apply-method", Type: typecheck.TString(), Optional: true},
-					})),
-					"tags": typecheck.TMap(typecheck.TString()),
+					}))),
+					"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn": typecheck.TString(),
@@ -133,12 +125,8 @@ func TestRdsSchemas(t *testing.T) {
 						Require: "(@each.value.apply-method == 'immediate' || " +
 							"@each.value.apply-method == 'pending-reboot')",
 						Message: "apply-method must be immediate or pending-reboot",
-						ForEach: "input.parameters",
+						ForEach: "input.parameters ?? []",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.parameters", Optional: true},
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -166,13 +154,13 @@ func TestRdsSchemas(t *testing.T) {
 					"deletion-protection":         typecheck.TOptional(typecheck.TBoolean()),
 					"domain":                      typecheck.TOptional(typecheck.TString()),
 					"domain-auth-secret-arn":      typecheck.TOptional(typecheck.TString()),
-					"domain-dns-ips":              typecheck.TList(typecheck.TString()),
+					"domain-dns-ips":              typecheck.TOptional(typecheck.TList(typecheck.TString())),
 					"domain-fqdn":                 typecheck.TOptional(typecheck.TString()),
 					"domain-iam-role-name":        typecheck.TOptional(typecheck.TString()),
 					"domain-ou":                   typecheck.TOptional(typecheck.TString()),
 					"enable-performance-insights": typecheck.TOptional(typecheck.TBoolean()),
-					"enabled-cloudwatch-logs-exports": typecheck.TList(
-						typecheck.TString()),
+					"enabled-cloudwatch-logs-exports": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
 					"engine":                   typecheck.TOptional(typecheck.TString()),
 					"engine-lifecycle-support": typecheck.TOptional(typecheck.TString()),
 					"engine-version":           typecheck.TOptional(typecheck.TString()),
@@ -246,10 +234,10 @@ func TestRdsSchemas(t *testing.T) {
 					"storage-encrypted":      typecheck.TOptional(typecheck.TBoolean()),
 					"storage-throughput":     typecheck.TOptional(typecheck.TInteger()),
 					"storage-type":           typecheck.TOptional(typecheck.TString()),
-					"tags":                   typecheck.TMap(typecheck.TString()),
+					"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"timezone":               typecheck.TOptional(typecheck.TString()),
 					"username":               typecheck.TOptional(typecheck.TString()),
-					"vpc-security-group-ids": typecheck.TList(typecheck.TString()),
+					"vpc-security-group-ids": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"address":                typecheck.TString(),
@@ -350,6 +338,22 @@ func TestRdsSchemas(t *testing.T) {
 					},
 					{
 						Kind: "predicate",
+						When: "(input.vpc-security-group-ids != null)",
+						Require: "(input.vpc-security-group-ids == null || " +
+							"@core.length(input.vpc-security-group-ids) >= 1)",
+						Message: "vpc-security-group-ids must list at least one group when given",
+					},
+					{
+						Kind: "predicate",
+						When: "(input.domain-dns-ips != null)",
+						Require: "(input.domain-dns-ips == null || " +
+							"@core.length(input.domain-dns-ips) >= 2) && " +
+							"(input.domain-dns-ips == null || " +
+							"@core.length(input.domain-dns-ips) <= 2)",
+						Message: "domain-dns-ips must contain exactly two IP addresses when given",
+					},
+					{
+						Kind: "predicate",
 						When: "(input.backup-target != null)",
 						Require: "(input.backup-target == 'outposts' || " +
 							"input.backup-target == 'region')",
@@ -397,14 +401,8 @@ func TestRdsSchemas(t *testing.T) {
 							"@each.value == 'upgrade')",
 						Message: "enabled-cloudwatch-logs-exports entries must be " +
 							"valid instance log types",
-						ForEach: "input.enabled-cloudwatch-logs-exports",
+						ForEach: "input.enabled-cloudwatch-logs-exports ?? []",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.vpc-security-group-ids", Optional: true},
-					{Field: "input.enabled-cloudwatch-logs-exports", Optional: true},
-					{Field: "input.domain-dns-ips", Optional: true},
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -413,7 +411,7 @@ func TestRdsSchemas(t *testing.T) {
 			want: &runtime.TypeSchema{
 				Inputs: map[string]typecheck.Type{
 					"allocated-storage":         typecheck.TOptional(typecheck.TInteger()),
-					"availability-zones":        typecheck.TList(typecheck.TString()),
+					"availability-zones":        typecheck.TOptional(typecheck.TList(typecheck.TString())),
 					"backtrack-window":          typecheck.TOptional(typecheck.TInteger()),
 					"backup-retention-period":   typecheck.TOptional(typecheck.TInteger()),
 					"ca-certificate-identifier": typecheck.TOptional(typecheck.TString()),
@@ -440,15 +438,15 @@ func TestRdsSchemas(t *testing.T) {
 						typecheck.TBoolean()),
 					"enable-local-write-forwarding": typecheck.TOptional(
 						typecheck.TBoolean()),
-					"enabled-cloudwatch-logs-exports": typecheck.TList(
-						typecheck.TString()),
+					"enabled-cloudwatch-logs-exports": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
 					"engine":                    typecheck.TString(),
 					"engine-lifecycle-support":  typecheck.TOptional(typecheck.TString()),
 					"engine-mode":               typecheck.TOptional(typecheck.TString()),
 					"engine-version":            typecheck.TOptional(typecheck.TString()),
 					"final-snapshot-identifier": typecheck.TOptional(typecheck.TString()),
 					"global-cluster-identifier": typecheck.TOptional(typecheck.TString()),
-					"iam-roles":                 typecheck.TList(typecheck.TString()),
+					"iam-roles":                 typecheck.TOptional(typecheck.TList(typecheck.TString())),
 					"iops":                      typecheck.TOptional(typecheck.TInteger()),
 					"kms-key-id":                typecheck.TOptional(typecheck.TString()),
 					"manage-master-user-password": typecheck.TOptional(
@@ -524,13 +522,14 @@ func TestRdsSchemas(t *testing.T) {
 								Optional: true,
 							},
 						})),
-					"skip-final-snapshot":    typecheck.TOptional(typecheck.TBoolean()),
-					"snapshot-identifier":    typecheck.TOptional(typecheck.TString()),
-					"source-region":          typecheck.TOptional(typecheck.TString()),
-					"storage-encrypted":      typecheck.TOptional(typecheck.TBoolean()),
-					"storage-type":           typecheck.TOptional(typecheck.TString()),
-					"tags":                   typecheck.TMap(typecheck.TString()),
-					"vpc-security-group-ids": typecheck.TList(typecheck.TString()),
+					"skip-final-snapshot": typecheck.TOptional(typecheck.TBoolean()),
+					"snapshot-identifier": typecheck.TOptional(typecheck.TString()),
+					"source-region":       typecheck.TOptional(typecheck.TString()),
+					"storage-encrypted":   typecheck.TOptional(typecheck.TBoolean()),
+					"storage-type":        typecheck.TOptional(typecheck.TString()),
+					"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+					"vpc-security-group-ids": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn":                       typecheck.TString(),
@@ -611,6 +610,13 @@ func TestRdsSchemas(t *testing.T) {
 					},
 					{
 						Kind: "predicate",
+						When: "(input.availability-zones != null)",
+						Require: "(input.availability-zones == null || " +
+							"@core.length(input.availability-zones) >= 1)",
+						Message: "availability-zones must list at least one zone when given",
+					},
+					{
+						Kind: "predicate",
 						When: "(input.backup-retention-period != null)",
 						Require: "(input.backup-retention-period == null || " +
 							"input.backup-retention-period <= 35)",
@@ -635,15 +641,8 @@ func TestRdsSchemas(t *testing.T) {
 							"@each.value == 'slowquery' || @each.value == 'upgrade')",
 						Message: "enabled-cloudwatch-logs-exports entries must be " +
 							"valid cluster log types",
-						ForEach: "input.enabled-cloudwatch-logs-exports",
+						ForEach: "input.enabled-cloudwatch-logs-exports ?? []",
 					},
-				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.availability-zones", Optional: true},
-					{Field: "input.enabled-cloudwatch-logs-exports", Optional: true},
-					{Field: "input.iam-roles", Optional: true},
-					{Field: "input.vpc-security-group-ids", Optional: true},
-					{Field: "input.tags", Optional: true},
 				},
 			},
 		},
@@ -676,7 +675,7 @@ func TestRdsSchemas(t *testing.T) {
 					"preferred-maintenance-window": typecheck.TOptional(typecheck.TString()),
 					"promotion-tier":               typecheck.TOptional(typecheck.TInteger()),
 					"publicly-accessible":          typecheck.TOptional(typecheck.TBoolean()),
-					"tags":                         typecheck.TMap(typecheck.TString()),
+					"tags":                         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn":                          typecheck.TString(),
@@ -706,15 +705,12 @@ func TestRdsSchemas(t *testing.T) {
 							"between 7 and 731",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		require.Contains(t, schema.Resources, tt.key)
-		assert.Equal(t, tt.want, schema.Resources[tt.key],
+		assertTypeSchemaEqual(t, tt.want, schema.Resources[tt.key],
 			"schema mismatch for %s", tt.key)
 	}
 }

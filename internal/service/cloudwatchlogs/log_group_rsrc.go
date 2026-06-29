@@ -12,7 +12,6 @@ import (
 	cloudwatchlogs "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	cloudwatchlogstypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -55,12 +54,12 @@ type LogGroup struct {
 	// Name is the log group name. It must hold only letters, digits, underscore,
 	// hyphen, forward slash, period, or the hash sign, and be no longer than 512
 	// characters. The name is the group's identity, fixed at create time.
-	Name                      string            `ub:"name"`
-	LogGroupClass             *string           `ub:"log-group-class"`
-	RetentionInDays           *int64            `ub:"retention-in-days"`
-	KmsKeyId                  *string           `ub:"kms-key-id"`
-	DeletionProtectionEnabled *bool             `ub:"deletion-protection-enabled"`
-	Tags                      map[string]string `ub:"tags"`
+	Name                      string             `ub:"name"`
+	LogGroupClass             *string            `ub:"log-group-class"`
+	RetentionInDays           *int64             `ub:"retention-in-days"`
+	KmsKeyId                  *string            `ub:"kms-key-id"`
+	DeletionProtectionEnabled *bool              `ub:"deletion-protection-enabled"`
+	Tags                      *map[string]string `ub:"tags"`
 }
 
 // LogGroupOutput holds the value CloudWatch Logs computes for a log group. The
@@ -82,13 +81,6 @@ func (r *LogGroup) ReplaceFields() []string {
 	return []string{
 		"name",
 		"log-group-class",
-	}
-}
-
-// Defaults marks the collection input a log group may omit.
-func (r LogGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -124,7 +116,7 @@ func (r *LogGroup) Create(ctx context.Context, cfg *awsCfg) (*LogGroupOutput, er
 		LogGroupName:              aws.String(r.Name),
 		KmsKeyId:                  r.KmsKeyId,
 		DeletionProtectionEnabled: r.DeletionProtectionEnabled,
-		Tags:                      r.Tags,
+		Tags:                      ptr.Value(r.Tags),
 	}
 	if r.LogGroupClass != nil {
 		in.LogGroupClass = cloudwatchlogstypes.LogGroupClass(*r.LogGroupClass)
@@ -249,7 +241,7 @@ func (r *LogGroup) Update(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -304,7 +296,7 @@ func (r *LogGroup) putRetention(ctx context.Context, client *cloudwatchlogs.Clie
 // group by ARN. CloudWatch Logs reads tags with ListTagsForResource and writes
 // changes with TagResource and UntagResource.
 func (r *LogGroup) syncTags(ctx context.Context, client *cloudwatchlogs.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,
 				&cloudwatchlogs.ListTagsForResourceInput{ResourceArn: aws.String(arn)})

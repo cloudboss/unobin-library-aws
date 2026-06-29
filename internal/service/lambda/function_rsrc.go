@@ -10,7 +10,6 @@ import (
 	lambda "github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -42,32 +41,32 @@ const functionStateTimeout = 10 * time.Minute
 // call. SkipDestroy retains the function on delete rather than removing it; it
 // is a delete-time switch, not a property of the live function.
 type Function struct {
-	FunctionName                 string                     `ub:"function-name"`
-	Role                         string                     `ub:"role"`
-	Code                         FunctionCode               `ub:"code"`
-	PackageType                  *string                    `ub:"package-type"`
-	Handler                      *string                    `ub:"handler"`
-	Runtime                      *string                    `ub:"runtime"`
-	Architectures                []string                   `ub:"architectures"`
-	Description                  *string                    `ub:"description"`
-	MemorySize                   *int64                     `ub:"memory-size"`
-	Timeout                      *int64                     `ub:"timeout"`
-	Layers                       []string                   `ub:"layers"`
-	KMSKeyArn                    *string                    `ub:"kms-key-arn"`
-	CodeSigningConfigArn         *string                    `ub:"code-signing-config-arn"`
-	ReservedConcurrentExecutions *int64                     `ub:"reserved-concurrent-executions"`
-	Publish                      *bool                      `ub:"publish"`
-	SkipDestroy                  *bool                      `ub:"skip-destroy"`
-	Environment                  *FunctionEnvironment       `ub:"environment"`
-	VpcConfig                    *FunctionVpcConfig         `ub:"vpc-config"`
-	DeadLetterConfig             *FunctionDeadLetterConfig  `ub:"dead-letter-config"`
-	TracingConfig                *FunctionTracingConfig     `ub:"tracing-config"`
-	ImageConfig                  *FunctionImageConfig       `ub:"image-config"`
-	LoggingConfig                *FunctionLoggingConfig     `ub:"logging-config"`
-	SnapStart                    *FunctionSnapStart         `ub:"snap-start"`
-	EphemeralStorage             *FunctionEphemeralStorage  `ub:"ephemeral-storage"`
-	FileSystemConfigs            []FunctionFileSystemConfig `ub:"file-system-configs"`
-	Tags                         map[string]string          `ub:"tags"`
+	FunctionName                 string                      `ub:"function-name"`
+	Role                         string                      `ub:"role"`
+	Code                         FunctionCode                `ub:"code"`
+	PackageType                  *string                     `ub:"package-type"`
+	Handler                      *string                     `ub:"handler"`
+	Runtime                      *string                     `ub:"runtime"`
+	Architectures                *[]string                   `ub:"architectures"`
+	Description                  *string                     `ub:"description"`
+	MemorySize                   *int64                      `ub:"memory-size"`
+	Timeout                      *int64                      `ub:"timeout"`
+	Layers                       *[]string                   `ub:"layers"`
+	KMSKeyArn                    *string                     `ub:"kms-key-arn"`
+	CodeSigningConfigArn         *string                     `ub:"code-signing-config-arn"`
+	ReservedConcurrentExecutions *int64                      `ub:"reserved-concurrent-executions"`
+	Publish                      *bool                       `ub:"publish"`
+	SkipDestroy                  *bool                       `ub:"skip-destroy"`
+	Environment                  *FunctionEnvironment        `ub:"environment"`
+	VpcConfig                    *FunctionVpcConfig          `ub:"vpc-config"`
+	DeadLetterConfig             *FunctionDeadLetterConfig   `ub:"dead-letter-config"`
+	TracingConfig                *FunctionTracingConfig      `ub:"tracing-config"`
+	ImageConfig                  *FunctionImageConfig        `ub:"image-config"`
+	LoggingConfig                *FunctionLoggingConfig      `ub:"logging-config"`
+	SnapStart                    *FunctionSnapStart          `ub:"snap-start"`
+	EphemeralStorage             *FunctionEphemeralStorage   `ub:"ephemeral-storage"`
+	FileSystemConfigs            *[]FunctionFileSystemConfig `ub:"file-system-configs"`
+	Tags                         *map[string]string          `ub:"tags"`
 }
 
 // FunctionOutput holds the values Lambda computes for a function. Arn is the
@@ -116,16 +115,6 @@ func (r *Function) ModifyResourcePlan(
 	return nil
 }
 
-// Defaults marks the collection inputs a function may omit.
-func (r Function) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Architectures),
-		defaults.Optional(r.Layers),
-		defaults.Optional(r.FileSystemConfigs),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules Lambda places on a function's inputs. The
 // deployment package comes from exactly one source, so exactly one of the
 // code block's four primary source handles is set; the inline and on-disk zip
@@ -157,6 +146,10 @@ func (r Function) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.PackageType)).
 			Require(constraint.OneOf(r.PackageType, "Zip", "Image")).
 			Message("package-type must be Zip or Image"),
+		constraint.When(constraint.Present(r.Architectures)).
+			Require(constraint.MinItems(r.Architectures, 1),
+				constraint.MaxItems(r.Architectures, 1)).
+			Message("architectures must hold exactly one value when given"),
 		constraint.When(constraint.Present(r.MemorySize)).
 			Require(constraint.AtLeast(r.MemorySize, 128),
 				constraint.AtMost(r.MemorySize, 32768)).
@@ -325,7 +318,7 @@ func (r *Function) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -380,11 +373,11 @@ func (r *Function) createInput() (*lambda.CreateFunctionInput, error) {
 		Description:          r.Description,
 		Handler:              r.Handler,
 		KMSKeyArn:            r.KMSKeyArn,
-		Layers:               r.Layers,
+		Layers:               ptr.Value(r.Layers),
 		MemorySize:           ptr.Int32(r.MemorySize),
 		Timeout:              ptr.Int32(r.Timeout),
 		Publish:              aws.ToBool(r.Publish),
-		Architectures:        functionArchitectures(r.Architectures),
+		Architectures:        functionArchitectures(ptr.Value(r.Architectures)),
 		Environment:          r.Environment.to(),
 		VpcConfig:            r.VpcConfig.to(),
 		DeadLetterConfig:     r.DeadLetterConfig.to(),
@@ -393,8 +386,8 @@ func (r *Function) createInput() (*lambda.CreateFunctionInput, error) {
 		LoggingConfig:        r.LoggingConfig.to(),
 		SnapStart:            r.SnapStart.to(),
 		EphemeralStorage:     r.EphemeralStorage.to(),
-		FileSystemConfigs:    fileSystemConfigs(r.FileSystemConfigs),
-		Tags:                 r.Tags,
+		FileSystemConfigs:    fileSystemConfigs(ptr.Value(r.FileSystemConfigs)),
+		Tags:                 ptr.Value(r.Tags),
 	}
 	if r.PackageType != nil {
 		in.PackageType = lambdatypes.PackageType(*r.PackageType)
@@ -445,7 +438,7 @@ func (r *Function) updateConfiguration(
 		Description:       r.Description,
 		Handler:           r.Handler,
 		KMSKeyArn:         r.KMSKeyArn,
-		Layers:            layersForUpdate(r.Layers, prior.Layers),
+		Layers:            layersForUpdate(ptr.Value(r.Layers), ptr.Value(prior.Layers)),
 		MemorySize:        ptr.Int32(r.MemorySize),
 		Timeout:           ptr.Int32(r.Timeout),
 		Environment:       environmentForUpdate(r.Environment, prior.Environment),
@@ -456,7 +449,7 @@ func (r *Function) updateConfiguration(
 		LoggingConfig:     loggingConfigForUpdate(r.LoggingConfig, prior.LoggingConfig),
 		SnapStart:         snapStartForUpdate(r.SnapStart, prior.SnapStart),
 		EphemeralStorage:  r.EphemeralStorage.to(),
-		FileSystemConfigs: fileSystemConfigsForUpdate(r.FileSystemConfigs, prior.FileSystemConfigs),
+		FileSystemConfigs: fileSystemConfigsForUpdate(ptr.Value(r.FileSystemConfigs), ptr.Value(prior.FileSystemConfigs)),
 	}
 	if r.Runtime != nil {
 		in.Runtime = lambdatypes.Runtime(*r.Runtime)
@@ -481,7 +474,7 @@ func (r *Function) updateCode(ctx context.Context, client *lambda.Client) error 
 	}
 	in := &lambda.UpdateFunctionCodeInput{
 		FunctionName:    aws.String(r.FunctionName),
-		Architectures:   functionArchitectures(r.Architectures),
+		Architectures:   functionArchitectures(ptr.Value(r.Architectures)),
 		ZipFile:         code.ZipFile,
 		S3Bucket:        code.S3Bucket,
 		S3Key:           code.S3Key,
@@ -570,7 +563,7 @@ func (r *Function) publishVersion(ctx context.Context, client *lambda.Client) er
 // live tags and writing changes with TagResource and UntagResource. Lambda
 // addresses function tags by the function ARN.
 func (r *Function) syncTags(ctx context.Context, client *lambda.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTags(ctx, &lambda.ListTagsInput{Resource: aws.String(arn)})
 			if err != nil {
@@ -641,7 +634,7 @@ func (r *Function) configChanged(prior Function) bool {
 		runtime.Changed(prior.Runtime, r.Runtime) ||
 		runtime.Changed(prior.MemorySize, r.MemorySize) ||
 		runtime.Changed(prior.Timeout, r.Timeout) ||
-		runtime.Changed(prior.Layers, r.Layers) ||
+		runtime.Changed(ptr.Value(prior.Layers), ptr.Value(r.Layers)) ||
 		runtime.Changed(prior.KMSKeyArn, r.KMSKeyArn) ||
 		runtime.Changed(prior.Environment, r.Environment) ||
 		runtime.Changed(prior.VpcConfig, r.VpcConfig) ||
@@ -651,14 +644,14 @@ func (r *Function) configChanged(prior Function) bool {
 		runtime.Changed(prior.LoggingConfig, r.LoggingConfig) ||
 		runtime.Changed(prior.SnapStart, r.SnapStart) ||
 		runtime.Changed(prior.EphemeralStorage, r.EphemeralStorage) ||
-		runtime.Changed(prior.FileSystemConfigs, r.FileSystemConfigs)
+		runtime.Changed(ptr.Value(prior.FileSystemConfigs), ptr.Value(r.FileSystemConfigs))
 }
 
 // codeChanged reports whether any input that UpdateFunctionCode sends differs
 // from the prior inputs: the code block or the architectures.
 func (r *Function) codeChanged(prior Function) bool {
 	return runtime.Changed(prior.Code, r.Code) ||
-		runtime.Changed(prior.Architectures, r.Architectures)
+		(ptr.Value(r.Architectures) != nil && runtime.Changed(ptr.Value(prior.Architectures), ptr.Value(r.Architectures)))
 }
 
 // waitDescribable polls GetFunction until it stops reporting the function

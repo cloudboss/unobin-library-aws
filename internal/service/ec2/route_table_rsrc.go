@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -21,8 +21,8 @@ import (
 // each their own resource, so this resource manages only the table itself and
 // its tags.
 type RouteTable struct {
-	VpcId string            `ub:"vpc-id"`
-	Tags  map[string]string `ub:"tags"`
+	VpcId string             `ub:"vpc-id"`
+	Tags  *map[string]string `ub:"tags"`
 }
 
 // RouteTableOutput holds the values EC2 computes for a route table. The id is
@@ -43,13 +43,6 @@ func (r *RouteTable) ReplaceFields() []string {
 	return []string{"vpc-id"}
 }
 
-// Defaults marks the collection inputs a route table may omit.
-func (r RouteTable) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 func (r *RouteTable) Create(ctx context.Context, cfg *awsCfg) (*RouteTableOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -57,7 +50,7 @@ func (r *RouteTable) Create(ctx context.Context, cfg *awsCfg) (*RouteTableOutput
 	}
 	in := &ec2.CreateRouteTableInput{
 		VpcId:             aws.String(r.VpcId),
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeRouteTable, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeRouteTable, ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateRouteTable(ctx, in)
 	if err != nil {
@@ -95,8 +88,8 @@ func (r *RouteTable) Update(
 		return nil, err
 	}
 	id := prior.Outputs.RouteTableId
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

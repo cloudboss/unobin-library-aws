@@ -12,9 +12,9 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -28,13 +28,13 @@ import (
 // input reconciled in place. The network border group is also threaded into the
 // release call, since EC2 needs it to release an address scoped to a location.
 type Eip struct {
-	Address               *string           `ub:"address"`
-	Domain                *string           `ub:"domain"`
-	IpamPoolId            *string           `ub:"ipam-pool-id"`
-	NetworkBorderGroup    *string           `ub:"network-border-group"`
-	PublicIpv4Pool        *string           `ub:"public-ipv4-pool"`
-	CustomerOwnedIpv4Pool *string           `ub:"customer-owned-ipv4-pool"`
-	Tags                  map[string]string `ub:"tags"`
+	Address               *string            `ub:"address"`
+	Domain                *string            `ub:"domain"`
+	IpamPoolId            *string            `ub:"ipam-pool-id"`
+	NetworkBorderGroup    *string            `ub:"network-border-group"`
+	PublicIpv4Pool        *string            `ub:"public-ipv4-pool"`
+	CustomerOwnedIpv4Pool *string            `ub:"customer-owned-ipv4-pool"`
+	Tags                  *map[string]string `ub:"tags"`
 }
 
 // EipOutput holds the values EC2 computes for an allocation. The allocation id
@@ -69,13 +69,6 @@ func (r *Eip) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the tag map as a collection the caller may omit.
-func (r Eip) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the one rule on an allocation's inputs: the network is
 // one of the two values AllocateAddress accepts. AWS rejects standard
 // post-Classic, but the enum still admits it, so the value is validated against
@@ -100,7 +93,7 @@ func (r *Eip) Create(ctx context.Context, cfg *awsCfg) (*EipOutput, error) {
 		NetworkBorderGroup:    r.NetworkBorderGroup,
 		PublicIpv4Pool:        r.PublicIpv4Pool,
 		CustomerOwnedIpv4Pool: r.CustomerOwnedIpv4Pool,
-		TagSpecifications:     tagSpecifications(ec2types.ResourceTypeElasticIp, r.Tags),
+		TagSpecifications:     tagSpecifications(ec2types.ResourceTypeElasticIp, ptr.Value(r.Tags)),
 	}
 	resp, err := client.AllocateAddress(ctx, in)
 	if err != nil {
@@ -152,8 +145,8 @@ func (r *Eip) Update(
 	}
 	// Every allocation argument is replace-only, so tags are the only input an
 	// update reconciles; reconcile them as a set whenever they changed.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.AllocationId, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.AllocationId, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

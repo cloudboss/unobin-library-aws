@@ -10,6 +10,8 @@ import (
 	dynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
 	"github.com/cloudboss/unobin/pkg/runtime"
+
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // createTableTimeout and deleteTableTimeout bound the create and delete retries
@@ -38,7 +40,7 @@ const (
 func (r *Table) reconcile(
 	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
 ) error {
-	diff := diffGSIs(prior.Inputs.GlobalSecondaryIndex, r.GlobalSecondaryIndex)
+	diff := diffGSIs(ptr.Value(prior.Inputs.GlobalSecondaryIndex), ptr.Value(r.GlobalSecondaryIndex))
 	deletes := append(diff.deletes, recreateNames(diff.recreates)...)
 	if err := r.deleteIndexes(ctx, client, deletes); err != nil {
 		return err
@@ -248,7 +250,7 @@ func (r *Table) createIndexes(
 	for _, gsi := range creates {
 		_, err := client.UpdateTable(ctx, &dynamodb.UpdateTableInput{
 			TableName:            aws.String(r.Name),
-			AttributeDefinitions: attributeDefinitions(r.Attribute),
+			AttributeDefinitions: attributeDefinitions(ptr.Value(r.Attribute)),
 			GlobalSecondaryIndexUpdates: []dynamodbtypes.GlobalSecondaryIndexUpdate{
 				gsiCreateUpdate(gsi),
 			},

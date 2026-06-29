@@ -67,7 +67,7 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				"protocol-type":                typecheck.TString(),
 				"route-key":                    typecheck.TOptional(typecheck.TString()),
 				"route-selection-expression":   typecheck.TOptional(typecheck.TString()),
-				"tags":                         typecheck.TMap(typecheck.TString()),
+				"tags":                         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"target":                       typecheck.TOptional(typecheck.TString()),
 				"version":                      typecheck.TOptional(typecheck.TString()),
 			},
@@ -145,9 +145,6 @@ func TestApigatewayv2Schemas(t *testing.T) {
 					Message: "base-path applies only to a body import",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"apigatewayv2-integration": {
 			Inputs: map[string]typecheck.Type{
@@ -163,12 +160,12 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				"integration-uri":           typecheck.TOptional(typecheck.TString()),
 				"passthrough-behavior":      typecheck.TOptional(typecheck.TString()),
 				"payload-format-version":    typecheck.TOptional(typecheck.TString()),
-				"request-parameters":        typecheck.TMap(typecheck.TString()),
-				"request-templates":         typecheck.TMap(typecheck.TString()),
-				"response-parameters": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"request-parameters":        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"request-templates":         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"response-parameters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "status-code", Type: typecheck.TString()},
 					{Name: "mappings", Type: typecheck.TMap(typecheck.TString())},
-				})),
+				}))),
 				"template-selection-expression": typecheck.TOptional(typecheck.TString()),
 				"timeout-in-millis":             typecheck.TOptional(typecheck.TInteger()),
 				"tls-config": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
@@ -246,11 +243,6 @@ func TestApigatewayv2Schemas(t *testing.T) {
 					Message: "integration-method must be a valid HTTP method",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.request-parameters", Optional: true},
-				{Field: "input.request-templates", Optional: true},
-				{Field: "input.response-parameters", Optional: true},
-			},
 		},
 		"apigatewayv2-authorizer": {
 			Inputs: map[string]typecheck.Type{
@@ -261,7 +253,7 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				"authorizer-type":                   typecheck.TString(),
 				"authorizer-uri":                    typecheck.TOptional(typecheck.TString()),
 				"enable-simple-responses":           typecheck.TOptional(typecheck.TBoolean()),
-				"identity-sources":                  typecheck.TList(typecheck.TString()),
+				"identity-sources":                  typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"jwt-configuration": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "audience", Type: typecheck.TList(typecheck.TString()), Optional: true},
 					{Name: "issuer", Type: typecheck.TString(), Optional: true},
@@ -282,10 +274,9 @@ func TestApigatewayv2Schemas(t *testing.T) {
 					Message: "authorizer-type must be JWT or REQUEST",
 				},
 				{
-					Kind: "predicate",
-					When: "true",
-					Require: "((input.name != null) && " +
-						"(@core.length(input.name) >= 1))",
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.name) >= 1)",
 					Message: "name must not be empty",
 				},
 				{
@@ -312,21 +303,18 @@ func TestApigatewayv2Schemas(t *testing.T) {
 					Message: "authorizer-uri must not be empty",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.identity-sources", Optional: true},
-			},
 		},
 		"apigatewayv2-route": {
 			Inputs: map[string]typecheck.Type{
 				"api-id":                              typecheck.TString(),
 				"api-key-required":                    typecheck.TOptional(typecheck.TBoolean()),
-				"authorization-scopes":                typecheck.TList(typecheck.TString()),
+				"authorization-scopes":                typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"authorization-type":                  typecheck.TOptional(typecheck.TString()),
 				"authorizer-id":                       typecheck.TOptional(typecheck.TString()),
 				"model-selection-expression":          typecheck.TOptional(typecheck.TString()),
 				"operation-name":                      typecheck.TOptional(typecheck.TString()),
-				"request-models":                      typecheck.TMap(typecheck.TString()),
-				"request-parameters":                  typecheck.TMap(typecheck.TBoolean()),
+				"request-models":                      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"request-parameters":                  typecheck.TOptional(typecheck.TMap(typecheck.TBoolean())),
 				"route-key":                           typecheck.TString(),
 				"route-response-selection-expression": typecheck.TOptional(typecheck.TString()),
 				"target":                              typecheck.TOptional(typecheck.TString()),
@@ -366,11 +354,6 @@ func TestApigatewayv2Schemas(t *testing.T) {
 					Message: "target must not be empty",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.authorization-scopes", Optional: true},
-				{Field: "input.request-models", Optional: true},
-				{Field: "input.request-parameters", Optional: true},
-			},
 		},
 		"apigatewayv2-stage": {
 			Inputs: map[string]typecheck.Type{
@@ -391,16 +374,16 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				"deployment-id": typecheck.TOptional(typecheck.TString()),
 				"description":   typecheck.TOptional(typecheck.TString()),
 				"name":          typecheck.TString(),
-				"route-settings": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"route-settings": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "route-key", Type: typecheck.TString()},
 					{Name: "data-trace-enabled", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "detailed-metrics-enabled", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "logging-level", Type: typecheck.TString(), Optional: true},
 					{Name: "throttling-burst-limit", Type: typecheck.TInteger(), Optional: true},
 					{Name: "throttling-rate-limit", Type: typecheck.TNumber(), Optional: true},
-				})),
-				"stage-variables": typecheck.TMap(typecheck.TString()),
-				"tags":            typecheck.TMap(typecheck.TString()),
+				}))),
+				"stage-variables": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"api-id":        typecheck.TString(),
@@ -431,13 +414,8 @@ func TestApigatewayv2Schemas(t *testing.T) {
 						"@each.value.logging-level == 'INFO' || " +
 						"@each.value.logging-level == 'OFF')",
 					Message: "route-settings logging-level must be ERROR, INFO, or OFF",
-					ForEach: "input.route-settings",
+					ForEach: "input.route-settings ?? []",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.route-settings", Optional: true},
-				{Field: "input.stage-variables", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"apigatewayv2-domain-name": {
@@ -461,7 +439,7 @@ func TestApigatewayv2Schemas(t *testing.T) {
 						{Name: "truststore-version", Type: typecheck.TString(), Optional: true},
 					})),
 				"routing-mode": typecheck.TOptional(typecheck.TString()),
-				"tags":         typecheck.TMap(typecheck.TString()),
+				"tags":         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"api-gateway-domain-name":                typecheck.TString(),
@@ -481,10 +459,8 @@ func TestApigatewayv2Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "(input.domain-name-configurations == null || " +
-						"@core.length(input.domain-name-configurations) >= 1) && " +
-						"(input.domain-name-configurations == null || " +
-						"@core.length(input.domain-name-configurations) <= 1)",
+					Require: "(@core.length(input.domain-name-configurations) >= 1) && " +
+						"(@core.length(input.domain-name-configurations) <= 1)",
 					Message: "domain-name-configurations must have exactly one item",
 				},
 				{
@@ -496,9 +472,6 @@ func TestApigatewayv2Schemas(t *testing.T) {
 						"ipv4 or dualstack",
 					ForEach: "input.domain-name-configurations",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"apigatewayv2-api-mapping": {
@@ -517,7 +490,7 @@ func TestApigatewayv2Schemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

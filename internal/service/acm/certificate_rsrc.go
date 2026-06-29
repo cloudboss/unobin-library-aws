@@ -10,9 +10,9 @@ import (
 	acm "github.com/aws/aws-sdk-go-v2/service/acm"
 	acmtypes "github.com/aws/aws-sdk-go-v2/service/acm/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -47,11 +47,11 @@ type Certificate struct {
 	// SubjectAlternativeNames are additional domains the certificate covers.
 	// Each is 1 to 253 characters and may not end in a dot. ACM also adds
 	// domain-name to this set server-side, so the read-back output includes it.
-	SubjectAlternativeNames []string `ub:"subject-alternative-names"`
-	ValidationMethod        *string  `ub:"validation-method"`
+	SubjectAlternativeNames *[]string `ub:"subject-alternative-names"`
+	ValidationMethod        *string   `ub:"validation-method"`
 	// ValidationOption sets the email domain for email validation of each named
 	// domain. It is fixed at creation.
-	ValidationOption []CertificateValidationOption `ub:"validation-option"`
+	ValidationOption *[]CertificateValidationOption `ub:"validation-option"`
 	// Options holds the transparency-logging and export preferences. It is
 	// set at creation; the transparency preference is reconciled in place by
 	// UpdateCertificateOptions, while the export preference is create-only.
@@ -64,8 +64,8 @@ type Certificate struct {
 	PrivateKey *string `ub:"private-key,sensitive"`
 	// CertificateChain is the PEM-encoded chain of intermediate certificates
 	// for an imported certificate.
-	CertificateChain *string           `ub:"certificate-chain"`
-	Tags             map[string]string `ub:"tags"`
+	CertificateChain *string            `ub:"certificate-chain"`
+	Tags             *map[string]string `ub:"tags"`
 }
 
 // CertificateOutput holds the values ACM computes for a certificate. The ARN is
@@ -105,16 +105,6 @@ func (r *Certificate) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a certificate may omit. The options
-// block is a pointer field, optional on its own, so it takes no marker.
-func (r Certificate) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.SubjectAlternativeNames),
-		defaults.Optional(r.ValidationOption),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules ACM places on a certificate's inputs. Exactly
 // one of domain-name (request mode) or private-key (import mode) selects the
 // creation path. The two field groups are mutually exclusive: the import
@@ -128,7 +118,13 @@ func (r Certificate) Constraints() []constraint.Constraint {
 		constraint.ExactlyOneOf(r.DomainName, r.PrivateKey),
 		constraint.ForbiddenWith(r.PrivateKey,
 			r.DomainName, r.CertificateAuthorityArn, r.KeyAlgorithm,
-			r.SubjectAlternativeNames, r.ValidationMethod, r.ValidationOption, r.Options),
+			r.ValidationMethod, r.Options),
+		constraint.When(constraint.Present(r.PrivateKey)).
+			Require(constraint.Not(constraint.NotEmpty(r.SubjectAlternativeNames))).
+			Message("subject-alternative-names cannot be set with private-key"),
+		constraint.When(constraint.Present(r.PrivateKey)).
+			Require(constraint.Not(constraint.NotEmpty(r.ValidationOption))).
+			Message("validation-option cannot be set with private-key"),
 		constraint.ForbiddenWith(r.DomainName,
 			r.CertificateBody, r.PrivateKey, r.CertificateChain),
 		constraint.RequiredWith(r.CertificateBody, r.PrivateKey),
@@ -221,7 +217,7 @@ func (r *Certificate) Update(
 			return nil, fmt.Errorf("update certificate options: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -255,10 +251,10 @@ func (r *Certificate) request(ctx context.Context, client *acm.Client) (string, 
 	in := &acm.RequestCertificateInput{
 		DomainName:              r.DomainName,
 		CertificateAuthorityArn: r.CertificateAuthorityArn,
-		SubjectAlternativeNames: r.SubjectAlternativeNames,
-		DomainValidationOptions: validationOptions(r.ValidationOption),
+		SubjectAlternativeNames: ptr.Value(r.SubjectAlternativeNames),
+		DomainValidationOptions: validationOptions(ptr.Value(r.ValidationOption)),
 		Options:                 r.Options.to(),
-		Tags:                    certificateTags(r.Tags),
+		Tags:                    certificateTags(ptr.Value(r.Tags)),
 	}
 	if r.KeyAlgorithm != nil {
 		in.KeyAlgorithm = acmtypes.KeyAlgorithm(*r.KeyAlgorithm)
@@ -289,7 +285,7 @@ func (r *Certificate) importCertificate(
 		in.CertificateChain = []byte(*r.CertificateChain)
 	}
 	if arn == nil {
-		in.Tags = certificateTags(r.Tags)
+		in.Tags = certificateTags(ptr.Value(r.Tags))
 	}
 	resp, err := client.ImportCertificate(ctx, in)
 	if err != nil {
@@ -400,7 +396,7 @@ func (r *Certificate) transparencyChanged(
 // live tags with ListTagsForCertificate and writing changes with
 // AddTagsToCertificate and RemoveTagsFromCertificate.
 func (r *Certificate) syncTags(ctx context.Context, client *acm.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForCertificate(ctx,
 				&acm.ListTagsForCertificateInput{CertificateArn: aws.String(arn)})

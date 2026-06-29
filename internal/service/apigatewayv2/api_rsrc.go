@@ -11,11 +11,11 @@ import (
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"gopkg.in/yaml.v3"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // Api manages an API Gateway v2 API, the root of an HTTP or WebSocket API:
@@ -99,7 +99,7 @@ type Api struct {
 	// Tags label the API. A document with its own tags section replaces the
 	// API's tag set on import, so the resource re-syncs this map after every
 	// import: tags belong here rather than in the body.
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // ApiOutput holds the values computed for an API. ApiId is the stable handle
@@ -130,13 +130,6 @@ func (r *Api) ReplaceFields() []string {
 		"credentials-arn",
 		"route-key",
 		"target",
-	}
-}
-
-// Defaults marks the collection inputs an API may omit.
-func (r Api) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -237,8 +230,8 @@ func (r *Api) Create(ctx context.Context, cfg *awsCfg) (*ApiOutput, error) {
 	if r.IpAddressType != nil {
 		in.IpAddressType = apigatewayv2types.IpAddressType(*r.IpAddressType)
 	}
-	if len(r.Tags) > 0 {
-		in.Tags = r.Tags
+	if len(ptr.Value(r.Tags)) > 0 {
+		in.Tags = ptr.Value(r.Tags)
 	}
 	var resp *apigatewayv2.CreateApiOutput
 	err = withConflictRetry(ctx, func(ctx context.Context) error {
@@ -348,9 +341,9 @@ func (r *Api) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		err := withConflictRetry(ctx, func(ctx context.Context) error {
-			return syncResourceTags(ctx, client, prior.Outputs.Arn, r.Tags)
+			return syncResourceTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags))
 		})
 		if err != nil {
 			return nil, fmt.Errorf("sync tags: %w", err)
@@ -502,7 +495,7 @@ func (r *Api) reimport(
 		}
 	}
 	err = withConflictRetry(ctx, func(ctx context.Context) error {
-		return syncResourceTags(ctx, client, arn, r.Tags)
+		return syncResourceTags(ctx, client, arn, ptr.Value(r.Tags))
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sync tags after import: %w", err)

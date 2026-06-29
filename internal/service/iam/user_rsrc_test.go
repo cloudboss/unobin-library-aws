@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/cloudboss/unobin/pkg/runtime"
-	sdkcfg "github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,12 +59,12 @@ func TestUserCreateRetriesWithoutTagsOutsideStandardPartition(t *testing.T) {
 			map[string]string{"Project": "unobin", "aws:system": "ignored"})
 	})
 	cfg := fake.configuration()
-	cfg.Region = &sdkcfg.String{Value: "us-iso-east-1"}
+	cfg.Region = aws.String("us-iso-east-1")
 
 	out, err := (&User{
 		Name: "test-user",
 		Path: "/",
-		Tags: map[string]string{"Project": "unobin", "aws:skip": "ignored"},
+		Tags: new(map[string]string{"Project": "unobin", "aws:skip": "ignored"}),
 	}).Create(context.Background(), cfg)
 	require.NoError(t, err)
 	assert.Equal(t, &UserOutput{
@@ -125,11 +124,11 @@ func TestUserUpdateReconcilesChangedFields(t *testing.T) {
 			Name:                "old-user",
 			Path:                "/old/",
 			PermissionsBoundary: aws.String(oldBoundary),
-			Tags: map[string]string{
+			Tags: new(map[string]string{
 				"Keep":      "old",
 				"Remove":    "old",
 				"aws:owned": "old",
-			},
+			}),
 		},
 		Outputs: &UserOutput{Name: "old-user"},
 	}
@@ -138,10 +137,10 @@ func TestUserUpdateReconcilesChangedFields(t *testing.T) {
 		Name:                "new-user",
 		Path:                "/new/",
 		PermissionsBoundary: aws.String(""),
-		Tags: map[string]string{
+		Tags: new(map[string]string{
 			"Keep":       "new",
 			"aws:wanted": "new",
-		},
+		}),
 	}).Update(context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Equal(t, "new-user", out.Name)
@@ -187,7 +186,7 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 			Name:                "same-user",
 			Path:                "/wanted/",
 			PermissionsBoundary: aws.String(desiredBoundary),
-			Tags:                map[string]string{"Keep": "wanted"},
+			Tags:                new(map[string]string{"Keep": "wanted"}),
 		},
 		Outputs: &UserOutput{Name: "same-user"},
 		Observed: &UserOutput{
@@ -205,7 +204,7 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 		Name:                "same-user",
 		Path:                "/wanted/",
 		PermissionsBoundary: aws.String(desiredBoundary),
-		Tags:                map[string]string{"Keep": "wanted", "aws:desired": "ignored"},
+		Tags:                new(map[string]string{"Keep": "wanted", "aws:desired": "ignored"}),
 	}).Update(context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Equal(t, "/wanted/", out.Path)
@@ -224,7 +223,7 @@ func TestUserUpdateReturnsObservedWhenOnlyComputedFieldsChanged(t *testing.T) {
 		Tags:     map[string]string{"Keep": "same"},
 	}
 	prior := runtime.Prior[User, *UserOutput]{
-		Inputs: User{Name: "same", Path: "/", Tags: map[string]string{"Keep": "same"}},
+		Inputs: User{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})},
 		Outputs: &UserOutput{
 			Arn:      "old",
 			UniqueId: "AIDAOLD",
@@ -235,7 +234,7 @@ func TestUserUpdateReturnsObservedWhenOnlyComputedFieldsChanged(t *testing.T) {
 		Observed: observed,
 	}
 
-	out, err := (&User{Name: "same", Path: "/", Tags: map[string]string{"Keep": "same"}}).
+	out, err := (&User{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})}).
 		Update(context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Same(t, observed, out)

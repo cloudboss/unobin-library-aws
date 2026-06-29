@@ -293,9 +293,9 @@ func TestDomainNameUserTags(t *testing.T) {
 }
 
 func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
-	r := DomainName{Tags: map[string]string{"team": "platform"}}
+	r := DomainName{Tags: new(map[string]string{"team": "platform"})}
 	prior := runtime.Prior[DomainName, *DomainNameOutput]{
-		Inputs: DomainName{Tags: map[string]string{"team": "platform"}},
+		Inputs: DomainName{Tags: new(map[string]string{"team": "platform"})},
 		Observed: &DomainNameOutput{
 			Tags: map[string]string{"team": "security"},
 		},
@@ -305,9 +305,9 @@ func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
 }
 
 func TestDomainNameTagsNeedSyncUsesUserTags(t *testing.T) {
-	r := DomainName{Tags: map[string]string{"aws:system": "new", "team": "platform"}}
+	r := DomainName{Tags: new(map[string]string{"aws:system": "new", "team": "platform"})}
 	prior := runtime.Prior[DomainName, *DomainNameOutput]{
-		Inputs: DomainName{Tags: map[string]string{"team": "platform"}},
+		Inputs: DomainName{Tags: new(map[string]string{"team": "platform"})},
 		Observed: &DomainNameOutput{
 			Tags: map[string]string{"team": "platform"},
 		},

@@ -53,11 +53,11 @@ func TestRoute53Schemas(t *testing.T) {
 				"delegation-set-id": typecheck.TOptional(typecheck.TString()),
 				"force-destroy":     typecheck.TOptional(typecheck.TBoolean()),
 				"name":              typecheck.TString(),
-				"tags":              typecheck.TMap(typecheck.TString()),
-				"vpcs": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"tags":              typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"vpcs": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "vpc-id", Type: typecheck.TString()},
 					{Name: "vpc-region", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                 typecheck.TString(),
@@ -68,21 +68,19 @@ func TestRoute53Schemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind:   "at-most-one-of",
-					Fields: []string{"input.delegation-set-id", "input.vpcs"},
-				},
-				{
 					Kind: "predicate",
 					When: "true",
-					Require: "((@each.value.vpc-id != null) && " +
-						"(@core.length(@each.value.vpc-id) >= 1))",
-					Message: "a vpc association requires a vpc-id",
-					ForEach: "input.vpcs",
+					Require: "((input.delegation-set-id == null) || " +
+						"!(@core.length(input.vpcs ?? []) >= 1))",
+					Message: "delegation-set-id and vpcs are mutually exclusive",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.vpcs", Optional: true},
-				{Field: "input.tags", Optional: true},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(@each.value.vpc-id) >= 1)",
+					Message: "a vpc association requires a vpc-id",
+					ForEach: "input.vpcs ?? []",
+				},
 			},
 		},
 		"route53-record-set": {
@@ -109,7 +107,7 @@ func TestRoute53Schemas(t *testing.T) {
 					})),
 				"multivalue-answer-routing-policy": typecheck.TOptional(typecheck.TBoolean()),
 				"name":                             typecheck.TString(),
-				"records":                          typecheck.TList(typecheck.TString()),
+				"records":                          typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"set-identifier":                   typecheck.TOptional(typecheck.TString()),
 				"ttl":                              typecheck.TOptional(typecheck.TInteger()),
 				"type":                             typecheck.TString(),
@@ -130,19 +128,28 @@ func TestRoute53Schemas(t *testing.T) {
 				{
 					Kind:    "predicate",
 					When:    "true",
-					Require: "((input.zone-id != null) && (@core.length(input.zone-id) >= 1))",
+					Require: "(@core.length(input.zone-id) >= 1)",
 				},
 				{
-					Kind:   "exactly-one-of",
-					Fields: []string{"input.alias", "input.records"},
+					Kind: "predicate",
+					When: "true",
+					Require: "(((input.alias != null) && " +
+						"!((input.records != null) && " +
+						"(@core.length(input.records) >= 1))) || " +
+						"((input.alias == null) && " +
+						"((input.records != null) && " +
+						"(@core.length(input.records) >= 1))))",
+					Message: "exactly one of alias or records is required",
 				},
 				{
 					Kind:   "forbidden-with",
 					Fields: []string{"input.ttl", "input.alias"},
 				},
 				{
-					Kind:   "required-with",
-					Fields: []string{"input.ttl", "input.records"},
+					Kind:    "predicate",
+					When:    "(input.ttl != null)",
+					Require: "((input.records != null) && (@core.length(input.records) >= 1))",
+					Message: "ttl requires records",
 				},
 				{
 					Kind: "at-most-one-of",
@@ -242,16 +249,13 @@ func TestRoute53Schemas(t *testing.T) {
 						"input.type == 'HTTPS')",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.records", Optional: true},
-			},
 		},
 	}
 
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }
@@ -266,7 +270,7 @@ func TestRoute53DataSourceSchemas(t *testing.T) {
 			"name":         typecheck.TOptional(typecheck.TString()),
 			"private-zone": typecheck.TOptional(typecheck.TBoolean()),
 			"vpc-id":       typecheck.TOptional(typecheck.TString()),
-			"tags":         typecheck.TMap(typecheck.TString()),
+			"tags":         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		},
 		Outputs: map[string]typecheck.Type{
 			"zone-id":                     typecheck.TString(),
@@ -289,10 +293,7 @@ func TestRoute53DataSourceSchemas(t *testing.T) {
 				Fields: []string{"input.zone-id", "input.name"},
 			},
 		},
-		Defaults: []lang.DefaultSpec{
-			{Field: "input.tags", Optional: true},
-		},
 	}
 	require.Contains(t, schema.DataSources, "route53-zone")
-	assert.Equal(t, want, schema.DataSources["route53-zone"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["route53-zone"])
 }

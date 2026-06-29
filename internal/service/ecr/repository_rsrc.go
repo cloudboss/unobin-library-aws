@@ -9,10 +9,10 @@ import (
 	ecr "github.com/aws/aws-sdk-go-v2/service/ecr"
 	ecrtypes "github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -51,7 +51,7 @@ type Repository struct {
 	// image tags exempt from the mutability setting. The list is only valid
 	// with one of the WITH_EXCLUSION mutability modes, and it changes through
 	// the same PutImageTagMutability call as the setting itself.
-	ImageTagMutabilityExclusionFilters []RepositoryExclusionFilter `ub:"image-tag-mutability-exclusion-filters"`
+	ImageTagMutabilityExclusionFilters *[]RepositoryExclusionFilter `ub:"image-tag-mutability-exclusion-filters"`
 	// LifecyclePolicy is the JSON lifecycle policy text, which expires images
 	// by age or count. It is reconciled by its own PutLifecyclePolicy call,
 	// an upsert, so a changed policy updates in place; removing the field
@@ -64,7 +64,7 @@ type Repository struct {
 	// text is sent as given, so reformatting it reads as a change.
 	RepositoryPolicy *string `ub:"repository-policy"`
 	// Tags are the metadata tags on the repository, reconciled as a set.
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 	// ForceDelete, when true, deletes the repository even when it still holds
 	// images. It is a delete-time switch with no presence in the cloud, so it
 	// is never sent to create or read.
@@ -95,14 +95,6 @@ func (r *Repository) SchemaVersion() int { return 1 }
 // upserts.
 func (r *Repository) ReplaceFields() []string {
 	return []string{"name", "encryption-configuration"}
-}
-
-// Defaults marks the collection inputs a repository may omit.
-func (r Repository) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.ImageTagMutabilityExclusionFilters),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules ECR places on a repository's inputs: the
@@ -145,8 +137,8 @@ func (r *Repository) Create(ctx context.Context, cfg *awsCfg) (*RepositoryOutput
 	in := &ecr.CreateRepositoryInput{
 		RepositoryName:                     aws.String(r.Name),
 		EncryptionConfiguration:            encryptionConfiguration(r.EncryptionConfiguration),
-		ImageTagMutabilityExclusionFilters: exclusionFilters(r.ImageTagMutabilityExclusionFilters),
-		Tags:                               repositoryTags(r.Tags),
+		ImageTagMutabilityExclusionFilters: exclusionFilters(ptr.Value(r.ImageTagMutabilityExclusionFilters)),
+		Tags:                               repositoryTags(ptr.Value(r.Tags)),
 	}
 	if r.ScanOnPush != nil {
 		in.ImageScanningConfiguration = &ecrtypes.ImageScanningConfiguration{
@@ -177,10 +169,10 @@ func (r *Repository) Create(ctx context.Context, cfg *awsCfg) (*RepositoryOutput
 	if err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if _, err := client.TagResource(ctx, &ecr.TagResourceInput{
 			ResourceArn: aws.String(out.Arn),
-			Tags:        repositoryTags(r.Tags),
+			Tags:        repositoryTags(ptr.Value(r.Tags)),
 		}); err != nil {
 			return nil, fmt.Errorf("tag resource: %w", err)
 		}
@@ -297,7 +289,7 @@ func (r *Repository) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -379,7 +371,7 @@ func (r *Repository) putImageTagMutability(
 	_, err := client.PutImageTagMutability(ctx, &ecr.PutImageTagMutabilityInput{
 		RepositoryName:                     aws.String(name),
 		ImageTagMutability:                 mutability,
-		ImageTagMutabilityExclusionFilters: exclusionFilters(r.ImageTagMutabilityExclusionFilters),
+		ImageTagMutabilityExclusionFilters: exclusionFilters(ptr.Value(r.ImageTagMutabilityExclusionFilters)),
 	})
 	if err != nil {
 		return fmt.Errorf("put image tag mutability: %w", err)
@@ -479,7 +471,7 @@ func (r *Repository) deleteRepositoryPolicy(
 // UntagResource. ECR addresses repository tags by ARN, and the describe a
 // Read makes does not return them, so the tag list is its own call.
 func (r *Repository) syncTags(ctx context.Context, client *ecr.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ecr.ListTagsForResourceInput{
 				ResourceArn: aws.String(arn),

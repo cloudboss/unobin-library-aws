@@ -13,10 +13,10 @@ import (
 	sqs "github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -65,23 +65,23 @@ var (
 // name ^[0-9A-Za-z_-]{1,80}$. That rule is a regular-expression and byte-length
 // check enforced in Create rather than a declarative constraint.
 type Queue struct {
-	Name                          string            `ub:"name"`
-	FifoQueue                     *bool             `ub:"fifo-queue"`
-	ContentBasedDeduplication     *bool             `ub:"content-based-deduplication"`
-	DeduplicationScope            *string           `ub:"deduplication-scope"`
-	FifoThroughputLimit           *string           `ub:"fifo-throughput-limit"`
-	DelaySeconds                  *int64            `ub:"delay-seconds"`
-	MaximumMessageSize            *int64            `ub:"maximum-message-size"`
-	MessageRetentionPeriod        *int64            `ub:"message-retention-period"`
-	ReceiveMessageWaitTimeSeconds *int64            `ub:"receive-message-wait-time-seconds"`
-	VisibilityTimeout             *int64            `ub:"visibility-timeout"`
-	KmsMasterKeyId                *string           `ub:"kms-master-key-id"`
-	KmsDataKeyReusePeriodSeconds  *int64            `ub:"kms-data-key-reuse-period-seconds"`
-	SqsManagedSseEnabled          *bool             `ub:"sqs-managed-sse-enabled"`
-	Policy                        *string           `ub:"policy"`
-	RedrivePolicy                 *string           `ub:"redrive-policy"`
-	RedriveAllowPolicy            *string           `ub:"redrive-allow-policy"`
-	Tags                          map[string]string `ub:"tags"`
+	Name                          string             `ub:"name"`
+	FifoQueue                     *bool              `ub:"fifo-queue"`
+	ContentBasedDeduplication     *bool              `ub:"content-based-deduplication"`
+	DeduplicationScope            *string            `ub:"deduplication-scope"`
+	FifoThroughputLimit           *string            `ub:"fifo-throughput-limit"`
+	DelaySeconds                  *int64             `ub:"delay-seconds"`
+	MaximumMessageSize            *int64             `ub:"maximum-message-size"`
+	MessageRetentionPeriod        *int64             `ub:"message-retention-period"`
+	ReceiveMessageWaitTimeSeconds *int64             `ub:"receive-message-wait-time-seconds"`
+	VisibilityTimeout             *int64             `ub:"visibility-timeout"`
+	KmsMasterKeyId                *string            `ub:"kms-master-key-id"`
+	KmsDataKeyReusePeriodSeconds  *int64             `ub:"kms-data-key-reuse-period-seconds"`
+	SqsManagedSseEnabled          *bool              `ub:"sqs-managed-sse-enabled"`
+	Policy                        *string            `ub:"policy"`
+	RedrivePolicy                 *string            `ub:"redrive-policy"`
+	RedriveAllowPolicy            *string            `ub:"redrive-allow-policy"`
+	Tags                          *map[string]string `ub:"tags"`
 }
 
 // QueueOutput holds the values SQS computes for a queue. The ARN is the queue's
@@ -105,13 +105,6 @@ func (r *Queue) ReplaceFields() []string {
 	return []string{
 		"name",
 		"fifo-queue",
-	}
-}
-
-// Defaults marks the collection inputs a queue may omit.
-func (r Queue) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -173,7 +166,7 @@ func (r *Queue) Create(ctx context.Context, cfg *awsCfg) (*QueueOutput, error) {
 	in := &sqs.CreateQueueInput{
 		QueueName:  aws.String(name),
 		Attributes: attributes,
-		Tags:       r.Tags,
+		Tags:       ptr.Value(r.Tags),
 	}
 	// Some partitions, such as the ISO partitions, cannot tag a queue as it is
 	// created. When the tagged create fails for that reason, create the queue
@@ -195,7 +188,7 @@ func (r *Queue) Create(ctx context.Context, cfg *awsCfg) (*QueueOutput, error) {
 	if err := r.waitAttributesPropagated(ctx, client, url, attributes); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.createTags(ctx, client, url); err != nil {
 			return nil, err
 		}
@@ -276,7 +269,7 @@ func (r *Queue) Update(
 	}
 	// SQS reconciles tags through its own tag calls, not SetQueueAttributes, so
 	// reconcile them as a set whenever they changed.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, url); err != nil {
 			return nil, err
 		}
@@ -582,10 +575,10 @@ func jsonEqual(want, got string) bool {
 func (r *Queue) createTags(ctx context.Context, client *sqs.Client, url string) error {
 	_, err := client.TagQueue(ctx, &sqs.TagQueueInput{
 		QueueUrl: aws.String(url),
-		Tags:     r.Tags,
+		Tags:     ptr.Value(r.Tags),
 	})
 	if err != nil {
-		if len(r.Tags) == 0 && partition.UnsupportedOperation(region(client), err) {
+		if len(ptr.Value(r.Tags)) == 0 && partition.UnsupportedOperation(region(client), err) {
 			return nil
 		}
 		return fmt.Errorf("tag queue: %w", err)
@@ -597,7 +590,7 @@ func (r *Queue) createTags(ctx context.Context, client *sqs.Client, url string) 
 // tags through ListQueueTags and writing changes with TagQueue and UntagQueue.
 // SQS addresses a queue's tags by its URL.
 func (r *Queue) syncTags(ctx context.Context, client *sqs.Client, url string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListQueueTags(ctx, &sqs.ListQueueTagsInput{
 				QueueUrl: aws.String(url),

@@ -11,7 +11,6 @@ import (
 	cloudwatch "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	cloudwatchtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -76,28 +75,28 @@ var ec2AutomatePattern = regexp.MustCompile(
 // or a multiple of 60 (a metric-query period also allows 1 and 5); and an
 // action ARN must be an ordinary ARN or an EC2-automate ARN.
 type MetricAlarm struct {
-	AlarmName                        string                   `ub:"alarm-name"`
-	ActionsEnabled                   *bool                    `ub:"actions-enabled"`
-	AlarmActions                     []string                 `ub:"alarm-actions"`
-	OKActions                        []string                 `ub:"ok-actions"`
-	InsufficientDataActions          []string                 `ub:"insufficient-data-actions"`
-	AlarmDescription                 *string                  `ub:"alarm-description"`
-	ComparisonOperator               *string                  `ub:"comparison-operator"`
-	DatapointsToAlarm                *int64                   `ub:"datapoints-to-alarm"`
-	Dimensions                       map[string]string        `ub:"dimensions"`
-	EvaluateLowSampleCountPercentile *string                  `ub:"evaluate-low-sample-count-percentile"`
-	EvaluationPeriods                *int64                   `ub:"evaluation-periods"`
-	ExtendedStatistic                *string                  `ub:"extended-statistic"`
-	MetricName                       *string                  `ub:"metric-name"`
-	MetricQuery                      []MetricAlarmMetricQuery `ub:"metric-query"`
-	Namespace                        *string                  `ub:"namespace"`
-	Period                           *int64                   `ub:"period"`
-	Statistic                        *string                  `ub:"statistic"`
-	Threshold                        *float64                 `ub:"threshold"`
-	ThresholdMetricId                *string                  `ub:"threshold-metric-id"`
-	TreatMissingData                 *string                  `ub:"treat-missing-data"`
-	Unit                             *string                  `ub:"unit"`
-	Tags                             map[string]string        `ub:"tags"`
+	AlarmName                        string                    `ub:"alarm-name"`
+	ActionsEnabled                   *bool                     `ub:"actions-enabled"`
+	AlarmActions                     *[]string                 `ub:"alarm-actions"`
+	OKActions                        *[]string                 `ub:"ok-actions"`
+	InsufficientDataActions          *[]string                 `ub:"insufficient-data-actions"`
+	AlarmDescription                 *string                   `ub:"alarm-description"`
+	ComparisonOperator               *string                   `ub:"comparison-operator"`
+	DatapointsToAlarm                *int64                    `ub:"datapoints-to-alarm"`
+	Dimensions                       *map[string]string        `ub:"dimensions"`
+	EvaluateLowSampleCountPercentile *string                   `ub:"evaluate-low-sample-count-percentile"`
+	EvaluationPeriods                *int64                    `ub:"evaluation-periods"`
+	ExtendedStatistic                *string                   `ub:"extended-statistic"`
+	MetricName                       *string                   `ub:"metric-name"`
+	MetricQuery                      *[]MetricAlarmMetricQuery `ub:"metric-query"`
+	Namespace                        *string                   `ub:"namespace"`
+	Period                           *int64                    `ub:"period"`
+	Statistic                        *string                   `ub:"statistic"`
+	Threshold                        *float64                  `ub:"threshold"`
+	ThresholdMetricId                *string                   `ub:"threshold-metric-id"`
+	TreatMissingData                 *string                   `ub:"treat-missing-data"`
+	Unit                             *string                   `ub:"unit"`
+	Tags                             *map[string]string        `ub:"tags"`
 }
 
 // MetricAlarmOutput holds the values CloudWatch computes for an alarm. Arn is
@@ -122,19 +121,6 @@ func (r *MetricAlarm) ReplaceFields() []string {
 	return []string{"alarm-name"}
 }
 
-// Defaults marks the collection and map inputs an alarm may omit. The pointer
-// fields are already optional and take no marker.
-func (r MetricAlarm) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.AlarmActions),
-		defaults.Optional(r.OKActions),
-		defaults.Optional(r.InsufficientDataActions),
-		defaults.Optional(r.Dimensions),
-		defaults.Optional(r.MetricQuery),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules CloudWatch places on an alarm's inputs. The
 // central rule is the metric form: an alarm watches exactly one of a single
 // metric (metric-name) or a metric-math expression (metric-query), and the
@@ -148,9 +134,22 @@ func (r MetricAlarm) Defaults() []defaults.Default {
 // (see the type doc) because the constraint vocabulary cannot express them.
 func (r MetricAlarm) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.ExactlyOneOf(r.MetricName, r.MetricQuery),
-		constraint.ForbiddenWith(r.MetricQuery, r.Namespace, r.Dimensions, r.Period,
-			r.Unit, r.Statistic, r.ExtendedStatistic),
+		constraint.Must(constraint.Any(
+			constraint.All(
+				constraint.Present(r.MetricName),
+				constraint.Not(constraint.NotEmpty(r.MetricQuery))),
+			constraint.All(
+				constraint.Absent(r.MetricName),
+				constraint.NotEmpty(r.MetricQuery)))).
+			Message("exactly one of metric-name or metric-query is required"),
+		constraint.When(constraint.NotEmpty(r.MetricQuery)).
+			Require(constraint.Absent(r.Namespace),
+				constraint.Not(constraint.NotEmpty(r.Dimensions)),
+				constraint.Absent(r.Period),
+				constraint.Absent(r.Unit),
+				constraint.Absent(r.Statistic),
+				constraint.Absent(r.ExtendedStatistic)).
+			Message("metric-query cannot combine with single-metric fields"),
 		constraint.AtMostOneOf(r.Statistic, r.ExtendedStatistic),
 		constraint.ExactlyOneOf(r.Threshold, r.ThresholdMetricId),
 		constraint.When(constraint.Present(r.MetricName)).
@@ -227,7 +226,7 @@ func (r *MetricAlarm) Create(ctx context.Context, cfg *awsCfg) (*MetricAlarmOutp
 		return nil, err
 	}
 	in := r.expandPutMetricAlarmInput()
-	in.Tags = metricAlarmTags(r.Tags)
+	in.Tags = metricAlarmTags(ptr.Value(r.Tags))
 	// Some partitions, such as the ISO partitions, cannot tag an alarm as it is
 	// created. When the tagged put fails for that reason, repeat the put without
 	// tags and apply them with a separate call below.
@@ -249,7 +248,7 @@ func (r *MetricAlarm) Create(ctx context.Context, cfg *awsCfg) (*MetricAlarmOutp
 	if err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client, out.Arn); err != nil {
 			return nil, err
 		}
@@ -312,7 +311,7 @@ func (r *MetricAlarm) Update(
 			return nil, fmt.Errorf("put metric alarm: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -357,17 +356,17 @@ func (r *MetricAlarm) expandPutMetricAlarmInput() *cloudwatch.PutMetricAlarmInpu
 	in := &cloudwatch.PutMetricAlarmInput{
 		AlarmName:                        aws.String(r.AlarmName),
 		ActionsEnabled:                   aws.Bool(r.actionsEnabled()),
-		AlarmActions:                     r.AlarmActions,
-		OKActions:                        r.OKActions,
-		InsufficientDataActions:          r.InsufficientDataActions,
+		AlarmActions:                     ptr.Value(r.AlarmActions),
+		OKActions:                        ptr.Value(r.OKActions),
+		InsufficientDataActions:          ptr.Value(r.InsufficientDataActions),
 		AlarmDescription:                 r.AlarmDescription,
 		DatapointsToAlarm:                ptr.Int32(r.DatapointsToAlarm),
-		Dimensions:                       expandDimensions(r.Dimensions),
+		Dimensions:                       expandDimensions(ptr.Value(r.Dimensions)),
 		EvaluateLowSampleCountPercentile: r.EvaluateLowSampleCountPercentile,
 		EvaluationPeriods:                ptr.Int32(r.EvaluationPeriods),
 		ExtendedStatistic:                r.ExtendedStatistic,
 		MetricName:                       r.MetricName,
-		Metrics:                          expandMetricQuery(r.MetricQuery),
+		Metrics:                          expandMetricQuery(ptr.Value(r.MetricQuery)),
 		Namespace:                        r.Namespace,
 		Period:                           ptr.Int32(r.Period),
 		TreatMissingData:                 aws.String(r.treatMissingData()),
@@ -416,7 +415,7 @@ func (r *MetricAlarm) treatMissingData() string {
 func (r *MetricAlarm) syncTags(
 	ctx context.Context, client *cloudwatch.Client, arn string,
 ) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,
 				&cloudwatch.ListTagsForResourceInput{ResourceARN: aws.String(arn)})
@@ -511,13 +510,13 @@ func (r *MetricAlarm) validate() error {
 	if err := validatePeriod("period", r.Period, false); err != nil {
 		return err
 	}
-	if err := validateActions("alarm-actions", r.AlarmActions); err != nil {
+	if err := validateActions("alarm-actions", ptr.Value(r.AlarmActions)); err != nil {
 		return err
 	}
-	if err := validateActions("ok-actions", r.OKActions); err != nil {
+	if err := validateActions("ok-actions", ptr.Value(r.OKActions)); err != nil {
 		return err
 	}
-	if err := validateActions("insufficient-data-actions", r.InsufficientDataActions); err != nil {
+	if err := validateActions("insufficient-data-actions", ptr.Value(r.InsufficientDataActions)); err != nil {
 		return err
 	}
 	return r.validateMetricQuery()
@@ -528,7 +527,7 @@ func (r *MetricAlarm) validate() error {
 // period, the metric block namespace, and the metric block statistic, which may
 // be a standard statistic or a percentile.
 func (r *MetricAlarm) validateMetricQuery() error {
-	for i, q := range r.MetricQuery {
+	for i, q := range ptr.Value(r.MetricQuery) {
 		if err := validatePeriod(
 			fmt.Sprintf("metric-query[%d].period", i), q.Period, true); err != nil {
 			return err

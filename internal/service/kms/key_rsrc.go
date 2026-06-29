@@ -10,7 +10,6 @@ import (
 	kms "github.com/aws/aws-sdk-go-v2/service/kms"
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -35,18 +34,18 @@ const policyNameDefault = "default"
 // (created enabled, rotation off), and a set value is reconciled by enabling or
 // disabling the key or its rotation.
 type Key struct {
-	Policy                         *string           `ub:"policy"`
-	BypassPolicyLockoutSafetyCheck *bool             `ub:"bypass-policy-lockout-safety-check"`
-	Description                    *string           `ub:"description"`
-	KeySpec                        *string           `ub:"key-spec"`
-	KeyUsage                       *string           `ub:"key-usage"`
-	CustomKeyStoreId               *string           `ub:"custom-key-store-id"`
-	XksKeyId                       *string           `ub:"xks-key-id"`
-	MultiRegion                    *bool             `ub:"multi-region"`
-	EnableKey                      *bool             `ub:"enable-key"`
-	EnableKeyRotation              *bool             `ub:"enable-key-rotation"`
-	RotationPeriodInDays           *int64            `ub:"rotation-period-in-days"`
-	Tags                           map[string]string `ub:"tags"`
+	Policy                         *string            `ub:"policy"`
+	BypassPolicyLockoutSafetyCheck *bool              `ub:"bypass-policy-lockout-safety-check"`
+	Description                    *string            `ub:"description"`
+	KeySpec                        *string            `ub:"key-spec"`
+	KeyUsage                       *string            `ub:"key-usage"`
+	CustomKeyStoreId               *string            `ub:"custom-key-store-id"`
+	XksKeyId                       *string            `ub:"xks-key-id"`
+	MultiRegion                    *bool              `ub:"multi-region"`
+	EnableKey                      *bool              `ub:"enable-key"`
+	EnableKeyRotation              *bool              `ub:"enable-key-rotation"`
+	RotationPeriodInDays           *int64             `ub:"rotation-period-in-days"`
+	Tags                           *map[string]string `ub:"tags"`
 }
 
 // KeyOutput holds the values KMS computes for a key. The ARN is the key's
@@ -70,13 +69,6 @@ func (r *Key) ReplaceFields() []string {
 		"custom-key-store-id",
 		"xks-key-id",
 		"multi-region",
-	}
-}
-
-// Defaults marks the collection inputs a key may omit.
-func (r Key) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -120,7 +112,7 @@ func (r *Key) Create(ctx context.Context, cfg *awsCfg) (*KeyOutput, error) {
 		Description:                    r.Description,
 		MultiRegion:                    r.MultiRegion,
 		Policy:                         r.Policy,
-		Tags:                           kmsKeyTags(r.Tags),
+		Tags:                           kmsKeyTags(ptr.Value(r.Tags)),
 	}
 	if r.KeySpec != nil {
 		in.KeySpec = kmstypes.KeySpec(*r.KeySpec)
@@ -261,7 +253,7 @@ func (r *Key) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, keyID); err != nil {
 			return nil, err
 		}
@@ -397,7 +389,7 @@ func (r *Key) disableRotation(ctx context.Context, client *kms.Client, keyID str
 // tags through the paginated ListResourceTags and writing changes with
 // TagResource and UntagResource. KMS addresses key tags by key id.
 func (r *Key) syncTags(ctx context.Context, client *kms.Client, keyID string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}
 			pager := kms.NewListResourceTagsPaginator(client, &kms.ListResourceTagsInput{

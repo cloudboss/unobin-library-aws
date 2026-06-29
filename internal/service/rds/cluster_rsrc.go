@@ -13,7 +13,6 @@ import (
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -103,8 +102,8 @@ type Cluster struct {
 	NetworkType      *string `ub:"network-type"`
 	Port             *int64  `ub:"port"`
 
-	AvailabilityZones   []string `ub:"availability-zones"`
-	VpcSecurityGroupIds []string `ub:"vpc-security-group-ids"`
+	AvailabilityZones   *[]string `ub:"availability-zones"`
+	VpcSecurityGroupIds *[]string `ub:"vpc-security-group-ids"`
 
 	DbClusterInstanceClass       *string `ub:"db-cluster-instance-class"`
 	DbClusterParameterGroupName  *string `ub:"db-cluster-parameter-group-name"`
@@ -132,15 +131,15 @@ type Cluster struct {
 	PerformanceInsightsKmsKeyId        *string `ub:"performance-insights-kms-key-id"`
 	PerformanceInsightsRetentionPeriod *int64  `ub:"performance-insights-retention-period"`
 
-	BacktrackWindow              *int64   `ub:"backtrack-window"`
-	BackupRetentionPeriod        *int64   `ub:"backup-retention-period"`
-	PreferredBackupWindow        *string  `ub:"preferred-backup-window"`
-	PreferredMaintenanceWindow   *string  `ub:"preferred-maintenance-window"`
-	EnabledCloudwatchLogsExports []string `ub:"enabled-cloudwatch-logs-exports"`
+	BacktrackWindow              *int64    `ub:"backtrack-window"`
+	BackupRetentionPeriod        *int64    `ub:"backup-retention-period"`
+	PreferredBackupWindow        *string   `ub:"preferred-backup-window"`
+	PreferredMaintenanceWindow   *string   `ub:"preferred-maintenance-window"`
+	EnabledCloudwatchLogsExports *[]string `ub:"enabled-cloudwatch-logs-exports"`
 
-	GlobalClusterIdentifier     *string  `ub:"global-cluster-identifier"`
-	IamRoles                    []string `ub:"iam-roles"`
-	ReplicationSourceIdentifier *string  `ub:"replication-source-identifier"`
+	GlobalClusterIdentifier     *string   `ub:"global-cluster-identifier"`
+	IamRoles                    *[]string `ub:"iam-roles"`
+	ReplicationSourceIdentifier *string   `ub:"replication-source-identifier"`
 
 	Scaling             *ClusterScaling             `ub:"scaling"`
 	ServerlessV2Scaling *ClusterServerlessV2Scaling `ub:"serverlessv2-scaling"`
@@ -154,7 +153,7 @@ type Cluster struct {
 	FinalSnapshotIdentifier *string `ub:"final-snapshot-identifier"`
 	DeleteAutomatedBackups  *bool   `ub:"delete-automated-backups"`
 
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // ClusterOutput holds the values RDS computes for a DB cluster once it is
@@ -214,18 +213,6 @@ func (r *Cluster) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the optional collection inputs a cluster may omit. A bare list
-// or map input is otherwise compile-required; all of these are optional.
-func (r Cluster) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.AvailabilityZones),
-		defaults.Optional(r.EnabledCloudwatchLogsExports),
-		defaults.Optional(r.IamRoles),
-		defaults.Optional(r.VpcSecurityGroupIds),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules RDS places on a cluster's inputs. At most one
 // create mode is selected, and a snapshot restore cannot also join a global
 // cluster. The password is managed by RDS or given directly, never both. The
@@ -258,6 +245,9 @@ func (r Cluster) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.NetworkType)).
 			Require(constraint.OneOf(r.NetworkType, "DUAL", "IPV4")).
 			Message("network-type must be DUAL or IPV4"),
+		constraint.When(constraint.Present(r.AvailabilityZones)).
+			Require(constraint.MinItems(r.AvailabilityZones, 1)).
+			Message("availability-zones must list at least one zone when given"),
 		constraint.When(constraint.Present(r.BackupRetentionPeriod)).
 			Require(constraint.AtMost(r.BackupRetentionPeriod, 35)).
 			Message("backup-retention-period must be at most 35"),
@@ -310,7 +300,7 @@ func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, erro
 	}
 	// IAM roles are associated one at a time after the cluster is available; a
 	// restore or create call does not take them.
-	for _, roleArn := range r.IamRoles {
+	for _, roleArn := range ptr.Value(r.IamRoles) {
 		if err := r.addRole(ctx, client, roleArn); err != nil {
 			return nil, err
 		}
@@ -346,7 +336,7 @@ func (r *Cluster) createPlain(
 		EngineVersion:                      r.EngineVersion,
 		EngineLifecycleSupport:             r.EngineLifecycleSupport,
 		AllocatedStorage:                   ptr.Int32(r.AllocatedStorage),
-		AvailabilityZones:                  r.AvailabilityZones,
+		AvailabilityZones:                  ptr.Value(r.AvailabilityZones),
 		BacktrackWindow:                    r.BacktrackWindow,
 		BackupRetentionPeriod:              ptr.Int32(r.BackupRetentionPeriod),
 		CACertificateIdentifier:            r.CaCertificateIdentifier,
@@ -359,7 +349,7 @@ func (r *Cluster) createPlain(
 		DeletionProtection:                 r.DeletionProtection,
 		Domain:                             r.Domain,
 		DomainIAMRoleName:                  r.DomainIamRoleName,
-		EnableCloudwatchLogsExports:        r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:        ptr.Value(r.EnabledCloudwatchLogsExports),
 		EnableGlobalWriteForwarding:        r.EnableGlobalWriteForwarding,
 		EnableHttpEndpoint:                 r.EnableHttpEndpoint,
 		EnableIAMDatabaseAuthentication:    r.EnableIamDatabaseAuthentication,
@@ -385,8 +375,8 @@ func (r *Cluster) createPlain(
 		SourceRegion:                       r.SourceRegion,
 		StorageEncrypted:                   r.StorageEncrypted,
 		StorageType:                        r.StorageType,
-		Tags:                               tagList(r.Tags),
-		VpcSecurityGroupIds:                r.VpcSecurityGroupIds,
+		Tags:                               tagList(ptr.Value(r.Tags)),
+		VpcSecurityGroupIds:                ptr.Value(r.VpcSecurityGroupIds),
 	}
 	if r.ClusterScalabilityType != nil {
 		in.ClusterScalabilityType = rdstypes.ClusterScalabilityType(*r.ClusterScalabilityType)
@@ -437,7 +427,7 @@ func (r *Cluster) createFromSnapshot(
 		EngineMode:                      r.EngineMode,
 		EngineVersion:                   r.EngineVersion,
 		EngineLifecycleSupport:          r.EngineLifecycleSupport,
-		AvailabilityZones:               r.AvailabilityZones,
+		AvailabilityZones:               ptr.Value(r.AvailabilityZones),
 		BacktrackWindow:                 r.BacktrackWindow,
 		CopyTagsToSnapshot:              r.CopyTagsToSnapshot,
 		DBClusterInstanceClass:          r.DbClusterInstanceClass,
@@ -447,7 +437,7 @@ func (r *Cluster) createFromSnapshot(
 		DeletionProtection:              r.DeletionProtection,
 		Domain:                          r.Domain,
 		DomainIAMRoleName:               r.DomainIamRoleName,
-		EnableCloudwatchLogsExports:     r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:     ptr.Value(r.EnabledCloudwatchLogsExports),
 		EnableIAMDatabaseAuthentication: r.EnableIamDatabaseAuthentication,
 		Iops:                            ptr.Int32(r.Iops),
 		KmsKeyId:                        r.KmsKeyId,
@@ -457,8 +447,8 @@ func (r *Cluster) createFromSnapshot(
 		Port:                            ptr.Int32(r.Port),
 		ScalingConfiguration:            r.Scaling.toSDK(),
 		StorageType:                     r.StorageType,
-		Tags:                            tagList(r.Tags),
-		VpcSecurityGroupIds:             r.VpcSecurityGroupIds,
+		Tags:                            tagList(ptr.Value(r.Tags)),
+		VpcSecurityGroupIds:             ptr.Value(r.VpcSecurityGroupIds),
 	}
 	err := retry.OnError(ctx, isIamRoleInvalid, func(ctx context.Context) error {
 		_, err := client.RestoreDBClusterFromSnapshot(ctx, in)
@@ -490,7 +480,7 @@ func (r *Cluster) createFromS3(
 		SourceEngine:                     aws.String(r.S3Import.SourceEngine),
 		SourceEngineVersion:              aws.String(r.S3Import.SourceEngineVersion),
 		S3Prefix:                         r.S3Import.BucketPrefix,
-		AvailabilityZones:                r.AvailabilityZones,
+		AvailabilityZones:                ptr.Value(r.AvailabilityZones),
 		BacktrackWindow:                  r.BacktrackWindow,
 		BackupRetentionPeriod:            ptr.Int32(r.BackupRetentionPeriod),
 		CopyTagsToSnapshot:               r.CopyTagsToSnapshot,
@@ -500,7 +490,7 @@ func (r *Cluster) createFromS3(
 		DeletionProtection:               r.DeletionProtection,
 		Domain:                           r.Domain,
 		DomainIAMRoleName:                r.DomainIamRoleName,
-		EnableCloudwatchLogsExports:      r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:      ptr.Value(r.EnabledCloudwatchLogsExports),
 		EnableIAMDatabaseAuthentication:  r.EnableIamDatabaseAuthentication,
 		EngineLifecycleSupport:           r.EngineLifecycleSupport,
 		EngineVersion:                    r.EngineVersion,
@@ -515,8 +505,8 @@ func (r *Cluster) createFromS3(
 		ServerlessV2ScalingConfiguration: r.ServerlessV2Scaling.toSDK(),
 		StorageEncrypted:                 r.StorageEncrypted,
 		StorageType:                      r.StorageType,
-		Tags:                             tagList(r.Tags),
-		VpcSecurityGroupIds:              r.VpcSecurityGroupIds,
+		Tags:                             tagList(ptr.Value(r.Tags)),
+		VpcSecurityGroupIds:              ptr.Value(r.VpcSecurityGroupIds),
 	}
 	err := retry.OnError(ctx, isS3RestoreRetryable, func(ctx context.Context) error {
 		_, err := client.RestoreDBClusterFromS3(ctx, in)
@@ -552,7 +542,7 @@ func (r *Cluster) createToPointInTime(
 		DeletionProtection:              r.DeletionProtection,
 		Domain:                          r.Domain,
 		DomainIAMRoleName:               r.DomainIamRoleName,
-		EnableCloudwatchLogsExports:     r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:     ptr.Value(r.EnabledCloudwatchLogsExports),
 		EnableIAMDatabaseAuthentication: r.EnableIamDatabaseAuthentication,
 		EngineLifecycleSupport:          r.EngineLifecycleSupport,
 		Iops:                            ptr.Int32(r.Iops),
@@ -562,8 +552,8 @@ func (r *Cluster) createToPointInTime(
 		NetworkType:                     r.NetworkType,
 		Port:                            ptr.Int32(r.Port),
 		StorageType:                     r.StorageType,
-		Tags:                            tagList(r.Tags),
-		VpcSecurityGroupIds:             r.VpcSecurityGroupIds,
+		Tags:                            tagList(ptr.Value(r.Tags)),
+		VpcSecurityGroupIds:             ptr.Value(r.VpcSecurityGroupIds),
 	}
 	if b.RestoreToTime != nil {
 		t, err := time.Parse(time.RFC3339, *b.RestoreToTime)
@@ -775,13 +765,13 @@ func (r *Cluster) Update(
 	}
 	// IAM roles are reconciled as a set: the added ARNs are associated and the
 	// removed ARNs are disassociated.
-	if runtime.Changed(prior.Inputs.IamRoles, r.IamRoles) {
+	if r.IamRoles != nil && runtime.Changed(prior.Inputs.IamRoles, r.IamRoles) {
 		if err := r.reconcileRoles(ctx, client, prior.Inputs.IamRoles); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -890,8 +880,9 @@ func (r *Cluster) modifyInput(
 		func() { in.ServerlessV2ScalingConfiguration = r.ServerlessV2Scaling.toSDK() })
 	set(runtime.Changed(p.StorageType, r.StorageType),
 		func() { in.StorageType = r.StorageType })
-	set(runtime.Changed(p.VpcSecurityGroupIds, r.VpcSecurityGroupIds),
-		func() { in.VpcSecurityGroupIds = r.VpcSecurityGroupIds })
+	set(ptr.Value(r.VpcSecurityGroupIds) != nil &&
+		runtime.Changed(ptr.Value(p.VpcSecurityGroupIds), ptr.Value(r.VpcSecurityGroupIds)),
+		func() { in.VpcSecurityGroupIds = ptr.Value(r.VpcSecurityGroupIds) })
 	// The HTTP endpoint rides this call only for a non-provisioned engine mode;
 	// the provisioned case is handled by its own call before this one.
 	set(runtime.Changed(p.EnableHttpEndpoint, r.EnableHttpEndpoint) &&
@@ -899,8 +890,8 @@ func (r *Cluster) modifyInput(
 		func() { in.EnableHttpEndpoint = r.EnableHttpEndpoint })
 	// The cloudwatch logs exports are reconciled as an enable/disable diff of the
 	// log-type set rather than a whole-set replacement.
-	if enable, disable := logExportsDiff(p.EnabledCloudwatchLogsExports,
-		r.EnabledCloudwatchLogsExports); len(enable) > 0 || len(disable) > 0 {
+	if enable, disable := logExportsDiff(ptr.Value(p.EnabledCloudwatchLogsExports),
+		ptr.Value(r.EnabledCloudwatchLogsExports)); len(enable) > 0 || len(disable) > 0 {
 		in.CloudwatchLogsExportConfiguration = &rdstypes.CloudwatchLogsExportConfiguration{
 			EnableLogTypes:  enable,
 			DisableLogTypes: disable,
@@ -1106,24 +1097,26 @@ func (r *Cluster) removeFromGlobalCluster(
 // reconcileRoles associates the IAM role ARNs added since the prior apply and
 // disassociates the ones removed.
 func (r *Cluster) reconcileRoles(
-	ctx context.Context, client *rds.Client, priorRoles []string,
+	ctx context.Context, client *rds.Client, priorRoles *[]string,
 ) error {
+	priorList := ptr.Value(priorRoles)
+	desiredList := ptr.Value(r.IamRoles)
 	prior := map[string]bool{}
-	for _, a := range priorRoles {
+	for _, a := range priorList {
 		prior[a] = true
 	}
 	desired := map[string]bool{}
-	for _, a := range r.IamRoles {
+	for _, a := range desiredList {
 		desired[a] = true
 	}
-	for _, a := range r.IamRoles {
+	for _, a := range desiredList {
 		if !prior[a] {
 			if err := r.addRole(ctx, client, a); err != nil {
 				return err
 			}
 		}
 	}
-	for _, a := range priorRoles {
+	for _, a := range priorList {
 		if !desired[a] {
 			if err := r.removeRole(ctx, client, a); err != nil {
 				return err

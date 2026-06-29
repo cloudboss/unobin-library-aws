@@ -10,9 +10,9 @@ import (
 	ssm "github.com/aws/aws-sdk-go-v2/service/ssm"
 	ssmtypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -79,7 +79,7 @@ type Parameter struct {
 	// Tags is the parameter's tag set. On create the tags ride the PutParameter
 	// call; on update they are reconciled by separate tag calls, since SSM
 	// forbids setting both Tags and Overwrite.
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // ParameterOutput holds the values SSM computes for a parameter. The ARN is the
@@ -106,13 +106,6 @@ func (r *Parameter) ReplaceFields() []string {
 	return []string{
 		"name",
 		"data-type",
-	}
-}
-
-// Defaults marks the collection input a parameter may omit.
-func (r Parameter) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -172,7 +165,7 @@ func (r *Parameter) Create(ctx context.Context, cfg *awsCfg) (*ParameterOutput, 
 	// SSM rejects a request that sets both Tags and Overwrite. The tags are
 	// inlined here, so no separate AddTagsToResource is needed.
 	in := r.putInput(false)
-	in.Tags = parameterTags(r.Tags)
+	in.Tags = parameterTags(ptr.Value(r.Tags))
 	if err := r.put(ctx, client, in); err != nil {
 		return nil, fmt.Errorf("create parameter: %w", err)
 	}
@@ -216,7 +209,7 @@ func (r *Parameter) Update(
 			return nil, fmt.Errorf("update parameter: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -380,7 +373,7 @@ func (r *Parameter) getParameter(
 // ListTagsForResource and writing changes with AddTagsToResource and
 // RemoveTagsFromResource.
 func (r *Parameter) syncTags(ctx context.Context, client *ssm.Client) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ssm.ListTagsForResourceInput{
 				ResourceId:   aws.String(r.Name),

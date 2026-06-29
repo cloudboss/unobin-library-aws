@@ -10,7 +10,6 @@ import (
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -26,13 +25,13 @@ import (
 // so a change to either replaces the role; the trust policy, description,
 // session limit, permissions boundary, and tags all change in place.
 type Role struct {
-	RoleName                 string            `ub:"role-name"`
-	AssumeRolePolicyDocument string            `ub:"assume-role-policy-document"`
-	Path                     *string           `ub:"path"`
-	Description              *string           `ub:"description"`
-	MaxSessionDuration       *int64            `ub:"max-session-duration"`
-	PermissionsBoundary      *string           `ub:"permissions-boundary"`
-	Tags                     map[string]string `ub:"tags"`
+	RoleName                 string             `ub:"role-name"`
+	AssumeRolePolicyDocument string             `ub:"assume-role-policy-document"`
+	Path                     *string            `ub:"path"`
+	Description              *string            `ub:"description"`
+	MaxSessionDuration       *int64             `ub:"max-session-duration"`
+	PermissionsBoundary      *string            `ub:"permissions-boundary"`
+	Tags                     *map[string]string `ub:"tags"`
 }
 
 // RoleOutput holds the values IAM computes for a role. The ARN and role id
@@ -53,13 +52,6 @@ func (r *Role) ReplaceFields() []string {
 	return []string{
 		"role-name",
 		"path",
-	}
-}
-
-// Defaults marks the collection inputs a role may omit.
-func (r Role) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -87,7 +79,7 @@ func (r *Role) Create(ctx context.Context, cfg *awsCfg) (*RoleOutput, error) {
 		Description:              r.Description,
 		MaxSessionDuration:       ptr.Int32(r.MaxSessionDuration),
 		PermissionsBoundary:      r.PermissionsBoundary,
-		Tags:                     iamRoleTags(r.Tags),
+		Tags:                     iamRoleTags(ptr.Value(r.Tags)),
 	}
 	// A trust policy that names a just-created principal, or a concurrent IAM
 	// change, makes CreateRole fail transiently until the change propagates, so
@@ -113,7 +105,7 @@ func (r *Role) Create(ctx context.Context, cfg *awsCfg) (*RoleOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create role: %w", err)
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -242,7 +234,7 @@ func (r *Role) Update(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -286,7 +278,7 @@ func (r *Role) Delete(ctx context.Context, cfg *awsCfg, prior *RoleOutput) error
 // tags through the paginated ListRoleTags and writing changes with TagRole and
 // UntagRole. IAM addresses role tags by role name.
 func (r *Role) syncTags(ctx context.Context, client *iam.Client) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}
 			pager := iam.NewListRoleTagsPaginator(client, &iam.ListRoleTagsInput{

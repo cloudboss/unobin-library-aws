@@ -9,7 +9,6 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -39,19 +38,19 @@ type NatGateway struct {
 	// SecondaryAllocationIds adds further Elastic IP allocations to a public
 	// gateway. It is reconciled in place on Update by AssociateNatGatewayAddress
 	// and DisassociateNatGatewayAddress.
-	SecondaryAllocationIds []string `ub:"secondary-allocation-ids"`
+	SecondaryAllocationIds *[]string `ub:"secondary-allocation-ids"`
 	// SecondaryPrivateIpAddresses adds further private addresses. On a private
 	// gateway it is reconciled in place by AssignPrivateNatGatewayAddress and
 	// UnassignPrivateNatGatewayAddress; on a public gateway the added entries
 	// accompany an Associate as the paired private IPs, so a change to this
 	// list alone, with no newly added secondary-allocation-ids, sends nothing.
-	SecondaryPrivateIpAddresses []string `ub:"secondary-private-ip-addresses"`
+	SecondaryPrivateIpAddresses *[]string `ub:"secondary-private-ip-addresses"`
 	// SecondaryPrivateIpAddressCount asks EC2 to assign that many private
 	// addresses to a private gateway at create time, instead of listing them. It
 	// is a create-only alternative to the addresses list; changing it replaces the
 	// gateway rather than reconciling in place.
-	SecondaryPrivateIpAddressCount *int64            `ub:"secondary-private-ip-address-count"`
-	Tags                           map[string]string `ub:"tags"`
+	SecondaryPrivateIpAddressCount *int64             `ub:"secondary-private-ip-address-count"`
+	Tags                           *map[string]string `ub:"tags"`
 }
 
 // NatGatewayOutput holds the values EC2 computes for the gateway's primary
@@ -86,15 +85,6 @@ func (r *NatGateway) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a NAT gateway may omit.
-func (r NatGateway) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.SecondaryAllocationIds),
-		defaults.Optional(r.SecondaryPrivateIpAddresses),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the cross-field rules EC2 enforces on a zonal NAT
 // gateway's inputs. The connectivity type is public or private and defaults to
 // public when omitted. An Elastic IP allocation is required for a public gateway
@@ -116,12 +106,16 @@ func (r NatGateway) Constraints() []constraint.Constraint {
 			Require(constraint.Absent(r.AllocationId)).
 			Message("allocation-id is not supported with connectivity-type private"),
 		constraint.When(constraint.Equals(r.ConnectivityType, "private")).
-			Require(constraint.Absent(r.SecondaryAllocationIds)).
+			Require(constraint.MaxItems(r.SecondaryAllocationIds, 0)).
 			Message("secondary-allocation-ids is not supported with connectivity-type private"),
 		constraint.When(constraint.Present(r.SecondaryPrivateIpAddressCount)).
 			Require(constraint.Equals(r.ConnectivityType, "private")).
 			Message("secondary-private-ip-address-count is supported only with connectivity-type private"),
-		constraint.AtMostOneOf(r.SecondaryPrivateIpAddressCount, r.SecondaryPrivateIpAddresses),
+		constraint.Must(constraint.Any(
+			constraint.Absent(r.SecondaryPrivateIpAddressCount),
+			constraint.Not(constraint.NotEmpty(r.SecondaryPrivateIpAddresses)))).
+			Message("secondary-private-ip-address-count and secondary-private-ip-addresses " +
+				"are mutually exclusive"),
 	}
 }
 
@@ -135,10 +129,10 @@ func (r *NatGateway) Create(ctx context.Context, cfg *awsCfg) (*NatGatewayOutput
 		ConnectivityType:               ec2types.ConnectivityType(aws.ToString(r.ConnectivityType)),
 		AllocationId:                   r.AllocationId,
 		PrivateIpAddress:               r.PrivateIp,
-		SecondaryAllocationIds:         r.SecondaryAllocationIds,
-		SecondaryPrivateIpAddresses:    r.SecondaryPrivateIpAddresses,
+		SecondaryAllocationIds:         ptr.Value(r.SecondaryAllocationIds),
+		SecondaryPrivateIpAddresses:    ptr.Value(r.SecondaryPrivateIpAddresses),
 		SecondaryPrivateIpAddressCount: ptr.Int32(r.SecondaryPrivateIpAddressCount),
-		TagSpecifications:              tagSpecifications(ec2types.ResourceTypeNatgateway, r.Tags),
+		TagSpecifications:              tagSpecifications(ec2types.ResourceTypeNatgateway, ptr.Value(r.Tags)),
 	}
 	// The SDK fills the idempotency token when ClientToken is unset, so a retried
 	// create does not double-provision; it is left for the SDK to supply.
@@ -179,18 +173,20 @@ func (r *NatGateway) Update(
 	// it depends on the connectivity type. A public gateway adds and removes
 	// Elastic IP allocations; a private gateway adds and removes private addresses.
 	// Each set is reconciled only when its input actually changed.
+	privateChanged := ptr.Value(r.SecondaryPrivateIpAddresses) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.SecondaryPrivateIpAddresses),
+			ptr.Value(r.SecondaryPrivateIpAddresses))
+	allocationChanged := ptr.Value(r.SecondaryAllocationIds) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.SecondaryAllocationIds), ptr.Value(r.SecondaryAllocationIds))
 	if aws.ToString(r.ConnectivityType) == "private" {
-		if runtime.Changed(prior.Inputs.SecondaryPrivateIpAddresses,
-			r.SecondaryPrivateIpAddresses) {
+		if privateChanged {
 			if err := r.reconcilePrivateAddresses(ctx, client, id,
 				prior.Inputs.SecondaryPrivateIpAddresses); err != nil {
 				return nil, err
 			}
 		}
 	} else {
-		if runtime.Changed(prior.Inputs.SecondaryAllocationIds, r.SecondaryAllocationIds) ||
-			runtime.Changed(prior.Inputs.SecondaryPrivateIpAddresses,
-				r.SecondaryPrivateIpAddresses) {
+		if allocationChanged || privateChanged {
 			if err := r.reconcileSecondaryAllocations(ctx, client, id,
 				prior.Inputs.SecondaryAllocationIds,
 				prior.Inputs.SecondaryPrivateIpAddresses); err != nil {
@@ -200,8 +196,8 @@ func (r *NatGateway) Update(
 	}
 	// The address calls do not touch tags, so reconcile them as a set whenever they
 	// changed, the same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -259,10 +255,12 @@ func (r *NatGateway) read(
 // ids, which a fresh read maps from the allocation ids, and each waited until
 // gone.
 func (r *NatGateway) reconcileSecondaryAllocations(
-	ctx context.Context, client *ec2.Client, id string, priorAllocations, priorPrivate []string,
+	ctx context.Context, client *ec2.Client, id string, priorAllocations, priorPrivate *[]string,
 ) error {
-	added := natGatewayStringsAdded(priorAllocations, r.SecondaryAllocationIds)
-	removed := natGatewayStringsAdded(r.SecondaryAllocationIds, priorAllocations)
+	desiredAllocations := ptr.Value(r.SecondaryAllocationIds)
+	priorAllocationList := ptr.Value(priorAllocations)
+	added := natGatewayStringsAdded(priorAllocationList, desiredAllocations)
+	removed := natGatewayStringsAdded(desiredAllocations, priorAllocationList)
 	if len(added) > 0 {
 		in := &ec2.AssociateNatGatewayAddressInput{
 			NatGatewayId:  aws.String(id),
@@ -271,7 +269,7 @@ func (r *NatGateway) reconcileSecondaryAllocations(
 		// Pass any newly added private addresses as the paired private IPs of the
 		// association, the way EC2 accepts them for a public gateway.
 		if priv := natGatewayStringsAdded(
-			priorPrivate, r.SecondaryPrivateIpAddresses,
+			ptr.Value(priorPrivate), ptr.Value(r.SecondaryPrivateIpAddresses),
 		); len(priv) > 0 {
 			in.PrivateIpAddresses = priv
 		}
@@ -312,10 +310,12 @@ func (r *NatGateway) reconcileSecondaryAllocations(
 // addresses to the desired set. Added addresses are assigned and each waited
 // until succeeded; removed addresses are unassigned and each waited until gone.
 func (r *NatGateway) reconcilePrivateAddresses(
-	ctx context.Context, client *ec2.Client, id string, prior []string,
+	ctx context.Context, client *ec2.Client, id string, prior *[]string,
 ) error {
-	added := natGatewayStringsAdded(prior, r.SecondaryPrivateIpAddresses)
-	removed := natGatewayStringsAdded(r.SecondaryPrivateIpAddresses, prior)
+	desired := ptr.Value(r.SecondaryPrivateIpAddresses)
+	priorList := ptr.Value(prior)
+	added := natGatewayStringsAdded(priorList, desired)
+	removed := natGatewayStringsAdded(desired, priorList)
 	if len(added) > 0 {
 		_, err := client.AssignPrivateNatGatewayAddress(ctx,
 			&ec2.AssignPrivateNatGatewayAddressInput{

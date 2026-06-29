@@ -147,12 +147,12 @@ func TestVpcDataReadPaginatesAndEnrichesSelectedVpc(t *testing.T) {
 		DhcpOptionsId: aws.String("dopt-0123456789abcdef0"),
 		Default:       aws.Bool(true),
 		State:         aws.String("available"),
-		Filter: []VpcDataFilter{
+		Filter: new([]VpcDataFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
-		},
-		Tags: map[string]string{"unobin": "ec2-vpc-data"},
+		}),
+		Tags: new(map[string]string{"unobin": "ec2-vpc-data"}),
 	}
 	out, err := r.Read(context.Background(), cfg)
 	require.NoError(t, err)

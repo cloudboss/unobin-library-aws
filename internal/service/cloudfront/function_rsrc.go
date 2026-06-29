@@ -9,8 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	cloudfront "github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	cloudfronttypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -43,7 +43,7 @@ type Function struct {
 	// KeyValueStoreAssociations lists the ARNs of the key value stores the
 	// function reads at runtime. CloudFront limits this to one store; the API
 	// rejects more, so no constraint caps it here.
-	KeyValueStoreAssociations []string `ub:"key-value-store-associations"`
+	KeyValueStoreAssociations *[]string `ub:"key-value-store-associations"`
 	// Publish is an intent flag, defaulting to true, that promotes the
 	// DEVELOPMENT code to the LIVE stage through PublishFunction. It is
 	// reconciled by that call on every create and update, not echoed to output.
@@ -72,13 +72,6 @@ func (r *Function) SchemaVersion() int { return 1 }
 // new function. Every other input reconciles in place through UpdateFunction.
 func (r *Function) ReplaceFields() []string {
 	return []string{"name"}
-}
-
-// Defaults marks the collection input a function may omit.
-func (r Function) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.KeyValueStoreAssociations),
-	}
 }
 
 // Constraints declares the rules CloudFront places on a function's inputs. The
@@ -133,12 +126,12 @@ func (r *Function) config() *cloudfronttypes.FunctionConfig {
 // the items in a quantity. An empty list leaves the member nil so the field is
 // omitted rather than sent as an empty set.
 func (r *Function) keyValueStoreAssociations() *cloudfronttypes.KeyValueStoreAssociations {
-	if len(r.KeyValueStoreAssociations) == 0 {
+	if len(ptr.Value(r.KeyValueStoreAssociations)) == 0 {
 		return nil
 	}
 	items := make([]cloudfronttypes.KeyValueStoreAssociation, 0,
-		len(r.KeyValueStoreAssociations))
-	for _, arn := range r.KeyValueStoreAssociations {
+		len(ptr.Value(r.KeyValueStoreAssociations)))
+	for _, arn := range ptr.Value(r.KeyValueStoreAssociations) {
 		items = append(items, cloudfronttypes.KeyValueStoreAssociation{
 			KeyValueStoreARN: aws.String(arn),
 		})
@@ -291,8 +284,8 @@ func (r *Function) codeChanged(prior runtime.Prior[Function, *FunctionOutput]) b
 func (r *Function) configChanged(prior runtime.Prior[Function, *FunctionOutput]) bool {
 	return runtime.Changed(prior.Inputs.Comment, r.Comment) ||
 		runtime.Changed(prior.Inputs.Runtime, r.Runtime) ||
-		runtime.Changed(prior.Inputs.KeyValueStoreAssociations,
-			r.KeyValueStoreAssociations)
+		runtime.Changed(ptr.Value(prior.Inputs.KeyValueStoreAssociations),
+			ptr.Value(r.KeyValueStoreAssociations))
 }
 
 func (r *Function) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionOutput) error {

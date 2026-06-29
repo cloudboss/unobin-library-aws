@@ -10,9 +10,9 @@ import (
 	cloudfront "github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	cloudfronttypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
@@ -49,22 +49,22 @@ const certRetryTimeout = time.Minute
 // cache-tag config; the viewer mTLS config; and the multi-tenant distribution
 // (a separate resource).
 type Distribution struct {
-	Enabled              *bool                             `ub:"enabled"`
-	Aliases              []string                          `ub:"aliases"`
-	Comment              *string                           `ub:"comment"`
-	DefaultRootObject    *string                           `ub:"default-root-object"`
-	PriceClass           *string                           `ub:"price-class"`
-	HttpVersion          *string                           `ub:"http-version"`
-	IsIPV6Enabled        *bool                             `ub:"is-ipv6-enabled"`
-	WebACLId             *string                           `ub:"web-acl-id"`
-	Origins              []DistributionOrigin              `ub:"origins"`
-	DefaultCacheBehavior DistributionDefaultCacheBehavior  `ub:"default-cache-behavior"`
-	CacheBehaviors       []DistributionCacheBehavior       `ub:"cache-behaviors"`
-	CustomErrorResponses []DistributionCustomErrorResponse `ub:"custom-error-responses"`
-	ViewerCertificate    *DistributionViewerCertificate    `ub:"viewer-certificate"`
-	Restrictions         *DistributionRestrictions         `ub:"restrictions"`
-	Logging              *DistributionLogging              `ub:"logging"`
-	Tags                 map[string]string                 `ub:"tags"`
+	Enabled              *bool                              `ub:"enabled"`
+	Aliases              *[]string                          `ub:"aliases"`
+	Comment              *string                            `ub:"comment"`
+	DefaultRootObject    *string                            `ub:"default-root-object"`
+	PriceClass           *string                            `ub:"price-class"`
+	HttpVersion          *string                            `ub:"http-version"`
+	IsIPV6Enabled        *bool                              `ub:"is-ipv6-enabled"`
+	WebACLId             *string                            `ub:"web-acl-id"`
+	Origins              []DistributionOrigin               `ub:"origins"`
+	DefaultCacheBehavior DistributionDefaultCacheBehavior   `ub:"default-cache-behavior"`
+	CacheBehaviors       *[]DistributionCacheBehavior       `ub:"cache-behaviors"`
+	CustomErrorResponses *[]DistributionCustomErrorResponse `ub:"custom-error-responses"`
+	ViewerCertificate    *DistributionViewerCertificate     `ub:"viewer-certificate"`
+	Restrictions         *DistributionRestrictions          `ub:"restrictions"`
+	Logging              *DistributionLogging               `ub:"logging"`
+	Tags                 *map[string]string                 `ub:"tags"`
 }
 
 // DistributionOutput holds the values CloudFront computes for a distribution.
@@ -95,18 +95,6 @@ func (r *Distribution) SchemaVersion() int { return 1 }
 // flag, is deferred.
 func (r *Distribution) ReplaceFields() []string {
 	return nil
-}
-
-// Defaults marks the collection inputs a distribution may omit. The origins
-// list is not marked: a distribution must have at least one origin, so it is
-// required. The default cache behavior is a required non-pointer block.
-func (r Distribution) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Aliases),
-		defaults.Optional(r.CacheBehaviors),
-		defaults.Optional(r.CustomErrorResponses),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules CloudFront places on a distribution. The
@@ -196,7 +184,7 @@ func (r *Distribution) Create(ctx context.Context, cfg *awsCfg) (*DistributionOu
 	in := &cloudfront.CreateDistributionWithTagsInput{
 		DistributionConfigWithTags: &cloudfronttypes.DistributionConfigWithTags{
 			DistributionConfig: r.expandConfig(callerReference),
-			Tags:               distributionTags(r.Tags),
+			Tags:               distributionTags(ptr.Value(r.Tags)),
 		},
 	}
 	var resp *cloudfront.CreateDistributionWithTagsOutput
@@ -300,7 +288,7 @@ func (r *Distribution) Update(
 	}
 	// Tags are not part of the configuration diff; they reconcile on their own
 	// change through TagResource and UntagResource against the distribution ARN.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, prior.Outputs.Arn); err != nil {
 			return nil, err
 		}
@@ -317,7 +305,7 @@ func (r *Distribution) configChanged(
 	prior runtime.Prior[Distribution, *DistributionOutput],
 ) bool {
 	return runtime.Changed(prior.Inputs.Enabled, r.Enabled) ||
-		runtime.Changed(prior.Inputs.Aliases, r.Aliases) ||
+		runtime.Changed(ptr.Value(prior.Inputs.Aliases), ptr.Value(r.Aliases)) ||
 		runtime.Changed(prior.Inputs.Comment, r.Comment) ||
 		runtime.Changed(prior.Inputs.DefaultRootObject, r.DefaultRootObject) ||
 		runtime.Changed(prior.Inputs.PriceClass, r.PriceClass) ||
@@ -327,7 +315,7 @@ func (r *Distribution) configChanged(
 		runtime.Changed(prior.Inputs.Origins, r.Origins) ||
 		runtime.Changed(prior.Inputs.DefaultCacheBehavior, r.DefaultCacheBehavior) ||
 		runtime.Changed(prior.Inputs.CacheBehaviors, r.CacheBehaviors) ||
-		runtime.Changed(prior.Inputs.CustomErrorResponses, r.CustomErrorResponses) ||
+		runtime.Changed(ptr.Value(prior.Inputs.CustomErrorResponses), ptr.Value(r.CustomErrorResponses)) ||
 		runtime.Changed(prior.Inputs.ViewerCertificate, r.ViewerCertificate) ||
 		runtime.Changed(prior.Inputs.Restrictions, r.Restrictions) ||
 		runtime.Changed(prior.Inputs.Logging, r.Logging)
@@ -405,8 +393,8 @@ func overlayChangedConfig(
 	if runtime.Changed(prior.Inputs.Enabled, r.Enabled) {
 		config.Enabled = boolOrFalse(r.Enabled)
 	}
-	if runtime.Changed(prior.Inputs.Aliases, r.Aliases) {
-		config.Aliases = expandAliases(r.Aliases)
+	if runtime.Changed(ptr.Value(prior.Inputs.Aliases), ptr.Value(r.Aliases)) {
+		config.Aliases = expandAliases(ptr.Value(r.Aliases))
 	}
 	if runtime.Changed(prior.Inputs.Comment, r.Comment) {
 		config.Comment = aws.String(aws.ToString(r.Comment))
@@ -433,10 +421,10 @@ func overlayChangedConfig(
 		config.DefaultCacheBehavior = expandDefaultCacheBehavior(r.DefaultCacheBehavior)
 	}
 	if runtime.Changed(prior.Inputs.CacheBehaviors, r.CacheBehaviors) {
-		config.CacheBehaviors = expandCacheBehaviors(r.CacheBehaviors)
+		config.CacheBehaviors = expandCacheBehaviors(ptr.Value(r.CacheBehaviors))
 	}
-	if runtime.Changed(prior.Inputs.CustomErrorResponses, r.CustomErrorResponses) {
-		config.CustomErrorResponses = expandCustomErrorResponses(r.CustomErrorResponses)
+	if runtime.Changed(ptr.Value(prior.Inputs.CustomErrorResponses), ptr.Value(r.CustomErrorResponses)) {
+		config.CustomErrorResponses = expandCustomErrorResponses(ptr.Value(r.CustomErrorResponses))
 	}
 	if runtime.Changed(prior.Inputs.ViewerCertificate, r.ViewerCertificate) {
 		config.ViewerCertificate = expandViewerCertificate(r.ViewerCertificate)
@@ -453,7 +441,7 @@ func overlayChangedConfig(
 // live tags through ListTagsForResource and writing changes with TagResource
 // and UntagResource. CloudFront addresses a distribution's tags by its ARN.
 func (r *Distribution) syncTags(ctx context.Context, client *cloudfront.Client, arn string) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,
 				&cloudfront.ListTagsForResourceInput{Resource: aws.String(arn)})

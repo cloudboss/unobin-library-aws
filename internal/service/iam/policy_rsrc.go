@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -29,11 +29,11 @@ const maxPolicyVersions = 5
 // treats the description as immutable, so a change to any of them recreates
 // the policy.
 type Policy struct {
-	PolicyName     string            `ub:"policy-name"`
-	PolicyDocument string            `ub:"policy-document"`
-	Path           *string           `ub:"path"`
-	Description    *string           `ub:"description"`
-	Tags           map[string]string `ub:"tags"`
+	PolicyName     string             `ub:"policy-name"`
+	PolicyDocument string             `ub:"policy-document"`
+	Path           *string            `ub:"path"`
+	Description    *string            `ub:"description"`
+	Tags           *map[string]string `ub:"tags"`
 }
 
 // PolicyOutput holds the values IAM computes for a managed policy. The
@@ -60,13 +60,6 @@ func (r *Policy) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a policy may omit.
-func (r Policy) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -77,7 +70,7 @@ func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error)
 		PolicyDocument: aws.String(r.PolicyDocument),
 		Path:           r.Path,
 		Description:    r.Description,
-		Tags:           toIamTags(r.Tags),
+		Tags:           toIamTags(ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreatePolicy(ctx, in)
 	// Some partitions, such as the ISO partitions, cannot tag a policy as it
@@ -93,8 +86,8 @@ func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error)
 	if err != nil {
 		return nil, fmt.Errorf("create policy: %w", err)
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
-		err := syncPolicyTags(ctx, client, aws.ToString(resp.Policy.Arn), r.Tags)
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		err := syncPolicyTags(ctx, client, aws.ToString(resp.Policy.Arn), ptr.Value(r.Tags))
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +161,7 @@ func (r *Policy) Update(
 			return nil, err
 		}
 	}
-	if err := syncPolicyTags(ctx, client, arn, r.Tags); err != nil {
+	if err := syncPolicyTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 		return nil, err
 	}
 	resp, err := client.GetPolicy(ctx, &iam.GetPolicyInput{PolicyArn: aws.String(arn)})

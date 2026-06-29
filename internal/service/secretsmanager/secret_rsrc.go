@@ -10,9 +10,9 @@ import (
 	secretsmanager "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	secretsmanagertypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -46,15 +46,15 @@ const currentStage = "AWSCURRENT"
 // characters; that rule is a regular-expression and byte-length check in Create
 // rather than a declarative constraint.
 type Secret struct {
-	Name                        string            `ub:"name"`
-	Description                 *string           `ub:"description"`
-	KmsKeyId                    *string           `ub:"kms-key-id"`
-	ForceOverwriteReplicaSecret *bool             `ub:"force-overwrite-replica-secret"`
-	Replica                     []SecretReplica   `ub:"replica"`
-	SecretString                *string           `ub:"secret-string,sensitive"`
-	SecretBinary                *string           `ub:"secret-binary,sensitive"`
-	RecoveryWindowInDays        *int64            `ub:"recovery-window-in-days"`
-	Tags                        map[string]string `ub:"tags"`
+	Name                        string             `ub:"name"`
+	Description                 *string            `ub:"description"`
+	KmsKeyId                    *string            `ub:"kms-key-id"`
+	ForceOverwriteReplicaSecret *bool              `ub:"force-overwrite-replica-secret"`
+	Replica                     *[]SecretReplica   `ub:"replica"`
+	SecretString                *string            `ub:"secret-string,sensitive"`
+	SecretBinary                *string            `ub:"secret-binary,sensitive"`
+	RecoveryWindowInDays        *int64             `ub:"recovery-window-in-days"`
+	Tags                        *map[string]string `ub:"tags"`
 }
 
 // SecretReplica is one Region the secret is replicated to. The region names the
@@ -100,14 +100,6 @@ func (r *Secret) ReplaceFields() []string {
 	return []string{"name"}
 }
 
-// Defaults marks the collection inputs a secret may omit.
-func (r Secret) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Replica),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules Secrets Manager places on a secret's inputs. A
 // secret holds at most one value form, so the secret string and secret binary
 // are mutually exclusive, and both may be absent since a secret can exist with
@@ -124,12 +116,6 @@ func (r Secret) Constraints() []constraint.Constraint {
 				constraint.All(constraint.AtLeast(r.RecoveryWindowInDays, 7),
 					constraint.AtMost(r.RecoveryWindowInDays, 30)))).
 			Message("recovery-window-in-days must be 0 or between 7 and 30"),
-		constraint.ForEach(r.Replica, func(rep SecretReplica) []constraint.Constraint {
-			return []constraint.Constraint{
-				constraint.Must(constraint.NotEmpty(rep.Region)).
-					Message("a replica requires a region"),
-			}
-		}),
 	}
 }
 
@@ -143,6 +129,11 @@ func (r *Secret) validate() error {
 	}
 	if len(r.Name) > secretNameMaxLength {
 		return fmt.Errorf("name must be at most %d characters", secretNameMaxLength)
+	}
+	for _, rep := range ptr.Value(r.Replica) {
+		if rep.Region == "" {
+			return fmt.Errorf("a replica requires a region")
+		}
 	}
 	if r.SecretBinary != nil {
 		if _, err := base64.StdEncoding.DecodeString(*r.SecretBinary); err != nil {
@@ -164,8 +155,8 @@ func (r *Secret) Create(ctx context.Context, cfg *awsCfg) (*SecretOutput, error)
 		Name:                        aws.String(r.Name),
 		Description:                 r.Description,
 		ForceOverwriteReplicaSecret: aws.ToBool(r.ForceOverwriteReplicaSecret),
-		AddReplicaRegions:           expandReplicas(r.Replica),
-		Tags:                        secretTags(r.Tags),
+		AddReplicaRegions:           expandReplicas(ptr.Value(r.Replica)),
+		Tags:                        secretTags(ptr.Value(r.Tags)),
 	}
 	// The KMS key is sent only when set; with none given Secrets Manager uses the
 	// AWS-managed aws/secretsmanager key, so a nil key must not be fabricated.
@@ -284,7 +275,7 @@ func (r *Secret) Update(
 	// Replica regions are reconciled by set difference on the configured Regions:
 	// the removed Regions are taken out first, because a Region cannot be both
 	// removed and re-added in one pass, then the added Regions are replicated.
-	if runtime.Changed(prior.Inputs.Replica, r.Replica) {
+	if r.Replica != nil && runtime.Changed(prior.Inputs.Replica, r.Replica) {
 		if err := r.reconcileReplicas(ctx, client, arn, prior.Inputs.Replica); err != nil {
 			return nil, err
 		}
@@ -316,7 +307,7 @@ func (r *Secret) Update(
 			}
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -457,7 +448,7 @@ func (r *Secret) waitDeleted(
 func (r *Secret) syncTags(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) error {
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			desc, err := client.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 				SecretId: aws.String(arn),

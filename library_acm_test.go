@@ -60,13 +60,13 @@ func TestAcmSchemas(t *testing.T) {
 					{Name: "export", Type: typecheck.TString(), Optional: true},
 				})),
 				"private-key":               typecheck.TOptional(typecheck.TString()),
-				"subject-alternative-names": typecheck.TList(typecheck.TString()),
-				"tags":                      typecheck.TMap(typecheck.TString()),
+				"subject-alternative-names": typecheck.TOptional(typecheck.TList(typecheck.TString())),
+				"tags":                      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"validation-method":         typecheck.TOptional(typecheck.TString()),
-				"validation-option": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"validation-option": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "domain-name", Type: typecheck.TString()},
 					{Name: "validation-domain", Type: typecheck.TString()},
-				})),
+				}))),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":         typecheck.TString(),
@@ -98,11 +98,23 @@ func TestAcmSchemas(t *testing.T) {
 						"input.domain-name",
 						"input.certificate-authority-arn",
 						"input.key-algorithm",
-						"input.subject-alternative-names",
 						"input.validation-method",
-						"input.validation-option",
 						"input.options",
 					},
+				},
+				{
+					Kind: "predicate",
+					When: "(input.private-key != null)",
+					Require: "!((input.subject-alternative-names != null) && " +
+						"(@core.length(input.subject-alternative-names) >= 1))",
+					Message: "subject-alternative-names cannot be set with private-key",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.private-key != null)",
+					Require: "!((input.validation-option != null) && " +
+						"(@core.length(input.validation-option) >= 1))",
+					Message: "validation-option cannot be set with private-key",
 				},
 				{
 					Kind: "forbidden-with",
@@ -166,22 +178,14 @@ func TestAcmSchemas(t *testing.T) {
 					Message: "options export must be ENABLED or DISABLED",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.subject-alternative-names", Optional: true},
-				{Field: "input.validation-option", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"acm-certificate-validation": {
 			Inputs: map[string]typecheck.Type{
 				"certificate-arn":         typecheck.TString(),
-				"validation-record-fqdns": typecheck.TList(typecheck.TString()),
+				"validation-record-fqdns": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"certificate-arn": typecheck.TString(),
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.validation-record-fqdns", Optional: true},
 			},
 		},
 	}
@@ -189,7 +193,7 @@ func TestAcmSchemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 
@@ -197,11 +201,11 @@ func TestAcmSchemas(t *testing.T) {
 		"acm-certificate-data": {
 			Inputs: map[string]typecheck.Type{
 				"domain":      typecheck.TOptional(typecheck.TString()),
-				"key-types":   typecheck.TList(typecheck.TString()),
+				"key-types":   typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"most-recent": typecheck.TBoolean(),
-				"statuses":    typecheck.TList(typecheck.TString()),
-				"tags":        typecheck.TMap(typecheck.TString()),
-				"types":       typecheck.TList(typecheck.TString()),
+				"statuses":    typecheck.TOptional(typecheck.TList(typecheck.TString())),
+				"tags":        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"types":       typecheck.TOptional(typecheck.TList(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":               typecheck.TString(),
@@ -213,8 +217,11 @@ func TestAcmSchemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
-					Kind:   "at-least-one-of",
-					Fields: []string{"input.domain", "input.tags"},
+					Kind: "predicate",
+					When: "true",
+					Require: "((input.domain != null) || ((input.tags != null) && " +
+						"(@core.length(input.tags) >= 1)))",
+					Message: "a certificate lookup needs domain or tags",
 				},
 				{
 					Kind: "predicate",
@@ -227,7 +234,7 @@ func TestAcmSchemas(t *testing.T) {
 						"@each.value == 'EC_secp384r1' || " +
 						"@each.value == 'EC_secp521r1')",
 					Message: "key-types entries must be valid ACM key algorithms",
-					ForEach: "input.key-types",
+					ForEach: "input.key-types ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -240,7 +247,7 @@ func TestAcmSchemas(t *testing.T) {
 						"@each.value == 'REVOKED' || " +
 						"@each.value == 'FAILED')",
 					Message: "statuses entries must be valid ACM certificate statuses",
-					ForEach: "input.statuses",
+					ForEach: "input.statuses ?? []",
 				},
 				{
 					Kind: "predicate",
@@ -249,15 +256,11 @@ func TestAcmSchemas(t *testing.T) {
 						"@each.value == 'AMAZON_ISSUED' || " +
 						"@each.value == 'PRIVATE')",
 					Message: "types entries must be valid ACM certificate types",
-					ForEach: "input.types",
+					ForEach: "input.types ?? []",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.most-recent", Value: "false"},
-				{Field: "input.tags", Optional: true},
-				{Field: "input.key-types", Optional: true},
-				{Field: "input.statuses", Optional: true},
-				{Field: "input.types", Optional: true},
 			},
 		},
 	}
@@ -265,7 +268,7 @@ func TestAcmSchemas(t *testing.T) {
 	for key, want := range dataSources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.DataSources, key)
-			assert.Equal(t, want, schema.DataSources[key])
+			assertTypeSchemaEqual(t, want, schema.DataSources[key])
 		})
 	}
 }

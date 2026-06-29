@@ -14,10 +14,10 @@ import (
 	ecs "github.com/aws/aws-sdk-go-v2/service/ecs"
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -53,7 +53,7 @@ type CapacityProvider struct {
 	Cluster                  *string                                   `ub:"cluster"`
 	AutoScalingGroupProvider *CapacityProviderAutoScalingGroupProvider `ub:"auto-scaling-group-provider"`
 	ManagedInstancesProvider *CapacityProviderManagedInstancesProvider `ub:"managed-instances-provider"`
-	Tags                     map[string]string                         `ub:"tags"`
+	Tags                     *map[string]string                        `ub:"tags"`
 }
 
 // CapacityProviderOutput holds the ECS-computed identity and status fields,
@@ -89,32 +89,6 @@ func (r *CapacityProvider) SchemaVersion() int { return 1 }
 // triggers, so those nested leaves cannot be represented safely here.
 func (r *CapacityProvider) ReplaceFields() []string {
 	return []string{"name", "cluster"}
-}
-
-// Defaults marks optional collection inputs, including optional collections
-// nested under the Managed Instances instance requirements block.
-func (r CapacityProvider) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-		defaults.Optional(
-			r.ManagedInstancesProvider.InstanceLaunchTemplate.NetworkConfiguration.SecurityGroups),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.AcceleratorManufacturers),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.AcceleratorNames),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.AcceleratorTypes),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.AllowedInstanceTypes),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.CpuManufacturers),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.ExcludedInstanceTypes),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.InstanceGenerations),
-		defaults.Optional(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.LocalStorageTypes),
-	}
 }
 
 // Constraints declares the provider selection rules, mutable enum sets, and
@@ -212,15 +186,11 @@ func (r CapacityProvider) Constraints() []constraint.Constraint {
 			Require(constraint.OneOf(r.ManagedInstancesProvider.PropagateTags,
 				"CAPACITY_PROVIDER", "NONE")).
 			Message("propagate-tags must be CAPACITY_PROVIDER or NONE"),
-		constraint.When(constraint.Present(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.AllowedInstanceTypes)).
-			Require(constraint.MaxItems(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-				InstanceRequirements.AllowedInstanceTypes, 400)).
+		constraint.Must(constraint.MaxItems(r.ManagedInstancesProvider.InstanceLaunchTemplate.
+			InstanceRequirements.AllowedInstanceTypes, 400)).
 			Message("allowed-instance-types allows at most 400 entries"),
-		constraint.When(constraint.Present(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-			InstanceRequirements.ExcludedInstanceTypes)).
-			Require(constraint.MaxItems(r.ManagedInstancesProvider.InstanceLaunchTemplate.
-				InstanceRequirements.ExcludedInstanceTypes, 400)).
+		constraint.Must(constraint.MaxItems(r.ManagedInstancesProvider.InstanceLaunchTemplate.
+			InstanceRequirements.ExcludedInstanceTypes, 400)).
 			Message("excluded-instance-types allows at most 400 entries"),
 		constraint.When(constraint.Present(r.ManagedInstancesProvider.InstanceLaunchTemplate.
 			InstanceRequirements)).
@@ -382,7 +352,7 @@ func (r *CapacityProvider) Create(
 		AutoScalingGroupProvider: r.AutoScalingGroupProvider.sdk(),
 		Cluster:                  r.Cluster,
 		ManagedInstancesProvider: r.ManagedInstancesProvider.sdk(),
-		Tags:                     tagsSDK(r.Tags),
+		Tags:                     tagsSDK(ptr.Value(r.Tags)),
 	}
 	create := func() (*ecs.CreateCapacityProviderOutput, error) {
 		return client.CreateCapacityProvider(ctx, in)
@@ -401,7 +371,7 @@ func (r *CapacityProvider) Create(
 		return nil, errors.New("create capacity provider: response holds no capacity provider")
 	}
 	capacityProviderArn := aws.ToString(resp.CapacityProvider.CapacityProviderArn)
-	if fallbackTags := tagsSDK(r.Tags); taggedSeparately && len(fallbackTags) > 0 {
+	if fallbackTags := tagsSDK(ptr.Value(r.Tags)); taggedSeparately && len(fallbackTags) > 0 {
 		if _, err := client.TagResource(ctx, &ecs.TagResourceInput{
 			ResourceArn: aws.String(capacityProviderArn),
 			Tags:        fallbackTags,
@@ -455,7 +425,7 @@ func (r *CapacityProvider) Update(
 		}
 	}
 	if r.tagsNeedSync(prior) {
-		if err := syncResourceTags(ctx, client, capacityProviderArn, r.Tags); err != nil {
+		if err := syncResourceTags(ctx, client, capacityProviderArn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -485,8 +455,8 @@ func (r *CapacityProvider) Delete(
 func (r *CapacityProvider) tagsNeedSync(
 	prior runtime.Prior[CapacityProvider, *CapacityProviderOutput],
 ) bool {
-	desired := capacityProviderUserTags(r.Tags)
-	if !maps.Equal(capacityProviderUserTags(prior.Inputs.Tags), desired) {
+	desired := capacityProviderUserTags(ptr.Value(r.Tags))
+	if !maps.Equal(capacityProviderUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
 		return true
 	}
 	return prior.Observed != nil &&
@@ -669,8 +639,8 @@ func configuredNetworkConfigurationDrifted(
 	if runtime.Changed(actual.Subnets, desired.Subnets) {
 		return true
 	}
-	return len(desired.SecurityGroups) > 0 &&
-		runtime.Changed(actual.SecurityGroups, desired.SecurityGroups)
+	return len(ptr.Value(desired.SecurityGroups)) > 0 &&
+		runtime.Changed(ptr.Value(actual.SecurityGroups), ptr.Value(desired.SecurityGroups))
 }
 
 func configuredLocalStorageConfigurationDrifted(
@@ -753,15 +723,15 @@ func configuredInstanceRequirementsScalarDrifted(
 	desired, actual *CapacityProviderInstanceRequirementsRequest,
 ) bool {
 	if configuredStringSliceDrifted(
-		desired.AcceleratorManufacturers,
-		actual.AcceleratorManufacturers,
-	) || configuredStringSliceDrifted(desired.AcceleratorNames, actual.AcceleratorNames) ||
-		configuredStringSliceDrifted(desired.AcceleratorTypes, actual.AcceleratorTypes) ||
-		configuredStringSliceDrifted(desired.AllowedInstanceTypes, actual.AllowedInstanceTypes) ||
-		configuredStringSliceDrifted(desired.CpuManufacturers, actual.CpuManufacturers) ||
-		configuredStringSliceDrifted(desired.ExcludedInstanceTypes, actual.ExcludedInstanceTypes) ||
-		configuredStringSliceDrifted(desired.InstanceGenerations, actual.InstanceGenerations) ||
-		configuredStringSliceDrifted(desired.LocalStorageTypes, actual.LocalStorageTypes) {
+		ptr.Value(desired.AcceleratorManufacturers),
+		ptr.Value(actual.AcceleratorManufacturers),
+	) || configuredStringSliceDrifted(ptr.Value(desired.AcceleratorNames), ptr.Value(actual.AcceleratorNames)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.AcceleratorTypes), ptr.Value(actual.AcceleratorTypes)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.AllowedInstanceTypes), ptr.Value(actual.AllowedInstanceTypes)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.CpuManufacturers), ptr.Value(actual.CpuManufacturers)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.ExcludedInstanceTypes), ptr.Value(actual.ExcludedInstanceTypes)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.InstanceGenerations), ptr.Value(actual.InstanceGenerations)) ||
+		configuredStringSliceDrifted(ptr.Value(desired.LocalStorageTypes), ptr.Value(actual.LocalStorageTypes)) {
 		return true
 	}
 	if configuredPtrDrifted(desired.BareMetal, actual.BareMetal) ||
@@ -1177,11 +1147,11 @@ func (r *CapacityProvider) validate() error {
 		}
 		if reqs := p.InstanceLaunchTemplate.InstanceRequirements; reqs != nil {
 			if err := validateCapacityProviderInstanceTypes(
-				"allowed-instance-types", reqs.AllowedInstanceTypes); err != nil {
+				"allowed-instance-types", ptr.Value(reqs.AllowedInstanceTypes)); err != nil {
 				return err
 			}
 			if err := validateCapacityProviderInstanceTypes(
-				"excluded-instance-types", reqs.ExcludedInstanceTypes); err != nil {
+				"excluded-instance-types", ptr.Value(reqs.ExcludedInstanceTypes)); err != nil {
 				return err
 			}
 		}

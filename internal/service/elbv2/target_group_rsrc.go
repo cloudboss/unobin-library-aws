@@ -11,7 +11,6 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -68,7 +67,7 @@ type TargetGroup struct {
 	ProxyProtocolV2                *bool                  `ub:"proxy-protocol-v2"`
 	ConnectionTermination          *bool                  `ub:"connection-termination"`
 	LambdaMultiValueHeadersEnabled *bool                  `ub:"lambda-multi-value-headers-enabled"`
-	Tags                           map[string]string      `ub:"tags"`
+	Tags                           *map[string]string     `ub:"tags"`
 }
 
 // TargetGroupOutput holds the values ELBv2 computes for a target group. The ARN
@@ -100,13 +99,6 @@ func (r *TargetGroup) ReplaceFields() []string {
 		"target-type",
 		"ip-address-type",
 		"target-control-port",
-	}
-}
-
-// Defaults marks the collection inputs a target group may omit.
-func (r TargetGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -245,8 +237,8 @@ func (r *TargetGroup) Create(ctx context.Context, cfg *awsCfg) (*TargetGroupOutp
 			return nil, err
 		}
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -317,8 +309,8 @@ func (r *TargetGroup) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -356,7 +348,7 @@ func (r *TargetGroup) createInput() *elbv2.CreateTargetGroupInput {
 	in := &elbv2.CreateTargetGroupInput{
 		Name:              aws.String(r.Name),
 		TargetControlPort: ptr.Int32(r.TargetControlPort),
-		Tags:              tagList(r.Tags),
+		Tags:              tagList(ptr.Value(r.Tags)),
 	}
 	if r.TargetType != nil {
 		in.TargetType = elbv2types.TargetTypeEnum(*r.TargetType)

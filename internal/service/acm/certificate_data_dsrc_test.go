@@ -28,8 +28,8 @@ func TestCertificateDataListInput(t *testing.T) {
 		{
 			name: "uses explicit statuses and key types",
 			lookup: CertificateData{
-				Statuses: []string{"PENDING_VALIDATION", "ISSUED"},
-				KeyTypes: []string{"RSA_2048", "EC_prime256v1"},
+				Statuses: &[]string{"PENDING_VALIDATION", "ISSUED"},
+				KeyTypes: &[]string{"RSA_2048", "EC_prime256v1"},
 			},
 			wantStatuses: []acmtypes.CertificateStatus{
 				acmtypes.CertificateStatus("PENDING_VALIDATION"),
@@ -74,7 +74,7 @@ func TestCertificateDataCheckLookupKeys(t *testing.T) {
 		},
 		{
 			name:   "accepts explicit empty tags",
-			lookup: CertificateData{Tags: map[string]string{}},
+			lookup: CertificateData{Tags: new(map[string]string{})},
 		},
 	}
 
@@ -150,7 +150,7 @@ func TestCertificateDataSummaryMatches(t *testing.T) {
 		},
 		{
 			name:   "non-empty types filter requires membership",
-			lookup: CertificateData{Types: []string{"IMPORTED"}},
+			lookup: CertificateData{Types: &[]string{"IMPORTED"}},
 			summary: acmtypes.CertificateSummary{
 				Type: acmtypes.CertificateTypeAmazonIssued,
 			},

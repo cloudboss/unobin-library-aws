@@ -12,10 +12,10 @@ import (
 	eventbridge "github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	eventbridgetypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
@@ -42,7 +42,7 @@ type EventBus struct {
 	EventSourceName  *string                   `ub:"event-source-name"`
 	KmsKeyIdentifier *string                   `ub:"kms-key-identifier"`
 	LogConfig        *EventBusLogConfig        `ub:"log-config"`
-	Tags             map[string]string         `ub:"tags"`
+	Tags             *map[string]string        `ub:"tags"`
 }
 
 // EventBusOutput holds the ARN DescribeEventBus returns, plus the name handle
@@ -59,11 +59,6 @@ func (r *EventBus) SchemaVersion() int { return 1 }
 // the bus is created.
 func (r *EventBus) ReplaceFields() []string {
 	return []string{"name", "event-source-name"}
-}
-
-// Defaults marks the tag map optional.
-func (r EventBus) Defaults() []defaults.Default {
-	return []defaults.Default{defaults.Optional(r.Tags)}
 }
 
 // Constraints declares the enum and reserved-name rules the schema can express.
@@ -104,7 +99,7 @@ func (r *EventBus) Create(ctx context.Context, cfg *awsCfg) (*EventBusOutput, er
 		if err != nil {
 			return nil, err
 		}
-		if err := tagEventBus(ctx, client, busArn, eventBusUserTags(r.Tags)); err != nil {
+		if err := tagEventBus(ctx, client, busArn, eventBusUserTags(ptr.Value(r.Tags))); err != nil {
 			return nil, err
 		}
 	}
@@ -136,7 +131,7 @@ func (r *EventBus) Update(
 	if err != nil {
 		return nil, err
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -174,7 +169,7 @@ func (r *EventBus) createInput() *eventbridge.CreateEventBusInput {
 		EventSourceName:  r.EventSourceName,
 		KmsKeyIdentifier: r.KmsKeyIdentifier,
 		LogConfig:        r.LogConfig.to(),
-		Tags:             eventBusTags(eventBusUserTags(r.Tags)),
+		Tags:             eventBusTags(eventBusUserTags(ptr.Value(r.Tags))),
 	}
 }
 
@@ -256,7 +251,7 @@ func (r *EventBus) priorArn(
 }
 
 func (r *EventBus) syncTags(ctx context.Context, client *eventbridge.Client, arn string) error {
-	return tagsync.Sync(ctx, eventBusUserTags(r.Tags),
+	return tagsync.Sync(ctx, eventBusUserTags(ptr.Value(r.Tags)),
 		func(ctx context.Context) (map[string]string, error) {
 			return readEventBusTags(ctx, client, arn, true)
 		},

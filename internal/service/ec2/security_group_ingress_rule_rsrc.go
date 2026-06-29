@@ -3,8 +3,8 @@ package ec2
 import (
 	"context"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -14,16 +14,16 @@ import (
 // Each property maps to the AWS SDK field that holds it; the description
 // rides inside the chosen source rather than as a standalone field.
 type SecurityGroupIngressRule struct {
-	SecurityGroupId           string            `ub:"security-group-id"`
-	IpProtocol                string            `ub:"ip-protocol"`
-	FromPort                  *int64            `ub:"from-port"`
-	ToPort                    *int64            `ub:"to-port"`
-	CidrIpv4                  *string           `ub:"cidr-ipv4"`
-	CidrIpv6                  *string           `ub:"cidr-ipv6"`
-	PrefixListId              *string           `ub:"prefix-list-id"`
-	ReferencedSecurityGroupId *string           `ub:"referenced-security-group-id"`
-	Description               *string           `ub:"description"`
-	Tags                      map[string]string `ub:"tags"`
+	SecurityGroupId           string             `ub:"security-group-id"`
+	IpProtocol                string             `ub:"ip-protocol"`
+	FromPort                  *int64             `ub:"from-port"`
+	ToPort                    *int64             `ub:"to-port"`
+	CidrIpv4                  *string            `ub:"cidr-ipv4"`
+	CidrIpv6                  *string            `ub:"cidr-ipv6"`
+	PrefixListId              *string            `ub:"prefix-list-id"`
+	ReferencedSecurityGroupId *string            `ub:"referenced-security-group-id"`
+	Description               *string            `ub:"description"`
+	Tags                      *map[string]string `ub:"tags"`
 }
 
 // SecurityGroupIngressRuleOutput holds the values EC2 computes for the rule:
@@ -47,7 +47,7 @@ func (r *SecurityGroupIngressRule) rule() sgRule {
 		PrefixListId:              r.PrefixListId,
 		ReferencedSecurityGroupId: r.ReferencedSecurityGroupId,
 		Description:               r.Description,
-		Tags:                      r.Tags,
+		Tags:                      ptr.Value(r.Tags),
 	}
 }
 
@@ -64,13 +64,6 @@ func (r *SecurityGroupIngressRule) ReplaceFields() []string {
 		"cidr-ipv6",
 		"prefix-list-id",
 		"referenced-security-group-id",
-	}
-}
-
-// Defaults marks the collection inputs an ingress rule may omit.
-func (r SecurityGroupIngressRule) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 

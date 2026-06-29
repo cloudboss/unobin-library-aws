@@ -9,9 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // VpcData resolves exactly one existing EC2 VPC with DescribeVpcs. The lookup
@@ -21,13 +21,13 @@ import (
 // main route table on a best-effort basis, and projects CIDR associations and
 // tags from the selected VPC.
 type VpcData struct {
-	VpcId         *string           `ub:"vpc-id"`
-	CidrBlock     *string           `ub:"cidr-block"`
-	DhcpOptionsId *string           `ub:"dhcp-options-id"`
-	Default       *bool             `ub:"default"`
-	State         *string           `ub:"state"`
-	Filter        []VpcDataFilter   `ub:"filter"`
-	Tags          map[string]string `ub:"tags"`
+	VpcId         *string            `ub:"vpc-id"`
+	CidrBlock     *string            `ub:"cidr-block"`
+	DhcpOptionsId *string            `ub:"dhcp-options-id"`
+	Default       *bool              `ub:"default"`
+	State         *string            `ub:"state"`
+	Filter        *[]VpcDataFilter   `ub:"filter"`
+	Tags          *map[string]string `ub:"tags"`
 }
 
 // VpcDataFilter is one DescribeVpcs filter. The name and values pass to EC2
@@ -65,14 +65,6 @@ type VpcDataOutput struct {
 	MainRouteTableId                 *string                       `ub:"main-route-table-id"`
 	OwnerId                          string                        `ub:"owner-id"`
 	Tags                             map[string]string             `ub:"tags"`
-}
-
-// Defaults marks the optional collection inputs.
-func (r VpcData) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Filter),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Read resolves the VPC data source. A missing or ambiguous lookup is a normal
@@ -137,7 +129,7 @@ func (r *VpcData) describeInput() *ec2.DescribeVpcsInput {
 }
 
 func (r *VpcData) describeFilters() []ec2types.Filter {
-	filters := make([]ec2types.Filter, 0, len(r.Filter)+len(r.Tags)+4)
+	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Filter))+len(ptr.Value(r.Tags))+4)
 	filters = appendStringFilter(filters, "cidr", r.CidrBlock)
 	filters = appendStringFilter(filters, "dhcp-options-id", r.DhcpOptionsId)
 	if r.Default != nil && *r.Default {
@@ -147,13 +139,13 @@ func (r *VpcData) describeFilters() []ec2types.Filter {
 		})
 	}
 	filters = appendStringFilter(filters, "state", r.State)
-	for _, filter := range r.Filter {
+	for _, filter := range ptr.Value(r.Filter) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String(filter.Name),
 			Values: filter.Values,
 		})
 	}
-	for key, value := range r.Tags {
+	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("tag:" + key),
 			Values: []string{value},

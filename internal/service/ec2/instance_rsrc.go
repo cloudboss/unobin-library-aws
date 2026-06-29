@@ -11,7 +11,6 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -44,34 +43,34 @@ import (
 // state to a gone resource, the same as a not-found error code; a shutting-down
 // instance is still live.
 type Instance struct {
-	Ami                               *string                        `ub:"ami"`
-	InstanceType                      *string                        `ub:"instance-type"`
-	SubnetId                          *string                        `ub:"subnet-id"`
-	AvailabilityZone                  *string                        `ub:"availability-zone"`
-	KeyName                           *string                        `ub:"key-name"`
-	VpcSecurityGroupIds               []string                       `ub:"vpc-security-group-ids"`
-	IamInstanceProfile                *string                        `ub:"iam-instance-profile"`
-	UserData                          *string                        `ub:"user-data"`
-	UserDataBase64                    *string                        `ub:"user-data-base64"`
-	PrivateIp                         *string                        `ub:"private-ip"`
-	AssociatePublicIpAddress          *bool                          `ub:"associate-public-ip-address"`
-	Monitoring                        *bool                          `ub:"monitoring"`
-	EbsOptimized                      *bool                          `ub:"ebs-optimized"`
-	DisableApiTermination             *bool                          `ub:"disable-api-termination"`
-	DisableApiStop                    *bool                          `ub:"disable-api-stop"`
-	InstanceInitiatedShutdownBehavior *string                        `ub:"instance-initiated-shutdown-behavior"`
-	SourceDestCheck                   *bool                          `ub:"source-dest-check"`
-	Tenancy                           *string                        `ub:"tenancy"`
-	MetadataOptions                   *InstanceMetadataOptions       `ub:"metadata-options"`
-	RootBlockDevice                   *InstanceRootBlockDevice       `ub:"root-block-device"`
-	EbsBlockDevice                    []InstanceEbsBlockDevice       `ub:"ebs-block-device"`
-	EphemeralBlockDevice              []InstanceEphemeralBlockDevice `ub:"ephemeral-block-device"`
-	LaunchTemplate                    *InstanceLaunchTemplate        `ub:"launch-template"`
+	Ami                               *string                         `ub:"ami"`
+	InstanceType                      *string                         `ub:"instance-type"`
+	SubnetId                          *string                         `ub:"subnet-id"`
+	AvailabilityZone                  *string                         `ub:"availability-zone"`
+	KeyName                           *string                         `ub:"key-name"`
+	VpcSecurityGroupIds               *[]string                       `ub:"vpc-security-group-ids"`
+	IamInstanceProfile                *string                         `ub:"iam-instance-profile"`
+	UserData                          *string                         `ub:"user-data"`
+	UserDataBase64                    *string                         `ub:"user-data-base64"`
+	PrivateIp                         *string                         `ub:"private-ip"`
+	AssociatePublicIpAddress          *bool                           `ub:"associate-public-ip-address"`
+	Monitoring                        *bool                           `ub:"monitoring"`
+	EbsOptimized                      *bool                           `ub:"ebs-optimized"`
+	DisableApiTermination             *bool                           `ub:"disable-api-termination"`
+	DisableApiStop                    *bool                           `ub:"disable-api-stop"`
+	InstanceInitiatedShutdownBehavior *string                         `ub:"instance-initiated-shutdown-behavior"`
+	SourceDestCheck                   *bool                           `ub:"source-dest-check"`
+	Tenancy                           *string                         `ub:"tenancy"`
+	MetadataOptions                   *InstanceMetadataOptions        `ub:"metadata-options"`
+	RootBlockDevice                   *InstanceRootBlockDevice        `ub:"root-block-device"`
+	EbsBlockDevice                    *[]InstanceEbsBlockDevice       `ub:"ebs-block-device"`
+	EphemeralBlockDevice              *[]InstanceEphemeralBlockDevice `ub:"ephemeral-block-device"`
+	LaunchTemplate                    *InstanceLaunchTemplate         `ub:"launch-template"`
 	// VolumeTags are applied to every EBS volume the instance creates, at create
 	// time and reconciled per volume on Update. Per-block-device tags are a future
 	// addition; this one flat map tags all of the instance's volumes alike.
-	VolumeTags map[string]string `ub:"volume-tags"`
-	Tags       map[string]string `ub:"tags"`
+	VolumeTags *map[string]string `ub:"volume-tags"`
+	Tags       *map[string]string `ub:"tags"`
 	// ForceDestroy is read only at delete time. When true, Delete first clears the
 	// stop- and termination-protection attributes so a protected instance can be
 	// terminated. It backs no RunInstances field and is never reconciled after
@@ -128,19 +127,6 @@ func (r *Instance) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection and map inputs an instance may omit. The pointer
-// blocks -- root-block-device, metadata-options, launch-template -- are omittable
-// through the pointer itself and are not marked here.
-func (r Instance) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.VpcSecurityGroupIds),
-		defaults.Optional(r.EbsBlockDevice),
-		defaults.Optional(r.EphemeralBlockDevice),
-		defaults.Optional(r.VolumeTags),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the cross-field rules EC2 enforces on an instance's
 // inputs. An image or a launch template supplies the AMI, and an instance type
 // or a launch template supplies the type, so each pair needs at least one. User
@@ -157,6 +143,9 @@ func (r Instance) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.Tenancy)).
 			Require(constraint.OneOf(r.Tenancy, "default", "dedicated", "host")).
 			Message("tenancy must be default, dedicated, or host"),
+		constraint.When(constraint.Present(r.VpcSecurityGroupIds)).
+			Require(constraint.MinItems(r.VpcSecurityGroupIds, 1)).
+			Message("vpc-security-group-ids must list at least one group when given"),
 		constraint.When(constraint.Present(r.LaunchTemplate)).
 			Require(constraint.Any(
 				constraint.All(constraint.Present(r.LaunchTemplate.Id),
@@ -196,7 +185,7 @@ func (r Instance) Constraints() []constraint.Constraint {
 			Require(constraint.Equals(r.RootBlockDevice.VolumeType, "gp3")).
 			Message("root-block-device throughput is valid only for gp3 volumes"),
 		constraint.When(constraint.Present(r.RootBlockDevice.Tags)).
-			Require(constraint.Absent(r.VolumeTags)).
+			Require(constraint.MaxItems(r.VolumeTags, 0)).
 			Message("root-block-device tags cannot combine with volume-tags"),
 		constraint.ForEach(r.EbsBlockDevice,
 			func(b InstanceEbsBlockDevice) []constraint.Constraint {
@@ -371,7 +360,7 @@ func (r *Instance) placement() *ec2types.Placement {
 func (r *Instance) applyAddressing(in *ec2.RunInstancesInput) error {
 	if r.AssociatePublicIpAddress == nil {
 		in.SubnetId = r.SubnetId
-		in.SecurityGroupIds = r.VpcSecurityGroupIds
+		in.SecurityGroupIds = ptr.Value(r.VpcSecurityGroupIds)
 		in.PrivateIpAddress = r.PrivateIp
 		return nil
 	}
@@ -379,7 +368,7 @@ func (r *Instance) applyAddressing(in *ec2.RunInstancesInput) error {
 		DeviceIndex:              aws.Int32(0),
 		AssociatePublicIpAddress: r.AssociatePublicIpAddress,
 		SubnetId:                 r.SubnetId,
-		Groups:                   r.VpcSecurityGroupIds,
+		Groups:                   ptr.Value(r.VpcSecurityGroupIds),
 		PrivateIpAddress:         r.PrivateIp,
 	}}
 	return nil
@@ -408,8 +397,8 @@ func (r *Instance) applyBlockDevices(
 		}
 		mappings = append(mappings, rootBlockDeviceMapping(r.RootBlockDevice, rootName))
 	}
-	mappings = append(mappings, ebsBlockDeviceMappings(r.EbsBlockDevice)...)
-	mappings = append(mappings, ephemeralBlockDeviceMappings(r.EphemeralBlockDevice)...)
+	mappings = append(mappings, ebsBlockDeviceMappings(ptr.Value(r.EbsBlockDevice))...)
+	mappings = append(mappings, ephemeralBlockDeviceMappings(ptr.Value(r.EphemeralBlockDevice))...)
 	if len(mappings) > 0 {
 		in.BlockDeviceMappings = mappings
 	}
@@ -420,8 +409,8 @@ func (r *Instance) applyBlockDevices(
 // and its volumes, each from its own tag map.
 func (r *Instance) tagSpecifications() []ec2types.TagSpecification {
 	var specs []ec2types.TagSpecification
-	specs = append(specs, tagSpecifications(ec2types.ResourceTypeInstance, r.Tags)...)
-	specs = append(specs, tagSpecifications(ec2types.ResourceTypeVolume, r.VolumeTags)...)
+	specs = append(specs, tagSpecifications(ec2types.ResourceTypeInstance, ptr.Value(r.Tags))...)
+	specs = append(specs, tagSpecifications(ec2types.ResourceTypeVolume, ptr.Value(r.VolumeTags))...)
 	return specs
 }
 
@@ -473,14 +462,14 @@ func (r *Instance) run(
 func (r *Instance) tagAfterCreate(
 	ctx context.Context, client *ec2.Client, id string, instance ec2types.Instance,
 ) error {
-	if len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return err
 		}
 	}
-	if len(r.VolumeTags) > 0 {
+	if len(ptr.Value(r.VolumeTags)) > 0 {
 		for _, volumeID := range instanceVolumeIds(instance.BlockDeviceMappings) {
-			if err := syncTags(ctx, client, volumeID, r.VolumeTags); err != nil {
+			if err := syncTags(ctx, client, volumeID, ptr.Value(r.VolumeTags)); err != nil {
 				return err
 			}
 		}
@@ -525,7 +514,7 @@ func (r *Instance) updateInPlace(
 	ctx context.Context, client *ec2.Client, id string,
 	prior runtime.Prior[Instance, *InstanceOutput],
 ) error {
-	if runtime.Changed(prior.Inputs.VolumeTags, r.VolumeTags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.VolumeTags), ptr.Value(r.VolumeTags)) {
 		if err := r.reconcileVolumeTags(ctx, client, id); err != nil {
 			return err
 		}
@@ -540,7 +529,8 @@ func (r *Instance) updateInPlace(
 			return err
 		}
 	}
-	if runtime.Changed(prior.Inputs.VpcSecurityGroupIds, r.VpcSecurityGroupIds) {
+	if ptr.Value(r.VpcSecurityGroupIds) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.VpcSecurityGroupIds), ptr.Value(r.VpcSecurityGroupIds)) {
 		if err := r.setSecurityGroups(ctx, client, id); err != nil {
 			return err
 		}
@@ -692,7 +682,7 @@ func (r *Instance) reconcileVolumeTags(
 		return err
 	}
 	for _, volumeID := range instanceVolumeIds(instance.BlockDeviceMappings) {
-		if err := syncTags(ctx, client, volumeID, r.VolumeTags); err != nil {
+		if err := syncTags(ctx, client, volumeID, ptr.Value(r.VolumeTags)); err != nil {
 			return err
 		}
 	}
@@ -806,7 +796,7 @@ func (r *Instance) setSecurityGroups(
 ) error {
 	_, err := client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
 		InstanceId: aws.String(id),
-		Groups:     r.VpcSecurityGroupIds,
+		Groups:     ptr.Value(r.VpcSecurityGroupIds),
 	})
 	if err != nil {
 		return fmt.Errorf("modify security groups: %w", err)

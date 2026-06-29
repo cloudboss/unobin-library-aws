@@ -10,10 +10,10 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -42,11 +42,11 @@ type VpcEndpoint struct {
 	PrivateDnsEnabled *bool                  `ub:"private-dns-enabled"`
 	IpAddressType     *string                `ub:"ip-address-type"`
 	Policy            *string                `ub:"policy"`
-	RouteTableIds     []string               `ub:"route-table-ids"`
-	SecurityGroupIds  []string               `ub:"security-group-ids"`
-	SubnetIds         []string               `ub:"subnet-ids"`
+	RouteTableIds     *[]string              `ub:"route-table-ids"`
+	SecurityGroupIds  *[]string              `ub:"security-group-ids"`
+	SubnetIds         *[]string              `ub:"subnet-ids"`
 	DnsOptions        *VpcEndpointDnsOptions `ub:"dns-options"`
-	Tags              map[string]string      `ub:"tags"`
+	Tags              *map[string]string     `ub:"tags"`
 }
 
 // VpcEndpointOutput holds the values EC2 computes for an endpoint. The id is the
@@ -81,18 +81,6 @@ func (r *VpcEndpoint) SchemaVersion() int { return 1 }
 // type.
 func (r *VpcEndpoint) ReplaceFields() []string {
 	return []string{"vpc-id", "service-name", "vpc-endpoint-type"}
-}
-
-// Defaults marks the collection inputs an endpoint may omit. The three id
-// lists and the tags are each absent unless the configuration sets them; the
-// DNS-options block is a pointer field, optional on its own.
-func (r VpcEndpoint) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.RouteTableIds),
-		defaults.Optional(r.SecurityGroupIds),
-		defaults.Optional(r.SubnetIds),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the value rules EC2 enforces on an endpoint's inputs. The
@@ -136,11 +124,11 @@ func (r *VpcEndpoint) Create(ctx context.Context, cfg *awsCfg) (*VpcEndpointOutp
 		ServiceName:       aws.String(r.ServiceName),
 		PrivateDnsEnabled: privateDns,
 		PolicyDocument:    r.Policy,
-		RouteTableIds:     r.RouteTableIds,
-		SecurityGroupIds:  r.SecurityGroupIds,
-		SubnetIds:         r.SubnetIds,
+		RouteTableIds:     ptr.Value(r.RouteTableIds),
+		SecurityGroupIds:  ptr.Value(r.SecurityGroupIds),
+		SubnetIds:         ptr.Value(r.SubnetIds),
 		DnsOptions:        r.DnsOptions.to(),
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeVpcEndpoint, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeVpcEndpoint, ptr.Value(r.Tags)),
 	}
 	if r.VpcEndpointType != nil {
 		in.VpcEndpointType = ec2types.VpcEndpointType(*r.VpcEndpointType)
@@ -163,8 +151,8 @@ func (r *VpcEndpoint) Create(ctx context.Context, cfg *awsCfg) (*VpcEndpointOutp
 		return nil, fmt.Errorf("create vpc endpoint: %w", err)
 	}
 	id := aws.ToString(resp.VpcEndpoint.VpcEndpointId)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -206,8 +194,8 @@ func (r *VpcEndpoint) Update(
 	}
 	// Tags ride their own calls, so reconcile them whenever they changed, the
 	// same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -261,20 +249,23 @@ func (r *VpcEndpoint) buildModify(
 ) *ec2.ModifyVpcEndpointInput {
 	in := &ec2.ModifyVpcEndpointInput{VpcEndpointId: aws.String(id)}
 	changed := false
-	if runtime.Changed(prior.Inputs.RouteTableIds, r.RouteTableIds) {
-		add, remove := stringSetDelta(prior.Inputs.RouteTableIds, r.RouteTableIds)
+	if ptr.Value(r.RouteTableIds) != nil && runtime.Changed(ptr.Value(prior.Inputs.RouteTableIds), ptr.Value(r.RouteTableIds)) {
+		add, remove := stringSetDelta(ptr.Value(prior.Inputs.RouteTableIds),
+			ptr.Value(r.RouteTableIds))
 		in.AddRouteTableIds = add
 		in.RemoveRouteTableIds = remove
 		changed = changed || len(add) > 0 || len(remove) > 0
 	}
-	if runtime.Changed(prior.Inputs.SecurityGroupIds, r.SecurityGroupIds) {
-		add, remove := stringSetDelta(prior.Inputs.SecurityGroupIds, r.SecurityGroupIds)
+	if ptr.Value(r.SecurityGroupIds) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.SecurityGroupIds), ptr.Value(r.SecurityGroupIds)) {
+		add, remove := stringSetDelta(ptr.Value(prior.Inputs.SecurityGroupIds),
+			ptr.Value(r.SecurityGroupIds))
 		in.AddSecurityGroupIds = add
 		in.RemoveSecurityGroupIds = remove
 		changed = changed || len(add) > 0 || len(remove) > 0
 	}
-	if runtime.Changed(prior.Inputs.SubnetIds, r.SubnetIds) {
-		add, remove := stringSetDelta(prior.Inputs.SubnetIds, r.SubnetIds)
+	if ptr.Value(r.SubnetIds) != nil && runtime.Changed(ptr.Value(prior.Inputs.SubnetIds), ptr.Value(r.SubnetIds)) {
+		add, remove := stringSetDelta(ptr.Value(prior.Inputs.SubnetIds), ptr.Value(r.SubnetIds))
 		in.AddSubnetIds = add
 		in.RemoveSubnetIds = remove
 		changed = changed || len(add) > 0 || len(remove) > 0

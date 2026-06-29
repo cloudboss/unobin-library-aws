@@ -9,7 +9,6 @@ import (
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -56,24 +55,24 @@ import (
 // (up to 32768), the response-parameters status code range, and the
 // credentials-arn ARN form.
 type Integration struct {
-	ApiId                       string                         `ub:"api-id"`
-	IntegrationType             string                         `ub:"integration-type"`
-	ConnectionId                *string                        `ub:"connection-id"`
-	ConnectionType              *string                        `ub:"connection-type"`
-	ContentHandlingStrategy     *string                        `ub:"content-handling-strategy"`
-	CredentialsArn              *string                        `ub:"credentials-arn"`
-	Description                 *string                        `ub:"description"`
-	IntegrationMethod           *string                        `ub:"integration-method"`
-	IntegrationSubtype          *string                        `ub:"integration-subtype"`
-	IntegrationUri              *string                        `ub:"integration-uri"`
-	PassthroughBehavior         *string                        `ub:"passthrough-behavior"`
-	PayloadFormatVersion        *string                        `ub:"payload-format-version"`
-	RequestParameters           map[string]string              `ub:"request-parameters"`
-	RequestTemplates            map[string]string              `ub:"request-templates"`
-	ResponseParameters          []IntegrationResponseParameter `ub:"response-parameters"`
-	TemplateSelectionExpression *string                        `ub:"template-selection-expression"`
-	TimeoutInMillis             *int64                         `ub:"timeout-in-millis"`
-	TlsConfig                   *IntegrationTlsConfig          `ub:"tls-config"`
+	ApiId                       string                          `ub:"api-id"`
+	IntegrationType             string                          `ub:"integration-type"`
+	ConnectionId                *string                         `ub:"connection-id"`
+	ConnectionType              *string                         `ub:"connection-type"`
+	ContentHandlingStrategy     *string                         `ub:"content-handling-strategy"`
+	CredentialsArn              *string                         `ub:"credentials-arn"`
+	Description                 *string                         `ub:"description"`
+	IntegrationMethod           *string                         `ub:"integration-method"`
+	IntegrationSubtype          *string                         `ub:"integration-subtype"`
+	IntegrationUri              *string                         `ub:"integration-uri"`
+	PassthroughBehavior         *string                         `ub:"passthrough-behavior"`
+	PayloadFormatVersion        *string                         `ub:"payload-format-version"`
+	RequestParameters           *map[string]string              `ub:"request-parameters"`
+	RequestTemplates            *map[string]string              `ub:"request-templates"`
+	ResponseParameters          *[]IntegrationResponseParameter `ub:"response-parameters"`
+	TemplateSelectionExpression *string                         `ub:"template-selection-expression"`
+	TimeoutInMillis             *int64                          `ub:"timeout-in-millis"`
+	TlsConfig                   *IntegrationTlsConfig           `ub:"tls-config"`
 }
 
 // IntegrationOutput holds the integration's identity and its one computed
@@ -103,15 +102,6 @@ func (r *Integration) ReplaceFields() []string {
 		"api-id",
 		"integration-type",
 		"integration-subtype",
-	}
-}
-
-// Defaults marks the collection inputs an integration may omit.
-func (r Integration) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.RequestParameters),
-		defaults.Optional(r.RequestTemplates),
-		defaults.Optional(r.ResponseParameters),
 	}
 }
 
@@ -174,9 +164,9 @@ func (r *Integration) Create(ctx context.Context, cfg *awsCfg) (*IntegrationOutp
 		IntegrationSubtype:          r.IntegrationSubtype,
 		IntegrationUri:              r.IntegrationUri,
 		PayloadFormatVersion:        r.PayloadFormatVersion,
-		RequestParameters:           r.RequestParameters,
-		RequestTemplates:            r.RequestTemplates,
-		ResponseParameters:          integrationResponseParameterMap(r.ResponseParameters),
+		RequestParameters:           ptr.Value(r.RequestParameters),
+		RequestTemplates:            ptr.Value(r.RequestTemplates),
+		ResponseParameters:          integrationResponseParameterMap(ptr.Value(r.ResponseParameters)),
 		TemplateSelectionExpression: r.TemplateSelectionExpression,
 		TimeoutInMillis:             ptr.Int32(r.TimeoutInMillis),
 		TlsConfig:                   r.TlsConfig.sdk(),
@@ -343,22 +333,22 @@ func (r *Integration) updateIntegrationInput(
 		in.TimeoutInMillis = ptr.Int32(r.TimeoutInMillis)
 		changed = true
 	}
-	if runtime.Changed(prior.Inputs.RequestParameters, r.RequestParameters) {
+	if runtime.Changed(ptr.Value(prior.Inputs.RequestParameters), ptr.Value(r.RequestParameters)) {
 		in.RequestParameters = integrationRequestParameterUpdates(
-			prior.Inputs.RequestParameters, r.RequestParameters)
+			ptr.Value(prior.Inputs.RequestParameters), ptr.Value(r.RequestParameters))
 		changed = true
 	}
-	if runtime.Changed(prior.Inputs.RequestTemplates, r.RequestTemplates) {
-		templates := r.RequestTemplates
+	if runtime.Changed(ptr.Value(prior.Inputs.RequestTemplates), ptr.Value(r.RequestTemplates)) {
+		templates := ptr.Value(r.RequestTemplates)
 		if templates == nil {
 			templates = map[string]string{}
 		}
 		in.RequestTemplates = templates
 		changed = true
 	}
-	if runtime.Changed(prior.Inputs.ResponseParameters, r.ResponseParameters) {
+	if runtime.Changed(ptr.Value(prior.Inputs.ResponseParameters), ptr.Value(r.ResponseParameters)) {
 		in.ResponseParameters = integrationResponseParameterUpdates(
-			prior.Inputs.ResponseParameters, r.ResponseParameters)
+			ptr.Value(prior.Inputs.ResponseParameters), ptr.Value(r.ResponseParameters))
 		changed = true
 	}
 	if runtime.Changed(prior.Inputs.TlsConfig, r.TlsConfig) {

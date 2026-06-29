@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -45,10 +45,10 @@ type SubnetGroup struct {
 	// only lowercase letters, digits, hyphen, underscore, period, or space, be
 	// no longer than 255 characters, and not equal "default", which RDS
 	// reserves for its own default group.
-	Name        string            `ub:"name"`
-	Description string            `ub:"description"`
-	SubnetIds   []string          `ub:"subnet-ids"`
-	Tags        map[string]string `ub:"tags"`
+	Name        string             `ub:"name"`
+	Description string             `ub:"description"`
+	SubnetIds   []string           `ub:"subnet-ids"`
+	Tags        *map[string]string `ub:"tags"`
 }
 
 // SubnetGroupOutput holds the values RDS computes for a DB subnet group. The ARN
@@ -68,15 +68,6 @@ func (r *SubnetGroup) SchemaVersion() int { return 1 }
 // description and subnet set are reconciled in place by ModifyDBSubnetGroup.
 func (r *SubnetGroup) ReplaceFields() []string {
 	return []string{"name"}
-}
-
-// Defaults marks the optional collection inputs a DB subnet group may omit. A
-// bare map input is otherwise compile-required; the subnet set is required, so
-// only the tags are optional.
-func (r SubnetGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rule the subnet set is non-empty. RDS requires at
@@ -103,7 +94,7 @@ func (r *SubnetGroup) Create(ctx context.Context, cfg *awsCfg) (*SubnetGroupOutp
 		DBSubnetGroupName:        aws.String(r.Name),
 		DBSubnetGroupDescription: aws.String(r.Description),
 		SubnetIds:                r.SubnetIds,
-		Tags:                     tagList(r.Tags),
+		Tags:                     tagList(ptr.Value(r.Tags)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create db subnet group: %w", err)
@@ -159,8 +150,8 @@ func (r *SubnetGroup) Update(
 			return nil, fmt.Errorf("modify db subnet group: %w", err)
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.Arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

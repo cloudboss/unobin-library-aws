@@ -10,7 +10,6 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -50,7 +49,7 @@ type Listener struct {
 	CertificateArn  *string                 `ub:"certificate-arn"`
 	AlpnPolicy      *string                 `ub:"alpn-policy"`
 	DefaultAction   []ListenerDefaultAction `ub:"default-action"`
-	Tags            map[string]string       `ub:"tags"`
+	Tags            *map[string]string      `ub:"tags"`
 }
 
 // ListenerOutput holds the values ELBv2 computes for a listener. Arn is the
@@ -72,13 +71,6 @@ func (r *Listener) SchemaVersion() int { return 1 }
 // ModifyListener.
 func (r *Listener) ReplaceFields() []string {
 	return []string{"load-balancer-arn"}
-}
-
-// Defaults marks the collection inputs a listener may omit.
-func (r Listener) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the cross-field rules on a listener's protocol and the
@@ -209,8 +201,8 @@ func (r *Listener) Create(ctx context.Context, cfg *awsCfg) (*ListenerOutput, er
 	if err := r.waitVisible(ctx, client, arn); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -249,8 +241,8 @@ func (r *Listener) Update(
 	}
 	// ModifyListener does not touch an existing listener's tags, so reconcile them
 	// through the tag API as a set whenever they changed.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -329,7 +321,7 @@ func (r *Listener) createInput() *elbv2.CreateListenerInput {
 		Port:            ptr.Int32(r.Port),
 		SslPolicy:       r.SslPolicy,
 		DefaultActions:  defaultActions(r.DefaultAction),
-		Tags:            tagList(r.Tags),
+		Tags:            tagList(ptr.Value(r.Tags)),
 	}
 	if r.Protocol != nil {
 		in.Protocol = elbv2types.ProtocolEnum(*r.Protocol)

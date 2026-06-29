@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 )
 
 // AvailabilityZones looks up the Availability Zones, Local Zones, and Wavelength
@@ -29,11 +29,11 @@ import (
 // the same index in either list refers to the same zone. group-names is a
 // separate, deduplicated, sorted list and is not index-aligned with the others.
 type AvailabilityZones struct {
-	AllAvailabilityZones *bool                     `ub:"all-availability-zones"`
-	State                *string                   `ub:"state"`
-	Filters              []AvailabilityZonesFilter `ub:"filters"`
-	ExcludeNames         []string                  `ub:"exclude-names"`
-	ExcludeZoneIds       []string                  `ub:"exclude-zone-ids"`
+	AllAvailabilityZones *bool                      `ub:"all-availability-zones"`
+	State                *string                    `ub:"state"`
+	Filters              *[]AvailabilityZonesFilter `ub:"filters"`
+	ExcludeNames         *[]string                  `ub:"exclude-names"`
+	ExcludeZoneIds       *[]string                  `ub:"exclude-zone-ids"`
 }
 
 // AvailabilityZonesFilter is one DescribeAvailabilityZones filter: a filter name
@@ -55,15 +55,6 @@ type AvailabilityZonesOutput struct {
 	Names      []string `ub:"names"`
 	ZoneIds    []string `ub:"zone-ids"`
 	GroupNames []string `ub:"group-names"`
-}
-
-// Defaults marks the collection inputs an availability-zones lookup may omit.
-func (r AvailabilityZones) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Filters),
-		defaults.Optional(r.ExcludeNames),
-		defaults.Optional(r.ExcludeZoneIds),
-	}
 }
 
 // Constraints declares the input rules expressible as a derived schema. The
@@ -108,7 +99,7 @@ func (r *AvailabilityZones) describeInput() *ec2.DescribeAvailabilityZonesInput 
 	if r.AllAvailabilityZones != nil {
 		in.AllAvailabilityZones = aws.Bool(*r.AllAvailabilityZones)
 	}
-	filters := availabilityZonesFilters(r.Filters)
+	filters := availabilityZonesFilters(ptr.Value(r.Filters))
 	if r.State != nil {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("state"),
@@ -139,10 +130,10 @@ func (r *AvailabilityZones) output(
 	for _, zone := range sorted {
 		name := aws.ToString(zone.ZoneName)
 		zoneID := aws.ToString(zone.ZoneId)
-		if slices.Contains(r.ExcludeNames, name) {
+		if slices.Contains(ptr.Value(r.ExcludeNames), name) {
 			continue
 		}
-		if slices.Contains(r.ExcludeZoneIds, zoneID) {
+		if slices.Contains(ptr.Value(r.ExcludeZoneIds), zoneID) {
 			continue
 		}
 		out.Names = append(out.Names, name)

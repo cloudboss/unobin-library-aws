@@ -51,7 +51,7 @@ func TestKmsSchemas(t *testing.T) {
 				"enable-key":                         typecheck.TOptional(typecheck.TBoolean()),
 				"enable-key-rotation":                typecheck.TOptional(typecheck.TBoolean()),
 				"rotation-period-in-days":            typecheck.TOptional(typecheck.TInteger()),
-				"tags":                               typecheck.TMap(typecheck.TString()),
+				"tags":                               typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":    typecheck.TString(),
@@ -96,9 +96,6 @@ func TestKmsSchemas(t *testing.T) {
 					Message: "rotation-period-in-days must be between 90 and 2560",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"kms-alias": {
 			Inputs: map[string]typecheck.Type{
@@ -115,7 +112,7 @@ func TestKmsSchemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

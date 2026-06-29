@@ -254,11 +254,11 @@ func TestChangedExceptTags(t *testing.T) {
 		ComparisonOperator: aws.String("GreaterThanThreshold"),
 		EvaluationPeriods:  aws.Int64(1),
 		MetricName:         aws.String("CPUUtilization"),
-		Tags:               map[string]string{"env": "prod"},
+		Tags:               new(map[string]string{"env": "prod"}),
 	}
 	t.Run("tag-only change does not count", func(t *testing.T) {
 		current := base
-		current.Tags = map[string]string{"env": "dev", "team": "core"}
+		current.Tags = new(map[string]string{"env": "dev", "team": "core"})
 		assert.False(t, current.changedExceptTags(base))
 	})
 	t.Run("non-tag change counts", func(t *testing.T) {

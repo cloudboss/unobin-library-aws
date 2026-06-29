@@ -12,9 +12,9 @@ import (
 	rds "github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
@@ -48,11 +48,11 @@ var parameterDependencyBins = [][]string{
 // ResetDBParameterGroup for removed ones, so it is a field that updates in
 // place. Tags are reconciled as a set.
 type ParameterGroup struct {
-	Name        string                    `ub:"name"`
-	Family      string                    `ub:"family"`
-	Description string                    `ub:"description"`
-	Parameters  []ParameterGroupParameter `ub:"parameters"`
-	Tags        map[string]string         `ub:"tags"`
+	Name        string                     `ub:"name"`
+	Family      string                     `ub:"family"`
+	Description string                     `ub:"description"`
+	Parameters  *[]ParameterGroupParameter `ub:"parameters"`
+	Tags        *map[string]string         `ub:"tags"`
 }
 
 // ParameterGroupParameter is one engine parameter in the group's parameter set.
@@ -82,15 +82,6 @@ func (r *ParameterGroup) SchemaVersion() int { return 1 }
 // place.
 func (r *ParameterGroup) ReplaceFields() []string {
 	return []string{"name", "family", "description"}
-}
-
-// Defaults marks the inputs the group may omit: a group can be created with no
-// parameters and no tags.
-func (r ParameterGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Parameters),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the per-parameter rule RDS places on the apply method:
@@ -124,7 +115,7 @@ func (r *ParameterGroup) Create(ctx context.Context, cfg *awsCfg) (*ParameterGro
 		DBParameterGroupName:   aws.String(r.Name),
 		DBParameterGroupFamily: aws.String(r.Family),
 		Description:            aws.String(r.Description),
-		Tags:                   tagList(r.Tags),
+		Tags:                   tagList(ptr.Value(r.Tags)),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create db parameter group: %w", err)
@@ -189,13 +180,13 @@ func (r *ParameterGroup) Update(
 	// The parameter set reconciles only when it changed: re-applying identical
 	// parameters issues no modify and no reset.
 	if runtime.Changed(prior.Inputs.Parameters, r.Parameters) {
-		if err := r.reconcileParameters(ctx, client, prior.Inputs.Parameters); err != nil {
+		if err := r.reconcileParameters(ctx, client, ptr.Value(prior.Inputs.Parameters)); err != nil {
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		arn := prior.Outputs.Arn
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -242,9 +233,9 @@ func (r *ParameterGroup) reconcileParameters(
 	for _, p := range prior {
 		priorByName[strings.ToLower(p.Name)] = p
 	}
-	currentNames := make(map[string]struct{}, len(r.Parameters))
+	currentNames := make(map[string]struct{}, len(ptr.Value(r.Parameters)))
 	var modify []rdstypes.Parameter
-	for _, p := range r.Parameters {
+	for _, p := range ptr.Value(r.Parameters) {
 		name := strings.ToLower(p.Name)
 		currentNames[name] = struct{}{}
 		old, existed := priorByName[name]

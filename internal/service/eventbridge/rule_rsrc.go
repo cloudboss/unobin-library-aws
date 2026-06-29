@@ -12,10 +12,10 @@ import (
 	eventbridgetypes "github.com/aws/aws-sdk-go-v2/service/eventbridge/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -40,15 +40,15 @@ const defaultEventBusName = "default"
 // 256 characters, and the event pattern is valid JSON of at most 4096
 // characters.
 type Rule struct {
-	Name               string            `ub:"name"`
-	EventBusName       *string           `ub:"event-bus-name"`
-	Description        *string           `ub:"description"`
-	EventPattern       *string           `ub:"event-pattern"`
-	ScheduleExpression *string           `ub:"schedule-expression"`
-	RoleArn            *string           `ub:"role-arn"`
-	State              *string           `ub:"state"`
-	Tags               map[string]string `ub:"tags"`
-	ForceDestroy       *bool             `ub:"force-destroy"`
+	Name               string             `ub:"name"`
+	EventBusName       *string            `ub:"event-bus-name"`
+	Description        *string            `ub:"description"`
+	EventPattern       *string            `ub:"event-pattern"`
+	ScheduleExpression *string            `ub:"schedule-expression"`
+	RoleArn            *string            `ub:"role-arn"`
+	State              *string            `ub:"state"`
+	Tags               *map[string]string `ub:"tags"`
+	ForceDestroy       *bool              `ub:"force-destroy"`
 }
 
 // RuleOutput holds the value EventBridge computes for a rule. The ARN is the
@@ -68,13 +68,6 @@ func (r *Rule) ReplaceFields() []string {
 	return []string{
 		"name",
 		"event-bus-name",
-	}
-}
-
-// Defaults marks the collection inputs a rule may omit.
-func (r Rule) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -118,7 +111,7 @@ func (r *Rule) Create(ctx context.Context, cfg *awsCfg) (*RuleOutput, error) {
 	if err := r.waitVisible(ctx, client); err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -179,7 +172,7 @@ func (r *Rule) Update(
 	}
 	// PutRule does not update an existing rule's tags, so reconcile them through
 	// the tag API as a set whenever they changed.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -227,7 +220,7 @@ func (r *Rule) putRuleInput() *eventbridge.PutRuleInput {
 		EventPattern:       r.EventPattern,
 		ScheduleExpression: r.ScheduleExpression,
 		RoleArn:            r.RoleArn,
-		Tags:               ruleTags(r.Tags),
+		Tags:               ruleTags(ptr.Value(r.Tags)),
 	}
 	if r.State != nil {
 		in.State = eventbridgetypes.RuleState(*r.State)
@@ -309,7 +302,7 @@ func (r *Rule) syncTags(ctx context.Context, client *eventbridge.Client) error {
 		return fmt.Errorf("describe rule: %w", err)
 	}
 	ruleArn := aws.ToString(resp.Arn)
-	return tagsync.Sync(ctx, r.Tags,
+	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			tagsResp, err := client.ListTagsForResource(ctx,
 				&eventbridge.ListTagsForResourceInput{ResourceARN: aws.String(ruleArn)})

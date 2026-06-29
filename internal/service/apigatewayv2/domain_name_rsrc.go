@@ -15,10 +15,10 @@ import (
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 const (
@@ -59,7 +59,7 @@ type DomainName struct {
 	RoutingMode *string `ub:"routing-mode"`
 	// Tags label the domain. Keys with the aws: prefix are ignored when sending
 	// creates and updates, matching AWS system-tag behavior.
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // DomainNameConfiguration is the one regional endpoint configuration of a
@@ -108,11 +108,6 @@ func (r *DomainName) SchemaVersion() int { return 1 }
 // change in place.
 func (r *DomainName) ReplaceFields() []string {
 	return []string{"domain-name"}
-}
-
-// Defaults marks the tag map optional.
-func (r DomainName) Defaults() []defaults.Default {
-	return []defaults.Default{defaults.Optional(r.Tags)}
 }
 
 // Constraints declares list-size and enum rules the schema can express exactly.
@@ -186,7 +181,7 @@ func (r *DomainName) Create(ctx context.Context, cfg *awsCfg) (*DomainNameOutput
 	if r.RoutingMode != nil {
 		in.RoutingMode = domainNameRoutingMode(*r.RoutingMode)
 	}
-	if tags := domainNameUserTags(r.Tags); len(tags) > 0 {
+	if tags := domainNameUserTags(ptr.Value(r.Tags)); len(tags) > 0 {
 		in.Tags = tags
 	}
 	var resp *apigatewayv2.CreateDomainNameOutput
@@ -253,7 +248,7 @@ func (r *DomainName) Update(
 	domainName := prior.Outputs.DomainName
 	if r.tagsNeedSync(prior) {
 		arn := domainNameARN(client.Options().Region, domainName)
-		desiredTags := domainNameUserTags(r.Tags)
+		desiredTags := domainNameUserTags(ptr.Value(r.Tags))
 		err := withConflictRetry(ctx, func(ctx context.Context) error {
 			return syncResourceTags(ctx, client, arn, desiredTags)
 		})
@@ -296,8 +291,8 @@ func (r *DomainName) Delete(ctx context.Context, cfg *awsCfg, prior *DomainNameO
 func (r *DomainName) tagsNeedSync(
 	prior runtime.Prior[DomainName, *DomainNameOutput],
 ) bool {
-	desired := domainNameUserTags(r.Tags)
-	if !maps.Equal(domainNameUserTags(prior.Inputs.Tags), desired) {
+	desired := domainNameUserTags(ptr.Value(r.Tags))
+	if !maps.Equal(domainNameUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
 		return true
 	}
 	return prior.Observed != nil && !maps.Equal(domainNameUserTags(prior.Observed.Tags), desired)

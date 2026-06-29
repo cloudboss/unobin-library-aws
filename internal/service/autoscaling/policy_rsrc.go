@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	autoscalingtypes "github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -50,7 +49,7 @@ type Policy struct {
 	MetricAggregationType   *string                            `ub:"metric-aggregation-type"`
 	MinAdjustmentMagnitude  *int64                             `ub:"min-adjustment-magnitude"`
 	ScalingAdjustment       *int64                             `ub:"scaling-adjustment"`
-	StepAdjustments         []PolicyStepAdjustment             `ub:"step-adjustments"`
+	StepAdjustments         *[]PolicyStepAdjustment            `ub:"step-adjustments"`
 	TargetTracking          *PolicyTargetTrackingConfiguration `ub:"target-tracking-configuration"`
 }
 
@@ -87,15 +86,6 @@ func (r *Policy) ReplaceFields() []string {
 	return []string{"autoscaling-group-name", "name"}
 }
 
-// Defaults marks the step-adjustment list optional. A bare list input is
-// otherwise compile-required; a policy that is not a step-scaling policy omits
-// it.
-func (r Policy) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.StepAdjustments),
-	}
-}
-
 // Constraints declares the rules the API enforces on a policy's inputs, keyed
 // on the policy type. The simple-scaling rules also apply when the policy type
 // is omitted, since the API defaults it to SimpleScaling. A scaling adjustment
@@ -113,7 +103,10 @@ func (r Policy) Constraints() []constraint.Constraint {
 				"TargetTrackingScaling", "PredictiveScaling")).
 			Message("policy-type must be SimpleScaling, StepScaling, " +
 				"TargetTrackingScaling, or PredictiveScaling"),
-		constraint.AtMostOneOf(r.ScalingAdjustment, r.StepAdjustments),
+		constraint.Must(constraint.Any(
+			constraint.Absent(r.ScalingAdjustment),
+			constraint.Not(constraint.NotEmpty(r.StepAdjustments)))).
+			Message("scaling-adjustment and step-adjustments are mutually exclusive"),
 		constraint.When(constraint.Any(constraint.Absent(r.PolicyType),
 			constraint.Equals(r.PolicyType, "SimpleScaling"))).
 			Require(constraint.Present(r.ScalingAdjustment)).
@@ -123,9 +116,9 @@ func (r Policy) Constraints() []constraint.Constraint {
 				constraint.Equals(r.PolicyType, "SimpleScaling"))).
 			Message("scaling-adjustment is valid only when policy-type is SimpleScaling"),
 		constraint.When(constraint.Equals(r.PolicyType, "StepScaling")).
-			Require(constraint.Present(r.StepAdjustments)).
+			Require(constraint.NotEmpty(r.StepAdjustments)).
 			Message("step-adjustments is required when policy-type is StepScaling"),
-		constraint.When(constraint.Present(r.StepAdjustments)).
+		constraint.When(constraint.NotEmpty(r.StepAdjustments)).
 			Require(constraint.Equals(r.PolicyType, "StepScaling")).
 			Message("step-adjustments is valid only when policy-type is StepScaling"),
 		constraint.When(constraint.Equals(r.PolicyType, "TargetTrackingScaling")).
@@ -185,7 +178,7 @@ func (r *Policy) putInput() *autoscaling.PutScalingPolicyInput {
 		in.ScalingAdjustment = ptr.Int32(r.ScalingAdjustment)
 		in.Cooldown = ptr.Int32(r.Cooldown)
 	case policyTypeStep:
-		in.StepAdjustments = expandStepAdjustments(r.StepAdjustments)
+		in.StepAdjustments = expandStepAdjustments(ptr.Value(r.StepAdjustments))
 		in.MetricAggregationType = r.MetricAggregationType
 		in.EstimatedInstanceWarmup = ptr.Int32(r.EstimatedInstanceWarmup)
 	case policyTypeTargetTracking:
@@ -299,7 +292,7 @@ func (r *Policy) changed(prior runtime.Prior[Policy, *PolicyOutput]) bool {
 		runtime.Changed(p.MetricAggregationType, r.MetricAggregationType) ||
 		runtime.Changed(p.MinAdjustmentMagnitude, r.MinAdjustmentMagnitude) ||
 		runtime.Changed(p.ScalingAdjustment, r.ScalingAdjustment) ||
-		runtime.Changed(p.StepAdjustments, r.StepAdjustments) ||
+		runtime.Changed(ptr.Value(p.StepAdjustments), ptr.Value(r.StepAdjustments)) ||
 		runtime.Changed(p.TargetTracking, r.TargetTracking)
 }
 

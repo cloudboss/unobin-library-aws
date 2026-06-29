@@ -16,10 +16,10 @@ import (
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // Object manages a single object in a bucket: the bytes plus the metadata,
@@ -30,28 +30,28 @@ import (
 // most one of an inline string, a file path, or base64-encoded bytes; with
 // none set the object is empty.
 type Object struct {
-	Bucket                    string            `ub:"bucket"`
-	Key                       string            `ub:"key"`
-	BodyContent               *string           `ub:"body-content"`
-	BodyPath                  *string           `ub:"body-path"`
-	BodyBase64                *string           `ub:"body-base64"`
-	ACL                       *string           `ub:"acl"`
-	BucketKeyEnabled          *bool             `ub:"bucket-key-enabled"`
-	CacheControl              *string           `ub:"cache-control"`
-	ChecksumAlgorithm         *string           `ub:"checksum-algorithm"`
-	ContentDisposition        *string           `ub:"content-disposition"`
-	ContentEncoding           *string           `ub:"content-encoding"`
-	ContentLanguage           *string           `ub:"content-language"`
-	ContentType               *string           `ub:"content-type"`
-	KmsKeyId                  *string           `ub:"kms-key-id"`
-	Metadata                  map[string]string `ub:"metadata"`
-	ServerSideEncryption      *string           `ub:"server-side-encryption"`
-	StorageClass              *string           `ub:"storage-class"`
-	WebsiteRedirect           *string           `ub:"website-redirect"`
-	ObjectLockMode            *string           `ub:"object-lock-mode"`
-	ObjectLockRetainUntilDate *string           `ub:"object-lock-retain-until-date"`
-	ObjectLockLegalHoldStatus *string           `ub:"object-lock-legal-hold-status"`
-	Tags                      map[string]string `ub:"tags"`
+	Bucket                    string             `ub:"bucket"`
+	Key                       string             `ub:"key"`
+	BodyContent               *string            `ub:"body-content"`
+	BodyPath                  *string            `ub:"body-path"`
+	BodyBase64                *string            `ub:"body-base64"`
+	ACL                       *string            `ub:"acl"`
+	BucketKeyEnabled          *bool              `ub:"bucket-key-enabled"`
+	CacheControl              *string            `ub:"cache-control"`
+	ChecksumAlgorithm         *string            `ub:"checksum-algorithm"`
+	ContentDisposition        *string            `ub:"content-disposition"`
+	ContentEncoding           *string            `ub:"content-encoding"`
+	ContentLanguage           *string            `ub:"content-language"`
+	ContentType               *string            `ub:"content-type"`
+	KmsKeyId                  *string            `ub:"kms-key-id"`
+	Metadata                  *map[string]string `ub:"metadata"`
+	ServerSideEncryption      *string            `ub:"server-side-encryption"`
+	StorageClass              *string            `ub:"storage-class"`
+	WebsiteRedirect           *string            `ub:"website-redirect"`
+	ObjectLockMode            *string            `ub:"object-lock-mode"`
+	ObjectLockRetainUntilDate *string            `ub:"object-lock-retain-until-date"`
+	ObjectLockLegalHoldStatus *string            `ub:"object-lock-legal-hold-status"`
+	Tags                      *map[string]string `ub:"tags"`
 	// PurgeOnDestroy controls how Delete removes the object. False, the default,
 	// issues a single DeleteObject, which on a versioned bucket leaves a delete
 	// marker. True purges every version and delete marker of this key. It is a
@@ -90,14 +90,6 @@ func (r *Object) SchemaVersion() int { return 1 }
 // re-putting.
 func (r *Object) ReplaceFields() []string {
 	return []string{"bucket", "key"}
-}
-
-// Defaults marks the collection inputs an object may omit.
-func (r Object) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Metadata),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules S3 places on an object's inputs. The body has
@@ -217,9 +209,9 @@ func (r *Object) put(ctx context.Context, client *s3.Client) error {
 		ContentEncoding:         r.ContentEncoding,
 		ContentLanguage:         r.ContentLanguage,
 		ContentType:             r.ContentType,
-		Metadata:                r.Metadata,
+		Metadata:                ptr.Value(r.Metadata),
 		WebsiteRedirectLocation: r.WebsiteRedirect,
-		Tagging:                 objectTagging(r.Tags),
+		Tagging:                 objectTagging(ptr.Value(r.Tags)),
 	}
 	if r.ACL != nil {
 		in.ACL = s3types.ObjectCannedACL(*r.ACL)
@@ -356,14 +348,14 @@ func (r *Object) contentChanged(prior Object) bool {
 		runtime.Changed(prior.ContentLanguage, r.ContentLanguage) ||
 		runtime.Changed(prior.ContentType, r.ContentType) ||
 		runtime.Changed(prior.KmsKeyId, r.KmsKeyId) ||
-		runtime.Changed(prior.Metadata, r.Metadata) ||
+		runtime.Changed(ptr.Value(prior.Metadata), ptr.Value(r.Metadata)) ||
 		runtime.Changed(prior.ServerSideEncryption, r.ServerSideEncryption) ||
 		runtime.Changed(prior.StorageClass, r.StorageClass) ||
 		runtime.Changed(prior.WebsiteRedirect, r.WebsiteRedirect) ||
 		runtime.Changed(prior.ObjectLockMode, r.ObjectLockMode) ||
 		runtime.Changed(prior.ObjectLockRetainUntilDate, r.ObjectLockRetainUntilDate) ||
 		runtime.Changed(prior.ObjectLockLegalHoldStatus, r.ObjectLockLegalHoldStatus) ||
-		runtime.Changed(prior.Tags, r.Tags)
+		runtime.Changed(ptr.Value(prior.Tags), ptr.Value(r.Tags))
 }
 
 // objectCleanKey normalizes a key to the form S3 stores it under: a leading

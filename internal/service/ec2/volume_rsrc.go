@@ -10,7 +10,6 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -29,18 +28,18 @@ import (
 // final snapshot. A nil optional field is never sent: the server applies its own
 // default and fills the computed outputs.
 type Volume struct {
-	AvailabilityZone         string            `ub:"availability-zone"`
-	Encrypted                *bool             `ub:"encrypted"`
-	Iops                     *int64            `ub:"iops"`
-	KmsKeyId                 *string           `ub:"kms-key-id"`
-	MultiAttachEnabled       *bool             `ub:"multi-attach-enabled"`
-	OutpostArn               *string           `ub:"outpost-arn"`
-	Size                     *int64            `ub:"size"`
-	SnapshotId               *string           `ub:"snapshot-id"`
-	Throughput               *int64            `ub:"throughput"`
-	Type                     *string           `ub:"type"`
-	VolumeInitializationRate *int64            `ub:"volume-initialization-rate"`
-	Tags                     map[string]string `ub:"tags"`
+	AvailabilityZone         string             `ub:"availability-zone"`
+	Encrypted                *bool              `ub:"encrypted"`
+	Iops                     *int64             `ub:"iops"`
+	KmsKeyId                 *string            `ub:"kms-key-id"`
+	MultiAttachEnabled       *bool              `ub:"multi-attach-enabled"`
+	OutpostArn               *string            `ub:"outpost-arn"`
+	Size                     *int64             `ub:"size"`
+	SnapshotId               *string            `ub:"snapshot-id"`
+	Throughput               *int64             `ub:"throughput"`
+	Type                     *string            `ub:"type"`
+	VolumeInitializationRate *int64             `ub:"volume-initialization-rate"`
+	Tags                     *map[string]string `ub:"tags"`
 	// FinalSnapshot is read only at delete time. When true, Delete first takes a
 	// snapshot of the volume and waits for it to complete before removing the
 	// volume. It backs no CreateVolume field and is never reconciled after create.
@@ -81,13 +80,6 @@ func (r *Volume) ReplaceFields() []string {
 		"multi-attach-enabled",
 		"outpost-arn",
 		"snapshot-id",
-	}
-}
-
-// Defaults marks the tag map a volume may omit.
-func (r Volume) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -151,7 +143,7 @@ func (r *Volume) Create(ctx context.Context, cfg *awsCfg) (*VolumeOutput, error)
 		Throughput:               ptr.Int32(r.Throughput),
 		VolumeInitializationRate: ptr.Int32(r.VolumeInitializationRate),
 		VolumeType:               ec2types.VolumeType(aws.ToString(r.Type)),
-		TagSpecifications:        tagSpecifications(ec2types.ResourceTypeVolume, r.Tags),
+		TagSpecifications:        tagSpecifications(ec2types.ResourceTypeVolume, ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateVolume(ctx, in)
 	// Some partitions, such as the ISO partitions, cannot tag a volume as it is
@@ -168,8 +160,8 @@ func (r *Volume) Create(ctx context.Context, cfg *awsCfg) (*VolumeOutput, error)
 		return nil, fmt.Errorf("create volume: %w", err)
 	}
 	id := aws.ToString(resp.VolumeId)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -213,8 +205,8 @@ func (r *Volume) Update(
 	}
 	// ModifyVolume does not touch tags, so reconcile them as a set whenever they
 	// changed, the same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -322,7 +314,7 @@ func (r *Volume) modify(ctx context.Context, client *ec2.Client, prior *VolumeOu
 func (r *Volume) createFinalSnapshot(ctx context.Context, client *ec2.Client, id string) error {
 	in := &ec2.CreateSnapshotInput{
 		VolumeId:          aws.String(id),
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSnapshot, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSnapshot, ptr.Value(r.Tags)),
 	}
 	var snapshotID string
 	// EC2 caps how often a single volume can be snapshotted; a burst of requests

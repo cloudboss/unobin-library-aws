@@ -78,16 +78,17 @@ func TestElbv2Schemas(t *testing.T) {
 					"load-balancer-type":                          typecheck.TOptional(typecheck.TString()),
 					"name":                                        typecheck.TString(),
 					"preserve-host-header":                        typecheck.TOptional(typecheck.TBoolean()),
-					"security-groups":                             typecheck.TList(typecheck.TString()),
-					"subnet-mappings": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					"security-groups": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
+					"subnet-mappings": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 						{Name: "subnet-id", Type: typecheck.TString(), Optional: false},
 						{Name: "allocation-id", Type: typecheck.TString(), Optional: true},
 						{Name: "private-ipv4-address", Type: typecheck.TString(), Optional: true},
 						{Name: "ipv6-address", Type: typecheck.TString(), Optional: true},
 						{Name: "source-nat-ipv6-prefix", Type: typecheck.TString(), Optional: true},
-					})),
-					"subnets":                    typecheck.TList(typecheck.TString()),
-					"tags":                       typecheck.TMap(typecheck.TString()),
+					}))),
+					"subnets":                    typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"tags":                       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"xff-header-processing-mode": typecheck.TOptional(typecheck.TString()),
 				},
 				Outputs: map[string]typecheck.Type{
@@ -102,8 +103,17 @@ func TestElbv2Schemas(t *testing.T) {
 				},
 				Constraints: []lang.ConstraintSpec{
 					{
-						Kind:   "exactly-one-of",
-						Fields: []string{"input.subnets", "input.subnet-mappings"},
+						Kind: "predicate",
+						When: "true",
+						Require: "((((input.subnets != null) && " +
+							"(@core.length(input.subnets) >= 1)) && " +
+							"!((input.subnet-mappings != null) && " +
+							"(@core.length(input.subnet-mappings) >= 1))) || " +
+							"(!((input.subnets != null) && " +
+							"(@core.length(input.subnets) >= 1)) && " +
+							"((input.subnet-mappings != null) && " +
+							"(@core.length(input.subnet-mappings) >= 1))))",
+						Message: "exactly one of subnets or subnet-mappings is required",
 					},
 					{
 						Kind: "predicate",
@@ -155,12 +165,6 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "enabled connection-logs require a bucket",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.security-groups", Optional: true},
-					{Field: "input.subnets", Optional: true},
-					{Field: "input.subnet-mappings", Optional: true},
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
@@ -197,7 +201,7 @@ func TestElbv2Schemas(t *testing.T) {
 						{Name: "cookie-duration", Type: typecheck.TInteger(), Optional: true},
 						{Name: "cookie-name", Type: typecheck.TString(), Optional: true},
 					})),
-					"tags":                      typecheck.TMap(typecheck.TString()),
+					"tags":                      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 					"target-control-port":       typecheck.TOptional(typecheck.TInteger()),
 					"target-type":               typecheck.TOptional(typecheck.TString()),
 					"unhealthy-threshold-count": typecheck.TOptional(typecheck.TInteger()),
@@ -384,9 +388,6 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "cookie-name applies only to app_cookie stickiness",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
@@ -446,7 +447,7 @@ func TestElbv2Schemas(t *testing.T) {
 					"port":              typecheck.TOptional(typecheck.TInteger()),
 					"protocol":          typecheck.TOptional(typecheck.TString()),
 					"ssl-policy":        typecheck.TOptional(typecheck.TString()),
-					"tags":              typecheck.TMap(typecheck.TString()),
+					"tags":              typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn":        typecheck.TString(),
@@ -478,10 +479,9 @@ func TestElbv2Schemas(t *testing.T) {
 						Message: "alpn-policy must be HTTP1Only, HTTP2Only, HTTP2Optional, HTTP2Preferred, or None",
 					},
 					{
-						Kind: "predicate",
-						When: "true",
-						Require: "((input.default-action != null) && " +
-							"(@core.length(input.default-action) >= 1))",
+						Kind:    "predicate",
+						When:    "true",
+						Require: "(@core.length(input.default-action) >= 1)",
 						Message: "default-action must list at least one action",
 					},
 					{
@@ -604,9 +604,6 @@ func TestElbv2Schemas(t *testing.T) {
 						ForEach: "input.default-action",
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
@@ -667,7 +664,7 @@ func TestElbv2Schemas(t *testing.T) {
 					})),
 					"listener-arn": typecheck.TString(),
 					"priority":     typecheck.TOptional(typecheck.TInteger()),
-					"tags":         typecheck.TMap(typecheck.TString()),
+					"tags":         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				},
 				Outputs: map[string]typecheck.Type{
 					"arn": typecheck.TString(),
@@ -683,13 +680,13 @@ func TestElbv2Schemas(t *testing.T) {
 					{
 						Kind:    "predicate",
 						When:    "true",
-						Require: "((input.actions != null) && (@core.length(input.actions) >= 1))",
+						Require: "(@core.length(input.actions) >= 1)",
 						Message: "a rule requires at least one action",
 					},
 					{
 						Kind:    "predicate",
 						When:    "true",
-						Require: "((input.conditions != null) && (@core.length(input.conditions) >= 1))",
+						Require: "(@core.length(input.conditions) >= 1)",
 						Message: "a rule requires at least one condition",
 					},
 					{
@@ -885,9 +882,6 @@ func TestElbv2Schemas(t *testing.T) {
 						},
 					},
 				},
-				Defaults: []lang.DefaultSpec{
-					{Field: "input.tags", Optional: true},
-				},
 			},
 		},
 		{
@@ -903,7 +897,7 @@ func TestElbv2Schemas(t *testing.T) {
 	}
 	for _, tt := range tests {
 		require.Contains(t, schema.Resources, tt.key)
-		assert.Equal(t, tt.want, schema.Resources[tt.key],
+		assertTypeSchemaEqual(t, tt.want, schema.Resources[tt.key],
 			"schema mismatch for %s", tt.key)
 	}
 }

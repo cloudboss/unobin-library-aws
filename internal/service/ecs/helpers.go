@@ -112,21 +112,3 @@ func syncResourceTags(
 		},
 	)
 }
-
-// derefStrings returns the slice behind an optional nested list input, or
-// nil when the input is absent so the request member stays unset.
-func derefStrings(s *[]string) []string {
-	if s == nil {
-		return nil
-	}
-	return *s
-}
-
-// derefStringMap returns the map behind an optional nested map input, or nil
-// when the input is absent so the request member stays unset.
-func derefStringMap(m *map[string]string) map[string]string {
-	if m == nil {
-		return nil
-	}
-	return *m
-}

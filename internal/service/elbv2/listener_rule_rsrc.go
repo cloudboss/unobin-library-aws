@@ -9,7 +9,6 @@ import (
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -55,7 +54,7 @@ type ListenerRule struct {
 	Priority    *int64                  `ub:"priority"`
 	Actions     []ListenerRuleAction    `ub:"actions"`
 	Conditions  []ListenerRuleCondition `ub:"conditions"`
-	Tags        map[string]string       `ub:"tags"`
+	Tags        *map[string]string      `ub:"tags"`
 }
 
 // ListenerRuleOutput holds the value ELBv2 computes for a rule. The ARN is the
@@ -73,13 +72,6 @@ func (r *ListenerRule) SchemaVersion() int { return 1 }
 // modifiable in place through SetRulePriorities.
 func (r *ListenerRule) ReplaceFields() []string {
 	return []string{"listener-arn"}
-}
-
-// Defaults marks the collection inputs a rule may omit.
-func (r ListenerRule) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules ELBv2 places on a rule's inputs: a priority
@@ -211,14 +203,14 @@ func (r *ListenerRule) Create(ctx context.Context, cfg *awsCfg) (*ListenerRuleOu
 	}
 	actions := r.actions()
 	conditions := r.conditions()
-	arn, err := r.create(ctx, client, actions, conditions, tagList(r.Tags))
+	arn, err := r.create(ctx, client, actions, conditions, tagList(ptr.Value(r.Tags)))
 	// Some partitions, such as the ISO partitions, cannot tag a rule as it is
 	// created. When the tagged create fails for that reason, create the rule
 	// without tags and apply them with a separate call below.
-	if err != nil && len(r.Tags) > 0 && partition.UnsupportedOperation(region(client), err) {
+	if err != nil && len(ptr.Value(r.Tags)) > 0 && partition.UnsupportedOperation(region(client), err) {
 		arn, err = r.create(ctx, client, actions, conditions, nil)
-		if err == nil && len(r.Tags) > 0 {
-			err = syncTags(ctx, client, arn, r.Tags)
+		if err == nil && len(ptr.Value(r.Tags)) > 0 {
+			err = syncTags(ctx, client, arn, ptr.Value(r.Tags))
 		}
 	}
 	if err != nil {
@@ -284,8 +276,8 @@ func (r *ListenerRule) Update(
 	}
 	// ModifyRule does not touch a rule's tags, so reconcile them through the tag
 	// API as a set whenever they changed.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

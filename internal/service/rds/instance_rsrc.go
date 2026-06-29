@@ -15,7 +15,6 @@ import (
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -102,16 +101,16 @@ type Instance struct {
 	StorageEncrypted    *bool   `ub:"storage-encrypted"`
 	KmsKeyId            *string `ub:"kms-key-id"`
 
-	DbName              *string  `ub:"db-name"`
-	DbSubnetGroupName   *string  `ub:"db-subnet-group-name"`
-	ParameterGroupName  *string  `ub:"parameter-group-name"`
-	OptionGroupName     *string  `ub:"option-group-name"`
-	Port                *int64   `ub:"port"`
-	AvailabilityZone    *string  `ub:"availability-zone"`
-	MultiAz             *bool    `ub:"multi-az"`
-	PubliclyAccessible  *bool    `ub:"publicly-accessible"`
-	NetworkType         *string  `ub:"network-type"`
-	VpcSecurityGroupIds []string `ub:"vpc-security-group-ids"`
+	DbName              *string   `ub:"db-name"`
+	DbSubnetGroupName   *string   `ub:"db-subnet-group-name"`
+	ParameterGroupName  *string   `ub:"parameter-group-name"`
+	OptionGroupName     *string   `ub:"option-group-name"`
+	Port                *int64    `ub:"port"`
+	AvailabilityZone    *string   `ub:"availability-zone"`
+	MultiAz             *bool     `ub:"multi-az"`
+	PubliclyAccessible  *bool     `ub:"publicly-accessible"`
+	NetworkType         *string   `ub:"network-type"`
+	VpcSecurityGroupIds *[]string `ub:"vpc-security-group-ids"`
 
 	LicenseModel          *string `ub:"license-model"`
 	CharacterSetName      *string `ub:"character-set-name"`
@@ -132,10 +131,10 @@ type Instance struct {
 	CustomIamInstanceProfile *string `ub:"custom-iam-instance-profile"`
 	DedicatedLogVolume       *bool   `ub:"dedicated-log-volume"`
 
-	IamDatabaseAuthenticationEnabled *bool    `ub:"iam-database-authentication-enabled"`
-	DatabaseInsightsMode             *string  `ub:"database-insights-mode"`
-	EnabledCloudwatchLogsExports     []string `ub:"enabled-cloudwatch-logs-exports"`
-	EngineLifecycleSupport           *string  `ub:"engine-lifecycle-support"`
+	IamDatabaseAuthenticationEnabled *bool     `ub:"iam-database-authentication-enabled"`
+	DatabaseInsightsMode             *string   `ub:"database-insights-mode"`
+	EnabledCloudwatchLogsExports     *[]string `ub:"enabled-cloudwatch-logs-exports"`
+	EngineLifecycleSupport           *string   `ub:"engine-lifecycle-support"`
 
 	MonitoringInterval                 *int64  `ub:"monitoring-interval"`
 	MonitoringRoleArn                  *string `ub:"monitoring-role-arn"`
@@ -146,12 +145,12 @@ type Instance struct {
 	ManageMasterUserPassword *bool   `ub:"manage-master-user-password"`
 	MasterUserSecretKmsKeyId *string `ub:"master-user-secret-kms-key-id"`
 
-	Domain              *string  `ub:"domain"`
-	DomainIamRoleName   *string  `ub:"domain-iam-role-name"`
-	DomainFqdn          *string  `ub:"domain-fqdn"`
-	DomainOu            *string  `ub:"domain-ou"`
-	DomainAuthSecretArn *string  `ub:"domain-auth-secret-arn"`
-	DomainDnsIps        []string `ub:"domain-dns-ips"`
+	Domain              *string   `ub:"domain"`
+	DomainIamRoleName   *string   `ub:"domain-iam-role-name"`
+	DomainFqdn          *string   `ub:"domain-fqdn"`
+	DomainOu            *string   `ub:"domain-ou"`
+	DomainAuthSecretArn *string   `ub:"domain-auth-secret-arn"`
+	DomainDnsIps        *[]string `ub:"domain-dns-ips"`
 
 	ReplicateSourceDb    *string                       `ub:"replicate-source-db"`
 	ReplicaMode          *string                       `ub:"replica-mode"`
@@ -163,7 +162,7 @@ type Instance struct {
 	FinalSnapshotIdentifier *string `ub:"final-snapshot-identifier"`
 	DeleteAutomatedBackups  *bool   `ub:"delete-automated-backups"`
 
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // createResult is what a create mode produces beyond the new instance's resource
@@ -226,17 +225,6 @@ func (r *Instance) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the optional collection inputs an instance may omit. A bare
-// list or map input is otherwise compile-required; these are all optional.
-func (r Instance) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.VpcSecurityGroupIds),
-		defaults.Optional(r.EnabledCloudwatchLogsExports),
-		defaults.Optional(r.DomainDnsIps),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules RDS enforces on an instance's inputs. At most
 // one create mode is selected. The managed master-user password conflicts with
 // an explicit password. The two Active Directory modes -- AWS-managed and
@@ -274,6 +262,13 @@ func (r Instance) Constraints() []constraint.Constraint {
 		constraint.When(constraint.Present(r.NetworkType)).
 			Require(constraint.OneOf(r.NetworkType, "IPV4", "DUAL")).
 			Message("network-type must be IPV4 or DUAL"),
+		constraint.When(constraint.Present(r.VpcSecurityGroupIds)).
+			Require(constraint.MinItems(r.VpcSecurityGroupIds, 1)).
+			Message("vpc-security-group-ids must list at least one group when given"),
+		constraint.When(constraint.Present(r.DomainDnsIps)).
+			Require(constraint.MinItems(r.DomainDnsIps, 2),
+				constraint.MaxItems(r.DomainDnsIps, 2)).
+			Message("domain-dns-ips must contain exactly two IP addresses when given"),
 		constraint.When(constraint.Present(r.BackupTarget)).
 			Require(constraint.OneOf(r.BackupTarget, "outposts", "region")).
 			Message("backup-target must be outposts or region"),
@@ -376,8 +371,8 @@ func (r *Instance) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.Arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -458,7 +453,7 @@ func (r *Instance) validateCommon() error {
 	if err := validateInstanceIdentifier(r.Identifier); err != nil {
 		return err
 	}
-	if len(r.DomainDnsIps) != 0 && len(r.DomainDnsIps) != 2 {
+	if r.DomainDnsIps != nil && len(*r.DomainDnsIps) != 2 {
 		return errors.New("domain-dns-ips must contain exactly two IP addresses")
 	}
 	if r.MasterUserSecretKmsKeyId != nil && !aws.ToBool(r.ManageMasterUserPassword) {
@@ -576,7 +571,7 @@ func (r *Instance) createPlain(ctx context.Context, client *rds.Client) (string,
 		MultiAZ:                            r.MultiAz,
 		PubliclyAccessible:                 r.PubliclyAccessible,
 		NetworkType:                        r.NetworkType,
-		VpcSecurityGroupIds:                r.VpcSecurityGroupIds,
+		VpcSecurityGroupIds:                ptr.Value(r.VpcSecurityGroupIds),
 		LicenseModel:                       r.LicenseModel,
 		CharacterSetName:                   r.CharacterSetName,
 		NcharCharacterSetName:              r.NcharCharacterSetName,
@@ -592,7 +587,7 @@ func (r *Instance) createPlain(ctx context.Context, client *rds.Client) (string,
 		CustomIamInstanceProfile:           r.CustomIamInstanceProfile,
 		DedicatedLogVolume:                 r.DedicatedLogVolume,
 		EnableIAMDatabaseAuthentication:    r.IamDatabaseAuthenticationEnabled,
-		EnableCloudwatchLogsExports:        r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:        ptr.Value(r.EnabledCloudwatchLogsExports),
 		EngineLifecycleSupport:             r.EngineLifecycleSupport,
 		MonitoringInterval:                 ptr.Int32(r.MonitoringInterval),
 		MonitoringRoleArn:                  r.MonitoringRoleArn,
@@ -601,7 +596,7 @@ func (r *Instance) createPlain(ctx context.Context, client *rds.Client) (string,
 		PerformanceInsightsRetentionPeriod: ptr.Int32(r.PerformanceInsightsRetentionPeriod),
 		ManageMasterUserPassword:           r.ManageMasterUserPassword,
 		MasterUserSecretKmsKeyId:           r.MasterUserSecretKmsKeyId,
-		Tags:                               tagList(r.Tags),
+		Tags:                               tagList(ptr.Value(r.Tags)),
 	}
 	if r.DatabaseInsightsMode != nil {
 		in.DatabaseInsightsMode = rdstypes.DatabaseInsightsMode(*r.DatabaseInsightsMode)
@@ -644,7 +639,7 @@ func (r *Instance) createReadReplica(
 		MultiAZ:                            r.MultiAz,
 		PubliclyAccessible:                 r.PubliclyAccessible,
 		NetworkType:                        r.NetworkType,
-		VpcSecurityGroupIds:                r.VpcSecurityGroupIds,
+		VpcSecurityGroupIds:                ptr.Value(r.VpcSecurityGroupIds),
 		BackupTarget:                       r.BackupTarget,
 		CopyTagsToSnapshot:                 r.CopyTagsToSnapshot,
 		AutoMinorVersionUpgrade:            r.AutoMinorVersionUpgrade,
@@ -652,13 +647,13 @@ func (r *Instance) createReadReplica(
 		DedicatedLogVolume:                 r.DedicatedLogVolume,
 		EnableCustomerOwnedIp:              r.CustomerOwnedIpEnabled,
 		EnableIAMDatabaseAuthentication:    r.IamDatabaseAuthenticationEnabled,
-		EnableCloudwatchLogsExports:        r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:        ptr.Value(r.EnabledCloudwatchLogsExports),
 		MonitoringInterval:                 ptr.Int32(r.MonitoringInterval),
 		MonitoringRoleArn:                  r.MonitoringRoleArn,
 		EnablePerformanceInsights:          r.EnablePerformanceInsights,
 		PerformanceInsightsKMSKeyId:        r.PerformanceInsightsKmsKeyId,
 		PerformanceInsightsRetentionPeriod: ptr.Int32(r.PerformanceInsightsRetentionPeriod),
-		Tags:                               tagList(r.Tags),
+		Tags:                               tagList(ptr.Value(r.Tags)),
 	}
 	if r.DatabaseInsightsMode != nil {
 		in.DatabaseInsightsMode = rdstypes.DatabaseInsightsMode(*r.DatabaseInsightsMode)
@@ -742,7 +737,7 @@ func (r *Instance) restoreFromS3(ctx context.Context, client *rds.Client) (strin
 		MultiAZ:                            r.MultiAz,
 		PubliclyAccessible:                 r.PubliclyAccessible,
 		NetworkType:                        r.NetworkType,
-		VpcSecurityGroupIds:                r.VpcSecurityGroupIds,
+		VpcSecurityGroupIds:                ptr.Value(r.VpcSecurityGroupIds),
 		LicenseModel:                       r.LicenseModel,
 		BackupRetentionPeriod:              ptr.Int32(r.BackupRetentionPeriod),
 		PreferredBackupWindow:              r.BackupWindow,
@@ -752,7 +747,7 @@ func (r *Instance) restoreFromS3(ctx context.Context, client *rds.Client) (strin
 		DeletionProtection:                 r.DeletionProtection,
 		DedicatedLogVolume:                 r.DedicatedLogVolume,
 		EnableIAMDatabaseAuthentication:    r.IamDatabaseAuthenticationEnabled,
-		EnableCloudwatchLogsExports:        r.EnabledCloudwatchLogsExports,
+		EnableCloudwatchLogsExports:        ptr.Value(r.EnabledCloudwatchLogsExports),
 		EngineLifecycleSupport:             r.EngineLifecycleSupport,
 		MonitoringInterval:                 ptr.Int32(r.MonitoringInterval),
 		MonitoringRoleArn:                  r.MonitoringRoleArn,
@@ -766,7 +761,7 @@ func (r *Instance) restoreFromS3(ctx context.Context, client *rds.Client) (strin
 		S3IngestionRoleArn:                 s.IngestionRole,
 		SourceEngine:                       s.SourceEngine,
 		SourceEngineVersion:                s.SourceEngineVersion,
-		Tags:                               tagList(r.Tags),
+		Tags:                               tagList(ptr.Value(r.Tags)),
 	}
 	if r.DatabaseInsightsMode != nil {
 		in.DatabaseInsightsMode = rdstypes.DatabaseInsightsMode(*r.DatabaseInsightsMode)
@@ -803,7 +798,7 @@ func (r *Instance) restoreFromSnapshot(
 		AvailabilityZone:                r.AvailabilityZone,
 		PubliclyAccessible:              r.PubliclyAccessible,
 		NetworkType:                     r.NetworkType,
-		VpcSecurityGroupIds:             r.VpcSecurityGroupIds,
+		VpcSecurityGroupIds:             ptr.Value(r.VpcSecurityGroupIds),
 		LicenseModel:                    r.LicenseModel,
 		BackupTarget:                    r.BackupTarget,
 		CopyTagsToSnapshot:              r.CopyTagsToSnapshot,
@@ -814,7 +809,7 @@ func (r *Instance) restoreFromSnapshot(
 		EnableCustomerOwnedIp:           r.CustomerOwnedIpEnabled,
 		EnableIAMDatabaseAuthentication: r.IamDatabaseAuthenticationEnabled,
 		EngineLifecycleSupport:          r.EngineLifecycleSupport,
-		Tags:                            tagList(r.Tags),
+		Tags:                            tagList(ptr.Value(r.Tags)),
 	}
 	if r.DbName != nil && snapshotKeepsDbName(r.Engine) {
 		in.DBName = r.DbName
@@ -893,7 +888,7 @@ func (r *Instance) restoreToPointInTime(ctx context.Context, client *rds.Client)
 		MultiAZ:                         r.MultiAz,
 		PubliclyAccessible:              r.PubliclyAccessible,
 		NetworkType:                     r.NetworkType,
-		VpcSecurityGroupIds:             r.VpcSecurityGroupIds,
+		VpcSecurityGroupIds:             ptr.Value(r.VpcSecurityGroupIds),
 		LicenseModel:                    r.LicenseModel,
 		BackupTarget:                    r.BackupTarget,
 		CopyTagsToSnapshot:              r.CopyTagsToSnapshot,
@@ -904,7 +899,7 @@ func (r *Instance) restoreToPointInTime(ctx context.Context, client *rds.Client)
 		EnableCustomerOwnedIp:           r.CustomerOwnedIpEnabled,
 		EnableIAMDatabaseAuthentication: r.IamDatabaseAuthenticationEnabled,
 		EngineLifecycleSupport:          r.EngineLifecycleSupport,
-		Tags:                            tagList(r.Tags),
+		Tags:                            tagList(ptr.Value(r.Tags)),
 	}
 	r.setDomainInput(&in.Domain, &in.DomainIAMRoleName, &in.DomainFqdn,
 		&in.DomainOu, &in.DomainAuthSecretArn, &in.DomainDnsIps)
@@ -1101,8 +1096,9 @@ func (r *Instance) updateModify(
 		in.PubliclyAccessible = r.PubliclyAccessible
 	})
 	set(runtime.Changed(p.NetworkType, r.NetworkType), func() { in.NetworkType = r.NetworkType })
-	set(runtime.Changed(p.VpcSecurityGroupIds, r.VpcSecurityGroupIds), func() {
-		in.VpcSecurityGroupIds = r.VpcSecurityGroupIds
+	set(ptr.Value(r.VpcSecurityGroupIds) != nil &&
+		runtime.Changed(ptr.Value(p.VpcSecurityGroupIds), ptr.Value(r.VpcSecurityGroupIds)), func() {
+		in.VpcSecurityGroupIds = ptr.Value(r.VpcSecurityGroupIds)
 	})
 	set(runtime.Changed(p.LicenseModel, r.LicenseModel), func() { in.LicenseModel = r.LicenseModel })
 	set(runtime.Changed(p.BackupRetentionPeriod, r.BackupRetentionPeriod), func() {
@@ -1176,7 +1172,7 @@ func (r *Instance) updateModify(
 		changed = true
 	}
 	if runtime.Changed(p.EnabledCloudwatchLogsExports, r.EnabledCloudwatchLogsExports) {
-		in.CloudwatchLogsExportConfiguration = r.logsExportConfig(p.EnabledCloudwatchLogsExports)
+		in.CloudwatchLogsExportConfiguration = r.logsExportConfig(ptr.Value(p.EnabledCloudwatchLogsExports))
 		changed = true
 	}
 	if r.domainChanged(p) {
@@ -1217,14 +1213,14 @@ func (r *Instance) domainChanged(p Instance) bool {
 		runtime.Changed(p.DomainFqdn, r.DomainFqdn) ||
 		runtime.Changed(p.DomainOu, r.DomainOu) ||
 		runtime.Changed(p.DomainAuthSecretArn, r.DomainAuthSecretArn) ||
-		runtime.Changed(p.DomainDnsIps, r.DomainDnsIps)
+		(ptr.Value(r.DomainDnsIps) != nil && runtime.Changed(ptr.Value(p.DomainDnsIps), ptr.Value(r.DomainDnsIps)))
 }
 
 // logsExportConfig builds the CloudWatch logs export configuration for an
 // update: the log types newly listed are enabled, the ones no longer listed are
 // disabled.
 func (r *Instance) logsExportConfig(prior []string) *rdstypes.CloudwatchLogsExportConfiguration {
-	enable, disable := stringSetDiff(prior, r.EnabledCloudwatchLogsExports)
+	enable, disable := stringSetDiff(prior, ptr.Value(r.EnabledCloudwatchLogsExports))
 	return &rdstypes.CloudwatchLogsExportConfiguration{
 		EnableLogTypes:  enable,
 		DisableLogTypes: disable,
@@ -1407,7 +1403,7 @@ func (r *Instance) setDomainInput(
 	*fqdn = r.DomainFqdn
 	*ou = r.DomainOu
 	*authSecret = r.DomainAuthSecretArn
-	*dnsIps = r.DomainDnsIps
+	*dnsIps = ptr.Value(r.DomainDnsIps)
 }
 
 // setDomainModify fills the Active Directory fields on an update modify. When no
@@ -1423,7 +1419,7 @@ func (r *Instance) setDomainModify(in *rds.ModifyDBInstanceInput) {
 	in.DomainFqdn = r.DomainFqdn
 	in.DomainOu = r.DomainOu
 	in.DomainAuthSecretArn = r.DomainAuthSecretArn
-	in.DomainDnsIps = r.DomainDnsIps
+	in.DomainDnsIps = ptr.Value(r.DomainDnsIps)
 }
 
 // read describes the instance by its resource id and maps it to outputs,

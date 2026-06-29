@@ -16,9 +16,9 @@ import (
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -39,11 +39,11 @@ var directoryBucketNamePattern = regexp.MustCompile(`.+--[a-z0-9-]+--x-s3\z`)
 // fields; when omitted, the library sends stable generated ids and returns the
 // ids read back from S3.
 type BucketNotification struct {
-	Bucket         string                             `ub:"bucket"`
-	Eventbridge    *bool                              `ub:"eventbridge"`
-	LambdaFunction []BucketNotificationLambdaFunction `ub:"lambda-function"`
-	Queue          []BucketNotificationQueue          `ub:"queue"`
-	Topic          []BucketNotificationTopic          `ub:"topic"`
+	Bucket         string                              `ub:"bucket"`
+	Eventbridge    *bool                               `ub:"eventbridge"`
+	LambdaFunction *[]BucketNotificationLambdaFunction `ub:"lambda-function"`
+	Queue          *[]BucketNotificationQueue          `ub:"queue"`
+	Topic          *[]BucketNotificationTopic          `ub:"topic"`
 }
 
 type BucketNotificationLambdaFunction struct {
@@ -175,15 +175,6 @@ func (r *BucketNotification) ReplaceFields() []string {
 	return []string{"bucket"}
 }
 
-// Defaults marks the destination lists a notification configuration may omit.
-func (r BucketNotification) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.LambdaFunction),
-		defaults.Optional(r.Queue),
-		defaults.Optional(r.Topic),
-	}
-}
-
 func (r *BucketNotification) Create(
 	ctx context.Context, cfg *awsCfg,
 ) (*BucketNotificationOutput, error) {
@@ -288,9 +279,9 @@ func (r *BucketNotification) needsPut(
 
 func (r *BucketNotification) changed(prior BucketNotification) bool {
 	return runtime.Changed(prior.Eventbridge, r.Eventbridge) ||
-		runtime.Changed(prior.LambdaFunction, r.LambdaFunction) ||
-		runtime.Changed(prior.Queue, r.Queue) ||
-		runtime.Changed(prior.Topic, r.Topic)
+		runtime.Changed(ptr.Value(prior.LambdaFunction), ptr.Value(r.LambdaFunction)) ||
+		runtime.Changed(ptr.Value(prior.Queue), ptr.Value(r.Queue)) ||
+		runtime.Changed(ptr.Value(prior.Topic), ptr.Value(r.Topic))
 }
 
 func (r *BucketNotification) observedDrifted(
@@ -399,12 +390,12 @@ func (r *BucketNotification) notificationConfiguration(
 func (r *BucketNotification) lambdaFunctionConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.LambdaFunctionConfiguration, []BucketNotificationLambdaSummary, error) {
-	if len(r.LambdaFunction) == 0 {
+	if len(ptr.Value(r.LambdaFunction)) == 0 {
 		return nil, []BucketNotificationLambdaSummary{}, nil
 	}
-	configs := make([]s3types.LambdaFunctionConfiguration, 0, len(r.LambdaFunction))
-	summaries := make([]BucketNotificationLambdaSummary, 0, len(r.LambdaFunction))
-	for i, item := range r.LambdaFunction {
+	configs := make([]s3types.LambdaFunctionConfiguration, 0, len(ptr.Value(r.LambdaFunction)))
+	summaries := make([]BucketNotificationLambdaSummary, 0, len(ptr.Value(r.LambdaFunction)))
+	for i, item := range ptr.Value(r.LambdaFunction) {
 		id, err := bucketNotificationDestinationID(item.Id,
 			ids.lambdaFunction(i), "tf-s3-lambda-")
 		if err != nil {
@@ -430,12 +421,12 @@ func (r *BucketNotification) lambdaFunctionConfigurations(
 func (r *BucketNotification) queueConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.QueueConfiguration, []BucketNotificationQueueSummary, error) {
-	if len(r.Queue) == 0 {
+	if len(ptr.Value(r.Queue)) == 0 {
 		return nil, []BucketNotificationQueueSummary{}, nil
 	}
-	configs := make([]s3types.QueueConfiguration, 0, len(r.Queue))
-	summaries := make([]BucketNotificationQueueSummary, 0, len(r.Queue))
-	for i, item := range r.Queue {
+	configs := make([]s3types.QueueConfiguration, 0, len(ptr.Value(r.Queue)))
+	summaries := make([]BucketNotificationQueueSummary, 0, len(ptr.Value(r.Queue)))
+	for i, item := range ptr.Value(r.Queue) {
 		id, err := bucketNotificationDestinationID(item.Id,
 			ids.queue(i), "tf-s3-queue-")
 		if err != nil {
@@ -461,12 +452,12 @@ func (r *BucketNotification) queueConfigurations(
 func (r *BucketNotification) topicConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.TopicConfiguration, []BucketNotificationTopicSummary, error) {
-	if len(r.Topic) == 0 {
+	if len(ptr.Value(r.Topic)) == 0 {
 		return nil, []BucketNotificationTopicSummary{}, nil
 	}
-	configs := make([]s3types.TopicConfiguration, 0, len(r.Topic))
-	summaries := make([]BucketNotificationTopicSummary, 0, len(r.Topic))
-	for i, item := range r.Topic {
+	configs := make([]s3types.TopicConfiguration, 0, len(ptr.Value(r.Topic)))
+	summaries := make([]BucketNotificationTopicSummary, 0, len(ptr.Value(r.Topic)))
+	for i, item := range ptr.Value(r.Topic) {
 		id, err := bucketNotificationDestinationID(item.Id,
 			ids.topic(i), "tf-s3-topic-")
 		if err != nil {

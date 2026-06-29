@@ -9,9 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	acm "github.com/aws/aws-sdk-go-v2/service/acm"
 	acmtypes "github.com/aws/aws-sdk-go-v2/service/acm/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -44,7 +44,7 @@ type CertificateValidation struct {
 	// waiting, so a missing record fails fast instead of timing out 75 minutes
 	// later. The list is never sent to AWS; it is used only for the check. A
 	// change to it replaces this resource.
-	ValidationRecordFqdns []string `ub:"validation-record-fqdns"`
+	ValidationRecordFqdns *[]string `ub:"validation-record-fqdns"`
 }
 
 // CertificateValidationOutput holds the certificate ARN, the barrier's identity
@@ -62,14 +62,6 @@ func (r *CertificateValidation) SchemaVersion() int { return 1 }
 // so a change to either replaces this barrier.
 func (r *CertificateValidation) ReplaceFields() []string {
 	return []string{"certificate-arn", "validation-record-fqdns"}
-}
-
-// Defaults marks the optional validation-record-fqdns list, which the user may
-// omit when the DNS cross-check is not wanted.
-func (r CertificateValidation) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.ValidationRecordFqdns),
-	}
 }
 
 func (r *CertificateValidation) Create(
@@ -91,8 +83,8 @@ func (r *CertificateValidation) Create(
 			"certificate %s has type %s, no validation necessary",
 			r.CertificateArn, detail.Type)
 	}
-	if len(r.ValidationRecordFqdns) > 0 {
-		if err := checkValidationRecordFqdns(detail, r.ValidationRecordFqdns); err != nil {
+	if len(ptr.Value(r.ValidationRecordFqdns)) > 0 {
+		if err := checkValidationRecordFqdns(detail, ptr.Value(r.ValidationRecordFqdns)); err != nil {
 			return nil, err
 		}
 	}

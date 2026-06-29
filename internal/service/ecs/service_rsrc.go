@@ -14,7 +14,6 @@ import (
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	smithy "github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -80,26 +79,26 @@ const servicePropagationTimeout = 4 * time.Minute
 // registries, VPC Lattice configurations, and classic load balancer names
 // are not modeled.
 type Service struct {
-	Name                          string                                `ub:"name"`
-	Cluster                       *string                               `ub:"cluster"`
-	TaskDefinition                string                                `ub:"task-definition"`
-	DesiredCount                  *int64                                `ub:"desired-count"`
-	LaunchType                    *string                               `ub:"launch-type"`
-	SchedulingStrategy            *string                               `ub:"scheduling-strategy"`
-	CapacityProviderStrategy      []ServiceCapacityProviderStrategyItem `ub:"capacity-provider-strategy"`
-	DeploymentConfiguration       *ServiceDeploymentConfiguration       `ub:"deployment-configuration"`
-	NetworkConfiguration          *ServiceNetworkConfiguration          `ub:"network-configuration"`
-	LoadBalancers                 []ServiceLoadBalancer                 `ub:"load-balancers"`
-	PlacementConstraints          []ServicePlacementConstraint          `ub:"placement-constraints"`
-	PlacementStrategy             []ServicePlacementStrategy            `ub:"placement-strategy"`
-	PlatformVersion               *string                               `ub:"platform-version"`
-	PropagateTags                 *string                               `ub:"propagate-tags"`
-	AvailabilityZoneRebalancing   *string                               `ub:"availability-zone-rebalancing"`
-	EnableECSManagedTags          *bool                                 `ub:"enable-ecs-managed-tags"`
-	EnableExecuteCommand          *bool                                 `ub:"enable-execute-command"`
-	HealthCheckGracePeriodSeconds *int64                                `ub:"health-check-grace-period-seconds"`
-	Tags                          map[string]string                     `ub:"tags"`
-	ForceDelete                   *bool                                 `ub:"force-delete"`
+	Name                          string                                 `ub:"name"`
+	Cluster                       *string                                `ub:"cluster"`
+	TaskDefinition                string                                 `ub:"task-definition"`
+	DesiredCount                  *int64                                 `ub:"desired-count"`
+	LaunchType                    *string                                `ub:"launch-type"`
+	SchedulingStrategy            *string                                `ub:"scheduling-strategy"`
+	CapacityProviderStrategy      *[]ServiceCapacityProviderStrategyItem `ub:"capacity-provider-strategy"`
+	DeploymentConfiguration       *ServiceDeploymentConfiguration        `ub:"deployment-configuration"`
+	NetworkConfiguration          *ServiceNetworkConfiguration           `ub:"network-configuration"`
+	LoadBalancers                 *[]ServiceLoadBalancer                 `ub:"load-balancers"`
+	PlacementConstraints          *[]ServicePlacementConstraint          `ub:"placement-constraints"`
+	PlacementStrategy             *[]ServicePlacementStrategy            `ub:"placement-strategy"`
+	PlatformVersion               *string                                `ub:"platform-version"`
+	PropagateTags                 *string                                `ub:"propagate-tags"`
+	AvailabilityZoneRebalancing   *string                                `ub:"availability-zone-rebalancing"`
+	EnableECSManagedTags          *bool                                  `ub:"enable-ecs-managed-tags"`
+	EnableExecuteCommand          *bool                                  `ub:"enable-execute-command"`
+	HealthCheckGracePeriodSeconds *int64                                 `ub:"health-check-grace-period-seconds"`
+	Tags                          *map[string]string                     `ub:"tags"`
+	ForceDelete                   *bool                                  `ub:"force-delete"`
 }
 
 // ServiceOutput holds the values ECS computes for a service: its ARN and the
@@ -128,17 +127,6 @@ func (r *Service) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a service may omit.
-func (r Service) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.CapacityProviderStrategy),
-		defaults.Optional(r.LoadBalancers),
-		defaults.Optional(r.PlacementConstraints),
-		defaults.Optional(r.PlacementStrategy),
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the rules ECS places on a service's inputs: the
 // launch type, scheduling strategy, tag propagation, zone rebalancing, and
 // public IP enums; the API rule that a launch type and a capacity provider
@@ -151,7 +139,10 @@ func (r Service) Defaults() []defaults.Default {
 // than declared here.
 func (r Service) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
-		constraint.AtMostOneOf(r.LaunchType, r.CapacityProviderStrategy),
+		constraint.Must(constraint.Any(
+			constraint.Absent(r.LaunchType),
+			constraint.Not(constraint.NotEmpty(r.CapacityProviderStrategy)))).
+			Message("launch-type and capacity-provider-strategy are mutually exclusive"),
 		constraint.When(constraint.Present(r.LaunchType)).
 			Require(constraint.OneOf(r.LaunchType, "EC2", "FARGATE", "EXTERNAL")).
 			Message("launch-type must be EC2, FARGATE, or EXTERNAL"),
@@ -280,12 +271,12 @@ func (r *Service) Create(ctx context.Context, cfg *awsCfg) (*ServiceOutput, erro
 	if err != nil {
 		return nil, err
 	}
-	if taggedSeparately && len(r.Tags) > 0 {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
 		// The separate tagging only happens for explicitly configured tags, so
 		// a partition that cannot tag the service at all is a real failure.
 		if _, err := client.TagResource(ctx, &ecs.TagResourceInput{
 			ResourceArn: aws.String(arn),
-			Tags:        tagsSDK(r.Tags),
+			Tags:        tagsSDK(ptr.Value(r.Tags)),
 		}); err != nil {
 			return nil, fmt.Errorf("tag service: %w", err)
 		}
@@ -349,8 +340,8 @@ func (r *Service) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncResourceTags(ctx, client, prior.Outputs.Arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncResourceTags(ctx, client, prior.Outputs.Arn, ptr.Value(r.Tags)); err != nil {
 			// Listing tags in a cluster that was deleted out of band fails
 			// with the inactive-cluster error, which means the service is
 			// gone rather than the tagging having failed.
@@ -426,7 +417,7 @@ func (r *Service) Delete(ctx context.Context, cfg *awsCfg, prior *ServiceOutput)
 // something when health checks exist, so the API rejects it on a service
 // with no load balancer.
 func (r *Service) validate() error {
-	if r.HealthCheckGracePeriodSeconds != nil && len(r.LoadBalancers) == 0 {
+	if r.HealthCheckGracePeriodSeconds != nil && len(ptr.Value(r.LoadBalancers)) == 0 {
 		return errors.New(
 			"health-check-grace-period-seconds requires at least one load-balancers entry")
 	}
@@ -457,7 +448,7 @@ func (r *Service) createInput(token string) *ecs.CreateServiceInput {
 		EnableExecuteCommand:          aws.ToBool(r.EnableExecuteCommand),
 		HealthCheckGracePeriodSeconds: ptr.Int32(r.HealthCheckGracePeriodSeconds),
 		NetworkConfiguration:          r.NetworkConfiguration.sdk(),
-		Tags:                          tagsSDK(r.Tags),
+		Tags:                          tagsSDK(ptr.Value(r.Tags)),
 	}
 	if r.LaunchType != nil {
 		in.LaunchType = ecstypes.LaunchType(*r.LaunchType)
@@ -472,17 +463,17 @@ func (r *Service) createInput(token string) *ecs.CreateServiceInput {
 		in.AvailabilityZoneRebalancing =
 			ecstypes.AvailabilityZoneRebalancing(*r.AvailabilityZoneRebalancing)
 	}
-	if len(r.CapacityProviderStrategy) > 0 {
-		in.CapacityProviderStrategy = serviceStrategySDK(r.CapacityProviderStrategy)
+	if len(ptr.Value(r.CapacityProviderStrategy)) > 0 {
+		in.CapacityProviderStrategy = serviceStrategySDK(ptr.Value(r.CapacityProviderStrategy))
 	}
-	if len(r.LoadBalancers) > 0 {
-		in.LoadBalancers = serviceLoadBalancersSDK(r.LoadBalancers)
+	if len(ptr.Value(r.LoadBalancers)) > 0 {
+		in.LoadBalancers = serviceLoadBalancersSDK(ptr.Value(r.LoadBalancers))
 	}
-	if len(r.PlacementConstraints) > 0 {
-		in.PlacementConstraints = servicePlacementConstraintsSDK(r.PlacementConstraints)
+	if len(ptr.Value(r.PlacementConstraints)) > 0 {
+		in.PlacementConstraints = servicePlacementConstraintsSDK(ptr.Value(r.PlacementConstraints))
 	}
-	if len(r.PlacementStrategy) > 0 {
-		in.PlacementStrategy = servicePlacementStrategySDK(r.PlacementStrategy)
+	if len(ptr.Value(r.PlacementStrategy)) > 0 {
+		in.PlacementStrategy = servicePlacementStrategySDK(ptr.Value(r.PlacementStrategy))
 	}
 	if !r.daemon() {
 		in.DesiredCount = aws.Int32(int32(aws.ToInt64(r.DesiredCount)))
@@ -530,7 +521,7 @@ func (r *Service) updateServiceInput(
 	}
 	if runtime.Changed(prior.Inputs.CapacityProviderStrategy, r.CapacityProviderStrategy) {
 		needed = true
-		in.CapacityProviderStrategy = serviceStrategySDK(r.CapacityProviderStrategy)
+		in.CapacityProviderStrategy = serviceStrategySDK(ptr.Value(r.CapacityProviderStrategy))
 		in.ForceNewDeployment = true
 	}
 	if runtime.Changed(prior.Inputs.NetworkConfiguration, r.NetworkConfiguration) &&
@@ -540,15 +531,15 @@ func (r *Service) updateServiceInput(
 	}
 	if runtime.Changed(prior.Inputs.LoadBalancers, r.LoadBalancers) {
 		needed = true
-		in.LoadBalancers = serviceLoadBalancersSDK(r.LoadBalancers)
+		in.LoadBalancers = serviceLoadBalancersSDK(ptr.Value(r.LoadBalancers))
 	}
 	if runtime.Changed(prior.Inputs.PlacementConstraints, r.PlacementConstraints) {
 		needed = true
-		in.PlacementConstraints = servicePlacementConstraintsSDK(r.PlacementConstraints)
+		in.PlacementConstraints = servicePlacementConstraintsSDK(ptr.Value(r.PlacementConstraints))
 	}
 	if runtime.Changed(prior.Inputs.PlacementStrategy, r.PlacementStrategy) {
 		needed = true
-		in.PlacementStrategy = servicePlacementStrategySDK(r.PlacementStrategy)
+		in.PlacementStrategy = servicePlacementStrategySDK(ptr.Value(r.PlacementStrategy))
 	}
 	if runtime.Changed(prior.Inputs.PlatformVersion, r.PlatformVersion) &&
 		r.PlatformVersion != nil {

@@ -10,10 +10,10 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
@@ -37,7 +37,7 @@ type LaunchTemplate struct {
 	VersionDescription   *string            `ub:"version-description"`
 	DefaultVersion       *int64             `ub:"default-version"`
 	UpdateDefaultVersion *bool              `ub:"update-default-version"`
-	Tags                 map[string]string  `ub:"tags"`
+	Tags                 *map[string]string `ub:"tags"`
 	Data                 LaunchTemplateData `ub:"data"`
 }
 
@@ -59,15 +59,6 @@ func (r *LaunchTemplate) SchemaVersion() int { return 1 }
 // in place.
 func (r *LaunchTemplate) ReplaceFields() []string {
 	return []string{"name"}
-}
-
-// Defaults marks the tag map a launch template may omit. The optional
-// collections inside the data block are pointers instead, which is what makes
-// a nested field omittable to the type checker.
-func (r LaunchTemplate) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the cross-field and value rules the launch-template API
@@ -175,7 +166,7 @@ func (r *LaunchTemplate) Create(ctx context.Context, cfg *awsCfg) (*LaunchTempla
 		LaunchTemplateName: aws.String(r.Name),
 		LaunchTemplateData: data,
 		VersionDescription: r.VersionDescription,
-		TagSpecifications:  tagSpecifications(ec2types.ResourceTypeLaunchTemplate, r.Tags),
+		TagSpecifications:  tagSpecifications(ec2types.ResourceTypeLaunchTemplate, ptr.Value(r.Tags)),
 	}
 	// Some partitions, such as the ISO partitions, cannot tag a launch template
 	// as it is created. When the tagged create fails for that reason, create the
@@ -192,8 +183,8 @@ func (r *LaunchTemplate) Create(ctx context.Context, cfg *awsCfg) (*LaunchTempla
 		return nil, fmt.Errorf("create launch template: %w", err)
 	}
 	id := aws.ToString(resp.LaunchTemplate.LaunchTemplateId)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -255,8 +246,8 @@ func (r *LaunchTemplate) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

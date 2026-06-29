@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	secretsmanager "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	secretsmanagertypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // expandReplicas converts the configured replica blocks into the SDK replica
@@ -68,12 +70,14 @@ func replicaStatusRegions(status []SecretReplicaStatus) []string {
 // since a Region cannot be removed and re-added in one pass; then the Regions
 // newly desired are replicated. A Region kept across the change is left alone.
 func (r *Secret) reconcileReplicas(
-	ctx context.Context, client *secretsmanager.Client, arn string, prior []SecretReplica,
+	ctx context.Context, client *secretsmanager.Client, arn string, prior *[]SecretReplica,
 ) error {
-	priorRegions := replicaRegionSet(prior)
-	desiredRegions := replicaRegionSet(r.Replica)
+	priorList := ptr.Value(prior)
+	desiredList := ptr.Value(r.Replica)
+	priorRegions := replicaRegionSet(priorList)
+	desiredRegions := replicaRegionSet(desiredList)
 	var remove []string
-	for _, rep := range prior {
+	for _, rep := range priorList {
 		if _, ok := desiredRegions[rep.Region]; !ok {
 			remove = append(remove, rep.Region)
 		}
@@ -84,7 +88,7 @@ func (r *Secret) reconcileReplicas(
 		}
 	}
 	var add []SecretReplica
-	for _, rep := range r.Replica {
+	for _, rep := range desiredList {
 		if _, ok := priorRegions[rep.Region]; !ok {
 			add = append(add, rep)
 		}

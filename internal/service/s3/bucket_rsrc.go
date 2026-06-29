@@ -16,10 +16,10 @@ import (
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
@@ -47,7 +47,7 @@ const bucketDeleteBatch = 1000
 type Bucket struct {
 	Bucket            string                   `ub:"bucket"`
 	ObjectLockEnabled *bool                    `ub:"object-lock-enabled"`
-	Tags              map[string]string        `ub:"tags"`
+	Tags              *map[string]string       `ub:"tags"`
 	Versioning        *BucketVersioning        `ub:"versioning"`
 	PublicAccessBlock *BucketPublicAccessBlock `ub:"public-access-block"`
 	OwnershipControls *BucketOwnershipControls `ub:"ownership-controls"`
@@ -83,13 +83,6 @@ func (r *Bucket) SchemaVersion() int { return 1 }
 // not a replace trigger.
 func (r *Bucket) ReplaceFields() []string {
 	return []string{"bucket", "object-lock-enabled"}
-}
-
-// Defaults marks the collection inputs a bucket may omit.
-func (r Bucket) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules S3 places on the bucket's configuration
@@ -188,9 +181,9 @@ func (r Bucket) Constraints() []constraint.Constraint {
 						Message("a lifecycle rule status must be Enabled or Disabled"),
 					constraint.Must(constraint.Any(
 						constraint.Present(rule.Expiration),
-						constraint.Present(rule.Transitions),
+						constraint.NotEmpty(rule.Transitions),
 						constraint.Present(rule.NoncurrentVersionExpiration),
-						constraint.Present(rule.NoncurrentVersionTransitions),
+						constraint.NotEmpty(rule.NoncurrentVersionTransitions),
 						constraint.Present(rule.AbortIncompleteMultipartUpload))).
 						Message("a lifecycle rule needs at least one action"),
 					constraint.AtMostOneOf(rule.Filter.Prefix, rule.Filter.Tag,
@@ -292,7 +285,7 @@ func (r *Bucket) Create(ctx context.Context, cfg *awsCfg) (*BucketOutput, error)
 	}
 	// When the endpoint refused tag-on-create the create stripped the tags, so
 	// they are written now that the bucket is visible.
-	if len(r.Tags) > 0 && !tagged {
+	if len(ptr.Value(r.Tags)) > 0 && !tagged {
 		if err := r.putTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -396,7 +389,7 @@ func bucketConfigDelete(
 // separately. Every attempt is retried through the transient OperationAborted a
 // freshly deleted or in-flight name returns.
 func (r *Bucket) create(ctx context.Context, client *s3.Client, region string) (bool, error) {
-	tagged := len(r.Tags) > 0
+	tagged := len(ptr.Value(r.Tags)) > 0
 	withTags := r.createInput(region, true, true)
 	err := bucketCreateRetry(ctx, client, withTags)
 	if err == nil {
@@ -442,8 +435,8 @@ func (r *Bucket) createInput(region string, withTags, withConfig bool) *s3.Creat
 		cfg.LocationConstraint = s3types.BucketLocationConstraint(region)
 		set = true
 	}
-	if withTags && len(r.Tags) > 0 {
-		cfg.Tags = bucketTags(r.Tags)
+	if withTags && len(ptr.Value(r.Tags)) > 0 {
+		cfg.Tags = bucketTags(ptr.Value(r.Tags))
 		set = true
 	}
 	if set {
@@ -503,7 +496,7 @@ func (r *Bucket) Update(
 	}
 	// The bucket name and Object Lock are replace-only and EmptyOnDestroy only
 	// affects delete. Tags and the configuration blocks reconcile in place.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		if err := r.syncTags(ctx, client); err != nil {
 			return nil, err
 		}
@@ -588,7 +581,7 @@ func (r *Bucket) waitGone(ctx context.Context, client *s3.Client) error {
 func (r *Bucket) putTags(ctx context.Context, client *s3.Client) error {
 	_, err := client.PutBucketTagging(ctx, &s3.PutBucketTaggingInput{
 		Bucket:  aws.String(r.Bucket),
-		Tagging: &s3types.Tagging{TagSet: bucketTags(r.Tags)},
+		Tagging: &s3types.Tagging{TagSet: bucketTags(ptr.Value(r.Tags))},
 	})
 	if err != nil {
 		return fmt.Errorf("put bucket tagging %s: %w", r.Bucket, err)
@@ -609,11 +602,11 @@ func (r *Bucket) syncTags(ctx context.Context, client *s3.Client) error {
 	if err != nil {
 		return err
 	}
-	upsert, remove := tagsync.Diff(current, r.Tags)
+	upsert, remove := tagsync.Diff(current, ptr.Value(r.Tags))
 	if len(upsert) == 0 && len(remove) == 0 {
 		return nil
 	}
-	if len(r.Tags) == 0 {
+	if len(ptr.Value(r.Tags)) == 0 {
 		_, err := client.DeleteBucketTagging(ctx, &s3.DeleteBucketTaggingInput{
 			Bucket: aws.String(r.Bucket),
 		})

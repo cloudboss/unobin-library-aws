@@ -57,7 +57,7 @@ func TestIamSchemas(t *testing.T) {
 				"description":                 typecheck.TOptional(typecheck.TString()),
 				"max-session-duration":        typecheck.TOptional(typecheck.TInteger()),
 				"permissions-boundary":        typecheck.TOptional(typecheck.TString()),
-				"tags":                        typecheck.TMap(typecheck.TString()),
+				"tags":                        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":         typecheck.TString(),
@@ -72,9 +72,6 @@ func TestIamSchemas(t *testing.T) {
 						"(input.max-session-duration == null || input.max-session-duration <= 43200)",
 					Message: "max-session-duration must be between 3600 and 43200 seconds",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-group": {
@@ -97,7 +94,7 @@ func TestIamSchemas(t *testing.T) {
 				"path":                 typecheck.TString(),
 				"permissions-boundary": typecheck.TOptional(typecheck.TString()),
 				"force-destroy":        typecheck.TBoolean(),
-				"tags":                 typecheck.TMap(typecheck.TString()),
+				"tags":                 typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                  typecheck.TString(),
@@ -119,7 +116,6 @@ func TestIamSchemas(t *testing.T) {
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.path", Value: "'/'"},
 				{Field: "input.force-destroy", Value: "false"},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"iam-access-key": {
@@ -159,7 +155,7 @@ func TestIamSchemas(t *testing.T) {
 				"policy-document": typecheck.TString(),
 				"path":            typecheck.TOptional(typecheck.TString()),
 				"description":     typecheck.TOptional(typecheck.TString()),
-				"tags":            typecheck.TMap(typecheck.TString()),
+				"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                typecheck.TString(),
@@ -168,42 +164,46 @@ func TestIamSchemas(t *testing.T) {
 				"attachment-count":   typecheck.TInteger(),
 				"create-date":        typecheck.TString(),
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"iam-instance-profile": {
 			Inputs: map[string]typecheck.Type{
 				"instance-profile-name": typecheck.TString(),
 				"path":                  typecheck.TOptional(typecheck.TString()),
 				"role":                  typecheck.TOptional(typecheck.TString()),
-				"tags":                  typecheck.TMap(typecheck.TString()),
+				"tags":                  typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":                 typecheck.TString(),
 				"instance-profile-id": typecheck.TString(),
 				"create-date":         typecheck.TString(),
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"iam-openid-connect-provider": {
 			Inputs: map[string]typecheck.Type{
 				"url":             typecheck.TString(),
 				"client-id-list":  typecheck.TList(typecheck.TString()),
-				"thumbprint-list": typecheck.TList(typecheck.TString()),
-				"tags":            typecheck.TMap(typecheck.TString()),
+				"thumbprint-list": typecheck.TOptional(typecheck.TList(typecheck.TString())),
+				"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":             typecheck.TString(),
 				"create-date":     typecheck.TString(),
 				"thumbprint-list": typecheck.TList(typecheck.TString()),
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.client-id-list", Optional: true},
-				{Field: "input.thumbprint-list", Optional: true},
-				{Field: "input.tags", Optional: true},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.client-id-list) >= 1)",
+					Message: "client-id-list must not be empty",
+				},
+				{
+					Kind: "predicate",
+					When: "(input.thumbprint-list != null)",
+					Require: "(input.thumbprint-list == null || " +
+						"@core.length(input.thumbprint-list) >= 1)",
+					Message: "thumbprint-list must not be empty when given",
+				},
 			},
 		},
 		"iam-role-policy-attachment": {
@@ -274,7 +274,7 @@ func TestIamSchemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }
@@ -314,5 +314,5 @@ func TestIamOpenIDConnectProviderDataSchema(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, want, schema.DataSources["iam-openid-connect-provider"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["iam-openid-connect-provider"])
 }

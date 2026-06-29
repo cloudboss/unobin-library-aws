@@ -47,7 +47,7 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 				"log-group-class":             typecheck.TOptional(typecheck.TString()),
 				"name":                        typecheck.TString(),
 				"retention-in-days":           typecheck.TOptional(typecheck.TInteger()),
-				"tags":                        typecheck.TMap(typecheck.TString()),
+				"tags":                        typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn": typecheck.TString(),
@@ -90,9 +90,6 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 					Message: "log-group-class must be STANDARD, INFREQUENT_ACCESS, or DELIVERY",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"cloudwatchlogs-resource-policy": {
 			Inputs: map[string]typecheck.Type{
@@ -119,7 +116,7 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 				"apply-on-transformed-logs": typecheck.TOptional(typecheck.TBoolean()),
 				"destination-arn":           typecheck.TString(),
 				"distribution":              typecheck.TString(),
-				"emit-system-fields":        typecheck.TList(typecheck.TString()),
+				"emit-system-fields":        typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"field-selection-criteria":  typecheck.TOptional(typecheck.TString()),
 				"filter-pattern":            typecheck.TString(),
 				"name":                      typecheck.TString(),
@@ -135,7 +132,7 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:    "predicate",
-					When:    "(input.distribution != null)",
+					When:    "true",
 					Require: "(input.distribution == 'ByLogStream' || input.distribution == 'Random')",
 					Message: "distribution must be ByLogStream or Random",
 				},
@@ -145,12 +142,11 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 					Require: "(@each.value == '@aws.account' || " +
 						"@each.value == '@aws.region')",
 					Message: "emit-system-fields entries must be @aws.account or @aws.region",
-					ForEach: "input.emit-system-fields",
+					ForEach: "input.emit-system-fields ?? []",
 				},
 			},
 			Defaults: []lang.DefaultSpec{
 				{Field: "input.distribution", Value: "'ByLogStream'"},
-				{Field: "input.emit-system-fields", Optional: true},
 			},
 		},
 		"cloudwatchlogs-metric-filter": {
@@ -222,7 +218,7 @@ func TestCloudwatchlogsSchemas(t *testing.T) {
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

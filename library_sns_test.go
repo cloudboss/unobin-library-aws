@@ -65,7 +65,7 @@ func TestSnsSchemas(t *testing.T) {
 				"sqs-failure-feedback-role-arn":            typecheck.TOptional(typecheck.TString()),
 				"sqs-success-feedback-role-arn":            typecheck.TOptional(typecheck.TString()),
 				"sqs-success-feedback-sample-rate":         typecheck.TOptional(typecheck.TInteger()),
-				"tags":                                     typecheck.TMap(typecheck.TString()),
+				"tags":                                     typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"tracing-config":                           typecheck.TOptional(typecheck.TString()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -158,9 +158,6 @@ func TestSnsSchemas(t *testing.T) {
 					Message: "lambda-success-feedback-sample-rate must be between 0 and 100",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 
 		"sns-topic-subscription": {
@@ -232,7 +229,7 @@ func TestSnsSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

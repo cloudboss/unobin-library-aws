@@ -58,7 +58,7 @@ func TestEventbridgeSchemas(t *testing.T) {
 					{Name: "include-detail", Type: typecheck.TString(), Optional: true},
 					{Name: "level", Type: typecheck.TString(), Optional: true},
 				})),
-				"tags": typecheck.TMap(typecheck.TString()),
+				"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn":  typecheck.TString(),
@@ -88,9 +88,6 @@ func TestEventbridgeSchemas(t *testing.T) {
 					Message: "log-config.level must be OFF, ERROR, INFO, or TRACE",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"eventbridge-rule": {
 			Inputs: map[string]typecheck.Type{
@@ -101,7 +98,7 @@ func TestEventbridgeSchemas(t *testing.T) {
 				"schedule-expression": typecheck.TOptional(typecheck.TString()),
 				"role-arn":            typecheck.TOptional(typecheck.TString()),
 				"state":               typecheck.TOptional(typecheck.TString()),
-				"tags":                typecheck.TMap(typecheck.TString()),
+				"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"force-destroy":       typecheck.TOptional(typecheck.TBoolean()),
 			},
 			Outputs: map[string]typecheck.Type{
@@ -120,9 +117,6 @@ func TestEventbridgeSchemas(t *testing.T) {
 					Message: "state must be ENABLED, DISABLED, or " +
 						"ENABLED_WITH_ALL_CLOUDTRAIL_MANAGEMENT_EVENTS",
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
 			},
 		},
 		"eventbridge-target": {
@@ -342,9 +336,8 @@ func TestEventbridgeSchemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "((@each.value.values != null) && " +
-						"(@core.length(@each.value.values) >= 1)) && " +
-						"(@each.value.values == null || @core.length(@each.value.values) <= 50)",
+					Require: "(@core.length(@each.value.values) >= 1) && " +
+						"(@core.length(@each.value.values) <= 50)",
 					Message: "a run command target takes 1 to 50 values",
 					ForEach: "input.run-command-parameters.run-command-targets",
 				},
@@ -362,7 +355,7 @@ func TestEventbridgeSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

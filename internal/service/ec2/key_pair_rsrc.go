@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -19,9 +19,9 @@ import (
 // set, reconciled through the EC2 tag calls keyed on the key pair id. The key
 // name is at most 255 bytes, which EC2 enforces; no other constraint applies.
 type KeyPair struct {
-	KeyName   string            `ub:"key-name"`
-	PublicKey string            `ub:"public-key"`
-	Tags      map[string]string `ub:"tags"`
+	KeyName   string             `ub:"key-name"`
+	PublicKey string             `ub:"public-key"`
+	Tags      *map[string]string `ub:"tags"`
 }
 
 // KeyPairOutput holds the values EC2 computes for a key pair. The id is the
@@ -43,13 +43,6 @@ func (r *KeyPair) ReplaceFields() []string {
 	return []string{"key-name", "public-key"}
 }
 
-// Defaults marks the tag map a key pair may omit.
-func (r KeyPair) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 func (r *KeyPair) Create(ctx context.Context, cfg *awsCfg) (*KeyPairOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -58,7 +51,7 @@ func (r *KeyPair) Create(ctx context.Context, cfg *awsCfg) (*KeyPairOutput, erro
 	in := &ec2.ImportKeyPairInput{
 		KeyName:           aws.String(r.KeyName),
 		PublicKeyMaterial: []byte(r.PublicKey),
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeKeyPair, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeKeyPair, ptr.Value(r.Tags)),
 	}
 	if _, err := client.ImportKeyPair(ctx, in); err != nil {
 		return nil, fmt.Errorf("import key pair: %w", err)
@@ -126,8 +119,8 @@ func (r *KeyPair) Update(
 	// A key pair has no mutable field other than tags; the name and public key
 	// are replace-only. Reconcile the tag set against the key pair id whenever it
 	// changed, the same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.KeyPairId, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.KeyPairId, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 		return r.read(ctx, client)

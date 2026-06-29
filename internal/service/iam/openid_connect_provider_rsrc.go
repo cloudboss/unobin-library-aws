@@ -8,19 +8,20 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
-	"github.com/cloudboss/unobin/pkg/defaults"
+	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
 // OpenIDConnectProvider manages an IAM OpenID Connect (OIDC) identity provider.
 type OpenIDConnectProvider struct {
-	Url            string            `ub:"url"`
-	ClientIDList   []string          `ub:"client-id-list"`
-	ThumbprintList []string          `ub:"thumbprint-list"`
-	Tags           map[string]string `ub:"tags"`
+	Url            string             `ub:"url"`
+	ClientIDList   []string           `ub:"client-id-list"`
+	ThumbprintList *[]string          `ub:"thumbprint-list"`
+	Tags           *map[string]string `ub:"tags"`
 }
 
 // OpenIDConnectProviderOutput holds attributes that IAM computes for the
@@ -47,12 +48,13 @@ func (r *OpenIDConnectProvider) ReplaceFields() []string {
 	return []string{"url"}
 }
 
-// Defaults marks the collection inputs a provider may omit.
-func (r OpenIDConnectProvider) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.ClientIDList),
-		defaults.Optional(r.ThumbprintList),
-		defaults.Optional(r.Tags),
+func (r OpenIDConnectProvider) Constraints() []constraint.Constraint {
+	return []constraint.Constraint{
+		constraint.Must(constraint.NotEmpty(r.ClientIDList)).
+			Message("client-id-list must not be empty"),
+		constraint.When(constraint.Present(r.ThumbprintList)).
+			Require(constraint.MinItems(r.ThumbprintList, 1)).
+			Message("thumbprint-list must not be empty when given"),
 	}
 }
 
@@ -69,8 +71,8 @@ func (r *OpenIDConnectProvider) Create(
 	input := &iam.CreateOpenIDConnectProviderInput{
 		Url:            aws.String(r.Url),
 		ClientIDList:   r.ClientIDList,
-		ThumbprintList: r.ThumbprintList,
-		Tags:           oidcProviderTags(r.Tags),
+		ThumbprintList: ptr.Value(r.ThumbprintList),
+		Tags:           oidcProviderTags(ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateOpenIDConnectProvider(ctx, input)
 	// Some partitions, such as the ISO partitions, cannot tag a provider as
@@ -87,8 +89,8 @@ func (r *OpenIDConnectProvider) Create(
 		return nil, fmt.Errorf("create iam oidc provider: %w", err)
 	}
 	arn := aws.ToString(resp.OpenIDConnectProviderArn)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := oidcProviderSyncTags(ctx, client, arn, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := oidcProviderSyncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -122,13 +124,14 @@ func (r *OpenIDConnectProvider) Update(
 	arn := prior.Outputs.Arn
 	// IAM rejects an empty thumbprint list on update, so only push a non-empty
 	// list. An omitted list leaves the thumbprints IAM derived in place.
-	if runtime.Changed(prior.Inputs.ThumbprintList, r.ThumbprintList) &&
-		len(r.ThumbprintList) > 0 {
+	if r.ThumbprintList != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.ThumbprintList), ptr.Value(r.ThumbprintList)) &&
+		len(*r.ThumbprintList) > 0 {
 		_, err := client.UpdateOpenIDConnectProviderThumbprint(
 			ctx,
 			&iam.UpdateOpenIDConnectProviderThumbprintInput{
 				OpenIDConnectProviderArn: aws.String(arn),
-				ThumbprintList:           r.ThumbprintList,
+				ThumbprintList:           *r.ThumbprintList,
 			},
 		)
 		if err != nil {
@@ -142,8 +145,8 @@ func (r *OpenIDConnectProvider) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := oidcProviderSyncTags(ctx, client, arn, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := oidcProviderSyncTags(ctx, client, arn, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

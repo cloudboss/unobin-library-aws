@@ -63,17 +63,6 @@ type LaunchTemplateData struct {
 	NetworkPerformanceOptions *LaunchTemplateNetworkPerformanceOptions `ub:"network-performance-options"`
 }
 
-// fromList returns the slice a declared optional list holds, or nil when the
-// list was not declared. An optional collection inside a block is a pointer so
-// the type checker accepts a body that leaves it out; the SDK reads nil and an
-// absent list the same way.
-func fromList[T any](p *[]T) []T {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
 // launchTemplateData converts the declared instance configuration to the SDK
 // request type. UserData is always set, to the empty string when unset, so an
 // otherwise-empty data block still produces a valid version request: EC2 rejects
@@ -85,7 +74,7 @@ func launchTemplateData(b LaunchTemplateData) (*ec2types.RequestLaunchTemplateDa
 	if err != nil {
 		return nil, err
 	}
-	if err := validateNetworkInterfaces(fromList(b.NetworkInterfaces)); err != nil {
+	if err := validateNetworkInterfaces(ptr.Value(b.NetworkInterfaces)); err != nil {
 		return nil, err
 	}
 	out := &ec2types.RequestLaunchTemplateData{
@@ -95,15 +84,15 @@ func launchTemplateData(b LaunchTemplateData) (*ec2types.RequestLaunchTemplateDa
 		EbsOptimized:                     b.EbsOptimized,
 		DisableApiStop:                   b.DisableApiStop,
 		DisableApiTermination:            b.DisableApiTermination,
-		SecurityGroupIds:                 fromList(b.SecurityGroupIds),
-		SecurityGroups:                   fromList(b.SecurityGroups),
-		BlockDeviceMappings:              blockDeviceMappings(fromList(b.BlockDeviceMappings)),
-		NetworkInterfaces:                networkInterfaces(fromList(b.NetworkInterfaces)),
+		SecurityGroupIds:                 ptr.Value(b.SecurityGroupIds),
+		SecurityGroups:                   ptr.Value(b.SecurityGroups),
+		BlockDeviceMappings:              blockDeviceMappings(ptr.Value(b.BlockDeviceMappings)),
+		NetworkInterfaces:                networkInterfaces(ptr.Value(b.NetworkInterfaces)),
 		IamInstanceProfile:               iamInstanceProfile(b.IamInstanceProfile),
 		Monitoring:                       monitoring(b.Monitoring),
 		MetadataOptions:                  metadataOptions(b.MetadataOptions),
 		Placement:                        placement(b.Placement),
-		TagSpecifications:                dataTagSpecifications(fromList(b.TagSpecifications)),
+		TagSpecifications:                dataTagSpecifications(ptr.Value(b.TagSpecifications)),
 		CreditSpecification:              creditSpecification(b.CreditSpecification),
 		CpuOptions:                       cpuOptions(b.CpuOptions),
 		CapacityReservationSpecification: capacityReservation(b.CapacityReservationSpecification),
@@ -112,7 +101,7 @@ func launchTemplateData(b LaunchTemplateData) (*ec2types.RequestLaunchTemplateDa
 		PrivateDnsNameOptions:            privateDnsNameOptions(b.PrivateDnsNameOptions),
 		MaintenanceOptions:               maintenanceOptions(b.MaintenanceOptions),
 		NetworkPerformanceOptions:        networkPerformanceOptions(b.NetworkPerformanceOptions),
-		LicenseSpecifications:            licenseSpecifications(fromList(b.LicenseSpecifications)),
+		LicenseSpecifications:            licenseSpecifications(ptr.Value(b.LicenseSpecifications)),
 		InstanceMarketOptions:            marketOptions,
 	}
 	if b.InstanceType != nil {
@@ -270,15 +259,15 @@ func networkInterface(
 		DeviceIndex:                     deviceIndex,
 		InterfaceType:                   b.InterfaceType,
 		Ipv4PrefixCount:                 ptr.Int32(b.Ipv4PrefixCount),
-		Ipv4Prefixes:                    ipv4Prefixes(fromList(b.Ipv4Prefixes)),
+		Ipv4Prefixes:                    ipv4Prefixes(ptr.Value(b.Ipv4Prefixes)),
 		Ipv6PrefixCount:                 ptr.Int32(b.Ipv6PrefixCount),
-		Ipv6Prefixes:                    ipv6Prefixes(fromList(b.Ipv6Prefixes)),
+		Ipv6Prefixes:                    ipv6Prefixes(ptr.Value(b.Ipv6Prefixes)),
 		NetworkCardIndex:                ptr.Int32(b.NetworkCardIndex),
 		NetworkInterfaceId:              b.NetworkInterfaceId,
 		PrimaryIpv6:                     b.PrimaryIpv6,
 		PrivateIpAddress:                b.PrivateIpAddress,
 		SubnetId:                        b.SubnetId,
-		Groups:                          fromList(b.Groups),
+		Groups:                          ptr.Value(b.Groups),
 		EnaSrdSpecification:             enaSrdSpecification(b.EnaSrdSpecification),
 		ConnectionTrackingSpecification: connectionTracking(b.ConnectionTrackingSpecification),
 	}
@@ -289,13 +278,13 @@ func networkInterface(
 	// both.
 	if b.Ipv4AddressCount != nil {
 		out.SecondaryPrivateIpAddressCount = ptr.Int32(b.Ipv4AddressCount)
-	} else if addrs := fromList(b.Ipv4Addresses); len(addrs) > 0 {
+	} else if addrs := ptr.Value(b.Ipv4Addresses); len(addrs) > 0 {
 		out.PrivateIpAddresses = privateIpAddresses(addrs, b.PrivateIpAddress)
 	}
 	// The IPv6 addresses likewise come from a count or an explicit list.
 	if b.Ipv6AddressCount != nil {
 		out.Ipv6AddressCount = ptr.Int32(b.Ipv6AddressCount)
-	} else if addrs := fromList(b.Ipv6Addresses); len(addrs) > 0 {
+	} else if addrs := ptr.Value(b.Ipv6Addresses); len(addrs) > 0 {
 		out.Ipv6Addresses = ipv6Addresses(addrs)
 	}
 	return out

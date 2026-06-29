@@ -69,13 +69,14 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 				"kms-key-id":                     typecheck.TOptional(typecheck.TString()),
 				"name":                           typecheck.TString(),
 				"recovery-window-in-days":        typecheck.TOptional(typecheck.TInteger()),
-				"replica": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
-					{Name: "region", Type: typecheck.TString()},
-					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
-				})),
+				"replica": typecheck.TOptional(typecheck.TList(typecheck.TObject(
+					[]typecheck.ObjectField{
+						{Name: "region", Type: typecheck.TString()},
+						{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					}))),
 				"secret-binary": typecheck.TOptional(typecheck.TString()),
 				"secret-string": typecheck.TOptional(typecheck.TString()),
-				"tags":          typecheck.TMap(typecheck.TString()),
+				"tags":          typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 			},
 			Outputs: map[string]typecheck.Type{
 				"arn": typecheck.TString(),
@@ -103,25 +104,13 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 						"input.recovery-window-in-days <= 30)))",
 					Message: "recovery-window-in-days must be 0 or between 7 and 30",
 				},
-				{
-					Kind: "predicate",
-					When: "true",
-					Require: "((@each.value.region != null) && " +
-						"(@core.length(@each.value.region) >= 1))",
-					Message: "a replica requires a region",
-					ForEach: "input.replica",
-				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.replica", Optional: true},
-				{Field: "input.tags", Optional: true},
 			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

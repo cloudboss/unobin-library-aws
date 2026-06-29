@@ -149,7 +149,7 @@ func TestS3Schemas(t *testing.T) {
 					{Name: "ignore-public-acls", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "restrict-public-buckets", Type: typecheck.TBoolean(), Optional: true},
 				})),
-				"tags": typecheck.TMap(typecheck.TString()),
+				"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"versioning": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "status", Type: typecheck.TString()},
 					{Name: "mfa-delete", Type: typecheck.TString(), Optional: true},
@@ -315,10 +315,8 @@ func TestS3Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "((@each.value.allowed-methods != null) && " +
-						"(@core.length(@each.value.allowed-methods) >= 1)) && " +
-						"((@each.value.allowed-origins != null) && " +
-						"(@core.length(@each.value.allowed-origins) >= 1))",
+					Require: "(@core.length(@each.value.allowed-methods) >= 1) && " +
+						"(@core.length(@each.value.allowed-origins) >= 1)",
 					Message: "a cors rule requires allowed-methods and allowed-origins",
 					ForEach: "input.cors.rules",
 				},
@@ -343,9 +341,10 @@ func TestS3Schemas(t *testing.T) {
 				{
 					Kind: "predicate",
 					When: "true",
-					Require: "((@each.value.expiration != null) || (@each.value.transitions != null) || " +
+					Require: "((@each.value.expiration != null) || " +
+						"(@core.length(@each.value.transitions) >= 1) || " +
 						"(@each.value.noncurrent-version-expiration != null) || " +
-						"(@each.value.noncurrent-version-transitions != null) || " +
+						"(@core.length(@each.value.noncurrent-version-transitions) >= 1) || " +
 						"(@each.value.abort-incomplete-multipart-upload != null))",
 					Message: "a lifecycle rule needs at least one action",
 					ForEach: "input.lifecycle.rules",
@@ -465,35 +464,32 @@ func TestS3Schemas(t *testing.T) {
 					Message: "partition-date-source must be EventTime or DeliveryTime",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.tags", Optional: true},
-			},
 		},
 		"s3-bucket-notification": {
 			Inputs: map[string]typecheck.Type{
 				"bucket":      typecheck.TString(),
 				"eventbridge": typecheck.TOptional(typecheck.TBoolean()),
-				"lambda-function": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"lambda-function": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "id", Type: typecheck.TString(), Optional: true},
 					{Name: "lambda-function-arn", Type: typecheck.TString(), Optional: true},
 					{Name: "events", Type: typecheck.TList(typecheck.TString())},
 					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
 					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
-				})),
-				"queue": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				}))),
+				"queue": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "id", Type: typecheck.TString(), Optional: true},
 					{Name: "queue-arn", Type: typecheck.TString()},
 					{Name: "events", Type: typecheck.TList(typecheck.TString())},
 					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
 					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
-				})),
-				"topic": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				}))),
+				"topic": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "id", Type: typecheck.TString(), Optional: true},
 					{Name: "topic-arn", Type: typecheck.TString()},
 					{Name: "events", Type: typecheck.TList(typecheck.TString())},
 					{Name: "filter-prefix", Type: typecheck.TString(), Optional: true},
 					{Name: "filter-suffix", Type: typecheck.TString(), Optional: true},
-				})),
+				}))),
 			},
 			Outputs: map[string]typecheck.Type{
 				"bucket":      typecheck.TString(),
@@ -523,11 +519,6 @@ func TestS3Schemas(t *testing.T) {
 						{Name: "filter-suffix", Type: typecheck.TString()},
 					})),
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.lambda-function", Optional: true},
-				{Field: "input.queue", Optional: true},
-				{Field: "input.topic", Optional: true},
-			},
 		},
 		"s3-bucket-policy": {
 			Inputs: map[string]typecheck.Type{
@@ -552,13 +543,13 @@ func TestS3Schemas(t *testing.T) {
 				"content-language":              typecheck.TOptional(typecheck.TString()),
 				"content-type":                  typecheck.TOptional(typecheck.TString()),
 				"kms-key-id":                    typecheck.TOptional(typecheck.TString()),
-				"metadata":                      typecheck.TMap(typecheck.TString()),
+				"metadata":                      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"object-lock-legal-hold-status": typecheck.TOptional(typecheck.TString()),
 				"object-lock-mode":              typecheck.TOptional(typecheck.TString()),
 				"object-lock-retain-until-date": typecheck.TOptional(typecheck.TString()),
 				"server-side-encryption":        typecheck.TOptional(typecheck.TString()),
 				"storage-class":                 typecheck.TOptional(typecheck.TString()),
-				"tags":                          typecheck.TMap(typecheck.TString()),
+				"tags":                          typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"website-redirect":              typecheck.TOptional(typecheck.TString()),
 				"purge-on-destroy":              typecheck.TOptional(typecheck.TBoolean()),
 			},
@@ -645,17 +636,13 @@ func TestS3Schemas(t *testing.T) {
 					Message: "object-lock-legal-hold-status must be ON or OFF",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.metadata", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 	}
 
 	for key, want := range cases {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 }

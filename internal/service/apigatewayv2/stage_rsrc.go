@@ -11,10 +11,10 @@ import (
 	apigatewayv2 "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	apigatewayv2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
 // Stage manages a stage of an API Gateway v2 API: a named deployment of the
@@ -57,14 +57,14 @@ type Stage struct {
 	// routes, one entry per route key. Route keys must be unique. An
 	// entry may name a route key with no matching route, such as
 	// $disconnect on a WebSocket API.
-	RouteSettings []StageRouteSettings `ub:"route-settings"`
+	RouteSettings *[]StageRouteSettings `ub:"route-settings"`
 	// StageVariables are name-value pairs available to integrations.
 	// Values may use the characters [A-Za-z0-9-._~:/?#&=,] (AWS enforces
 	// the form). An empty value is not representable, because the API
 	// reads an empty string as an instruction to remove the variable.
-	StageVariables map[string]string `ub:"stage-variables"`
+	StageVariables *map[string]string `ub:"stage-variables"`
 	// Tags are the stage's tags.
-	Tags map[string]string `ub:"tags"`
+	Tags *map[string]string `ub:"tags"`
 }
 
 // StageOutput holds the stage's identity and the values composed for it.
@@ -89,15 +89,6 @@ func (r *Stage) SchemaVersion() int { return 1 }
 // stage.
 func (r *Stage) ReplaceFields() []string {
 	return []string{"api-id", "name"}
-}
-
-// Defaults marks the collection inputs a stage may omit.
-func (r Stage) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.RouteSettings),
-		defaults.Optional(r.StageVariables),
-		defaults.Optional(r.Tags),
-	}
 }
 
 // Constraints declares the rules on a stage's inputs. With auto-deploy
@@ -171,18 +162,18 @@ func (r *Stage) Create(ctx context.Context, cfg *awsCfg) (*StageOutput, error) {
 	if r.DefaultRouteSettings != nil {
 		in.DefaultRouteSettings = r.DefaultRouteSettings.expand(websocket)
 	}
-	if len(r.RouteSettings) > 0 {
-		routeSettings, err := stageRouteSettingsMap(r.RouteSettings, websocket)
+	if len(ptr.Value(r.RouteSettings)) > 0 {
+		routeSettings, err := stageRouteSettingsMap(ptr.Value(r.RouteSettings), websocket)
 		if err != nil {
 			return nil, err
 		}
 		in.RouteSettings = routeSettings
 	}
-	if len(r.StageVariables) > 0 {
-		in.StageVariables = r.StageVariables
+	if len(ptr.Value(r.StageVariables)) > 0 {
+		in.StageVariables = ptr.Value(r.StageVariables)
 	}
-	if len(r.Tags) > 0 {
-		in.Tags = r.Tags
+	if len(ptr.Value(r.Tags)) > 0 {
+		in.Tags = ptr.Value(r.Tags)
 	}
 	var resp *apigatewayv2.CreateStageOutput
 	err = withConflictRetry(ctx, func(ctx context.Context) error {
@@ -252,10 +243,10 @@ func (r *Stage) Update(
 			return nil, err
 		}
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		arn := stageArn(client.Options().Region, apiID, name)
 		err := withConflictRetry(ctx, func(ctx context.Context) error {
-			return syncResourceTags(ctx, client, arn, r.Tags)
+			return syncResourceTags(ctx, client, arn, ptr.Value(r.Tags))
 		})
 		if err != nil {
 			return nil, err
@@ -274,7 +265,7 @@ func (r *Stage) settingsChanged(prior Stage) bool {
 		runtime.Changed(prior.DeploymentId, r.DeploymentId) ||
 		runtime.Changed(prior.Description, r.Description) ||
 		runtime.Changed(prior.RouteSettings, r.RouteSettings) ||
-		runtime.Changed(prior.StageVariables, r.StageVariables)
+		runtime.Changed(ptr.Value(prior.StageVariables), ptr.Value(r.StageVariables))
 }
 
 // updateStage reconciles the changed UpdateStage members. The API is read
@@ -300,8 +291,8 @@ func (r *Stage) updateStage(
 	websocket := api.ProtocolType == apigatewayv2types.ProtocolTypeWebsocket
 	routeSettingsChanged := runtime.Changed(prior.RouteSettings, r.RouteSettings)
 	var desiredRouteSettings map[string]apigatewayv2types.RouteSettings
-	if routeSettingsChanged && len(r.RouteSettings) > 0 {
-		desiredRouteSettings, err = stageRouteSettingsMap(r.RouteSettings, websocket)
+	if routeSettingsChanged && len(ptr.Value(r.RouteSettings)) > 0 {
+		desiredRouteSettings, err = stageRouteSettingsMap(ptr.Value(r.RouteSettings), websocket)
 		if err != nil {
 			return err
 		}
@@ -314,7 +305,7 @@ func (r *Stage) updateStage(
 	}
 	if routeSettingsChanged {
 		err := stageDeleteRouteSettings(ctx, client, apiID, name,
-			prior.RouteSettings, r.RouteSettings)
+			ptr.Value(prior.RouteSettings), ptr.Value(r.RouteSettings))
 		if err != nil {
 			return err
 		}
@@ -357,8 +348,8 @@ func (r *Stage) updateStage(
 		in.RouteSettings = desiredRouteSettings
 		dirty = true
 	}
-	if runtime.Changed(prior.StageVariables, r.StageVariables) {
-		variables := stageVariablesPatch(prior.StageVariables, r.StageVariables)
+	if runtime.Changed(ptr.Value(prior.StageVariables), ptr.Value(r.StageVariables)) {
+		variables := stageVariablesPatch(ptr.Value(prior.StageVariables), ptr.Value(r.StageVariables))
 		if len(variables) > 0 {
 			in.StageVariables = variables
 			dirty = true

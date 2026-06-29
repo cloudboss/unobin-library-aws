@@ -12,7 +12,6 @@ import (
 	lambda "github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
@@ -65,34 +64,34 @@ const (
 // Logging configuration is not modeled, matching the CloudFormation resource the
 // investigation covered.
 type EventSourceMapping struct {
-	FunctionName                        string                                        `ub:"function-name"`
-	Enabled                             *bool                                         `ub:"enabled"`
-	EventSourceArn                      *string                                       `ub:"event-source-arn"`
-	BatchSize                           *int64                                        `ub:"batch-size"`
-	BisectBatchOnFunctionError          *bool                                         `ub:"bisect-batch-on-function-error"`
-	MaximumBatchingWindowInSeconds      *int64                                        `ub:"maximum-batching-window-in-seconds"`
-	MaximumRecordAgeInSeconds           *int64                                        `ub:"maximum-record-age-in-seconds"`
-	MaximumRetryAttempts                *int64                                        `ub:"maximum-retry-attempts"`
-	ParallelizationFactor               *int64                                        `ub:"parallelization-factor"`
-	TumblingWindowInSeconds             *int64                                        `ub:"tumbling-window-in-seconds"`
-	KMSKeyArn                           *string                                       `ub:"kms-key-arn"`
-	StartingPosition                    *string                                       `ub:"starting-position"`
-	StartingPositionTimestamp           *string                                       `ub:"starting-position-timestamp"`
-	FunctionResponseTypes               []string                                      `ub:"function-response-types"`
-	Queues                              []string                                      `ub:"queues"`
-	Topics                              []string                                      `ub:"topics"`
-	FilterCriteria                      *EventSourceMappingFilterCriteria             `ub:"filter-criteria"`
-	DestinationConfig                   *EventSourceMappingDestinationConfig          `ub:"destination-config"`
-	ScalingConfig                       *EventSourceMappingScalingConfig              `ub:"scaling-config"`
-	MetricsConfig                       *EventSourceMappingMetricsConfig              `ub:"metrics-config"`
-	ProvisionedPollerConfig             *EventSourceMappingProvisionedPollerConfig    `ub:"provisioned-poller-config"`
-	DocumentDBEventSourceConfig         *EventSourceMappingDocumentDBConfig           `ub:"document-db-event-source-config"`
-	LoggingConfig                       *EventSourceMappingLoggingConfig              `ub:"logging-config"`
-	SelfManagedEventSource              *EventSourceMappingSelfManagedEventSource     `ub:"self-managed-event-source"`
-	AmazonManagedKafkaEventSourceConfig *EventSourceMappingAmazonManagedKafka         `ub:"amazon-managed-kafka-event-source-config"`
-	SelfManagedKafkaEventSourceConfig   *EventSourceMappingSelfManagedKafka           `ub:"self-managed-kafka-event-source-config"`
-	SourceAccessConfigurations          []EventSourceMappingSourceAccessConfiguration `ub:"source-access-configurations"`
-	Tags                                map[string]string                             `ub:"tags"`
+	FunctionName                        string                                         `ub:"function-name"`
+	Enabled                             *bool                                          `ub:"enabled"`
+	EventSourceArn                      *string                                        `ub:"event-source-arn"`
+	BatchSize                           *int64                                         `ub:"batch-size"`
+	BisectBatchOnFunctionError          *bool                                          `ub:"bisect-batch-on-function-error"`
+	MaximumBatchingWindowInSeconds      *int64                                         `ub:"maximum-batching-window-in-seconds"`
+	MaximumRecordAgeInSeconds           *int64                                         `ub:"maximum-record-age-in-seconds"`
+	MaximumRetryAttempts                *int64                                         `ub:"maximum-retry-attempts"`
+	ParallelizationFactor               *int64                                         `ub:"parallelization-factor"`
+	TumblingWindowInSeconds             *int64                                         `ub:"tumbling-window-in-seconds"`
+	KMSKeyArn                           *string                                        `ub:"kms-key-arn"`
+	StartingPosition                    *string                                        `ub:"starting-position"`
+	StartingPositionTimestamp           *string                                        `ub:"starting-position-timestamp"`
+	FunctionResponseTypes               *[]string                                      `ub:"function-response-types"`
+	Queues                              *[]string                                      `ub:"queues"`
+	Topics                              *[]string                                      `ub:"topics"`
+	FilterCriteria                      *EventSourceMappingFilterCriteria              `ub:"filter-criteria"`
+	DestinationConfig                   *EventSourceMappingDestinationConfig           `ub:"destination-config"`
+	ScalingConfig                       *EventSourceMappingScalingConfig               `ub:"scaling-config"`
+	MetricsConfig                       *EventSourceMappingMetricsConfig               `ub:"metrics-config"`
+	ProvisionedPollerConfig             *EventSourceMappingProvisionedPollerConfig     `ub:"provisioned-poller-config"`
+	DocumentDBEventSourceConfig         *EventSourceMappingDocumentDBConfig            `ub:"document-db-event-source-config"`
+	LoggingConfig                       *EventSourceMappingLoggingConfig               `ub:"logging-config"`
+	SelfManagedEventSource              *EventSourceMappingSelfManagedEventSource      `ub:"self-managed-event-source"`
+	AmazonManagedKafkaEventSourceConfig *EventSourceMappingAmazonManagedKafka          `ub:"amazon-managed-kafka-event-source-config"`
+	SelfManagedKafkaEventSourceConfig   *EventSourceMappingSelfManagedKafka            `ub:"self-managed-kafka-event-source-config"`
+	SourceAccessConfigurations          *[]EventSourceMappingSourceAccessConfiguration `ub:"source-access-configurations"`
+	Tags                                *map[string]string                             `ub:"tags"`
 }
 
 // EventSourceMappingOutput holds the values Lambda computes for a mapping. Uuid
@@ -129,19 +128,6 @@ func (r *EventSourceMapping) ReplaceFields() []string {
 		"starting-position-timestamp",
 		"queues",
 		"topics",
-	}
-}
-
-// Defaults marks the bare collection inputs a mapping may omit. The optional
-// nested collections inside the config blocks are reached through pointer
-// blocks, which is what makes them omittable to the type checker.
-func (r EventSourceMapping) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.FunctionResponseTypes),
-		defaults.Optional(r.Queues),
-		defaults.Optional(r.Topics),
-		defaults.Optional(r.SourceAccessConfigurations),
-		defaults.Optional(r.Tags),
 	}
 }
 
@@ -306,7 +292,7 @@ func (r *EventSourceMapping) Create(
 	// created. When the tagged create fails for that reason, create the mapping
 	// without tags; there is no separate tag call here, matching how the mapping
 	// sends tags only on its create.
-	if err != nil && len(r.Tags) > 0 && partition.UnsupportedOperation(region(client), err) {
+	if err != nil && len(ptr.Value(r.Tags)) > 0 && partition.UnsupportedOperation(region(client), err) {
 		in.Tags = nil
 		uuid, err = r.create(ctx, client, in)
 	}
@@ -427,8 +413,8 @@ func (r *EventSourceMapping) createInput() (*lambda.CreateEventSourceMappingInpu
 		ParallelizationFactor:               ptr.Int32(r.ParallelizationFactor),
 		TumblingWindowInSeconds:             ptr.Int32(r.TumblingWindowInSeconds),
 		KMSKeyArn:                           r.KMSKeyArn,
-		Queues:                              r.Queues,
-		Topics:                              r.Topics,
+		Queues:                              ptr.Value(r.Queues),
+		Topics:                              ptr.Value(r.Topics),
 		FilterCriteria:                      r.FilterCriteria.to(),
 		DestinationConfig:                   r.DestinationConfig.to(),
 		ScalingConfig:                       r.ScalingConfig.to(),
@@ -439,9 +425,9 @@ func (r *EventSourceMapping) createInput() (*lambda.CreateEventSourceMappingInpu
 		SelfManagedEventSource:              r.SelfManagedEventSource.to(),
 		AmazonManagedKafkaEventSourceConfig: amk,
 		SelfManagedKafkaEventSourceConfig:   smk,
-		FunctionResponseTypes:               functionResponseTypes(r.FunctionResponseTypes),
-		SourceAccessConfigurations:          sourceAccessConfigurations(r.SourceAccessConfigurations),
-		Tags:                                r.Tags,
+		FunctionResponseTypes:               functionResponseTypes(ptr.Value(r.FunctionResponseTypes)),
+		SourceAccessConfigurations:          sourceAccessConfigurations(ptr.Value(r.SourceAccessConfigurations)),
+		Tags:                                ptr.Value(r.Tags),
 	}
 	if r.StartingPosition != nil {
 		in.StartingPosition = lambdatypes.EventSourcePosition(*r.StartingPosition)
@@ -496,7 +482,7 @@ func (r *EventSourceMapping) updateInput(
 		in.KMSKeyArn = r.KMSKeyArn
 	}
 	if runtime.Changed(prior.FunctionResponseTypes, r.FunctionResponseTypes) {
-		in.FunctionResponseTypes = functionResponseTypes(r.FunctionResponseTypes)
+		in.FunctionResponseTypes = functionResponseTypes(ptr.Value(r.FunctionResponseTypes))
 	}
 	if runtime.Changed(prior.DestinationConfig, r.DestinationConfig) {
 		in.DestinationConfig = r.DestinationConfig.to()
@@ -532,7 +518,7 @@ func (r *EventSourceMapping) updateInput(
 		}
 	}
 	if runtime.Changed(prior.SourceAccessConfigurations, r.SourceAccessConfigurations) {
-		in.SourceAccessConfigurations = sourceAccessConfigurations(r.SourceAccessConfigurations)
+		in.SourceAccessConfigurations = sourceAccessConfigurations(ptr.Value(r.SourceAccessConfigurations))
 	}
 	return in
 }

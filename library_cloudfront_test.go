@@ -97,7 +97,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 				"code-content":                 typecheck.TOptional(typecheck.TString()),
 				"code-path":                    typecheck.TOptional(typecheck.TString()),
 				"comment":                      typecheck.TOptional(typecheck.TString()),
-				"key-value-store-associations": typecheck.TList(typecheck.TString()),
+				"key-value-store-associations": typecheck.TOptional(typecheck.TList(typecheck.TString())),
 				"name":                         typecheck.TString(),
 				"publish":                      typecheck.TOptional(typecheck.TBoolean()),
 				"runtime":                      typecheck.TString(),
@@ -120,9 +120,6 @@ func TestCloudfrontSchemas(t *testing.T) {
 					Kind:   "exactly-one-of",
 					Fields: []string{"input.code-content", "input.code-path"},
 				},
-			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.key-value-store-associations", Optional: true},
 			},
 		},
 
@@ -252,8 +249,8 @@ func TestCloudfrontSchemas(t *testing.T) {
 
 		"cloudfront-distribution": {
 			Inputs: map[string]typecheck.Type{
-				"aliases": typecheck.TList(typecheck.TString()),
-				"cache-behaviors": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"aliases": typecheck.TOptional(typecheck.TList(typecheck.TString())),
+				"cache-behaviors": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "path-pattern", Type: typecheck.TString()},
 					{Name: "target-origin-id", Type: typecheck.TString()},
 					{Name: "viewer-protocol-policy", Type: typecheck.TString()},
@@ -278,14 +275,14 @@ func TestCloudfrontSchemas(t *testing.T) {
 							{Name: "include-body", Type: typecheck.TBoolean(), Optional: true},
 						})),
 					},
-				})),
+				}))),
 				"comment": typecheck.TOptional(typecheck.TString()),
-				"custom-error-responses": typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				"custom-error-responses": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "error-code", Type: typecheck.TInteger(), Optional: true},
 					{Name: "response-code", Type: typecheck.TString(), Optional: true},
 					{Name: "response-page-path", Type: typecheck.TString(), Optional: true},
 					{Name: "error-caching-min-ttl", Type: typecheck.TInteger(), Optional: true},
-				})),
+				}))),
 				"default-cache-behavior": typecheck.TObject([]typecheck.ObjectField{
 					{Name: "target-origin-id", Type: typecheck.TString()},
 					{Name: "viewer-protocol-policy", Type: typecheck.TString()},
@@ -348,7 +345,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 						{Name: "locations", Type: typecheck.TList(typecheck.TString())},
 					}), Optional: true},
 				})),
-				"tags": typecheck.TMap(typecheck.TString()),
+				"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 				"viewer-certificate": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
 					{Name: "cloudfront-default-certificate", Type: typecheck.TBoolean(), Optional: true},
 					{Name: "acm-certificate-arn", Type: typecheck.TString(), Optional: true},
@@ -451,7 +448,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 						"@each.value.viewer-protocol-policy == 'redirect-to-https')",
 					Message: "cache-behaviors viewer-protocol-policy must be " +
 						"allow-all, https-only, or redirect-to-https",
-					ForEach: "input.cache-behaviors",
+					ForEach: "input.cache-behaviors ?? []",
 				},
 				{
 					Kind: "at-most-one-of",
@@ -471,18 +468,12 @@ func TestCloudfrontSchemas(t *testing.T) {
 					ForEach: "input.origins",
 				},
 			},
-			Defaults: []lang.DefaultSpec{
-				{Field: "input.aliases", Optional: true},
-				{Field: "input.cache-behaviors", Optional: true},
-				{Field: "input.custom-error-responses", Optional: true},
-				{Field: "input.tags", Optional: true},
-			},
 		},
 	}
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assert.Equal(t, want, schema.Resources[key])
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
 		})
 	}
 
@@ -554,7 +545,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 	for key, want := range dataSources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.DataSources, key)
-			assert.Equal(t, want, schema.DataSources[key])
+			assertTypeSchemaEqual(t, want, schema.DataSources[key])
 		})
 	}
 }

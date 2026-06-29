@@ -11,10 +11,10 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
+	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
@@ -27,11 +27,11 @@ import (
 // to a new group, so the group's egress is only what the separate egress rule
 // resources declare; ingress and egress rules are managed by those resources.
 type SecurityGroup struct {
-	Name        *string           `ub:"name"`
-	NamePrefix  *string           `ub:"name-prefix"`
-	Description string            `ub:"description"`
-	VpcId       *string           `ub:"vpc-id"`
-	Tags        map[string]string `ub:"tags"`
+	Name        *string            `ub:"name"`
+	NamePrefix  *string            `ub:"name-prefix"`
+	Description string             `ub:"description"`
+	VpcId       *string            `ub:"vpc-id"`
+	Tags        *map[string]string `ub:"tags"`
 	// RevokeRulesOnDelete, when true, strips this group's own rules before the
 	// group is deleted, so the delete is not blocked by a rule that references
 	// another group. It is a delete-time switch with no presence in the cloud,
@@ -64,13 +64,6 @@ func (r *SecurityGroup) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a security group may omit.
-func (r SecurityGroup) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the one cross-field rule on a security group's inputs: a
 // caller fixes the group name with an exact name or a name prefix, not both. A
 // caller that gives neither gets a generated name.
@@ -93,7 +86,7 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg *awsCfg) (*SecurityGroup
 		GroupName:         aws.String(name),
 		Description:       aws.String(r.Description),
 		VpcId:             r.VpcId,
-		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSecurityGroup, r.Tags),
+		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSecurityGroup, ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateSecurityGroup(ctx, in)
 	// Some partitions, such as the ISO partitions, cannot tag a group as it is
@@ -110,8 +103,8 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg *awsCfg) (*SecurityGroup
 		return nil, fmt.Errorf("create security group: %w", err)
 	}
 	id := aws.ToString(resp.GroupId)
-	if taggedSeparately && len(r.Tags) > 0 {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if taggedSeparately && len(ptr.Value(r.Tags)) > 0 {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}
@@ -204,8 +197,8 @@ func (r *SecurityGroup) Update(
 	if err != nil {
 		return nil, err
 	}
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, prior.Outputs.Id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, prior.Outputs.Id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

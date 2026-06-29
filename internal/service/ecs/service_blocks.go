@@ -113,7 +113,7 @@ func (n *ServiceNetworkConfiguration) sdk() *ecstypes.NetworkConfiguration {
 	}
 	awsvpc := &ecstypes.AwsVpcConfiguration{
 		Subnets:        n.Subnets,
-		SecurityGroups: derefStrings(n.SecurityGroups),
+		SecurityGroups: ptr.Value(n.SecurityGroups),
 	}
 	if n.AssignPublicIp != nil {
 		awsvpc.AssignPublicIp = ecstypes.AssignPublicIp(*n.AssignPublicIp)

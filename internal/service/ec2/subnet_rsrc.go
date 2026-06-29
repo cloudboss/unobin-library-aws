@@ -9,7 +9,6 @@ import (
 	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
-	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
@@ -28,18 +27,18 @@ import (
 // apply set. EC2 has no reset call, so restoring a default after an apply set
 // the option means setting the default explicitly.
 type Subnet struct {
-	VpcId              string            `ub:"vpc-id"`
-	AvailabilityZone   *string           `ub:"availability-zone"`
-	AvailabilityZoneId *string           `ub:"availability-zone-id"`
-	CidrBlock          *string           `ub:"cidr-block"`
-	Ipv4IpamPoolId     *string           `ub:"ipv4-ipam-pool-id"`
-	Ipv4NetmaskLength  *int64            `ub:"ipv4-netmask-length"`
-	Ipv6CidrBlock      *string           `ub:"ipv6-cidr-block"`
-	Ipv6IpamPoolId     *string           `ub:"ipv6-ipam-pool-id"`
-	Ipv6Native         *bool             `ub:"ipv6-native"`
-	Ipv6NetmaskLength  *int64            `ub:"ipv6-netmask-length"`
-	OutpostArn         *string           `ub:"outpost-arn"`
-	Tags               map[string]string `ub:"tags"`
+	VpcId              string             `ub:"vpc-id"`
+	AvailabilityZone   *string            `ub:"availability-zone"`
+	AvailabilityZoneId *string            `ub:"availability-zone-id"`
+	CidrBlock          *string            `ub:"cidr-block"`
+	Ipv4IpamPoolId     *string            `ub:"ipv4-ipam-pool-id"`
+	Ipv4NetmaskLength  *int64             `ub:"ipv4-netmask-length"`
+	Ipv6CidrBlock      *string            `ub:"ipv6-cidr-block"`
+	Ipv6IpamPoolId     *string            `ub:"ipv6-ipam-pool-id"`
+	Ipv6Native         *bool              `ub:"ipv6-native"`
+	Ipv6NetmaskLength  *int64             `ub:"ipv6-netmask-length"`
+	OutpostArn         *string            `ub:"outpost-arn"`
+	Tags               *map[string]string `ub:"tags"`
 	// The remaining fields each back a ModifySubnetAttribute call after create.
 	AssignIpv6AddressOnCreation *bool  `ub:"assign-ipv6-address-on-creation"`
 	EnableDns64                 *bool  `ub:"enable-dns64"`
@@ -96,13 +95,6 @@ func (r *Subnet) ReplaceFields() []string {
 	}
 }
 
-// Defaults marks the collection inputs a subnet may omit.
-func (r Subnet) Defaults() []defaults.Default {
-	return []defaults.Default{
-		defaults.Optional(r.Tags),
-	}
-}
-
 // Constraints declares the cross-field rules EC2 enforces on a subnet's inputs.
 // A subnet's zone is named by name or by id, never both. The IPv4 range comes
 // from an explicit CIDR block, an IPAM pool, or an Outpost's customer-owned
@@ -147,7 +139,7 @@ func (r *Subnet) Create(ctx context.Context, cfg *awsCfg) (*SubnetOutput, error)
 		Ipv6Native:         r.Ipv6Native,
 		Ipv6NetmaskLength:  ptr.Int32(r.Ipv6NetmaskLength),
 		OutpostArn:         r.OutpostArn,
-		TagSpecifications:  tagSpecifications(ec2types.ResourceTypeSubnet, r.Tags),
+		TagSpecifications:  tagSpecifications(ec2types.ResourceTypeSubnet, ptr.Value(r.Tags)),
 	}
 	resp, err := client.CreateSubnet(ctx, in)
 	if err != nil {
@@ -253,8 +245,8 @@ func (r *Subnet) Update(
 	}
 	// ModifySubnetAttribute does not touch tags, so reconcile them as a set
 	// whenever they changed, the same as the other EC2 resources.
-	if runtime.Changed(prior.Inputs.Tags, r.Tags) {
-		if err := syncTags(ctx, client, id, r.Tags); err != nil {
+	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
+		if err := syncTags(ctx, client, id, ptr.Value(r.Tags)); err != nil {
 			return nil, err
 		}
 	}

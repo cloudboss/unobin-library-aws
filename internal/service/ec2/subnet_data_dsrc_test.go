@@ -119,12 +119,12 @@ func TestSubnetDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 		VpcId:              aws.String("vpc-0123456789abcdef0"),
 		CidrBlock:          aws.String("10.62.1.0/24"),
 		Ipv6CidrBlock:      aws.String("2600:1f18:abcd:ef00::/64"),
-		Tags:               map[string]string{"unobin": "ec2-subnet-data"},
-		Filter: []SubnetDataFilter{
+		Tags:               new(map[string]string{"unobin": "ec2-subnet-data"}),
+		Filter: new([]SubnetDataFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
-		},
+		}),
 	}
 	out, err := r.Read(context.Background(), cfg)
 	require.NoError(t, err)

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/cloudboss/unobin/pkg/awscfg"
-	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 )
 
 // fakeIAM is an in-process stand-in for the IAM Query API, the same design as
@@ -94,8 +93,10 @@ func (f *fakeIAM) configuration() *awscfg.Configuration {
 	f.t.Setenv("AWS_PROFILE", "")
 	f.t.Setenv("AWS_ACCESS_KEY_ID", "AKIAFAKEFAKEFAKEFAKE")
 	f.t.Setenv("AWS_SECRET_ACCESS_KEY", "fake-secret-key")
+	region := "us-east-1"
+	endpointURL := f.server.URL
 	return &awscfg.Configuration{
-		Region:      &cfg.String{Value: "us-east-1"},
-		EndpointURL: &cfg.String{Value: f.server.URL},
+		Region:      &region,
+		EndpointURL: &endpointURL,
 	}
 }

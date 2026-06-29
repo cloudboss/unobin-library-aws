@@ -22,7 +22,7 @@ func TestAuthorizerCreateInputAppliesHTTPREQUESTTTLDefault(t *testing.T) {
 	r := Authorizer{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
-		IdentitySources: []string{"$request.header.Auth", "", "$request.header.Auth"},
+		IdentitySources: new([]string{"$request.header.Auth", "", "$request.header.Auth"}),
 		Name:            "auth",
 	}
 
@@ -52,7 +52,7 @@ func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testin
 			resource: Authorizer{
 				ApiId:           "api-123",
 				AuthorizerType:  "REQUEST",
-				IdentitySources: []string{"route.request.header.Auth"},
+				IdentitySources: new([]string{"route.request.header.Auth"}),
 				Name:            "auth",
 			},
 			protocol: apigatewayv2types.ProtocolTypeWebsocket,
@@ -62,7 +62,7 @@ func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testin
 			resource: Authorizer{
 				ApiId:           "api-123",
 				AuthorizerType:  "JWT",
-				IdentitySources: []string{"$request.header.Authorization"},
+				IdentitySources: new([]string{"$request.header.Authorization"}),
 				Name:            "auth",
 			},
 			protocol: apigatewayv2types.ProtocolTypeHttp,
@@ -83,7 +83,7 @@ func TestAuthorizerCreateInputSendsExplicitZeroTTL(t *testing.T) {
 		ApiId:                        "api-123",
 		AuthorizerType:               "REQUEST",
 		AuthorizerResultTtlInSeconds: aws.Int64(0),
-		IdentitySources:              []string{"$request.header.Auth"},
+		IdentitySources:              new([]string{"$request.header.Auth"}),
 		Name:                         "auth",
 	}
 
@@ -129,7 +129,7 @@ func TestAuthorizerUpdateInputUnchanged(t *testing.T) {
 	inputs := Authorizer{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
-		IdentitySources: []string{"b", "a"},
+		IdentitySources: new([]string{"b", "a"}),
 		Name:            "auth",
 		JwtConfiguration: &AuthorizerJwtConfiguration{
 			Audience: stringSlicePtr("z", "a"),
@@ -139,7 +139,7 @@ func TestAuthorizerUpdateInputUnchanged(t *testing.T) {
 	r := Authorizer{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
-		IdentitySources: []string{"a", "b", "", "a"},
+		IdentitySources: new([]string{"a", "b", "", "a"}),
 		Name:            "auth",
 		JwtConfiguration: &AuthorizerJwtConfiguration{
 			Audience: stringSlicePtr("a", "z", "z", ""),
@@ -169,7 +169,7 @@ func TestAuthorizerUpdateInputReconcilesExplicitTTLDifference(t *testing.T) {
 				ApiId:                        "api-123",
 				AuthorizerType:               "REQUEST",
 				AuthorizerResultTtlInSeconds: aws.Int64(tt.configured),
-				IdentitySources:              []string{"$request.header.Auth"},
+				IdentitySources:              new([]string{"$request.header.Auth"}),
 				Name:                         "auth",
 			}
 			r := inputs
@@ -193,7 +193,7 @@ func TestAuthorizerUpdateInputIgnoresUnconfiguredTTLDifference(t *testing.T) {
 	inputs := Authorizer{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
-		IdentitySources: []string{"$request.header.Auth"},
+		IdentitySources: new([]string{"$request.header.Auth"}),
 		Name:            "auth",
 	}
 	prior := authorizerPrior(inputs)
@@ -218,7 +218,7 @@ func TestAuthorizerUpdateInputClearsFields(t *testing.T) {
 		AuthorizerResultTtlInSeconds:   aws.Int64(300),
 		AuthorizerUri:                  aws.String("arn:aws:apigateway:us-east-1:lambda:path/f"),
 		EnableSimpleResponses:          aws.Bool(true),
-		IdentitySources:                []string{"$request.header.Auth"},
+		IdentitySources:                new([]string{"$request.header.Auth"}),
 		Name:                           "auth",
 		JwtConfiguration: &AuthorizerJwtConfiguration{
 			Audience: stringSlicePtr("api"),
