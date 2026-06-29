@@ -3,7 +3,10 @@ package lambdamicrovms
 import (
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 	lambdamicrovmstypes "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms/types"
 )
 
@@ -299,4 +302,334 @@ func int32FromInt64(name string, in int64) (int32, error) {
 
 func int32Ptr(in int32) *int32 {
 	return &in
+}
+
+func codeArtifactFromSDK(in lambdamicrovmstypes.CodeArtifact) (CodeArtifact, error) {
+	switch v := in.(type) {
+	case nil:
+		return CodeArtifact{}, nil
+	case *lambdamicrovmstypes.CodeArtifactMemberUri:
+		return CodeArtifact{Uri: v.Value}, nil
+	case *lambdamicrovmstypes.UnknownUnionMember:
+		return CodeArtifact{}, fmt.Errorf("unknown code-artifact union member %q", v.Tag)
+	default:
+		return CodeArtifact{}, fmt.Errorf("unknown code-artifact union type %T", in)
+	}
+}
+
+func cpuConfigurationsFromSDK(
+	in []lambdamicrovmstypes.CpuConfiguration,
+) []CpuConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := make([]CpuConfiguration, 0, len(in))
+	for _, cfg := range in {
+		out = append(out, CpuConfiguration{Architecture: string(cfg.Architecture)})
+	}
+	return out
+}
+
+func resourcesFromSDK(in []lambdamicrovmstypes.Resources) []Resources {
+	if in == nil {
+		return nil
+	}
+	out := make([]Resources, 0, len(in))
+	for _, resource := range in {
+		out = append(out, Resources{
+			MinimumMemoryInMiB: int64(aws.ToInt32(resource.MinimumMemoryInMiB)),
+		})
+	}
+	return out
+}
+
+func hooksFromSDK(in *lambdamicrovmstypes.Hooks) *Hooks {
+	if in == nil {
+		return nil
+	}
+	return &Hooks{
+		Port:              int64PtrFromInt32(in.Port),
+		MicrovmHooks:      microvmHooksFromSDK(in.MicrovmHooks),
+		MicrovmImageHooks: microvmImageHooksFromSDK(in.MicrovmImageHooks),
+	}
+}
+
+func microvmHooksFromSDK(in *lambdamicrovmstypes.MicrovmHooks) *MicrovmHooks {
+	if in == nil {
+		return nil
+	}
+	return &MicrovmHooks{
+		Run:                       hookStateString(in.Run),
+		RunTimeoutInSeconds:       int64PtrFromInt32(in.RunTimeoutInSeconds),
+		Resume:                    hookStateString(in.Resume),
+		ResumeTimeoutInSeconds:    int64PtrFromInt32(in.ResumeTimeoutInSeconds),
+		Suspend:                   hookStateString(in.Suspend),
+		SuspendTimeoutInSeconds:   int64PtrFromInt32(in.SuspendTimeoutInSeconds),
+		Terminate:                 hookStateString(in.Terminate),
+		TerminateTimeoutInSeconds: int64PtrFromInt32(in.TerminateTimeoutInSeconds),
+	}
+}
+
+func microvmImageHooksFromSDK(
+	in *lambdamicrovmstypes.MicrovmImageHooks,
+) *MicrovmImageHooks {
+	if in == nil {
+		return nil
+	}
+	return &MicrovmImageHooks{
+		Ready:                    hookStateString(in.Ready),
+		ReadyTimeoutInSeconds:    int64PtrFromInt32(in.ReadyTimeoutInSeconds),
+		Validate:                 hookStateString(in.Validate),
+		ValidateTimeoutInSeconds: int64PtrFromInt32(in.ValidateTimeoutInSeconds),
+	}
+}
+
+func idlePolicyFromSDK(in *lambdamicrovmstypes.IdlePolicy) *IdlePolicy {
+	if in == nil {
+		return nil
+	}
+	return &IdlePolicy{
+		AutoResumeEnabled:        aws.ToBool(in.AutoResumeEnabled),
+		MaxIdleDurationSeconds:   int64(aws.ToInt32(in.MaxIdleDurationSeconds)),
+		SuspendedDurationSeconds: int64(aws.ToInt32(in.SuspendedDurationSeconds)),
+	}
+}
+
+func managedMicrovmImageSummaryFromSDK(
+	in lambdamicrovmstypes.ManagedMicrovmImageSummary,
+) ManagedMicrovmImageSummary {
+	return ManagedMicrovmImageSummary{
+		ImageArn:  aws.ToString(in.ImageArn),
+		CreatedAt: formatTime(in.CreatedAt),
+		UpdatedAt: formatTime(in.UpdatedAt),
+	}
+}
+
+func managedMicrovmImageVersionFromSDK(
+	in lambdamicrovmstypes.ManagedMicrovmImageVersion,
+) ManagedMicrovmImageVersion {
+	return ManagedMicrovmImageVersion{
+		ImageArn:     aws.ToString(in.ImageArn),
+		ImageVersion: aws.ToString(in.ImageVersion),
+		CreatedAt:    formatTime(in.CreatedAt),
+		UpdatedAt:    formatTime(in.UpdatedAt),
+	}
+}
+
+func microvmImageSummaryFromSDK(
+	in lambdamicrovmstypes.MicrovmImageSummary,
+) MicrovmImageSummary {
+	return MicrovmImageSummary{
+		ImageArn:                 aws.ToString(in.ImageArn),
+		Name:                     aws.ToString(in.Name),
+		State:                    string(in.State),
+		CreatedAt:                formatTime(in.CreatedAt),
+		LatestActiveImageVersion: aws.ToString(in.LatestActiveImageVersion),
+		LatestFailedImageVersion: aws.ToString(in.LatestFailedImageVersion),
+	}
+}
+
+func microvmImageOutputFromGet(
+	in *awslambdamicrovms.GetMicrovmImageOutput,
+) *MicrovmImageOutput {
+	return &MicrovmImageOutput{
+		ImageArn:                 aws.ToString(in.ImageArn),
+		Name:                     aws.ToString(in.Name),
+		State:                    string(in.State),
+		CreatedAt:                formatTime(in.CreatedAt),
+		UpdatedAt:                formatTime(in.UpdatedAt),
+		LatestActiveImageVersion: aws.ToString(in.LatestActiveImageVersion),
+		LatestFailedImageVersion: aws.ToString(in.LatestFailedImageVersion),
+	}
+}
+
+func microvmImageDataOutputFromGet(
+	in *awslambdamicrovms.GetMicrovmImageOutput,
+) *MicrovmImageDataOutput {
+	return &MicrovmImageDataOutput{
+		ImageArn:                 aws.ToString(in.ImageArn),
+		Name:                     aws.ToString(in.Name),
+		State:                    string(in.State),
+		CreatedAt:                formatTime(in.CreatedAt),
+		UpdatedAt:                formatTime(in.UpdatedAt),
+		LatestActiveImageVersion: aws.ToString(in.LatestActiveImageVersion),
+		LatestFailedImageVersion: aws.ToString(in.LatestFailedImageVersion),
+		Tags:                     in.Tags,
+	}
+}
+
+func microvmImageVersionOutputFromGet(
+	in *awslambdamicrovms.GetMicrovmImageVersionOutput,
+) (*MicrovmImageVersionDataOutput, error) {
+	codeArtifact, err := codeArtifactFromSDK(in.CodeArtifact)
+	if err != nil {
+		return nil, err
+	}
+	logging, err := loggingFromSDK(in.Logging)
+	if err != nil {
+		return nil, err
+	}
+	return &MicrovmImageVersionDataOutput{
+		ImageArn:                 aws.ToString(in.ImageArn),
+		ImageVersion:             aws.ToString(in.ImageVersion),
+		State:                    string(in.State),
+		Status:                   string(in.Status),
+		BaseImageArn:             aws.ToString(in.BaseImageArn),
+		BaseImageVersion:         aws.ToString(in.BaseImageVersion),
+		BuildRoleArn:             aws.ToString(in.BuildRoleArn),
+		CodeArtifact:             codeArtifact,
+		AdditionalOsCapabilities: capabilitiesFromSDK(in.AdditionalOsCapabilities),
+		CpuConfigurations:        cpuConfigurationsFromSDK(in.CpuConfigurations),
+		Description:              aws.ToString(in.Description),
+		EgressNetworkConnectors:  in.EgressNetworkConnectors,
+		EnvironmentVariables:     in.EnvironmentVariables,
+		Hooks:                    hooksFromSDK(in.Hooks),
+		Logging:                  logging,
+		Resources:                resourcesFromSDK(in.Resources),
+		StateReason:              aws.ToString(in.StateReason),
+		Tags:                     in.Tags,
+		CreatedAt:                formatTime(in.CreatedAt),
+		UpdatedAt:                formatTime(in.UpdatedAt),
+	}, nil
+}
+
+func microvmImageVersionSummaryFromSDK(
+	in lambdamicrovmstypes.MicrovmImageVersionSummary,
+) (MicrovmImageVersionSummary, error) {
+	codeArtifact, err := codeArtifactFromSDK(in.CodeArtifact)
+	if err != nil {
+		return MicrovmImageVersionSummary{}, err
+	}
+	logging, err := loggingFromSDK(in.Logging)
+	if err != nil {
+		return MicrovmImageVersionSummary{}, err
+	}
+	return MicrovmImageVersionSummary{
+		ImageArn:                 aws.ToString(in.ImageArn),
+		ImageVersion:             aws.ToString(in.ImageVersion),
+		State:                    string(in.State),
+		Status:                   string(in.Status),
+		BaseImageArn:             aws.ToString(in.BaseImageArn),
+		BaseImageVersion:         aws.ToString(in.BaseImageVersion),
+		BuildRoleArn:             aws.ToString(in.BuildRoleArn),
+		CodeArtifact:             codeArtifact,
+		AdditionalOsCapabilities: capabilitiesFromSDK(in.AdditionalOsCapabilities),
+		CpuConfigurations:        cpuConfigurationsFromSDK(in.CpuConfigurations),
+		Description:              aws.ToString(in.Description),
+		EgressNetworkConnectors:  in.EgressNetworkConnectors,
+		EnvironmentVariables:     in.EnvironmentVariables,
+		Hooks:                    hooksFromSDK(in.Hooks),
+		Logging:                  logging,
+		Resources:                resourcesFromSDK(in.Resources),
+		StateReason:              aws.ToString(in.StateReason),
+		Tags:                     in.Tags,
+		CreatedAt:                formatTime(in.CreatedAt),
+		UpdatedAt:                formatTime(in.UpdatedAt),
+	}, nil
+}
+
+func microvmImageBuildOutputFromGet(
+	in *awslambdamicrovms.GetMicrovmImageBuildOutput,
+) *MicrovmImageBuildDataOutput {
+	return &MicrovmImageBuildDataOutput{
+		ImageArn:          aws.ToString(in.ImageArn),
+		ImageVersion:      aws.ToString(in.ImageVersion),
+		BuildId:           aws.ToString(in.BuildId),
+		BuildState:        string(in.BuildState),
+		Architecture:      string(in.Architecture),
+		Chipset:           string(in.Chipset),
+		ChipsetGeneration: aws.ToString(in.ChipsetGeneration),
+		SnapshotBuild:     snapshotBuildFromSDK(in.SnapshotBuild),
+		StateReason:       aws.ToString(in.StateReason),
+		CreatedAt:         formatTime(in.CreatedAt),
+	}
+}
+
+func microvmImageBuildSummaryFromSDK(
+	in lambdamicrovmstypes.MicrovmImageBuildSummary,
+) MicrovmImageBuildSummary {
+	return MicrovmImageBuildSummary{
+		ImageArn:          aws.ToString(in.ImageArn),
+		ImageVersion:      aws.ToString(in.ImageVersion),
+		BuildId:           aws.ToString(in.BuildId),
+		BuildState:        string(in.BuildState),
+		Architecture:      string(in.Architecture),
+		Chipset:           string(in.Chipset),
+		ChipsetGeneration: aws.ToString(in.ChipsetGeneration),
+		StateReason:       aws.ToString(in.StateReason),
+		CreatedAt:         formatTime(in.CreatedAt),
+	}
+}
+
+func snapshotBuildFromSDK(in *lambdamicrovmstypes.SnapshotBuild) *SnapshotBuild {
+	if in == nil {
+		return nil
+	}
+	return &SnapshotBuild{
+		CodeInstallSizeInBytes:    aws.ToInt64(in.CodeInstallSizeInBytes),
+		DiskSnapshotSizeInBytes:   aws.ToInt64(in.DiskSnapshotSizeInBytes),
+		MemorySnapshotSizeInBytes: aws.ToInt64(in.MemorySnapshotSizeInBytes),
+	}
+}
+
+func microvmOutputFromGet(in *awslambdamicrovms.GetMicrovmOutput) *MicrovmDataOutput {
+	return &MicrovmDataOutput{
+		MicrovmId:                aws.ToString(in.MicrovmId),
+		Endpoint:                 aws.ToString(in.Endpoint),
+		ImageArn:                 aws.ToString(in.ImageArn),
+		ImageVersion:             aws.ToString(in.ImageVersion),
+		State:                    string(in.State),
+		StartedAt:                formatTime(in.StartedAt),
+		TerminatedAt:             formatTime(in.TerminatedAt),
+		MaximumDurationInSeconds: int64(aws.ToInt32(in.MaximumDurationInSeconds)),
+		ExecutionRoleArn:         aws.ToString(in.ExecutionRoleArn),
+		IngressNetworkConnectors: in.IngressNetworkConnectors,
+		EgressNetworkConnectors:  in.EgressNetworkConnectors,
+		IdlePolicy:               idlePolicyFromSDK(in.IdlePolicy),
+		StateReason:              aws.ToString(in.StateReason),
+	}
+}
+
+func microvmSummaryFromSDK(in lambdamicrovmstypes.MicrovmItem) MicrovmSummary {
+	return MicrovmSummary{
+		MicrovmId:    aws.ToString(in.MicrovmId),
+		ImageArn:     aws.ToString(in.ImageArn),
+		ImageVersion: aws.ToString(in.ImageVersion),
+		State:        string(in.State),
+		StartedAt:    formatTime(in.StartedAt),
+	}
+}
+
+func capabilitiesFromSDK(in []lambdamicrovmstypes.Capability) []string {
+	if in == nil {
+		return nil
+	}
+	out := make([]string, 0, len(in))
+	for _, value := range in {
+		out = append(out, string(value))
+	}
+	return out
+}
+
+func formatTime(in *time.Time) string {
+	if in == nil {
+		return ""
+	}
+	return in.UTC().Format(time.RFC3339)
+}
+
+func hookStateString(in lambdamicrovmstypes.HookState) *string {
+	if in == "" {
+		return nil
+	}
+	out := string(in)
+	return &out
+}
+
+func int64PtrFromInt32(in *int32) *int64 {
+	if in == nil {
+		return nil
+	}
+	out := int64(*in)
+	return &out
 }

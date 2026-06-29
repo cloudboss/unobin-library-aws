@@ -1,6 +1,12 @@
 package lambdamicrovms
 
-import "context"
+import (
+	"context"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
+)
 
 type MicrovmImageVersions struct {
 	ImageIdentifier string `ub:"image-identifier"`
@@ -10,5 +16,27 @@ func (r *MicrovmImageVersions) Read(
 	ctx context.Context,
 	cfg *awsCfg,
 ) (*MicrovmImageVersionsOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	items := []MicrovmImageVersionSummary{}
+	paginator := awslambdamicrovms.NewListMicrovmImageVersionsPaginator(client,
+		&awslambdamicrovms.ListMicrovmImageVersionsInput{
+			ImageIdentifier: aws.String(r.ImageIdentifier),
+		})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list Microvm image versions: %w", err)
+		}
+		for _, item := range page.Items {
+			converted, err := microvmImageVersionSummaryFromSDK(item)
+			if err != nil {
+				return nil, fmt.Errorf("convert Microvm image version: %w", err)
+			}
+			items = append(items, converted)
+		}
+	}
+	return &MicrovmImageVersionsOutput{Items: items}, nil
 }

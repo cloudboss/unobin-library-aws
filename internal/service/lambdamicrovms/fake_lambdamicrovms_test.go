@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -18,20 +19,22 @@ import (
 )
 
 type fakeLambdaMicrovms struct {
-	t        *testing.T
-	mu       sync.Mutex
-	calls    map[string]int
-	handlers map[string]func(n int) (int, string)
-	bodies   map[string][][]byte
-	server   *httptest.Server
+	t           *testing.T
+	mu          sync.Mutex
+	calls       map[string]int
+	handlers    map[string]func(n int) (int, string)
+	bodies      map[string][][]byte
+	queryValues map[string][]url.Values
+	server      *httptest.Server
 }
 
 func newFakeLambdaMicrovms(t *testing.T) *fakeLambdaMicrovms {
 	fake := &fakeLambdaMicrovms{
-		t:        t,
-		calls:    map[string]int{},
-		handlers: map[string]func(int) (int, string){},
-		bodies:   map[string][][]byte{},
+		t:           t,
+		calls:       map[string]int{},
+		handlers:    map[string]func(int) (int, string){},
+		bodies:      map[string][][]byte{},
+		queryValues: map[string][]url.Values{},
 	}
 	fake.server = httptest.NewServer(http.HandlerFunc(fake.serve))
 	t.Cleanup(fake.server.Close)
@@ -50,6 +53,12 @@ func (f *fakeLambdaMicrovms) sent(route string) [][]byte {
 	return append([][]byte(nil), f.bodies[route]...)
 }
 
+func (f *fakeLambdaMicrovms) queries(route string) []url.Values {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]url.Values(nil), f.queryValues[route]...)
+}
+
 func (f *fakeLambdaMicrovms) serve(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -61,6 +70,7 @@ func (f *fakeLambdaMicrovms) serve(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.calls[route]++
 	f.bodies[route] = append(f.bodies[route], body)
+	f.queryValues[route] = append(f.queryValues[route], r.URL.Query())
 	h, ok := f.handlers[route]
 	n := f.calls[route]
 	f.mu.Unlock()

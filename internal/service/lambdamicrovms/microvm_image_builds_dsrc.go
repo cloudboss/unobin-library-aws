@@ -2,7 +2,11 @@ package lambdamicrovms
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
+	lambdamicrovmstypes "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms/types"
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
@@ -29,5 +33,31 @@ func (r *MicrovmImageBuilds) Read(
 	ctx context.Context,
 	cfg *awsCfg,
 ) (*MicrovmImageBuildsOutput, error) {
-	panic("unimplemented")
+	client, err := newClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	in := &awslambdamicrovms.ListMicrovmImageBuildsInput{
+		ImageIdentifier:   aws.String(r.ImageIdentifier),
+		ImageVersion:      aws.String(r.ImageVersion),
+		ChipsetGeneration: r.ChipsetGeneration,
+	}
+	if r.Architecture != nil {
+		in.Architecture = lambdamicrovmstypes.Architecture(*r.Architecture)
+	}
+	if r.Chipset != nil {
+		in.Chipset = lambdamicrovmstypes.Chipset(*r.Chipset)
+	}
+	items := []MicrovmImageBuildSummary{}
+	paginator := awslambdamicrovms.NewListMicrovmImageBuildsPaginator(client, in)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list Microvm image builds: %w", err)
+		}
+		for _, item := range page.Items {
+			items = append(items, microvmImageBuildSummaryFromSDK(item))
+		}
+	}
+	return &MicrovmImageBuildsOutput{Items: items}, nil
 }
