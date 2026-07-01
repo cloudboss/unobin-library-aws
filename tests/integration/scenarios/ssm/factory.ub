@@ -5,13 +5,13 @@ factory: {
     tag calls. The value rides the sensitive value field, exercising the masked path.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-ssm: 'github.com/cloudboss/unobin-library-aws//service/ssm' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-ssm: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     value: {
@@ -27,7 +27,7 @@ factory: {
   }
 
   resources: {
-    ssm-parameter-it: aws.ssm-parameter {
+    ssm-parameter-it: aws-ssm.parameter {
       name:        '/unobin/it/string'
       type:        'String'
       value:       input.value

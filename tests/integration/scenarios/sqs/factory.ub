@@ -6,13 +6,13 @@ factory: {
     redrive and policy documents reference the sibling queue ARNs through interpolation.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-sqs: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     visibility-timeout: {
@@ -23,11 +23,11 @@ factory: {
   }
 
   resources: {
-    sqs-queue-dlq: aws.sqs-queue {
+    sqs-queue-dlq: aws-sqs.queue {
       name: 'unobin-it-sqs-dlq'
       tags: { unobin: 'sqs-it' }
     }
-    sqs-queue-it: aws.sqs-queue {
+    sqs-queue-it: aws-sqs.queue {
       name:                     'unobin-it-sqs'
       visibility-timeout:       input.visibility-timeout
       message-retention-period: 86400
@@ -36,7 +36,7 @@ factory: {
         '''
       tags: { unobin: 'sqs-it' }
     }
-    sqs-queue-policy-it: aws.sqs-queue-policy {
+    sqs-queue-policy-it: aws-sqs.queue-policy {
       queue-url: resource.sqs-queue-it.url
       policy: $'''\-
         {"Version":"2012-10-17","Statement":[{"Sid":"AllowEventBridgeSend",

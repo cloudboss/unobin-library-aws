@@ -6,13 +6,19 @@ factory: {
     and subscription reference the sibling topic and queue ARNs through interpolation.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-sns: 'github.com/cloudboss/unobin-library-aws//service/sns'
+    aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-sns: input.aws-config
+    aws-sqs: input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     display-name: {
@@ -23,16 +29,16 @@ factory: {
   }
 
   resources: {
-    sns-topic-it: aws.sns-topic {
+    sns-topic-it: aws-sns.topic {
       name:         'unobin-it-topic'
       display-name: input.display-name
       tags:         { unobin: 'sns-it' }
     }
-    sqs-queue-it: aws.sqs-queue {
+    sqs-queue-it: aws-sqs.queue {
       name: 'unobin-it-sns-target'
       tags: { unobin: 'sns-it' }
     }
-    sns-topic-policy-it: aws.sns-topic-policy {
+    sns-topic-policy-it: aws-sns.topic-policy {
       arn: resource.sns-topic-it.arn
       policy: $'''\-
         {"Version":"2012-10-17","Statement":[{"Sid":"AllowEventBridgePublish",
@@ -40,15 +46,16 @@ factory: {
         "Action":"SNS:Publish","Resource":"{{ resource.sns-topic-it.arn }}"}]}
         '''
     }
-    sqs-queue-policy-it: aws.sqs-queue-policy {
+    sqs-queue-policy-it: aws-sqs.queue-policy {
       queue-url: resource.sqs-queue-it.url
       policy: $'''\-
         {"Version":"2012-10-17","Statement":[{"Sid":"AllowSNSDelivery","Effect":"Allow","Principal":
-        {"Service":"sns.amazonaws.com"},"Action":"sqs:SendMessage","Resource":"{{ resource.sqs-queue-it.arn }}
+        {"Service":"sns.amazonaws.com"},"Action":"sqs:SendMessage",
+        "Resource":"{{ resource.sqs-queue-it.arn }}
         ","Condition":{"ArnEquals":{"aws:SourceArn":"{{ resource.sns-topic-it.arn }}"}}}]}
         '''
     }
-    sns-topic-subscription-it: aws.sns-topic-subscription {
+    sns-topic-subscription-it: aws-sns.topic-subscription {
       topic-arn:            resource.sns-topic-it.arn
       protocol:             'sqs'
       endpoint:             resource.sqs-queue-it.arn

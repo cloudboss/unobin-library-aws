@@ -6,13 +6,13 @@ factory: {
     rotation through its enable and disable calls, and tags through the tag sync.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-kms: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     description: {
@@ -31,18 +31,16 @@ factory: {
   }
 
   locals: {
-    # The description input has no default, so the null test supplies the
-    # fallback and narrows the else branch to a plain string.
-    description: if input.description == null then 'unobin integration test key' else input.description
+    description: input.description ?? 'unobin integration test key'
   }
 
   resources: {
-    kms-key-it: aws.kms-key {
+    kms-key-it: aws-kms.key {
       description:         local.description
       enable-key-rotation: input.rotation-enabled
       tags:                input.tags ?? { unobin: 'kms-it' }
     }
-    kms-alias-it: aws.kms-alias {
+    kms-alias-it: aws-kms.alias {
       alias-name:    'alias/unobin-it-key'
       target-key-id: resource.kms-key-it.key-id
     }

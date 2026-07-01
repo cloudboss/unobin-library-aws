@@ -6,13 +6,13 @@ factory: {
     window is zero so destroy force-deletes the secret and a re-run can recreate it.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-secretsmanager: 'github.com/cloudboss/unobin-library-aws//service/secretsmanager' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-secretsmanager: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     secret-value: {
@@ -33,7 +33,7 @@ factory: {
   }
 
   resources: {
-    secretsmanager-secret-it: aws.secretsmanager-secret {
+    secretsmanager-secret-it: aws-secretsmanager.secret {
       name:                    'unobin-it-secret'
       description:             input.description
       secret-string:           input.secret-value
@@ -41,7 +41,7 @@ factory: {
       tags:                    { unobin: 'secretsmanager-it' }
     }
 
-    secretsmanager-secret-version-it: aws.secretsmanager-secret-version {
+    secretsmanager-secret-version-it: aws-secretsmanager.secret-version {
       secret-id:       resource.secretsmanager-secret-it.arn
       secret-string:   'managed-version-secret'
       version-stages:  input.managed-version-stages
