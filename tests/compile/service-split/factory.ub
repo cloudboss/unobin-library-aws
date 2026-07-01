@@ -1,0 +1,25 @@
+factory: {
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    bucket-name: { type: string }
+    queue-name:  { type: string }
+  }
+
+  imports: {
+    aws-s3: 'github.com/cloudboss/unobin-library-aws//service/s3'
+    aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
+
+  library-configs: {
+    aws-s3: input.aws-config
+    aws-sqs: input.aws-config
+  }
+
+  resources: {
+    bucket: aws-s3.bucket { bucket: input.bucket-name }
+    queue:  aws-sqs.queue { name: input.queue-name }
+  }
+}
