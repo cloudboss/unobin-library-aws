@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/ecs"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/ecs"
 	awsecs "github.com/cloudboss/unobin-library-aws/service/ecs"
 )
 
@@ -64,10 +64,10 @@ func TestLibraryRegistersECSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"capacity-provider": reflect.TypeFor[*internal.CapacityProviderOutput](),
-		"cluster":           reflect.TypeFor[*internal.ClusterOutput](),
-		"task-definition":   reflect.TypeFor[*internal.TaskDefinitionOutput](),
-		"service":           reflect.TypeFor[*internal.ServiceOutput](),
+		"capacity-provider": reflect.TypeFor[*svc.CapacityProviderOutput](),
+		"cluster":           reflect.TypeFor[*svc.ClusterOutput](),
+		"task-definition":   reflect.TypeFor[*svc.TaskDefinitionOutput](),
+		"service":           reflect.TypeFor[*svc.ServiceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

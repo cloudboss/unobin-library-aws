@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/lambda"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/lambda"
 	awslambda "github.com/cloudboss/unobin-library-aws/service/lambda"
 )
 
@@ -67,11 +67,11 @@ func TestLibraryRegistersLambdaLocalKinds(t *testing.T) {
 	}, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"function":             reflect.TypeFor[*internal.FunctionOutput](),
-		"alias":                reflect.TypeFor[*internal.AliasOutput](),
-		"permission":           reflect.TypeFor[*internal.PermissionOutput](),
-		"event-source-mapping": reflect.TypeFor[*internal.EventSourceMappingOutput](),
-		"function-url":         reflect.TypeFor[*internal.FunctionUrlOutput](),
+		"function":             reflect.TypeFor[*svc.FunctionOutput](),
+		"alias":                reflect.TypeFor[*svc.AliasOutput](),
+		"permission":           reflect.TypeFor[*svc.PermissionOutput](),
+		"event-source-mapping": reflect.TypeFor[*svc.EventSourceMappingOutput](),
+		"function-url":         reflect.TypeFor[*svc.FunctionUrlOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestLibraryRegistersLambdaLocalKinds(t *testing.T) {
 	}
 
 	actionsOutputs := map[string]reflect.Type{
-		"invoke": reflect.TypeFor[*internal.InvokeOutput](),
+		"invoke": reflect.TypeFor[*svc.InvokeOutput](),
 	}
 	for name, outputType := range actionsOutputs {
 		t.Run(name, func(t *testing.T) {

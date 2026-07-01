@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/autoscaling"
 	awsautoscaling "github.com/cloudboss/unobin-library-aws/service/autoscaling"
 )
 
@@ -63,9 +63,9 @@ func TestLibraryRegistersAutoScalingLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"group":          reflect.TypeFor[*internal.GroupOutput](),
-		"policy":         reflect.TypeFor[*internal.PolicyOutput](),
-		"lifecycle-hook": reflect.TypeFor[*internal.LifecycleHookOutput](),
+		"group":          reflect.TypeFor[*svc.GroupOutput](),
+		"policy":         reflect.TypeFor[*svc.PolicyOutput](),
+		"lifecycle-hook": reflect.TypeFor[*svc.LifecycleHookOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

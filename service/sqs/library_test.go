@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/sqs"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/sqs"
 	awssqs "github.com/cloudboss/unobin-library-aws/service/sqs"
 )
 
@@ -62,8 +62,8 @@ func TestLibraryRegistersSQSLocalResources(t *testing.T) {
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
-		"queue":        reflect.TypeFor[*internal.QueueOutput](),
-		"queue-policy": reflect.TypeFor[*internal.QueuePolicyOutput](),
+		"queue":        reflect.TypeFor[*svc.QueueOutput](),
+		"queue-policy": reflect.TypeFor[*svc.QueuePolicyOutput](),
 	}
 	for name, outputType := range outputs {
 		t.Run(name, func(t *testing.T) {

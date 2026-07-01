@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/route53"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/route53"
 	awsroute53 "github.com/cloudboss/unobin-library-aws/service/route53"
 )
 
@@ -64,8 +64,8 @@ func TestLibraryRegistersRoute53LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"hosted-zone": reflect.TypeFor[*internal.HostedZoneOutput](),
-		"record-set":  reflect.TypeFor[*internal.RecordSetOutput](),
+		"hosted-zone": reflect.TypeFor[*svc.HostedZoneOutput](),
+		"record-set":  reflect.TypeFor[*svc.RecordSetOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLibraryRegistersRoute53LocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"zone": reflect.TypeFor[*internal.ZoneDataOutput](),
+		"zone": reflect.TypeFor[*svc.ZoneDataOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/rds"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/rds"
 	awsrds "github.com/cloudboss/unobin-library-aws/service/rds"
 )
 
@@ -66,12 +66,12 @@ func TestLibraryRegistersRDSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"subnet-group":            reflect.TypeFor[*internal.SubnetGroupOutput](),
-		"parameter-group":         reflect.TypeFor[*internal.ParameterGroupOutput](),
-		"cluster-parameter-group": reflect.TypeFor[*internal.ClusterParameterGroupOutput](),
-		"cluster":                 reflect.TypeFor[*internal.ClusterOutput](),
-		"cluster-instance":        reflect.TypeFor[*internal.ClusterInstanceOutput](),
-		"instance":                reflect.TypeFor[*internal.InstanceOutput](),
+		"subnet-group":            reflect.TypeFor[*svc.SubnetGroupOutput](),
+		"parameter-group":         reflect.TypeFor[*svc.ParameterGroupOutput](),
+		"cluster-parameter-group": reflect.TypeFor[*svc.ClusterParameterGroupOutput](),
+		"cluster":                 reflect.TypeFor[*svc.ClusterOutput](),
+		"cluster-instance":        reflect.TypeFor[*svc.ClusterInstanceOutput](),
+		"instance":                reflect.TypeFor[*svc.InstanceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

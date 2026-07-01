@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/sts"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/sts"
 	awssts "github.com/cloudboss/unobin-library-aws/service/sts"
 )
 
@@ -61,7 +61,7 @@ func TestLibraryRegistersSTSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"caller-identity": reflect.TypeFor[*internal.CallerIdentityOutput](),
+		"caller-identity": reflect.TypeFor[*svc.CallerIdentityOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

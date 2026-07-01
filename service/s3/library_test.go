@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/typecheck"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/s3"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/s3"
 	awss3 "github.com/cloudboss/unobin-library-aws/service/s3"
 )
 
@@ -67,10 +67,10 @@ func TestLibraryRegistersS3LocalResources(t *testing.T) {
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
-		"bucket":              reflect.TypeFor[*internal.BucketOutput](),
-		"bucket-notification": reflect.TypeFor[*internal.BucketNotificationOutput](),
-		"bucket-policy":       reflect.TypeFor[*internal.BucketPolicyOutput](),
-		"object":              reflect.TypeFor[*internal.ObjectOutput](),
+		"bucket":              reflect.TypeFor[*svc.BucketOutput](),
+		"bucket-notification": reflect.TypeFor[*svc.BucketNotificationOutput](),
+		"bucket-policy":       reflect.TypeFor[*svc.BucketPolicyOutput](),
+		"object":              reflect.TypeFor[*svc.ObjectOutput](),
 	}
 	for name, outputType := range outputs {
 		t.Run(name, func(t *testing.T) {

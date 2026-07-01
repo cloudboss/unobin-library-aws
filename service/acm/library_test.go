@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/acm"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/acm"
 	awsacm "github.com/cloudboss/unobin-library-aws/service/acm"
 )
 
@@ -64,8 +64,8 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"certificate":            reflect.TypeFor[*internal.CertificateOutput](),
-		"certificate-validation": reflect.TypeFor[*internal.CertificateValidationOutput](),
+		"certificate":            reflect.TypeFor[*svc.CertificateOutput](),
+		"certificate-validation": reflect.TypeFor[*svc.CertificateValidationOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"certificate-data": reflect.TypeFor[*internal.CertificateDataOutput](),
+		"certificate-data": reflect.TypeFor[*svc.CertificateDataOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

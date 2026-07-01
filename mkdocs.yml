@@ -33,9 +33,4 @@ extra:
 
 nav:
   - AWS library: index.md
-  - Reference:
-      - Overview: reference/index.md
-      - Configuration: reference/configuration.md
-      - Resources: reference/resources/
-      - Data sources: reference/data-sources/
-      - Actions: reference/actions/
+  - Reference: reference/

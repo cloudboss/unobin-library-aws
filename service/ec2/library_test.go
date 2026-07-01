@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/ec2"
 	awsec2 "github.com/cloudboss/unobin-library-aws/service/ec2"
 )
 
@@ -83,22 +83,22 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"vpc":                         reflect.TypeFor[*internal.VpcOutput](),
-		"security-group":              reflect.TypeFor[*internal.SecurityGroupOutput](),
-		"security-group-ingress-rule": reflect.TypeFor[*internal.SecurityGroupIngressRuleOutput](),
-		"security-group-egress-rule":  reflect.TypeFor[*internal.SecurityGroupEgressRuleOutput](),
-		"subnet":                      reflect.TypeFor[*internal.SubnetOutput](),
-		"volume":                      reflect.TypeFor[*internal.VolumeOutput](),
-		"launch-template":             reflect.TypeFor[*internal.LaunchTemplateOutput](),
-		"internet-gateway":            reflect.TypeFor[*internal.InternetGatewayOutput](),
-		"route-table":                 reflect.TypeFor[*internal.RouteTableOutput](),
-		"route":                       reflect.TypeFor[*internal.RouteOutput](),
-		"route-table-association":     reflect.TypeFor[*internal.RouteTableAssociationOutput](),
-		"eip":                         reflect.TypeFor[*internal.EipOutput](),
-		"nat-gateway":                 reflect.TypeFor[*internal.NatGatewayOutput](),
-		"vpc-endpoint":                reflect.TypeFor[*internal.VpcEndpointOutput](),
-		"key-pair":                    reflect.TypeFor[*internal.KeyPairOutput](),
-		"instance":                    reflect.TypeFor[*internal.InstanceOutput](),
+		"vpc":                         reflect.TypeFor[*svc.VpcOutput](),
+		"security-group":              reflect.TypeFor[*svc.SecurityGroupOutput](),
+		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleOutput](),
+		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleOutput](),
+		"subnet":                      reflect.TypeFor[*svc.SubnetOutput](),
+		"volume":                      reflect.TypeFor[*svc.VolumeOutput](),
+		"launch-template":             reflect.TypeFor[*svc.LaunchTemplateOutput](),
+		"internet-gateway":            reflect.TypeFor[*svc.InternetGatewayOutput](),
+		"route-table":                 reflect.TypeFor[*svc.RouteTableOutput](),
+		"route":                       reflect.TypeFor[*svc.RouteOutput](),
+		"route-table-association":     reflect.TypeFor[*svc.RouteTableAssociationOutput](),
+		"eip":                         reflect.TypeFor[*svc.EipOutput](),
+		"nat-gateway":                 reflect.TypeFor[*svc.NatGatewayOutput](),
+		"vpc-endpoint":                reflect.TypeFor[*svc.VpcEndpointOutput](),
+		"key-pair":                    reflect.TypeFor[*svc.KeyPairOutput](),
+		"instance":                    reflect.TypeFor[*svc.InstanceOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -106,12 +106,12 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 		})
 	}
 	dataSourcesOutputs := map[string]reflect.Type{
-		"ami":                 reflect.TypeFor[*internal.AMIOutput](),
-		"availability-zones":  reflect.TypeFor[*internal.AvailabilityZonesOutput](),
-		"subnets":             reflect.TypeFor[*internal.SubnetsOutput](),
-		"subnet-data":         reflect.TypeFor[*internal.SubnetDataOutput](),
-		"security-group-data": reflect.TypeFor[*internal.SecurityGroupDataOutput](),
-		"vpc-data":            reflect.TypeFor[*internal.VpcDataOutput](),
+		"ami":                 reflect.TypeFor[*svc.AMIOutput](),
+		"availability-zones":  reflect.TypeFor[*svc.AvailabilityZonesOutput](),
+		"subnets":             reflect.TypeFor[*svc.SubnetsOutput](),
+		"subnet-data":         reflect.TypeFor[*svc.SubnetDataOutput](),
+		"security-group-data": reflect.TypeFor[*svc.SecurityGroupDataOutput](),
+		"vpc-data":            reflect.TypeFor[*svc.VpcDataOutput](),
 	}
 	for name, outputType := range dataSourcesOutputs {
 		t.Run(name, func(t *testing.T) {

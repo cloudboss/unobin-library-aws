@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/cloudfront"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/cloudfront"
 	awscloudfront "github.com/cloudboss/unobin-library-aws/service/cloudfront"
 )
 
@@ -67,10 +67,10 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"origin-access-control":   reflect.TypeFor[*internal.OriginAccessControlOutput](),
-		"function":                reflect.TypeFor[*internal.FunctionOutput](),
-		"response-headers-policy": reflect.TypeFor[*internal.ResponseHeadersPolicyOutput](),
-		"distribution":            reflect.TypeFor[*internal.DistributionOutput](),
+		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlOutput](),
+		"function":                reflect.TypeFor[*svc.FunctionOutput](),
+		"response-headers-policy": reflect.TypeFor[*svc.ResponseHeadersPolicyOutput](),
+		"distribution":            reflect.TypeFor[*svc.DistributionOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -79,8 +79,8 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"cache-policy-data":          reflect.TypeFor[*internal.CachePolicyDataOutput](),
-		"origin-request-policy-data": reflect.TypeFor[*internal.OriginRequestPolicyDataOutput](),
+		"cache-policy-data":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
+		"origin-request-policy-data": reflect.TypeFor[*svc.OriginRequestPolicyDataOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/cloudwatchlogs"
 	awscloudwatchlogs "github.com/cloudboss/unobin-library-aws/service/cloudwatchlogs"
 )
 
@@ -64,10 +64,10 @@ func TestLibraryRegistersCloudWatchLogsLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"log-group":           reflect.TypeFor[*internal.LogGroupOutput](),
-		"subscription-filter": reflect.TypeFor[*internal.SubscriptionFilterOutput](),
-		"metric-filter":       reflect.TypeFor[*internal.MetricFilterOutput](),
-		"resource-policy":     reflect.TypeFor[*internal.ResourcePolicyOutput](),
+		"log-group":           reflect.TypeFor[*svc.LogGroupOutput](),
+		"subscription-filter": reflect.TypeFor[*svc.SubscriptionFilterOutput](),
+		"metric-filter":       reflect.TypeFor[*svc.MetricFilterOutput](),
+		"resource-policy":     reflect.TypeFor[*svc.ResourcePolicyOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/dynamodb"
 	awsdynamodb "github.com/cloudboss/unobin-library-aws/service/dynamodb"
 )
 
@@ -61,7 +61,7 @@ func TestLibraryRegistersDynamoDBLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"table": reflect.TypeFor[*internal.TableOutput](),
+		"table": reflect.TypeFor[*svc.TableOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

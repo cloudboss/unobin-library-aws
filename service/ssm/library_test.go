@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/ssm"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/ssm"
 	awsssm "github.com/cloudboss/unobin-library-aws/service/ssm"
 )
 
@@ -61,7 +61,7 @@ func TestLibraryRegistersSSMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"parameter": reflect.TypeFor[*internal.ParameterOutput](),
+		"parameter": reflect.TypeFor[*svc.ParameterOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

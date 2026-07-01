@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/elbv2"
 	awselbv2 "github.com/cloudboss/unobin-library-aws/service/elbv2"
 )
 
@@ -66,12 +66,12 @@ func TestLibraryRegistersELBv2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"load-balancer":           reflect.TypeFor[*internal.LoadBalancerOutput](),
-		"target-group":            reflect.TypeFor[*internal.TargetGroupOutput](),
-		"target-group-attachment": reflect.TypeFor[*internal.TargetGroupAttachmentOutput](),
-		"listener":                reflect.TypeFor[*internal.ListenerOutput](),
-		"listener-rule":           reflect.TypeFor[*internal.ListenerRuleOutput](),
-		"listener-certificate":    reflect.TypeFor[*internal.ListenerCertificateOutput](),
+		"load-balancer":           reflect.TypeFor[*svc.LoadBalancerOutput](),
+		"target-group":            reflect.TypeFor[*svc.TargetGroupOutput](),
+		"target-group-attachment": reflect.TypeFor[*svc.TargetGroupAttachmentOutput](),
+		"listener":                reflect.TypeFor[*svc.ListenerOutput](),
+		"listener-rule":           reflect.TypeFor[*svc.ListenerRuleOutput](),
+		"listener-certificate":    reflect.TypeFor[*svc.ListenerCertificateOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

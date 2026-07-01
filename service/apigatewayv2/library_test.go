@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/apigatewayv2"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/apigatewayv2"
 	awsapigatewayv2 "github.com/cloudboss/unobin-library-aws/service/apigatewayv2"
 )
 
@@ -67,13 +67,13 @@ func TestLibraryRegistersAPIGatewayV2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"api":         reflect.TypeFor[*internal.ApiOutput](),
-		"integration": reflect.TypeFor[*internal.IntegrationOutput](),
-		"authorizer":  reflect.TypeFor[*internal.AuthorizerOutput](),
-		"route":       reflect.TypeFor[*internal.RouteOutput](),
-		"stage":       reflect.TypeFor[*internal.StageOutput](),
-		"domain-name": reflect.TypeFor[*internal.DomainNameOutput](),
-		"api-mapping": reflect.TypeFor[*internal.ApiMappingOutput](),
+		"api":         reflect.TypeFor[*svc.ApiOutput](),
+		"integration": reflect.TypeFor[*svc.IntegrationOutput](),
+		"authorizer":  reflect.TypeFor[*svc.AuthorizerOutput](),
+		"route":       reflect.TypeFor[*svc.RouteOutput](),
+		"stage":       reflect.TypeFor[*svc.StageOutput](),
+		"domain-name": reflect.TypeFor[*svc.DomainNameOutput](),
+		"api-mapping": reflect.TypeFor[*svc.ApiMappingOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

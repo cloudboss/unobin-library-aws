@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/eventbridge"
 	awseventbridge "github.com/cloudboss/unobin-library-aws/service/eventbridge"
 )
 
@@ -63,9 +63,9 @@ func TestLibraryRegistersEventBridgeLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"event-bus": reflect.TypeFor[*internal.EventBusOutput](),
-		"rule":      reflect.TypeFor[*internal.RuleOutput](),
-		"target":    reflect.TypeFor[*internal.TargetOutput](),
+		"event-bus": reflect.TypeFor[*svc.EventBusOutput](),
+		"rule":      reflect.TypeFor[*svc.RuleOutput](),
+		"target":    reflect.TypeFor[*svc.TargetOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

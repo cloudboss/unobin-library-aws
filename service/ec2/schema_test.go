@@ -1,0 +1,1691 @@
+package ec2
+
+import (
+	"reflect"
+	"testing"
+
+	"github.com/cloudboss/unobin/pkg/lang"
+	"github.com/cloudboss/unobin/pkg/runtime"
+	"github.com/cloudboss/unobin/pkg/typecheck"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/ec2"
+)
+
+// TestLibraryRegistersEc2Vpc checks the runtime registration: ec2-vpc is
+// present under Resources and dispatches to the Ec2VpcOutput type.
+func TestLibraryRegistersEc2Vpc(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "vpc")
+	assert.Equal(t,
+		reflect.TypeFor[*svc.VpcOutput](),
+		lib.Resources["vpc"].OutputType())
+}
+
+// TestEc2VpcSchema checks what the dev CLI reads from this library's
+// source: the input and output field types, that nothing is marked
+// sensitive, and the full set of cross-field constraints derived from
+// the Constraints method.
+func TestEc2VpcSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "vpc")
+
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"cidr-block":                           typecheck.TOptional(typecheck.TString()),
+			"instance-tenancy":                     typecheck.TOptional(typecheck.TString()),
+			"amazon-provided-ipv6-cidr-block":      typecheck.TOptional(typecheck.TBoolean()),
+			"ipv4-ipam-pool-id":                    typecheck.TOptional(typecheck.TString()),
+			"ipv4-netmask-length":                  typecheck.TOptional(typecheck.TInteger()),
+			"ipv6-cidr-block":                      typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block-network-border-group": typecheck.TOptional(typecheck.TString()),
+			"ipv6-ipam-pool-id":                    typecheck.TOptional(typecheck.TString()),
+			"ipv6-netmask-length":                  typecheck.TOptional(typecheck.TInteger()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"vpc-id":          typecheck.TString(),
+			"dhcp-options-id": typecheck.TString(),
+			"owner-id":        typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:    "predicate",
+				When:    "(input.instance-tenancy != null)",
+				Require: "(input.instance-tenancy == 'default' || input.instance-tenancy == 'dedicated')",
+				Message: "instance-tenancy must be default or dedicated",
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.cidr-block", "input.ipv4-netmask-length"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"input.ipv4-netmask-length", "input.ipv4-ipam-pool-id"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.ipv6-cidr-block", "input.ipv6-netmask-length"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"input.ipv6-cidr-block", "input.ipv6-ipam-pool-id"},
+			},
+			{
+				Kind:   "required-with",
+				Fields: []string{"input.ipv6-netmask-length", "input.ipv6-ipam-pool-id"},
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.amazon-provided-ipv6-cidr-block == true)",
+				Require: "(input.ipv6-cidr-block == null) && (input.ipv6-ipam-pool-id == null)",
+				Message: "amazon-provided-ipv6-cidr-block cannot combine with an explicit ipv6 block or pool",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.ipv6-cidr-block-network-border-group != null)",
+				Require: "(input.amazon-provided-ipv6-cidr-block == true)",
+				Message: "ipv6-cidr-block-network-border-group requires amazon-provided-ipv6-cidr-block",
+			},
+		},
+	}
+
+	assertTypeSchemaEqual(t, want, schema.Resources["vpc"])
+}
+
+// TestLibraryRegistersEc2SecurityGroups checks the runtime registration: the
+// security group and its ingress and egress rule resources are present under
+// Resources and dispatch to their output types.
+func TestLibraryRegistersEc2SecurityGroups(t *testing.T) {
+	lib := Library()
+	cases := map[string]reflect.Type{
+		"security-group":              reflect.TypeFor[*svc.SecurityGroupOutput](),
+		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleOutput](),
+		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleOutput](),
+	}
+	for key, outputType := range cases {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, lib.Resources, key)
+			assert.Equal(t, outputType, lib.Resources[key].OutputType())
+		})
+	}
+}
+
+// TestEc2SecurityGroupSchemas checks the input and output field types and the
+// cross-field constraints the dev CLI reads for the security group and its rule
+// resources. The ingress and egress rules are mirrors, so they share a schema.
+func TestEc2SecurityGroupSchemas(t *testing.T) {
+	schema := readLibrarySchema(t)
+
+	ruleSchema := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"security-group-id":            typecheck.TString(),
+			"ip-protocol":                  typecheck.TString(),
+			"from-port":                    typecheck.TOptional(typecheck.TInteger()),
+			"to-port":                      typecheck.TOptional(typecheck.TInteger()),
+			"cidr-ipv4":                    typecheck.TOptional(typecheck.TString()),
+			"cidr-ipv6":                    typecheck.TOptional(typecheck.TString()),
+			"prefix-list-id":               typecheck.TOptional(typecheck.TString()),
+			"referenced-security-group-id": typecheck.TOptional(typecheck.TString()),
+			"description":                  typecheck.TOptional(typecheck.TString()),
+			"tags":                         typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"security-group-rule-id": typecheck.TString(),
+			"arn":                    typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "exactly-one-of",
+				Fields: []string{
+					"input.cidr-ipv4", "input.cidr-ipv6", "input.prefix-list-id",
+					"input.referenced-security-group-id",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(input.from-port != null)",
+				Require: "(input.from-port == null || input.from-port >= -1) && " +
+					"(input.from-port == null || input.from-port <= 65535)",
+				Message: "from-port must be between -1 and 65535",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.to-port != null)",
+				Require: "(input.to-port == null || input.to-port >= -1) && " +
+					"(input.to-port == null || input.to-port <= 65535)",
+				Message: "to-port must be between -1 and 65535",
+			},
+		},
+	}
+
+	cases := map[string]*runtime.TypeSchema{
+		"security-group": {
+			Inputs: map[string]typecheck.Type{
+				"name":                   typecheck.TOptional(typecheck.TString()),
+				"name-prefix":            typecheck.TOptional(typecheck.TString()),
+				"description":            typecheck.TString(),
+				"vpc-id":                 typecheck.TOptional(typecheck.TString()),
+				"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				"revoke-rules-on-delete": typecheck.TOptional(typecheck.TBoolean()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"id":       typecheck.TString(),
+				"arn":      typecheck.TString(),
+				"owner-id": typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:   "at-most-one-of",
+					Fields: []string{"input.name", "input.name-prefix"},
+				},
+			},
+		},
+		"security-group-ingress-rule": ruleSchema,
+		"security-group-egress-rule":  ruleSchema,
+	}
+
+	for key, want := range cases {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.Resources, key)
+			assertTypeSchemaEqual(t, want, schema.Resources[key])
+		})
+	}
+}
+
+// TestLibraryRegistersEc2Subnet checks the runtime registration: ec2-subnet
+// is present under Resources and dispatches to its output type.
+func TestLibraryRegistersEc2Subnet(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "subnet")
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetOutput](),
+		lib.Resources["subnet"].OutputType())
+}
+
+// TestEc2SubnetSchema asserts the whole derived TypeSchema for ec2-subnet:
+// the input and output field types, that nothing is sensitive, and the
+// cross-field constraints derived from the Constraints method.
+func TestEc2SubnetSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "subnet")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"assign-ipv6-address-on-creation":                typecheck.TOptional(typecheck.TBoolean()),
+			"availability-zone":                              typecheck.TOptional(typecheck.TString()),
+			"availability-zone-id":                           typecheck.TOptional(typecheck.TString()),
+			"cidr-block":                                     typecheck.TOptional(typecheck.TString()),
+			"customer-owned-ipv4-pool":                       typecheck.TOptional(typecheck.TString()),
+			"enable-dns64":                                   typecheck.TOptional(typecheck.TBoolean()),
+			"enable-lni-at-device-index":                     typecheck.TOptional(typecheck.TInteger()),
+			"enable-resource-name-dns-a-record-on-launch":    typecheck.TOptional(typecheck.TBoolean()),
+			"enable-resource-name-dns-aaaa-record-on-launch": typecheck.TOptional(typecheck.TBoolean()),
+			"ipv4-ipam-pool-id":                              typecheck.TOptional(typecheck.TString()),
+			"ipv4-netmask-length":                            typecheck.TOptional(typecheck.TInteger()),
+			"ipv6-cidr-block":                                typecheck.TOptional(typecheck.TString()),
+			"ipv6-ipam-pool-id":                              typecheck.TOptional(typecheck.TString()),
+			"ipv6-native":                                    typecheck.TOptional(typecheck.TBoolean()),
+			"ipv6-netmask-length":                            typecheck.TOptional(typecheck.TInteger()),
+			"map-customer-owned-ip-on-launch":                typecheck.TOptional(typecheck.TBoolean()),
+			"map-public-ip-on-launch":                        typecheck.TOptional(typecheck.TBoolean()),
+			"outpost-arn":                                    typecheck.TOptional(typecheck.TString()),
+			"private-dns-hostname-type-on-launch":            typecheck.TOptional(typecheck.TString()),
+			"tags":                                           typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"vpc-id":                                         typecheck.TString(),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":                            typecheck.TString(),
+			"availability-zone":              typecheck.TString(),
+			"availability-zone-id":           typecheck.TString(),
+			"cidr-block":                     typecheck.TString(),
+			"id":                             typecheck.TString(),
+			"ipv6-cidr-block":                typecheck.TString(),
+			"ipv6-cidr-block-association-id": typecheck.TString(),
+			"owner-id":                       typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"input.availability-zone", "input.availability-zone-id",
+				},
+			},
+			{
+				Kind: "forbidden-with",
+				Fields: []string{
+					"input.ipv4-netmask-length", "input.cidr-block",
+					"input.customer-owned-ipv4-pool",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"input.ipv4-netmask-length", "input.ipv4-ipam-pool-id",
+				},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"input.ipv4-ipam-pool-id", "input.customer-owned-ipv4-pool",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"input.customer-owned-ipv4-pool",
+					"input.map-customer-owned-ip-on-launch", "input.outpost-arn",
+				},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"input.map-customer-owned-ip-on-launch",
+					"input.customer-owned-ipv4-pool", "input.outpost-arn",
+				},
+			},
+			{
+				Kind:   "forbidden-with",
+				Fields: []string{"input.ipv6-netmask-length", "input.ipv6-cidr-block"},
+			},
+			{
+				Kind: "required-with",
+				Fields: []string{
+					"input.ipv6-netmask-length", "input.ipv6-ipam-pool-id",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(input.private-dns-hostname-type-on-launch != null)",
+				Require: "(input.private-dns-hostname-type-on-launch == 'ip-name' || " +
+					"input.private-dns-hostname-type-on-launch == 'resource-name')",
+				Message: "private-dns-hostname-type-on-launch must be ip-name or " +
+					"resource-name",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.enable-lni-at-device-index != null)",
+				Require: "(input.enable-lni-at-device-index == null || " +
+					"input.enable-lni-at-device-index > 0)",
+				Message: "enable-lni-at-device-index must be a positive device position",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.Resources["subnet"])
+}
+
+// TestLibraryRegistersEc2Volume checks the runtime registration: ec2-volume
+// is in the resource map with the Volume output type.
+func TestLibraryRegistersEc2Volume(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "volume")
+	assert.Equal(t, reflect.TypeFor[*svc.VolumeOutput](),
+		lib.Resources["volume"].OutputType())
+}
+
+// TestEc2VolumeSchema asserts the whole derived TypeSchema for ec2-volume:
+// the input and output field types, that nothing is sensitive, the
+// cross-field constraints derived from the Constraints method, and the
+// declared optional defaults.
+func TestEc2VolumeSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "volume")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"availability-zone":          typecheck.TString(),
+			"encrypted":                  typecheck.TOptional(typecheck.TBoolean()),
+			"final-snapshot":             typecheck.TOptional(typecheck.TBoolean()),
+			"iops":                       typecheck.TOptional(typecheck.TInteger()),
+			"kms-key-id":                 typecheck.TOptional(typecheck.TString()),
+			"multi-attach-enabled":       typecheck.TOptional(typecheck.TBoolean()),
+			"outpost-arn":                typecheck.TOptional(typecheck.TString()),
+			"size":                       typecheck.TOptional(typecheck.TInteger()),
+			"snapshot-id":                typecheck.TOptional(typecheck.TString()),
+			"tags":                       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"throughput":                 typecheck.TOptional(typecheck.TInteger()),
+			"type":                       typecheck.TOptional(typecheck.TString()),
+			"volume-initialization-rate": typecheck.TOptional(typecheck.TInteger()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"create-time": typecheck.TString(),
+			"encrypted":   typecheck.TBoolean(),
+			"iops":        typecheck.TInteger(),
+			"kms-key-id":  typecheck.TString(),
+			"size":        typecheck.TInteger(),
+			"throughput":  typecheck.TInteger(),
+			"type":        typecheck.TString(),
+			"volume-id":   typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-least-one-of",
+				Fields: []string{"input.size", "input.snapshot-id"},
+			},
+			{
+				Kind: "predicate",
+				When: "(input.type != null)",
+				Require: "(input.type == 'standard' || input.type == 'gp2' || input.type == 'gp3' || " +
+					"input.type == 'io1' || input.type == 'io2' || input.type == 'sc1' || input.type == 'st1')",
+				Message: "type must be standard, gp2, gp3, io1, io2, sc1, or st1",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.type == 'io1')",
+				Require: "(input.iops != null)",
+				Message: "iops is required when type is io1",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.type == 'io2')",
+				Require: "(input.iops != null)",
+				Message: "iops is required when type is io2",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.iops != null)",
+				Require: "(input.type == 'gp3' || input.type == 'io1' || input.type == 'io2')",
+				Message: "iops is valid only for gp3, io1, or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.throughput != null)",
+				Require: "(input.type == 'gp3') && (input.throughput == null || input.throughput >= 125) && " +
+					"(input.throughput == null || input.throughput <= 2000)",
+				Message: "throughput is valid only for gp3 volumes and must be 125 to 2000",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.multi-attach-enabled == true)",
+				Require: "(input.type == 'io1' || input.type == 'io2')",
+				Message: "multi-attach-enabled is valid only for io1 or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.volume-initialization-rate != null)",
+				Require: "(input.snapshot-id != null) && (input.volume-initialization-rate == null || " +
+					"input.volume-initialization-rate >= 100) && (input.volume-initialization-rate == null || " +
+					"input.volume-initialization-rate <= 300)",
+				Message: "volume-initialization-rate requires snapshot-id and must be 100 to 300",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.Resources["volume"])
+}
+
+// TestLibraryRegistersEc2LaunchTemplate checks the runtime registration:
+// ec2-launch-template is in the resource map with the LaunchTemplate output
+// type.
+func TestLibraryRegistersEc2LaunchTemplate(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "launch-template")
+	assert.Equal(t, reflect.TypeFor[*svc.LaunchTemplateOutput](),
+		lib.Resources["launch-template"].OutputType())
+}
+
+// TestEc2LaunchTemplateSchema asserts the whole derived TypeSchema for
+// ec2-launch-template: the nested data block's field types, the outputs,
+// that nothing is sensitive, the constraints including the per-element
+// ForEach rules, and the declared optional defaults.
+func TestEc2LaunchTemplateSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "launch-template")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"data": typecheck.TObject([]typecheck.ObjectField{
+				{Name: "image-id", Type: typecheck.TString(), Optional: true},
+				{Name: "instance-type", Type: typecheck.TString(), Optional: true},
+				{Name: "key-name", Type: typecheck.TString(), Optional: true},
+				{Name: "user-data", Type: typecheck.TString(), Optional: true},
+				{Name: "ebs-optimized", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "disable-api-stop", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "disable-api-termination", Type: typecheck.TBoolean(), Optional: true},
+				{Name: "instance-initiated-shutdown-behavior", Type: typecheck.TString(), Optional: true},
+				{Name: "security-group-ids", Type: typecheck.TList(typecheck.TString()), Optional: true},
+				{Name: "security-groups", Type: typecheck.TList(typecheck.TString()), Optional: true},
+				{Name: "block-device-mappings", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString(), Optional: true},
+					{Name: "no-device", Type: typecheck.TString(), Optional: true},
+					{Name: "virtual-name", Type: typecheck.TString(), Optional: true},
+					{Name: "ebs", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "delete-on-termination", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+						{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+						{Name: "snapshot-id", Type: typecheck.TString(), Optional: true},
+						{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-initialization-rate", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+						{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				})), Optional: true},
+				{Name: "network-interfaces", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "associate-carrier-ip-address", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "associate-public-ip-address", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "delete-on-termination", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "description", Type: typecheck.TString(), Optional: true},
+					{Name: "device-index", Type: typecheck.TInteger(), Optional: true},
+					{Name: "interface-type", Type: typecheck.TString(), Optional: true},
+					{Name: "ipv4-prefix-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv4-prefixes", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv6-address-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv6-addresses", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv6-prefix-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "ipv6-prefixes", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "network-card-index", Type: typecheck.TInteger(), Optional: true},
+					{Name: "network-interface-id", Type: typecheck.TString(), Optional: true},
+					{Name: "primary-ipv6", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "private-ip-address", Type: typecheck.TString(), Optional: true},
+					{Name: "ipv4-addresses", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ipv4-address-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "subnet-id", Type: typecheck.TString(), Optional: true},
+					{Name: "groups", Type: typecheck.TList(typecheck.TString()), Optional: true},
+					{Name: "ena-srd-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "ena-srd-enabled", Type: typecheck.TBoolean(), Optional: true},
+						{Name: "ena-srd-udp-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+							{Name: "ena-srd-udp-enabled", Type: typecheck.TBoolean(), Optional: true},
+						}), Optional: true},
+					}), Optional: true},
+					{Name: "connection-tracking-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "tcp-established-timeout", Type: typecheck.TInteger(), Optional: true},
+						{Name: "udp-stream-timeout", Type: typecheck.TInteger(), Optional: true},
+						{Name: "udp-timeout", Type: typecheck.TInteger(), Optional: true},
+					}), Optional: true},
+				})), Optional: true},
+				{Name: "iam-instance-profile", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "arn", Type: typecheck.TString(), Optional: true},
+					{Name: "name", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "monitoring", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "metadata-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "http-endpoint", Type: typecheck.TString(), Optional: true},
+					{Name: "http-protocol-ipv6", Type: typecheck.TString(), Optional: true},
+					{Name: "http-put-response-hop-limit", Type: typecheck.TInteger(), Optional: true},
+					{Name: "http-tokens", Type: typecheck.TString(), Optional: true},
+					{Name: "instance-metadata-tags", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "placement", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "affinity", Type: typecheck.TString(), Optional: true},
+					{Name: "availability-zone", Type: typecheck.TString(), Optional: true},
+					{Name: "availability-zone-id", Type: typecheck.TString(), Optional: true},
+					{Name: "group-id", Type: typecheck.TString(), Optional: true},
+					{Name: "group-name", Type: typecheck.TString(), Optional: true},
+					{Name: "host-id", Type: typecheck.TString(), Optional: true},
+					{Name: "host-resource-group-arn", Type: typecheck.TString(), Optional: true},
+					{Name: "partition-number", Type: typecheck.TInteger(), Optional: true},
+					{Name: "spread-domain", Type: typecheck.TString(), Optional: true},
+					{Name: "tenancy", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "tag-specifications", Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+					{Name: "resource-type", Type: typecheck.TString(), Optional: true},
+					{Name: "tags", Type: typecheck.TMap(typecheck.TString())},
+				})), Optional: true},
+				{Name: "credit-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "cpu-credits", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "cpu-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "amd-sev-snp", Type: typecheck.TString(), Optional: true},
+					{Name: "core-count", Type: typecheck.TInteger(), Optional: true},
+					{Name: "nested-virtualization", Type: typecheck.TString(), Optional: true},
+					{Name: "threads-per-core", Type: typecheck.TInteger(), Optional: true},
+				}), Optional: true},
+				{Name: "enclave-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enabled", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "hibernation-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "configured", Type: typecheck.TBoolean(), Optional: true},
+				}), Optional: true},
+				{Name: "private-dns-name-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "enable-resource-name-dns-aaaa-record", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "enable-resource-name-dns-a-record", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "hostname-type", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "maintenance-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "auto-recovery", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+				{Name: "license-specifications",
+					Type: typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+						{Name: "license-configuration-arn", Type: typecheck.TString(), Optional: true},
+					})), Optional: true},
+				{Name: "instance-market-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "market-type", Type: typecheck.TString(), Optional: true},
+					{Name: "spot-options", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "block-duration-minutes", Type: typecheck.TInteger(), Optional: true},
+						{Name: "instance-interruption-behavior", Type: typecheck.TString(), Optional: true},
+						{Name: "max-price", Type: typecheck.TString(), Optional: true},
+						{Name: "spot-instance-type", Type: typecheck.TString(), Optional: true},
+						{Name: "valid-until", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				}), Optional: true},
+				{Name: "capacity-reservation-specification", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "capacity-reservation-preference", Type: typecheck.TString(), Optional: true},
+					{Name: "capacity-reservation-target", Type: typecheck.TObject([]typecheck.ObjectField{
+						{Name: "capacity-reservation-id", Type: typecheck.TString(), Optional: true},
+						{Name: "capacity-reservation-resource-group-arn", Type: typecheck.TString(), Optional: true},
+					}), Optional: true},
+				}), Optional: true},
+				{Name: "network-performance-options", Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "bandwidth-weighting", Type: typecheck.TString(), Optional: true},
+				}), Optional: true},
+			}),
+			"default-version":        typecheck.TOptional(typecheck.TInteger()),
+			"name":                   typecheck.TString(),
+			"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"update-default-version": typecheck.TOptional(typecheck.TBoolean()),
+			"version-description":    typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"default-version":    typecheck.TInteger(),
+			"latest-version":     typecheck.TInteger(),
+			"launch-template-id": typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.default-version", "input.update-default-version"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.data.security-groups", "input.data.security-group-ids"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.data.iam-instance-profile.arn", "input.data.iam-instance-profile.name"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.data.placement.group-id", "input.data.placement.group-name"},
+			},
+			{
+				Kind:   "at-most-one-of",
+				Fields: []string{"input.data.placement.host-resource-group-arn", "input.data.placement.host-id"},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"input.data.capacity-reservation-specification.capacity-reservation-target." +
+						"capacity-reservation-id",
+					"input.data.capacity-reservation-specification.capacity-reservation-target." +
+						"capacity-reservation-resource-group-arn",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.capacity-reservation-specification.capacity-reservation-preference != null)",
+				Require: "(input.data.capacity-reservation-specification.capacity-reservation-preference == " +
+					"'capacity-reservations-only' || " +
+					"input.data.capacity-reservation-specification.capacity-reservation-preference == 'open' || " +
+					"input.data.capacity-reservation-specification.capacity-reservation-preference == 'none')",
+				Message: "capacity-reservation-preference must be capacity-reservations-only, open, or none",
+			},
+			{
+				Kind:    "predicate",
+				When:    "(input.version-description != null)",
+				Require: "(input.version-description == null || input.version-description <= 255)",
+				Message: "version-description must be at most 255 characters",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.instance-initiated-shutdown-behavior != null)",
+				Require: "(input.data.instance-initiated-shutdown-behavior == 'stop' || " +
+					"input.data.instance-initiated-shutdown-behavior == 'terminate')",
+				Message: "instance-initiated-shutdown-behavior must be stop or terminate",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.credit-specification.cpu-credits != null)",
+				Require: "(input.data.credit-specification.cpu-credits == 'standard' || " +
+					"input.data.credit-specification.cpu-credits == 'unlimited')",
+				Message: "credit-specification cpu-credits must be standard or unlimited",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.cpu-options.amd-sev-snp != null)",
+				Require: "(input.data.cpu-options.amd-sev-snp == 'enabled' || " +
+					"input.data.cpu-options.amd-sev-snp == 'disabled')",
+				Message: "cpu-options amd-sev-snp must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.cpu-options.nested-virtualization != null)",
+				Require: "(input.data.cpu-options.nested-virtualization == 'enabled' || " +
+					"input.data.cpu-options.nested-virtualization == 'disabled')",
+				Message: "cpu-options nested-virtualization must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.placement.tenancy != null)",
+				Require: "(input.data.placement.tenancy == 'default' || " +
+					"input.data.placement.tenancy == 'dedicated' || input.data.placement.tenancy == 'host')",
+				Message: "placement tenancy must be default, dedicated, or host",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.private-dns-name-options.hostname-type != null)",
+				Require: "(input.data.private-dns-name-options.hostname-type == 'ip-name' || " +
+					"input.data.private-dns-name-options.hostname-type == 'resource-name')",
+				Message: "private-dns-name-options hostname-type must be ip-name or resource-name",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.maintenance-options.auto-recovery != null)",
+				Require: "(input.data.maintenance-options.auto-recovery == 'default' || " +
+					"input.data.maintenance-options.auto-recovery == 'disabled')",
+				Message: "maintenance-options auto-recovery must be default or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.network-performance-options.bandwidth-weighting != null)",
+				Require: "(input.data.network-performance-options.bandwidth-weighting == 'default' || " +
+					"input.data.network-performance-options.bandwidth-weighting == 'vpc-1' || " +
+					"input.data.network-performance-options.bandwidth-weighting == 'ebs-1')",
+				Message: "network-performance-options bandwidth-weighting must be default, vpc-1, or ebs-1",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.instance-market-options.market-type != null)",
+				Require: "(input.data.instance-market-options.market-type == 'spot' || " +
+					"input.data.instance-market-options.market-type == 'capacity-block' || " +
+					"input.data.instance-market-options.market-type == 'interruptible-capacity-reservation')",
+				Message: "instance-market-options market-type must be a valid market type",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.instance-market-options.spot-options.instance-interruption-behavior != null)",
+				Require: "(input.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+					"'hibernate' || " +
+					"input.data.instance-market-options.spot-options.instance-interruption-behavior == 'stop' || " +
+					"input.data.instance-market-options.spot-options.instance-interruption-behavior == " +
+					"'terminate')",
+				Message: "spot-options instance-interruption-behavior must be hibernate, stop, or terminate",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.instance-market-options.spot-options.spot-instance-type != null)",
+				Require: "(input.data.instance-market-options.spot-options.spot-instance-type == 'one-time' " +
+					"|| input.data.instance-market-options.spot-options.spot-instance-type == 'persistent')",
+				Message: "spot-options spot-instance-type must be one-time or persistent",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.metadata-options.http-endpoint != null)",
+				Require: "(input.data.metadata-options.http-endpoint == 'enabled' || " +
+					"input.data.metadata-options.http-endpoint == 'disabled')",
+				Message: "metadata-options http-endpoint must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.metadata-options.http-tokens != null)",
+				Require: "(input.data.metadata-options.http-tokens == 'optional' || " +
+					"input.data.metadata-options.http-tokens == 'required')",
+				Message: "metadata-options http-tokens must be optional or required",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(input.data.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"input.data.metadata-options.http-protocol-ipv6 == 'disabled')",
+				Message: "metadata-options http-protocol-ipv6 must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.metadata-options.instance-metadata-tags != null)",
+				Require: "(input.data.metadata-options.instance-metadata-tags == 'enabled' || " +
+					"input.data.metadata-options.instance-metadata-tags == 'disabled')",
+				Message: "metadata-options instance-metadata-tags must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.data.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(input.data.metadata-options.http-put-response-hop-limit == null || " +
+					"input.data.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(input.data.metadata-options.http-put-response-hop-limit == null || " +
+					"input.data.metadata-options.http-put-response-hop-limit <= 64)",
+				Message: "metadata-options http-put-response-hop-limit must be between 1 and 64",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want,
+		schema.Resources["launch-template"])
+}
+
+// TestLibraryRegistersEc2Ami checks the runtime registration: ec2-ami is in
+// the data source map, the library's first, with the AMI output type.
+func TestLibraryRegistersEc2Ami(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "ami")
+	assert.Equal(t, reflect.TypeFor[*svc.AMIOutput](),
+		lib.DataSources["ami"].OutputType())
+}
+
+// TestEc2AmiSchema asserts the whole derived TypeSchema for the ec2-ami data
+// source: the query inputs, the selected image's outputs, that nothing is
+// sensitive, the owners constraint, and the declared optional defaults.
+func TestEc2AmiSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "ami")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"allow-unsafe-filter": typecheck.TOptional(typecheck.TBoolean()),
+			"executable-users":    typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"filters": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			}))),
+			"image-ids":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"include-deprecated": typecheck.TOptional(typecheck.TBoolean()),
+			"most-recent":        typecheck.TOptional(typecheck.TBoolean()),
+			"name-regex":         typecheck.TOptional(typecheck.TString()),
+			"owners":             typecheck.TOptional(typecheck.TList(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"architecture":        typecheck.TString(),
+			"arn":                 typecheck.TString(),
+			"creation-date":       typecheck.TString(),
+			"ena-support":         typecheck.TBoolean(),
+			"image-id":            typecheck.TString(),
+			"name":                typecheck.TString(),
+			"owner-id":            typecheck.TString(),
+			"root-device-name":    typecheck.TString(),
+			"root-device-type":    typecheck.TString(),
+			"root-snapshot-id":    typecheck.TString(),
+			"sriov-net-support":   typecheck.TString(),
+			"state":               typecheck.TString(),
+			"virtualization-type": typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "predicate",
+				When: "(input.owners != null)",
+				Require: "(input.owners == null || " +
+					"@core.length(input.owners) >= 1)",
+				Message: "owners must list at least one owner when given",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["ami"])
+}
+
+// TestLibraryRegistersEc2Routing checks the runtime registration: the seven
+// VPC-routing resources are present under Resources and dispatch to their
+// output types.
+func TestLibraryRegistersEc2Routing(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "internet-gateway")
+	assert.Equal(t, reflect.TypeFor[*svc.InternetGatewayOutput](),
+		lib.Resources["internet-gateway"].OutputType())
+	require.Contains(t, lib.Resources, "route-table")
+	assert.Equal(t, reflect.TypeFor[*svc.RouteTableOutput](),
+		lib.Resources["route-table"].OutputType())
+	require.Contains(t, lib.Resources, "route")
+	assert.Equal(t, reflect.TypeFor[*svc.RouteOutput](),
+		lib.Resources["route"].OutputType())
+	require.Contains(t, lib.Resources, "route-table-association")
+	assert.Equal(t, reflect.TypeFor[*svc.RouteTableAssociationOutput](),
+		lib.Resources["route-table-association"].OutputType())
+	require.Contains(t, lib.Resources, "eip")
+	assert.Equal(t, reflect.TypeFor[*svc.EipOutput](),
+		lib.Resources["eip"].OutputType())
+	require.Contains(t, lib.Resources, "nat-gateway")
+	assert.Equal(t, reflect.TypeFor[*svc.NatGatewayOutput](),
+		lib.Resources["nat-gateway"].OutputType())
+	require.Contains(t, lib.Resources, "vpc-endpoint")
+	assert.Equal(t, reflect.TypeFor[*svc.VpcEndpointOutput](),
+		lib.Resources["vpc-endpoint"].OutputType())
+}
+
+// TestEc2RoutingSchemas asserts the whole derived TypeSchema -- input and
+// output field types, the cross-field constraints, and the declared optional
+// defaults -- for each VPC-routing resource.
+func TestEc2RoutingSchemas(t *testing.T) {
+	schema := readLibrarySchema(t)
+	tests := []struct {
+		key  string
+		want *runtime.TypeSchema
+	}{
+		{
+			key: "internet-gateway",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+					"vpc-id": typecheck.TOptional(typecheck.TString()),
+				},
+				Outputs: map[string]typecheck.Type{
+					"internet-gateway-id": typecheck.TString(),
+					"owner-id":            typecheck.TString(),
+					"vpc-id":              typecheck.TString(),
+				},
+			},
+		},
+		{
+			key: "route-table",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+					"vpc-id": typecheck.TString(),
+				},
+				Outputs: map[string]typecheck.Type{
+					"owner-id":       typecheck.TString(),
+					"route-table-id": typecheck.TString(),
+				},
+			},
+		},
+		{
+			key: "route",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"carrier-gateway-id":          typecheck.TOptional(typecheck.TString()),
+					"core-network-arn":            typecheck.TOptional(typecheck.TString()),
+					"destination-cidr-block":      typecheck.TOptional(typecheck.TString()),
+					"destination-ipv6-cidr-block": typecheck.TOptional(typecheck.TString()),
+					"destination-prefix-list-id":  typecheck.TOptional(typecheck.TString()),
+					"egress-only-gateway-id":      typecheck.TOptional(typecheck.TString()),
+					"gateway-id":                  typecheck.TOptional(typecheck.TString()),
+					"local-gateway-id":            typecheck.TOptional(typecheck.TString()),
+					"nat-gateway-id":              typecheck.TOptional(typecheck.TString()),
+					"network-interface-id":        typecheck.TOptional(typecheck.TString()),
+					"route-table-id":              typecheck.TString(),
+					"transit-gateway-id":          typecheck.TOptional(typecheck.TString()),
+					"vpc-endpoint-id":             typecheck.TOptional(typecheck.TString()),
+					"vpc-peering-connection-id":   typecheck.TOptional(typecheck.TString()),
+				},
+				Outputs: map[string]typecheck.Type{
+					"state": typecheck.TString(),
+				},
+				Constraints: []lang.ConstraintSpec{
+					{
+						Kind: "exactly-one-of",
+						Fields: []string{
+							"input.destination-cidr-block",
+							"input.destination-ipv6-cidr-block",
+							"input.destination-prefix-list-id",
+						},
+					},
+					{
+						Kind: "exactly-one-of",
+						Fields: []string{
+							"input.carrier-gateway-id",
+							"input.core-network-arn",
+							"input.egress-only-gateway-id",
+							"input.gateway-id",
+							"input.local-gateway-id",
+							"input.nat-gateway-id",
+							"input.network-interface-id",
+							"input.transit-gateway-id",
+							"input.vpc-endpoint-id",
+							"input.vpc-peering-connection-id",
+						},
+					},
+					{
+						Kind: "forbidden-with",
+						Fields: []string{
+							"input.carrier-gateway-id",
+							"input.destination-ipv6-cidr-block",
+						},
+					},
+					{
+						Kind: "forbidden-with",
+						Fields: []string{
+							"input.egress-only-gateway-id",
+							"input.destination-cidr-block",
+						},
+					},
+					{
+						Kind: "forbidden-with",
+						Fields: []string{
+							"input.vpc-endpoint-id",
+							"input.destination-prefix-list-id",
+						},
+					},
+					{
+						Kind:    "predicate",
+						When:    "(input.gateway-id != null)",
+						Require: "(input.gateway-id != 'local')",
+						Message: "gateway-id cannot be local; the local route is not managed here",
+					},
+				},
+			},
+		},
+		{
+			key: "route-table-association",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"gateway-id":     typecheck.TOptional(typecheck.TString()),
+					"route-table-id": typecheck.TString(),
+					"subnet-id":      typecheck.TOptional(typecheck.TString()),
+				},
+				Outputs: map[string]typecheck.Type{
+					"route-table-association-id": typecheck.TString(),
+				},
+				Constraints: []lang.ConstraintSpec{
+					{
+						Kind: "exactly-one-of",
+						Fields: []string{
+							"input.subnet-id",
+							"input.gateway-id",
+						},
+					},
+				},
+			},
+		},
+		{
+			key: "eip",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"address":                  typecheck.TOptional(typecheck.TString()),
+					"customer-owned-ipv4-pool": typecheck.TOptional(typecheck.TString()),
+					"domain":                   typecheck.TOptional(typecheck.TString()),
+					"ipam-pool-id":             typecheck.TOptional(typecheck.TString()),
+					"network-border-group":     typecheck.TOptional(typecheck.TString()),
+					"public-ipv4-pool":         typecheck.TOptional(typecheck.TString()),
+					"tags":                     typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				},
+				Outputs: map[string]typecheck.Type{
+					"allocation-id":  typecheck.TString(),
+					"association-id": typecheck.TString(),
+					"private-ip":     typecheck.TString(),
+					"public-ip":      typecheck.TString(),
+				},
+				Constraints: []lang.ConstraintSpec{
+					{
+						Kind:    "predicate",
+						When:    "(input.domain != null)",
+						Require: "(input.domain == 'vpc' || input.domain == 'standard')",
+						Message: "domain must be vpc or standard",
+					},
+				},
+			},
+		},
+		{
+			key: "nat-gateway",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"allocation-id":     typecheck.TOptional(typecheck.TString()),
+					"connectivity-type": typecheck.TOptional(typecheck.TString()),
+					"private-ip":        typecheck.TOptional(typecheck.TString()),
+					"secondary-allocation-ids": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
+					"secondary-private-ip-address-count": typecheck.TOptional(
+						typecheck.TInteger()),
+					"secondary-private-ip-addresses": typecheck.TOptional(typecheck.TList(
+						typecheck.TString())),
+					"subnet-id": typecheck.TString(),
+					"tags":      typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+				},
+				Outputs: map[string]typecheck.Type{
+					"nat-gateway-id":       typecheck.TString(),
+					"network-interface-id": typecheck.TString(),
+					"private-ip":           typecheck.TString(),
+					"public-ip":            typecheck.TString(),
+				},
+				Constraints: []lang.ConstraintSpec{
+					{
+						Kind: "predicate",
+						When: "(input.connectivity-type != null)",
+						Require: "(input.connectivity-type == 'public' || " +
+							"input.connectivity-type == 'private')",
+						Message: "connectivity-type must be public or private",
+					},
+					{
+						Kind: "predicate",
+						When: "((input.connectivity-type == 'public') || " +
+							"(input.connectivity-type == null))",
+						Require: "(input.allocation-id != null)",
+						Message: "allocation-id is required for a public NAT gateway",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(input.connectivity-type == 'private')",
+						Require: "(input.allocation-id == null)",
+						Message: "allocation-id is not supported with connectivity-type private",
+					},
+					{
+						Kind: "predicate",
+						When: "(input.connectivity-type == 'private')",
+						Require: "(input.secondary-allocation-ids == null || " +
+							"@core.length(input.secondary-allocation-ids) <= 0)",
+						Message: "secondary-allocation-ids is not supported with " +
+							"connectivity-type private",
+					},
+					{
+						Kind:    "predicate",
+						When:    "(input.secondary-private-ip-address-count != null)",
+						Require: "(input.connectivity-type == 'private')",
+						Message: "secondary-private-ip-address-count is supported only with " +
+							"connectivity-type private",
+					},
+					{
+						Kind: "predicate",
+						When: "true",
+						Require: "((input.secondary-private-ip-address-count == null) || " +
+							"!((input.secondary-private-ip-addresses != null) && " +
+							"(@core.length(input.secondary-private-ip-addresses) >= 1)))",
+						Message: "secondary-private-ip-address-count and " +
+							"secondary-private-ip-addresses are mutually exclusive",
+					},
+				},
+			},
+		},
+		{
+			key: "vpc-endpoint",
+			want: &runtime.TypeSchema{
+				Inputs: map[string]typecheck.Type{
+					"dns-options": typecheck.TOptional(typecheck.TObject(
+						[]typecheck.ObjectField{
+							{
+								Name:     "dns-record-ip-type",
+								Type:     typecheck.TString(),
+								Optional: true,
+							},
+							{
+								Name:     "private-dns-only-for-inbound-resolver-endpoint",
+								Type:     typecheck.TBoolean(),
+								Optional: true,
+							},
+						})),
+					"ip-address-type":     typecheck.TOptional(typecheck.TString()),
+					"policy":              typecheck.TOptional(typecheck.TString()),
+					"private-dns-enabled": typecheck.TOptional(typecheck.TBoolean()),
+					"route-table-ids":     typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"security-group-ids":  typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"service-name":        typecheck.TString(),
+					"subnet-ids":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
+					"tags":                typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+					"vpc-endpoint-type":   typecheck.TOptional(typecheck.TString()),
+					"vpc-id":              typecheck.TString(),
+				},
+				Outputs: map[string]typecheck.Type{
+					"cidr-blocks": typecheck.TList(typecheck.TString()),
+					"dns-entries": typecheck.TList(typecheck.TObject(
+						[]typecheck.ObjectField{
+							{Name: "dns-name", Type: typecheck.TString()},
+							{Name: "hosted-zone-id", Type: typecheck.TString()},
+						})),
+					"network-interface-ids": typecheck.TList(typecheck.TString()),
+					"owner-id":              typecheck.TString(),
+					"policy":                typecheck.TString(),
+					"prefix-list-id":        typecheck.TString(),
+					"state":                 typecheck.TString(),
+					"vpc-endpoint-id":       typecheck.TString(),
+				},
+				Constraints: []lang.ConstraintSpec{
+					{
+						Kind: "predicate",
+						When: "(input.vpc-endpoint-type != null)",
+						Require: "(input.vpc-endpoint-type == 'Gateway' || " +
+							"input.vpc-endpoint-type == 'Interface' || " +
+							"input.vpc-endpoint-type == 'GatewayLoadBalancer')",
+						Message: "vpc-endpoint-type must be Gateway, Interface, or " +
+							"GatewayLoadBalancer",
+					},
+					{
+						Kind: "predicate",
+						When: "(input.ip-address-type != null)",
+						Require: "(input.ip-address-type == 'ipv4' || " +
+							"input.ip-address-type == 'dualstack' || " +
+							"input.ip-address-type == 'ipv6')",
+						Message: "ip-address-type must be ipv4, dualstack, or ipv6",
+					},
+					{
+						Kind: "predicate",
+						When: "(input.dns-options.dns-record-ip-type != null)",
+						Require: "(input.dns-options.dns-record-ip-type == 'ipv4' || " +
+							"input.dns-options.dns-record-ip-type == 'dualstack' || " +
+							"input.dns-options.dns-record-ip-type == 'ipv6' || " +
+							"input.dns-options.dns-record-ip-type == 'service-defined')",
+						Message: "dns-options dns-record-ip-type must be ipv4, " +
+							"dualstack, ipv6, or service-defined",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			require.Contains(t, schema.Resources, tt.key)
+			assertTypeSchemaEqual(t, tt.want, schema.Resources[tt.key],
+				tt.key)
+		})
+	}
+}
+
+// TestLibraryRegistersEc2KeyPair checks the runtime registration: ec2-key-pair
+// is present under Resources and dispatches to the KeyPairOutput type.
+func TestLibraryRegistersEc2KeyPair(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "key-pair")
+	assert.Equal(t, reflect.TypeFor[*svc.KeyPairOutput](),
+		lib.Resources["key-pair"].OutputType())
+}
+
+// TestEc2KeyPairSchema asserts the whole derived TypeSchema for ec2-key-pair:
+// the input and output field types and the declared optional defaults.
+func TestEc2KeyPairSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "key-pair")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"key-name":   typecheck.TString(),
+			"public-key": typecheck.TString(),
+			"tags":       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"fingerprint": typecheck.TString(),
+			"key-pair-id": typecheck.TString(),
+			"key-type":    typecheck.TString(),
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.Resources["key-pair"])
+}
+
+// TestLibraryRegistersEc2Instance checks the runtime registration: ec2-instance
+// is present under Resources and dispatches to the InstanceOutput type.
+func TestLibraryRegistersEc2Instance(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.Resources, "instance")
+	assert.Equal(t, reflect.TypeFor[*svc.InstanceOutput](),
+		lib.Resources["instance"].OutputType())
+}
+
+// TestEc2InstanceSchema asserts the whole derived TypeSchema for ec2-instance:
+// the input and output field types, the cross-field constraints -- including
+// the nested-selector rules on the launch-template, metadata-options, and
+// root-block-device blocks and the ForEach rules on the volume lists -- and
+// the declared optional defaults.
+func TestEc2InstanceSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.Resources, "instance")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"ami":                         typecheck.TOptional(typecheck.TString()),
+			"associate-public-ip-address": typecheck.TOptional(typecheck.TBoolean()),
+			"availability-zone":           typecheck.TOptional(typecheck.TString()),
+			"disable-api-stop":            typecheck.TOptional(typecheck.TBoolean()),
+			"disable-api-termination":     typecheck.TOptional(typecheck.TBoolean()),
+			"ebs-block-device": typecheck.TOptional(typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString()},
+					{
+						Name:     "delete-on-termination",
+						Type:     typecheck.TBoolean(),
+						Optional: true,
+					},
+					{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					{Name: "snapshot-id", Type: typecheck.TString(), Optional: true},
+					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+				}))),
+			"ebs-optimized": typecheck.TOptional(typecheck.TBoolean()),
+			"ephemeral-block-device": typecheck.TOptional(typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "device-name", Type: typecheck.TString()},
+					{Name: "no-device", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "virtual-name", Type: typecheck.TString(), Optional: true},
+				}))),
+			"force-destroy":        typecheck.TOptional(typecheck.TBoolean()),
+			"iam-instance-profile": typecheck.TOptional(typecheck.TString()),
+			"instance-initiated-shutdown-behavior": typecheck.TOptional(
+				typecheck.TString()),
+			"instance-type": typecheck.TOptional(typecheck.TString()),
+			"key-name":      typecheck.TOptional(typecheck.TString()),
+			"launch-template": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "id", Type: typecheck.TString(), Optional: true},
+					{Name: "name", Type: typecheck.TString(), Optional: true},
+					{Name: "version", Type: typecheck.TString(), Optional: true},
+				})),
+			"metadata-options": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "http-endpoint", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "http-protocol-ipv6",
+						Type:     typecheck.TString(),
+						Optional: true,
+					},
+					{
+						Name:     "http-put-response-hop-limit",
+						Type:     typecheck.TInteger(),
+						Optional: true,
+					},
+					{Name: "http-tokens", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "instance-metadata-tags",
+						Type:     typecheck.TString(),
+						Optional: true,
+					},
+				})),
+			"monitoring": typecheck.TOptional(typecheck.TBoolean()),
+			"private-ip": typecheck.TOptional(typecheck.TString()),
+			"root-block-device": typecheck.TOptional(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{
+						Name:     "delete-on-termination",
+						Type:     typecheck.TBoolean(),
+						Optional: true,
+					},
+					{Name: "encrypted", Type: typecheck.TBoolean(), Optional: true},
+					{Name: "iops", Type: typecheck.TInteger(), Optional: true},
+					{Name: "kms-key-id", Type: typecheck.TString(), Optional: true},
+					{
+						Name:     "tags",
+						Type:     typecheck.TMap(typecheck.TString()),
+						Optional: true,
+					},
+					{Name: "throughput", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-size", Type: typecheck.TInteger(), Optional: true},
+					{Name: "volume-type", Type: typecheck.TString(), Optional: true},
+				})),
+			"source-dest-check":      typecheck.TOptional(typecheck.TBoolean()),
+			"subnet-id":              typecheck.TOptional(typecheck.TString()),
+			"tags":                   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"tenancy":                typecheck.TOptional(typecheck.TString()),
+			"user-data":              typecheck.TOptional(typecheck.TString()),
+			"user-data-base64":       typecheck.TOptional(typecheck.TString()),
+			"volume-tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"vpc-security-group-ids": typecheck.TOptional(typecheck.TList(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"availability-zone":            typecheck.TString(),
+			"instance-id":                  typecheck.TString(),
+			"instance-state":               typecheck.TString(),
+			"primary-network-interface-id": typecheck.TString(),
+			"private-dns":                  typecheck.TString(),
+			"private-ip":                   typecheck.TString(),
+			"public-dns":                   typecheck.TString(),
+			"public-ip":                    typecheck.TString(),
+			"root-device-name":             typecheck.TString(),
+			"root-volume-id":               typecheck.TString(),
+			"subnet-id":                    typecheck.TString(),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "at-least-one-of",
+				Fields: []string{
+					"input.ami",
+					"input.launch-template",
+				},
+			},
+			{
+				Kind: "at-least-one-of",
+				Fields: []string{
+					"input.instance-type",
+					"input.launch-template",
+				},
+			},
+			{
+				Kind: "at-most-one-of",
+				Fields: []string{
+					"input.user-data",
+					"input.user-data-base64",
+				},
+			},
+			{
+				Kind: "predicate",
+				When: "(input.tenancy != null)",
+				Require: "(input.tenancy == 'default' || input.tenancy == 'dedicated' || " +
+					"input.tenancy == 'host')",
+				Message: "tenancy must be default, dedicated, or host",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.vpc-security-group-ids != null)",
+				Require: "(input.vpc-security-group-ids == null || " +
+					"@core.length(input.vpc-security-group-ids) >= 1)",
+				Message: "vpc-security-group-ids must list at least one group when given",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.launch-template != null)",
+				Require: "(((input.launch-template.id != null) && " +
+					"(input.launch-template.name == null)) || " +
+					"((input.launch-template.id == null) && " +
+					"(input.launch-template.name != null)))",
+				Message: "launch-template requires exactly one of id and name",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.metadata-options.http-endpoint != null)",
+				Require: "(input.metadata-options.http-endpoint == 'enabled' || " +
+					"input.metadata-options.http-endpoint == 'disabled')",
+				Message: "metadata-options http-endpoint must be enabled or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.metadata-options.http-tokens != null)",
+				Require: "(input.metadata-options.http-tokens == 'optional' || " +
+					"input.metadata-options.http-tokens == 'required')",
+				Message: "metadata-options http-tokens must be optional or required",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.metadata-options.http-protocol-ipv6 != null)",
+				Require: "(input.metadata-options.http-protocol-ipv6 == 'enabled' || " +
+					"input.metadata-options.http-protocol-ipv6 == 'disabled')",
+				Message: "metadata-options http-protocol-ipv6 must be enabled " +
+					"or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.metadata-options.instance-metadata-tags != null)",
+				Require: "(input.metadata-options.instance-metadata-tags == 'enabled' " +
+					"|| input.metadata-options.instance-metadata-tags == 'disabled')",
+				Message: "metadata-options instance-metadata-tags must be enabled " +
+					"or disabled",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.metadata-options.http-put-response-hop-limit != null)",
+				Require: "(input.metadata-options.http-put-response-hop-limit == null " +
+					"|| input.metadata-options.http-put-response-hop-limit >= 1) && " +
+					"(input.metadata-options.http-put-response-hop-limit == null || " +
+					"input.metadata-options.http-put-response-hop-limit <= 64)",
+				Message: "metadata-options http-put-response-hop-limit must be " +
+					"1 to 64",
+			},
+			{
+				Kind: "predicate",
+				When: "((input.root-block-device.iops != null) && " +
+					"(input.root-block-device.volume-type != null))",
+				Require: "(input.root-block-device.volume-type == 'gp3' || " +
+					"input.root-block-device.volume-type == 'io1' || " +
+					"input.root-block-device.volume-type == 'io2')",
+				Message: "root-block-device iops is valid only for gp3, io1, " +
+					"or io2 volume types",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.root-block-device.volume-type == 'io1' || " +
+					"input.root-block-device.volume-type == 'io2')",
+				Require: "(input.root-block-device.iops != null)",
+				Message: "root-block-device iops is required when volume-type " +
+					"is io1 or io2",
+			},
+			{
+				Kind: "predicate",
+				When: "((input.root-block-device.throughput != null) && " +
+					"(input.root-block-device.volume-type != null))",
+				Require: "(input.root-block-device.volume-type == 'gp3')",
+				Message: "root-block-device throughput is valid only for gp3 volumes",
+			},
+			{
+				Kind: "predicate",
+				When: "(input.root-block-device.tags != null)",
+				Require: "(input.volume-tags == null || " +
+					"@core.length(input.volume-tags) <= 0)",
+				Message: "root-block-device tags cannot combine with volume-tags",
+			},
+			{
+				Kind: "predicate",
+				When: "((@each.value.iops != null) && " +
+					"(@each.value.volume-type != null))",
+				Require: "(@each.value.volume-type == 'gp3' || " +
+					"@each.value.volume-type == 'io1' || " +
+					"@each.value.volume-type == 'io2')",
+				Message: "iops is valid only for gp3, io1, or io2 volume types",
+				ForEach: "input.ebs-block-device ?? []",
+			},
+			{
+				Kind: "predicate",
+				When: "(@each.value.volume-type == 'io1' || " +
+					"@each.value.volume-type == 'io2')",
+				Require: "(@each.value.iops != null)",
+				Message: "iops is required when volume-type is io1 or io2",
+				ForEach: "input.ebs-block-device ?? []",
+			},
+			{
+				Kind: "predicate",
+				When: "((@each.value.throughput != null) && " +
+					"(@each.value.volume-type != null))",
+				Require: "(@each.value.volume-type == 'gp3')",
+				Message: "throughput is valid only for gp3 volumes",
+				ForEach: "input.ebs-block-device ?? []",
+			},
+			{
+				Kind: "predicate",
+				When: "!(@each.value.no-device == true)",
+				Require: "((@each.value.virtual-name != null) && " +
+					"(@core.length(@each.value.virtual-name) >= 1))",
+				Message: "virtual-name is required unless no-device is true",
+				ForEach: "input.ephemeral-block-device ?? []",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.Resources["instance"])
+}
+
+// TestLibraryRegistersEc2AvailabilityZones checks the runtime registration:
+// ec2-availability-zones is present under DataSources and dispatches to the
+// AvailabilityZonesOutput type.
+func TestLibraryRegistersEc2AvailabilityZones(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "availability-zones")
+	assert.Equal(t, reflect.TypeFor[*svc.AvailabilityZonesOutput](),
+		lib.DataSources["availability-zones"].OutputType())
+}
+
+// TestEc2AvailabilityZonesSchema asserts the whole derived TypeSchema for the
+// ec2-availability-zones data source: the query inputs, the three list
+// outputs, the state enum constraint, and the declared optional defaults.
+func TestEc2AvailabilityZonesSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "availability-zones")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"all-availability-zones": typecheck.TOptional(typecheck.TBoolean()),
+			"exclude-names":          typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"exclude-zone-ids":       typecheck.TOptional(typecheck.TList(typecheck.TString())),
+			"filters": typecheck.TOptional(typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "name", Type: typecheck.TString()},
+					{Name: "values", Type: typecheck.TList(typecheck.TString())},
+				}))),
+			"state": typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"group-names": typecheck.TList(typecheck.TString()),
+			"names":       typecheck.TList(typecheck.TString()),
+			"zone-ids":    typecheck.TList(typecheck.TString()),
+		},
+		Constraints: []lang.ConstraintSpec{
+			{
+				Kind: "predicate",
+				When: "(input.state != null)",
+				Require: "(input.state == 'available' || input.state == 'information' || " +
+					"input.state == 'impaired' || input.state == 'unavailable' || " +
+					"input.state == 'constrained')",
+				Message: "state must be one of available, information, impaired, " +
+					"unavailable, or constrained",
+			},
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["availability-zones"])
+}
+
+// TestLibraryRegistersEc2Subnets checks the runtime registration: ec2-subnets
+// is present under DataSources and dispatches to the SubnetsOutput type.
+func TestLibraryRegistersEc2Subnets(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "subnets")
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetsOutput](),
+		lib.DataSources["subnets"].OutputType())
+}
+
+// TestEc2SubnetsSchema asserts the whole derived TypeSchema for the
+// ec2-subnets data source: tag filters, generic filters, ids output, and the
+// declared optional defaults.
+func TestEc2SubnetsSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "subnets")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			}))),
+			"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"ids": typecheck.TList(typecheck.TString()),
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["subnets"])
+}
+
+// TestLibraryRegistersEc2SubnetData checks the runtime registration:
+// ec2-subnet-data is present under DataSources and dispatches to SubnetDataOutput.
+func TestLibraryRegistersEc2SubnetData(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "subnet-data")
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetDataOutput](),
+		lib.DataSources["subnet-data"].OutputType())
+}
+
+// TestEc2SubnetDataSchema asserts the whole derived TypeSchema for the
+// ec2-subnet-data data source: its query inputs, subnet outputs, and declared
+// optional defaults.
+func TestEc2SubnetDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "subnet-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"availability-zone":    typecheck.TOptional(typecheck.TString()),
+			"availability-zone-id": typecheck.TOptional(typecheck.TString()),
+			"cidr-block":           typecheck.TOptional(typecheck.TString()),
+			"default-for-az":       typecheck.TOptional(typecheck.TBoolean()),
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			}))),
+			"id":              typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block": typecheck.TOptional(typecheck.TString()),
+			"state":           typecheck.TOptional(typecheck.TString()),
+			"tags":            typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"vpc-id":          typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":                             typecheck.TString(),
+			"assign-ipv6-address-on-creation": typecheck.TBoolean(),
+			"availability-zone":               typecheck.TString(),
+			"availability-zone-id":            typecheck.TString(),
+			"available-ip-address-count":      typecheck.TInteger(),
+			"cidr-block":                      typecheck.TString(),
+			"customer-owned-ipv4-pool":        typecheck.TString(),
+			"default-for-az":                  typecheck.TBoolean(),
+			"enable-dns64":                    typecheck.TBoolean(),
+			"enable-lni-at-device-index":      typecheck.TInteger(),
+			"enable-resource-name-dns-a-record-on-launch": typecheck.TOptional(
+				typecheck.TBoolean()),
+			"enable-resource-name-dns-aaaa-record-on-launch": typecheck.TOptional(
+				typecheck.TBoolean()),
+			"id":                              typecheck.TString(),
+			"ipv6-cidr-block":                 typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block-association-id":  typecheck.TOptional(typecheck.TString()),
+			"ipv6-native":                     typecheck.TBoolean(),
+			"map-customer-owned-ip-on-launch": typecheck.TBoolean(),
+			"map-public-ip-on-launch":         typecheck.TBoolean(),
+			"outpost-arn":                     typecheck.TString(),
+			"owner-id":                        typecheck.TString(),
+			"private-dns-hostname-type-on-launch": typecheck.TOptional(
+				typecheck.TString()),
+			"state":  typecheck.TString(),
+			"tags":   typecheck.TMap(typecheck.TString()),
+			"vpc-id": typecheck.TString(),
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["subnet-data"])
+}
+
+// TestLibraryRegistersEc2SecurityGroupData checks the runtime registration:
+// ec2-security-group-data is present under DataSources and dispatches to
+// SecurityGroupDataOutput.
+func TestLibraryRegistersEc2SecurityGroupData(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "security-group-data")
+	assert.Equal(t, reflect.TypeFor[*svc.SecurityGroupDataOutput](),
+		lib.DataSources["security-group-data"].OutputType())
+}
+
+// TestEc2SecurityGroupDataSchema asserts the whole derived TypeSchema for the
+// ec2-security-group-data data source: its query inputs, security group outputs,
+// and declared optional defaults.
+func TestEc2SecurityGroupDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "security-group-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			}))),
+			"id":     typecheck.TOptional(typecheck.TString()),
+			"name":   typecheck.TOptional(typecheck.TString()),
+			"tags":   typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"vpc-id": typecheck.TOptional(typecheck.TString()),
+		},
+		Outputs: map[string]typecheck.Type{
+			"arn":         typecheck.TString(),
+			"description": typecheck.TString(),
+			"id":          typecheck.TString(),
+			"name":        typecheck.TString(),
+			"tags":        typecheck.TMap(typecheck.TString()),
+			"vpc-id":      typecheck.TString(),
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["security-group-data"])
+}
+
+// TestLibraryRegistersEc2VpcData checks the runtime registration:
+// ec2-vpc-data is present under DataSources and dispatches to VpcDataOutput.
+func TestLibraryRegistersEc2VpcData(t *testing.T) {
+	lib := Library()
+	require.Contains(t, lib.DataSources, "vpc-data")
+	assert.Equal(t, reflect.TypeFor[*svc.VpcDataOutput](),
+		lib.DataSources["vpc-data"].OutputType())
+}
+
+// TestEc2VpcDataSchema asserts the whole derived TypeSchema for the
+// ec2-vpc-data data source: its query inputs, enriched VPC outputs, and the
+// declared optional defaults.
+func TestEc2VpcDataSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Contains(t, schema.DataSources, "vpc-data")
+	want := &runtime.TypeSchema{
+		Inputs: map[string]typecheck.Type{
+			"vpc-id":          typecheck.TOptional(typecheck.TString()),
+			"cidr-block":      typecheck.TOptional(typecheck.TString()),
+			"dhcp-options-id": typecheck.TOptional(typecheck.TString()),
+			"default":         typecheck.TOptional(typecheck.TBoolean()),
+			"state":           typecheck.TOptional(typecheck.TString()),
+			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
+				{Name: "name", Type: typecheck.TString()},
+				{Name: "values", Type: typecheck.TList(typecheck.TString())},
+			}))),
+			"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		},
+		Outputs: map[string]typecheck.Type{
+			"vpc-id":     typecheck.TString(),
+			"arn":        typecheck.TString(),
+			"cidr-block": typecheck.TString(),
+			"cidr-block-associations": typecheck.TList(typecheck.TObject(
+				[]typecheck.ObjectField{
+					{Name: "association-id", Type: typecheck.TString()},
+					{Name: "cidr-block", Type: typecheck.TString()},
+					{Name: "state", Type: typecheck.TString()},
+				})),
+			"default":                              typecheck.TBoolean(),
+			"dhcp-options-id":                      typecheck.TString(),
+			"enable-dns-hostnames":                 typecheck.TBoolean(),
+			"enable-dns-support":                   typecheck.TBoolean(),
+			"enable-network-address-usage-metrics": typecheck.TBoolean(),
+			"instance-tenancy":                     typecheck.TString(),
+			"ipv6-association-id":                  typecheck.TOptional(typecheck.TString()),
+			"ipv6-cidr-block":                      typecheck.TOptional(typecheck.TString()),
+			"main-route-table-id":                  typecheck.TOptional(typecheck.TString()),
+			"owner-id":                             typecheck.TString(),
+			"tags":                                 typecheck.TMap(typecheck.TString()),
+		},
+	}
+	assertTypeSchemaEqual(t, want, schema.DataSources["vpc-data"])
+}

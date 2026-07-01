@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/kms"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/kms"
 	awskms "github.com/cloudboss/unobin-library-aws/service/kms"
 )
 
@@ -62,8 +62,8 @@ func TestLibraryRegistersKMSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"key":   reflect.TypeFor[*internal.KeyOutput](),
-		"alias": reflect.TypeFor[*internal.AliasOutput](),
+		"key":   reflect.TypeFor[*svc.KeyOutput](),
+		"alias": reflect.TypeFor[*svc.AliasOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

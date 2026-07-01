@@ -1,0 +1,172 @@
+{
+  "libraries": [
+    {
+      "title": "ACM",
+      "slug": "acm",
+      "package": "service/acm",
+      "module": "github.com/cloudboss/unobin-library-aws//service/acm",
+      "alias": "aws-acm"
+    },
+    {
+      "title": "API Gateway v2",
+      "slug": "apigatewayv2",
+      "package": "service/apigatewayv2",
+      "module": "github.com/cloudboss/unobin-library-aws//service/apigatewayv2",
+      "alias": "aws-apigatewayv2"
+    },
+    {
+      "title": "Auto Scaling",
+      "slug": "autoscaling",
+      "package": "service/autoscaling",
+      "module": "github.com/cloudboss/unobin-library-aws//service/autoscaling",
+      "alias": "aws-autoscaling"
+    },
+    {
+      "title": "CloudFront",
+      "slug": "cloudfront",
+      "package": "service/cloudfront",
+      "module": "github.com/cloudboss/unobin-library-aws//service/cloudfront",
+      "alias": "aws-cloudfront"
+    },
+    {
+      "title": "CloudWatch",
+      "slug": "cloudwatch",
+      "package": "service/cloudwatch",
+      "module": "github.com/cloudboss/unobin-library-aws//service/cloudwatch",
+      "alias": "aws-cloudwatch"
+    },
+    {
+      "title": "CloudWatch Logs",
+      "slug": "cloudwatchlogs",
+      "package": "service/cloudwatchlogs",
+      "module": "github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs",
+      "alias": "aws-cloudwatchlogs"
+    },
+    {
+      "title": "DynamoDB",
+      "slug": "dynamodb",
+      "package": "service/dynamodb",
+      "module": "github.com/cloudboss/unobin-library-aws//service/dynamodb",
+      "alias": "aws-dynamodb"
+    },
+    {
+      "title": "EC2",
+      "slug": "ec2",
+      "package": "service/ec2",
+      "module": "github.com/cloudboss/unobin-library-aws//service/ec2",
+      "alias": "aws-ec2"
+    },
+    {
+      "title": "ECR",
+      "slug": "ecr",
+      "package": "service/ecr",
+      "module": "github.com/cloudboss/unobin-library-aws//service/ecr",
+      "alias": "aws-ecr"
+    },
+    {
+      "title": "ECS",
+      "slug": "ecs",
+      "package": "service/ecs",
+      "module": "github.com/cloudboss/unobin-library-aws//service/ecs",
+      "alias": "aws-ecs"
+    },
+    {
+      "title": "ELBv2",
+      "slug": "elbv2",
+      "package": "service/elbv2",
+      "module": "github.com/cloudboss/unobin-library-aws//service/elbv2",
+      "alias": "aws-elbv2"
+    },
+    {
+      "title": "EventBridge",
+      "slug": "eventbridge",
+      "package": "service/eventbridge",
+      "module": "github.com/cloudboss/unobin-library-aws//service/eventbridge",
+      "alias": "aws-eventbridge"
+    },
+    {
+      "title": "IAM",
+      "slug": "iam",
+      "package": "service/iam",
+      "module": "github.com/cloudboss/unobin-library-aws//service/iam",
+      "alias": "aws-iam"
+    },
+    {
+      "title": "KMS",
+      "slug": "kms",
+      "package": "service/kms",
+      "module": "github.com/cloudboss/unobin-library-aws//service/kms",
+      "alias": "aws-kms"
+    },
+    {
+      "title": "Lambda",
+      "slug": "lambda",
+      "package": "service/lambda",
+      "module": "github.com/cloudboss/unobin-library-aws//service/lambda",
+      "alias": "aws-lambda"
+    },
+    {
+      "title": "Lambda MicroVMs",
+      "slug": "lambdamicrovms",
+      "package": "service/lambdamicrovms",
+      "module": "github.com/cloudboss/unobin-library-aws//service/lambdamicrovms",
+      "alias": "aws-lambdamicrovms"
+    },
+    {
+      "title": "RDS",
+      "slug": "rds",
+      "package": "service/rds",
+      "module": "github.com/cloudboss/unobin-library-aws//service/rds",
+      "alias": "aws-rds"
+    },
+    {
+      "title": "Route 53",
+      "slug": "route53",
+      "package": "service/route53",
+      "module": "github.com/cloudboss/unobin-library-aws//service/route53",
+      "alias": "aws-route53"
+    },
+    {
+      "title": "S3",
+      "slug": "s3",
+      "package": "service/s3",
+      "module": "github.com/cloudboss/unobin-library-aws//service/s3",
+      "alias": "aws-s3"
+    },
+    {
+      "title": "Secrets Manager",
+      "slug": "secretsmanager",
+      "package": "service/secretsmanager",
+      "module": "github.com/cloudboss/unobin-library-aws//service/secretsmanager",
+      "alias": "aws-secretsmanager"
+    },
+    {
+      "title": "SNS",
+      "slug": "sns",
+      "package": "service/sns",
+      "module": "github.com/cloudboss/unobin-library-aws//service/sns",
+      "alias": "aws-sns"
+    },
+    {
+      "title": "SQS",
+      "slug": "sqs",
+      "package": "service/sqs",
+      "module": "github.com/cloudboss/unobin-library-aws//service/sqs",
+      "alias": "aws-sqs"
+    },
+    {
+      "title": "SSM",
+      "slug": "ssm",
+      "package": "service/ssm",
+      "module": "github.com/cloudboss/unobin-library-aws//service/ssm",
+      "alias": "aws-ssm"
+    },
+    {
+      "title": "STS",
+      "slug": "sts",
+      "package": "service/sts",
+      "module": "github.com/cloudboss/unobin-library-aws//service/sts",
+      "alias": "aws-sts"
+    }
+  ]
+}

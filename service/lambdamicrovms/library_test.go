@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/lambdamicrovms"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/lambdamicrovms"
 	awslambdamicrovms "github.com/cloudboss/unobin-library-aws/service/lambdamicrovms"
 )
 
@@ -87,21 +87,21 @@ func TestLibraryRegistersLambdaMicroVMsLocalKinds(t *testing.T) {
 
 	require.Equal(
 		t,
-		reflect.TypeFor[*internal.MicrovmImageOutput](),
+		reflect.TypeFor[*svc.MicrovmImageOutput](),
 		lib.Resources["microvm-image"].OutputType(),
 	)
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"managed-microvm-image-versions": reflect.TypeFor[*internal.ManagedMicrovmImageVersionsOutput](),
-		"managed-microvm-images":         reflect.TypeFor[*internal.ManagedMicrovmImagesOutput](),
-		"microvm":                        reflect.TypeFor[*internal.MicrovmDataOutput](),
-		"microvm-image":                  reflect.TypeFor[*internal.MicrovmImageDataOutput](),
-		"microvm-image-build":            reflect.TypeFor[*internal.MicrovmImageBuildDataOutput](),
-		"microvm-image-builds":           reflect.TypeFor[*internal.MicrovmImageBuildsOutput](),
-		"microvm-image-version":          reflect.TypeFor[*internal.MicrovmImageVersionDataOutput](),
-		"microvm-image-versions":         reflect.TypeFor[*internal.MicrovmImageVersionsOutput](),
-		"microvm-images":                 reflect.TypeFor[*internal.MicrovmImagesOutput](),
-		"microvms":                       reflect.TypeFor[*internal.MicrovmsOutput](),
+		"managed-microvm-image-versions": reflect.TypeFor[*svc.ManagedMicrovmImageVersionsOutput](),
+		"managed-microvm-images":         reflect.TypeFor[*svc.ManagedMicrovmImagesOutput](),
+		"microvm":                        reflect.TypeFor[*svc.MicrovmDataOutput](),
+		"microvm-image":                  reflect.TypeFor[*svc.MicrovmImageDataOutput](),
+		"microvm-image-build":            reflect.TypeFor[*svc.MicrovmImageBuildDataOutput](),
+		"microvm-image-builds":           reflect.TypeFor[*svc.MicrovmImageBuildsOutput](),
+		"microvm-image-version":          reflect.TypeFor[*svc.MicrovmImageVersionDataOutput](),
+		"microvm-image-versions":         reflect.TypeFor[*svc.MicrovmImageVersionsOutput](),
+		"microvm-images":                 reflect.TypeFor[*svc.MicrovmImagesOutput](),
+		"microvms":                       reflect.TypeFor[*svc.MicrovmsOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -110,13 +110,13 @@ func TestLibraryRegistersLambdaMicroVMsLocalKinds(t *testing.T) {
 	}
 
 	actionOutputs := map[string]reflect.Type{
-		"create-microvm-auth-token":           reflect.TypeFor[*internal.MicrovmAuthTokenOutput](),
-		"create-microvm-shell-auth-token":     reflect.TypeFor[*internal.MicrovmShellAuthTokenOutput](),
-		"resume-microvm":                      reflect.TypeFor[*internal.ResumeMicrovmOutput](),
-		"run-microvm":                         reflect.TypeFor[*internal.MicrovmDataOutput](),
-		"suspend-microvm":                     reflect.TypeFor[*internal.SuspendMicrovmOutput](),
-		"terminate-microvm":                   reflect.TypeFor[*internal.TerminateMicrovmOutput](),
-		"update-microvm-image-version-status": reflect.TypeFor[*internal.MicrovmImageVersionDataOutput](),
+		"create-microvm-auth-token":           reflect.TypeFor[*svc.MicrovmAuthTokenOutput](),
+		"create-microvm-shell-auth-token":     reflect.TypeFor[*svc.MicrovmShellAuthTokenOutput](),
+		"resume-microvm":                      reflect.TypeFor[*svc.ResumeMicrovmOutput](),
+		"run-microvm":                         reflect.TypeFor[*svc.MicrovmDataOutput](),
+		"suspend-microvm":                     reflect.TypeFor[*svc.SuspendMicrovmOutput](),
+		"terminate-microvm":                   reflect.TypeFor[*svc.TerminateMicrovmOutput](),
+		"update-microvm-image-version-status": reflect.TypeFor[*svc.MicrovmImageVersionDataOutput](),
 	}
 	for name, outputType := range actionOutputs {
 		t.Run(name, func(t *testing.T) {

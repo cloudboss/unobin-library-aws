@@ -14,7 +14,7 @@ LOCALSTACK_NAME := $(PROJECT)-localstack
 MINISTACK_NAME  := $(PROJECT)-ministack
 
 UNOBIN_VERSION := $(shell awk '/github.com[/]cloudboss[/]unobin v/{print $$2}' go.mod)
-DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.1.4
+DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.2.0
 
 .DEFAULT_GOAL := help
 
@@ -46,7 +46,7 @@ $(DIR_OUT)/.command-%:
 HAS_COMMAND_CURL := $(DIR_OUT)/.command-curl
 
 docs:
-	@$(DOCGEN) --root $(DIR_ROOT) --out docs/reference
+	@$(DOCGEN) --root $(DIR_ROOT) --collection docs/reference-libraries.json --out docs/reference
 
 test:
 	@go test -v ./...

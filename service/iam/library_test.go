@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/iam"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/iam"
 	awsiam "github.com/cloudboss/unobin-library-aws/service/iam"
 )
 
@@ -75,19 +75,19 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"role":                    reflect.TypeFor[*internal.RoleOutput](),
-		"group":                   reflect.TypeFor[*internal.GroupOutput](),
-		"user":                    reflect.TypeFor[*internal.UserOutput](),
-		"access-key":              reflect.TypeFor[*internal.AccessKeyOutput](),
-		"policy":                  reflect.TypeFor[*internal.PolicyOutput](),
-		"instance-profile":        reflect.TypeFor[*internal.InstanceProfileOutput](),
-		"openid-connect-provider": reflect.TypeFor[*internal.OpenIDConnectProviderOutput](),
-		"role-policy-attachment":  reflect.TypeFor[*internal.RolePolicyAttachmentOutput](),
-		"group-policy-attachment": reflect.TypeFor[*internal.GroupPolicyAttachmentOutput](),
-		"user-policy-attachment":  reflect.TypeFor[*internal.UserPolicyAttachmentOutput](),
-		"role-policy":             reflect.TypeFor[*internal.RolePolicyOutput](),
-		"group-policy":            reflect.TypeFor[*internal.GroupPolicyOutput](),
-		"user-policy":             reflect.TypeFor[*internal.UserPolicyOutput](),
+		"role":                    reflect.TypeFor[*svc.RoleOutput](),
+		"group":                   reflect.TypeFor[*svc.GroupOutput](),
+		"user":                    reflect.TypeFor[*svc.UserOutput](),
+		"access-key":              reflect.TypeFor[*svc.AccessKeyOutput](),
+		"policy":                  reflect.TypeFor[*svc.PolicyOutput](),
+		"instance-profile":        reflect.TypeFor[*svc.InstanceProfileOutput](),
+		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderOutput](),
+		"role-policy-attachment":  reflect.TypeFor[*svc.RolePolicyAttachmentOutput](),
+		"group-policy-attachment": reflect.TypeFor[*svc.GroupPolicyAttachmentOutput](),
+		"user-policy-attachment":  reflect.TypeFor[*svc.UserPolicyAttachmentOutput](),
+		"role-policy":             reflect.TypeFor[*svc.RolePolicyOutput](),
+		"group-policy":            reflect.TypeFor[*svc.GroupPolicyOutput](),
+		"user-policy":             reflect.TypeFor[*svc.UserPolicyOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 		})
 	}
 	dataSourcesOutputs := map[string]reflect.Type{
-		"openid-connect-provider": reflect.TypeFor[*internal.OpenIDConnectProviderDataOutput](),
+		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderDataOutput](),
 	}
 	for name, outputType := range dataSourcesOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/sns"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/sns"
 	awssns "github.com/cloudboss/unobin-library-aws/service/sns"
 )
 
@@ -63,9 +63,9 @@ func TestLibraryRegistersSNSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"topic":              reflect.TypeFor[*internal.TopicOutput](),
-		"topic-policy":       reflect.TypeFor[*internal.TopicPolicyOutput](),
-		"topic-subscription": reflect.TypeFor[*internal.TopicSubscriptionOutput](),
+		"topic":              reflect.TypeFor[*svc.TopicOutput](),
+		"topic-policy":       reflect.TypeFor[*svc.TopicPolicyOutput](),
+		"topic-subscription": reflect.TypeFor[*svc.TopicSubscriptionOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

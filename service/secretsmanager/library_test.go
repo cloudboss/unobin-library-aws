@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/secretsmanager"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/secretsmanager"
 	awssecretsmanager "github.com/cloudboss/unobin-library-aws/service/secretsmanager"
 )
 
@@ -62,8 +62,8 @@ func TestLibraryRegistersSecretsManagerLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"secret":         reflect.TypeFor[*internal.SecretOutput](),
-		"secret-version": reflect.TypeFor[*internal.SecretVersionOutput](),
+		"secret":         reflect.TypeFor[*svc.SecretOutput](),
+		"secret-version": reflect.TypeFor[*svc.SecretVersionOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

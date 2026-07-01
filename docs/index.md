@@ -1,8 +1,8 @@
-# AWS library
+# AWS libraries
 
-The AWS library provides Unobin resources, data sources, and actions backed by
-AWS services. Import it in factory source and pass one AWS configuration value to
-the import alias.
+The AWS packages provide Unobin resources, data sources, and actions backed by
+AWS services. Import only the service packages a factory uses and pass each
+service alias the same AWS configuration value when they share settings.
 
 ```
 factory: {
@@ -10,22 +10,24 @@ factory: {
 
   inputs: {
     aws-config: {
-      type: library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: { region: 'us-east-1' }
     }
     bucket-name: { type: string }
   }
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-s3: 'github.com/cloudboss/unobin-library-aws//service/s3'
+  }
 
   library-configs: {
-    aws: input.aws-config
+    aws-s3: input.aws-config
   }
 
   resources: {
-    assets: aws.s3-bucket {
+    assets: aws-s3.bucket {
       bucket: input.bucket-name
-      tags: { service: 'assets' }
+      tags:   { service: 'assets' }
     }
   }
 
@@ -35,7 +37,7 @@ factory: {
 }
 ```
 
-Add the library to the dependency project before compiling the factory:
+Add the module dependency before compiling the factory:
 
 ```
 unobin deps get github.com/cloudboss/unobin-library-aws@v0.1.0-a.5
@@ -98,9 +100,10 @@ See [configuration reference](reference/configuration.md) for every field.
 
 ## Reference
 
-The generated reference lists every library kind, its inputs, outputs,
-defaults, constraints, and sensitive fields.
+The generated reference groups kinds by service and lists each service import
+path, suggested alias, inputs, outputs, defaults, constraints, and sensitive
+fields.
 
-- [Resources](reference/resources/)
-- [Data sources](reference/data-sources/)
-- [Actions](reference/actions/)
+- [Reference overview](reference/)
+- [Configuration](reference/configuration.md)
+- [S3 bucket resource](reference/s3/resources/bucket.md)

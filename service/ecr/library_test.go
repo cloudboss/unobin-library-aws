@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/sdk/cfg"
 	"github.com/stretchr/testify/require"
 
-	internal "github.com/cloudboss/unobin-library-aws/internal/service/ecr"
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/ecr"
 	awsecr "github.com/cloudboss/unobin-library-aws/service/ecr"
 )
 
@@ -61,7 +61,7 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"repository": reflect.TypeFor[*internal.RepositoryOutput](),
+		"repository": reflect.TypeFor[*svc.RepositoryOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
