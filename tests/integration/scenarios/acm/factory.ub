@@ -6,13 +6,13 @@ factory: {
     the preference through UpdateCertificateOptions and the tags through the tag sync.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-acm: 'github.com/cloudboss/unobin-library-aws//service/acm' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-acm: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     transparency: {
@@ -27,7 +27,7 @@ factory: {
   }
 
   resources: {
-    acm-certificate-it: aws.acm-certificate {
+    acm-certificate-it: aws-acm.certificate {
       domain-name:               'unobin-it.example.com'
       validation-method:         'DNS'
       subject-alternative-names: ['www.unobin-it.example.com']
@@ -37,7 +37,7 @@ factory: {
   }
 
   data-sources: {
-    acm-certificate-lookup: aws.acm-certificate-data {
+    acm-certificate-lookup: aws-acm.certificate-data {
       domain:      resource.acm-certificate-it.domain-name
       tags:        { unobin: 'acm-it' }
       statuses:    ['PENDING_VALIDATION']

@@ -9,13 +9,19 @@ factory: {
     forwarding use AWS managed policies resolved by the CloudFront policy data sources.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront'
+    aws-s3:         'github.com/cloudboss/unobin-library-aws//service/s3'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-cloudfront: input.aws-config
+    aws-s3:         input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     comment: {
@@ -26,41 +32,41 @@ factory: {
   }
 
   data-sources: {
-    cloudfront-cache-policy-caching-optimized: aws.cloudfront-cache-policy-data {
+    cloudfront-cache-policy-caching-optimized: aws-cloudfront.cache-policy-data {
       name: 'Managed-CachingOptimized'
     }
-    cloudfront-origin-request-policy-cors-s3: aws.cloudfront-origin-request-policy-data {
+    cloudfront-origin-request-policy-cors-s3: aws-cloudfront.origin-request-policy-data {
       name: 'Managed-CORS-S3Origin'
     }
   }
 
   resources: {
-    s3-bucket-origin: aws.s3-bucket {
+    s3-bucket-origin: aws-s3.bucket {
       bucket:           'unobin-it-cloudfront-origin'
       empty-on-destroy: true
       tags:             { unobin: 'cloudfront-it' }
     }
-    cloudfront-origin-access-control-oac: aws.cloudfront-origin-access-control {
+    cloudfront-origin-access-control-oac: aws-cloudfront.origin-access-control {
       name:                              'unobin-it-oac'
       description:                       'unobin integration test origin access control'
       origin-access-control-origin-type: 's3'
       signing-behavior:                  'always'
       signing-protocol:                  'sigv4'
     }
-    cloudfront-function-viewer: aws.cloudfront-function {
+    cloudfront-function-viewer: aws-cloudfront.function {
       name:         'unobin-it-fn'
       runtime:      'cloudfront-js-2.0'
       comment:      'unobin integration test function'
       code-content: 'function handler(event) { return event.request; }'
     }
-    cloudfront-response-headers-policy-headers: aws.cloudfront-response-headers-policy {
+    cloudfront-response-headers-policy-headers: aws-cloudfront.response-headers-policy {
       name: 'unobin-it-headers'
       security-headers-config: {
         content-type-options: { override: true }
         frame-options:        { frame-option: 'DENY', override: true }
       }
     }
-    cloudfront-distribution-it: aws.cloudfront-distribution {
+    cloudfront-distribution-it: aws-cloudfront.distribution {
       enabled:             true
       comment:             input.comment
       default-root-object: 'index.html'

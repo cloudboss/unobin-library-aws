@@ -6,13 +6,13 @@ factory: {
     force-destroy lets the zone tear down with its records across apply and destroy.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-route53: 'github.com/cloudboss/unobin-library-aws//service/route53' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-route53: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     zone-name: { type: string, description: 'Name of the hosted zone' }
@@ -28,27 +28,27 @@ factory: {
   }
 
   resources: {
-    route53-hosted-zone-it: aws.route53-hosted-zone {
+    route53-hosted-zone-it: aws-route53.hosted-zone {
       name:          input.zone-name
       comment:       input.comment
       force-destroy: true
       tags:          { unobin: 'route53-it' }
     }
-    route53-record-set-www: aws.route53-record-set {
+    route53-record-set-www: aws-route53.record-set {
       zone-id: resource.route53-hosted-zone-it.zone-id
       name:    'www'
       type:    'A'
       records: [input.www-address]
       ttl:     300
     }
-    route53-record-set-txt: aws.route53-record-set {
+    route53-record-set-txt: aws-route53.record-set {
       zone-id: resource.route53-hosted-zone-it.zone-id
       name:    'txt'
       type:    'TXT'
       records: ['hello from unobin']
       ttl:     300
     }
-    route53-record-set-app-blue: aws.route53-record-set {
+    route53-record-set-app-blue: aws-route53.record-set {
       zone-id:                 resource.route53-hosted-zone-it.zone-id
       name:                    'app'
       type:                    'A'
@@ -57,7 +57,7 @@ factory: {
       set-identifier:          'blue'
       weighted-routing-policy: { weight: 90 }
     }
-    route53-record-set-app-green: aws.route53-record-set {
+    route53-record-set-app-green: aws-route53.record-set {
       zone-id:                 resource.route53-hosted-zone-it.zone-id
       name:                    'app'
       type:                    'A'
@@ -69,11 +69,11 @@ factory: {
   }
 
   data-sources: {
-    route53-zone-by-name: aws.route53-zone {
+    route53-zone-by-name: aws-route53.zone {
       name: resource.route53-hosted-zone-it.name
       tags: { unobin: 'route53-it' }
     }
-    route53-zone-by-id: aws.route53-zone {
+    route53-zone-by-id: aws-route53.zone {
       zone-id: resource.route53-hosted-zone-it.zone-id
     }
   }
