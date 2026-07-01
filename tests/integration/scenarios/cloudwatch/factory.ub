@@ -6,13 +6,13 @@ factory: {
     it simply reports insufficient data, which is enough to create, read, and delete it.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-cloudwatch: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     threshold: {
@@ -23,7 +23,7 @@ factory: {
   }
 
   resources: {
-    cloudwatch-metric-alarm-it: aws.cloudwatch-metric-alarm {
+    cloudwatch-metric-alarm-it: aws-cloudwatch.metric-alarm {
       alarm-name:          'unobin-it-alarm'
       alarm-description:   'unobin integration test alarm'
       comparison-operator: 'GreaterThanThreshold'

@@ -5,13 +5,21 @@ factory: {
     from inputs so the update pass changes them in place through their reconcile calls.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-cloudwatchlogs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs'
+    aws-iam:            'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambda:         'github.com/cloudboss/unobin-library-aws//service/lambda'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-cloudwatchlogs: input.aws-config
+    aws-iam:            input.aws-config
+    aws-lambda:         input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     name: { type: string, description: 'Name of the log group' }
@@ -41,13 +49,13 @@ factory: {
   }
 
   resources: {
-    cloudwatchlogs-log-group-it: aws.cloudwatchlogs-log-group {
+    cloudwatchlogs-log-group-it: aws-cloudwatchlogs.log-group {
       name:              input.name
       retention-in-days: input.retention
       log-group-class:   'STANDARD'
       tags:              { unobin: 'cloudwatchlogs-it' }
     }
-    cloudwatchlogs-metric-filter-it: aws.cloudwatchlogs-metric-filter {
+    cloudwatchlogs-metric-filter-it: aws-cloudwatchlogs.metric-filter {
       filter-name:    'unobin-it-metric-filter'
       log-group-name: resource.cloudwatchlogs-log-group-it.name
       filter-pattern: input.metric-filter-pattern
@@ -57,29 +65,29 @@ factory: {
         metric-value:     '1'
       }
     }
-    cloudwatchlogs-resource-policy-it: aws.cloudwatchlogs-resource-policy {
+    cloudwatchlogs-resource-policy-it: aws-cloudwatchlogs.resource-policy {
       policy-name:     'unobin-it-cwl-resource-policy'
       policy-document: input.resource-policy-document
     }
-    iam-role-subscription-sink: aws.iam-role {
+    iam-role-subscription-sink: aws-iam.role {
       role-name: 'unobin-it-cwl-lambda-role'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
         {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
     }
-    iam-policy-subscription-sink: aws.iam-policy {
+    iam-policy-subscription-sink: aws-iam.policy {
       policy-name: 'unobin-it-cwl-lambda-policy'
       policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
         CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
         '''
     }
-    iam-role-policy-attachment-subscription-sink: aws.iam-role-policy-attachment {
+    iam-role-policy-attachment-subscription-sink: aws-iam.role-policy-attachment {
       role-name:  resource.iam-role-subscription-sink.role-name
       policy-arn: resource.iam-policy-subscription-sink.arn
     }
-    lambda-function-subscription-sink: aws.lambda-function {
+    lambda-function-subscription-sink: aws-lambda.function {
       function-name: 'unobin-it-cwl-sink'
       role:          resource.iam-role-subscription-sink.arn
       runtime:       'python3.12'
@@ -87,13 +95,13 @@ factory: {
       code:          { zip-file-path: '/tmp/unobin-it-cwl-lambda.zip' }
       tags:          { unobin: 'cloudwatchlogs-it' }
     }
-    lambda-permission-subscription-sink: aws.lambda-permission {
+    lambda-permission-subscription-sink: aws-lambda.permission {
       function-name: resource.lambda-function-subscription-sink.function-name
       statement-id:  'unobin-it-cwl-allow-logs'
       action:        'lambda:InvokeFunction'
       principal:     'logs.amazonaws.com'
     }
-    cloudwatchlogs-subscription-filter-it: aws.cloudwatchlogs-subscription-filter {
+    cloudwatchlogs-subscription-filter-it: aws-cloudwatchlogs.subscription-filter {
       destination-arn: resource.lambda-function-subscription-sink.arn
       log-group-name:  resource.cloudwatchlogs-log-group-it.name
       name:            'unobin-it-subscription-filter'

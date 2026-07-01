@@ -6,13 +6,21 @@ factory: {
     so the update pass can change them in place through the PutRule upsert.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge'
+    aws-iam:         'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambda:      'github.com/cloudboss/unobin-library-aws//service/lambda'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-eventbridge: input.aws-config
+    aws-iam:         input.aws-config
+    aws-lambda:      input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     schedule: {
@@ -30,25 +38,25 @@ factory: {
   }
 
   resources: {
-    iam-role-it: aws.iam-role {
+    iam-role-it: aws-iam.role {
       role-name: 'unobin-it-eventbridge-role'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
         {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
     }
-    iam-policy-it: aws.iam-policy {
+    iam-policy-it: aws-iam.policy {
       policy-name: 'unobin-it-eventbridge-policy'
       policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:
         CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}]}
         '''
     }
-    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+    iam-role-policy-attachment-it: aws-iam.role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
       policy-arn: resource.iam-policy-it.arn
     }
-    lambda-function-it: aws.lambda-function {
+    lambda-function-it: aws-lambda.function {
       function-name: 'unobin-it-eventbridge-function'
       role:          resource.iam-role-it.arn
       runtime:       'python3.12'
@@ -56,25 +64,25 @@ factory: {
       code:          { zip-file-path: '/tmp/unobin-it-eventbridge.zip' }
       tags:          { unobin: 'eventbridge-it' }
     }
-    eventbridge-event-bus-it: aws.eventbridge-event-bus {
+    eventbridge-event-bus-it: aws-eventbridge.event-bus {
       name:        'unobin-it-event-bus'
       description: input.event-bus-description
       tags:        { unobin: input.event-bus-tag-value }
     }
-    eventbridge-rule-it: aws.eventbridge-rule {
+    eventbridge-rule-it: aws-eventbridge.rule {
       name:                'unobin-it-rule'
       schedule-expression: input.schedule
       description:         'unobin eventbridge integration test rule'
       state:               input.rule-state
       tags:                { unobin: 'eventbridge-it' }
     }
-    eventbridge-target-it: aws.eventbridge-target {
+    eventbridge-target-it: aws-eventbridge.target {
       rule:      resource.eventbridge-rule-it.name
       target-id: 'unobin-it-target'
       arn:       resource.lambda-function-it.arn
       input:     '{"source":"unobin"}'
     }
-    lambda-permission-it: aws.lambda-permission {
+    lambda-permission-it: aws-lambda.permission {
       function-name: resource.lambda-function-it.function-name
       statement-id:  'unobin-it-allow-events'
       action:        'lambda:InvokeFunction'
