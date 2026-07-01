@@ -5,13 +5,21 @@ factory: {
     inputs so the update pass can change them in place through UpdateFunctionConfiguration.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-iam:    'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda'
+    aws-sqs:    'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-iam:    input.aws-config
+    aws-lambda: input.aws-config
+    aws-sqs:    input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     memory-size: { type: integer, default: 128, description: 'Memory of the function in MiB' }
@@ -34,14 +42,14 @@ factory: {
   }
 
   resources: {
-    iam-role-it: aws.iam-role {
+    iam-role-it: aws-iam.role {
       role-name: 'unobin-it-lambda-role'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
         {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
     }
-    iam-policy-it: aws.iam-policy {
+    iam-policy-it: aws-iam.policy {
       policy-name: 'unobin-it-lambda-policy'
       policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogGroup",
@@ -49,11 +57,11 @@ factory: {
         ["sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes"],"Resource":"*"}]}
         '''
     }
-    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+    iam-role-policy-attachment-it: aws-iam.role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
       policy-arn: resource.iam-policy-it.arn
     }
-    lambda-function-it: aws.lambda-function {
+    lambda-function-it: aws-lambda.function {
       function-name: 'unobin-it-function'
       role:          resource.iam-role-it.arn
       runtime:       'python3.12'
@@ -65,23 +73,23 @@ factory: {
       environment:   { variables: { GREETING: input.greeting } }
       tags:          { unobin: 'lambda-it' }
     }
-    lambda-alias-it: aws.lambda-alias {
+    lambda-alias-it: aws-lambda.alias {
       name:             'live'
       function-name:    resource.lambda-function-it.function-name
       function-version: resource.lambda-function-it.version
       description:      input.alias-description
     }
-    lambda-permission-it: aws.lambda-permission {
+    lambda-permission-it: aws-lambda.permission {
       function-name: resource.lambda-function-it.function-name
       statement-id:  'unobin-it-allow-invoke'
       action:        'lambda:InvokeFunction'
       principal:     's3.amazonaws.com'
     }
-    sqs-queue-events: aws.sqs-queue {
+    sqs-queue-events: aws-sqs.queue {
       name: 'unobin-it-lambda-events'
       tags: { unobin: 'lambda-it' }
     }
-    lambda-event-source-mapping-it: aws.lambda-event-source-mapping {
+    lambda-event-source-mapping-it: aws-lambda.event-source-mapping {
       function-name:                      resource.lambda-function-it.function-name
       event-source-arn:                   resource.sqs-queue-events.arn
       batch-size:                         input.batch-size
@@ -93,7 +101,7 @@ factory: {
   }
 
   actions: {
-    lambda-invoke-it: aws.lambda-invoke {
+    lambda-invoke-it: aws-lambda.invoke {
       function-name:   resource.lambda-function-it.function-name
       payload-content: '{"name":"unobin"}'
     }

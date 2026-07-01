@@ -7,7 +7,7 @@ factory: {
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     cidr-block: { type: string, description: 'IPv4 CIDR block for the VPC' }
@@ -17,9 +17,9 @@ factory: {
     }
   }
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-ec2: input.aws-config }
 
   constraints: [
     # The null test in when narrows what require reads; the optional `to`
@@ -33,16 +33,16 @@ factory: {
   ]
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: input.cidr-block
     }
-    ec2-security-group-it: aws.ec2-security-group {
+    ec2-security-group-it: aws-ec2.security-group {
       name:        'unobin-it-sg'
       description: 'unobin integration test security group'
       vpc-id:      resource.ec2-vpc-it.vpc-id
       tags:        { unobin: 'ec2-it' }
     }
-    ec2-security-group-ingress-rule-it: aws.ec2-security-group-ingress-rule {
+    ec2-security-group-ingress-rule-it: aws-ec2.security-group-ingress-rule {
       security-group-id: resource.ec2-security-group-it.id
       ip-protocol:       'tcp'
       # Each nullable level wears its own marker; ?? ends the chain.
@@ -51,7 +51,7 @@ factory: {
       cidr-ipv4:         input.cidr-block
       description:       'ssh from the vpc'
     }
-    ec2-security-group-egress-rule-it: aws.ec2-security-group-egress-rule {
+    ec2-security-group-egress-rule-it: aws-ec2.security-group-egress-rule {
       security-group-id: resource.ec2-security-group-it.id
       ip-protocol:       'tcp'
       from-port:         443
@@ -62,12 +62,12 @@ factory: {
   }
 
   data-sources: {
-    ec2-vpc-data-it: aws.ec2-vpc-data {
+    ec2-vpc-data-it: aws-ec2.vpc-data {
       vpc-id:     resource.ec2-vpc-it.vpc-id
       cidr-block: input.cidr-block
       filter:     [{ name: 'vpc-id', values: [resource.ec2-vpc-it.vpc-id] }]
     }
-    ec2-security-group-data-it: aws.ec2-security-group-data {
+    ec2-security-group-data-it: aws-ec2.security-group-data {
       id:     resource.ec2-security-group-it.id
       name:   'unobin-it-sg'
       vpc-id: resource.ec2-vpc-it.vpc-id

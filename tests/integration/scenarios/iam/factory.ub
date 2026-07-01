@@ -7,13 +7,13 @@ factory: {
     inline policies through Put calls, and the thumbprints through the rotation call.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-iam: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     max-session-duration: {
@@ -64,7 +64,7 @@ factory: {
   }
 
   resources: {
-    iam-role-it: aws.iam-role {
+    iam-role-it: aws-iam.role {
       role-name: 'unobin-it-role'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
@@ -72,62 +72,62 @@ factory: {
         '''
       max-session-duration: input.max-session-duration
     }
-    iam-policy-it: aws.iam-policy {
+    iam-policy-it: aws-iam.policy {
       policy-name:     'unobin-it-policy'
       policy-document: input.policy-document
     }
-    iam-group-it: aws.iam-group {
+    iam-group-it: aws-iam.group {
       name: input.group-name
       path: input.group-path
     }
-    iam-user-it: aws.iam-user {
+    iam-user-it: aws-iam.user {
       name:          input.user-name
       path:          input.user-path
       force-destroy: true
       tags:          { Scenario: 'iam', Mutable: input.user-tag-value }
     }
-    iam-access-key-user-it: aws.iam-user {
+    iam-access-key-user-it: aws-iam.user {
       name:          'unobin-it-access-key-user'
       path:          '/unobin/'
       force-destroy: true
       tags:          { Scenario: 'iam-access-key' }
     }
-    iam-access-key-it: aws.iam-access-key {
+    iam-access-key-it: aws-iam.access-key {
       user-name: resource.iam-access-key-user-it.name
       status:    input.access-key-status
     }
-    iam-role-policy-attachment-it: aws.iam-role-policy-attachment {
+    iam-role-policy-attachment-it: aws-iam.role-policy-attachment {
       role-name:  resource.iam-role-it.role-name
       policy-arn: resource.iam-policy-it.arn
     }
-    iam-group-policy-attachment-it: aws.iam-group-policy-attachment {
+    iam-group-policy-attachment-it: aws-iam.group-policy-attachment {
       group-name: resource.iam-group-it.name
       policy-arn: resource.iam-policy-it.arn
     }
-    iam-user-policy-attachment-it: aws.iam-user-policy-attachment {
+    iam-user-policy-attachment-it: aws-iam.user-policy-attachment {
       user:       resource.iam-user-it.name
       policy-arn: resource.iam-policy-it.arn
     }
-    iam-role-policy-it: aws.iam-role-policy {
+    iam-role-policy-it: aws-iam.role-policy {
       role-name:       resource.iam-role-it.role-name
       policy-name:     'unobin-it-inline'
       policy-document: input.inline-policy-document
     }
-    iam-group-policy-it: aws.iam-group-policy {
+    iam-group-policy-it: aws-iam.group-policy {
       group-name:      resource.iam-group-it.name
       policy-name:     'unobin-it-group-inline'
       policy-document: input.inline-policy-document
     }
-    iam-user-policy-it: aws.iam-user-policy {
+    iam-user-policy-it: aws-iam.user-policy {
       user-name:       resource.iam-user-it.name
       policy-name:     'unobin-it-user-inline'
       policy-document: input.inline-policy-document
     }
-    iam-instance-profile-it: aws.iam-instance-profile {
+    iam-instance-profile-it: aws-iam.instance-profile {
       instance-profile-name: 'unobin-it-profile'
       role:                  resource.iam-role-it.role-name
     }
-    iam-openid-connect-provider-it: aws.iam-openid-connect-provider {
+    iam-openid-connect-provider-it: aws-iam.openid-connect-provider {
       url:             'https://oidc.unobin-it.example.com'
       client-id-list:  ['sts.amazonaws.com']
       thumbprint-list: input.oidc-thumbprints
@@ -135,7 +135,7 @@ factory: {
   }
 
   data-sources: {
-    iam-openid-connect-provider-lookup: aws.iam-openid-connect-provider {
+    iam-openid-connect-provider-lookup: aws-iam.openid-connect-provider {
       url: resource.iam-openid-connect-provider-it.url
     }
   }

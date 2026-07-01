@@ -10,13 +10,13 @@ factory: {
     and the endpoint through ModifyVpcEndpoint when the update extends it to the public route table.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: { aws-ec2: input.aws-config }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     stage: {
@@ -31,17 +31,17 @@ factory: {
   }
 
   data-sources: {
-    ec2-availability-zones-available: aws.ec2-availability-zones {
+    ec2-availability-zones-available: aws-ec2.availability-zones {
       state: 'available'
     }
-    ec2-subnets-it: aws.ec2-subnets {
+    ec2-subnets-it: aws-ec2.subnets {
       tags:   { unobin: 'vpc-routing-it' }
       filter: [{ name: 'vpc-id', values: [resource.ec2-vpc-it.vpc-id] }]
     }
-    ec2-subnets-empty: aws.ec2-subnets {
+    ec2-subnets-empty: aws-ec2.subnets {
       filter: [{ name: 'tag:unobin', values: ['vpc-routing-it-missing'] }]
     }
-    ec2-subnet-data-public: aws.ec2-subnet-data {
+    ec2-subnet-data-public: aws-ec2.subnet-data {
       id:                resource.ec2-subnet-public.id
       availability-zone: resource.ec2-subnet-public.availability-zone
       default-for-az:    false
@@ -62,63 +62,63 @@ factory: {
   }
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: '10.62.0.0/16'
     }
-    ec2-subnet-public: aws.ec2-subnet {
+    ec2-subnet-public: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.62.1.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              local.tags
     }
-    ec2-subnet-private: aws.ec2-subnet {
+    ec2-subnet-private: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.62.2.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              local.tags
     }
-    ec2-internet-gateway-it: aws.ec2-internet-gateway {
+    ec2-internet-gateway-it: aws-ec2.internet-gateway {
       vpc-id: resource.ec2-vpc-it.vpc-id
       tags:   local.tags
     }
-    ec2-route-table-public: aws.ec2-route-table {
+    ec2-route-table-public: aws-ec2.route-table {
       vpc-id: resource.ec2-vpc-it.vpc-id
       tags:   { unobin: 'vpc-routing-it', tier: 'public', stage: input.stage ?? 'initial' }
     }
-    ec2-route-table-private: aws.ec2-route-table {
+    ec2-route-table-private: aws-ec2.route-table {
       vpc-id: resource.ec2-vpc-it.vpc-id
       tags:   { unobin: 'vpc-routing-it', tier: 'private', stage: input.stage ?? 'initial' }
     }
-    ec2-route-public-default: aws.ec2-route {
+    ec2-route-public-default: aws-ec2.route {
       route-table-id:         resource.ec2-route-table-public.route-table-id
       destination-cidr-block: '0.0.0.0/0'
       gateway-id:             resource.ec2-internet-gateway-it.internet-gateway-id
     }
-    ec2-route-private-default: aws.ec2-route {
+    ec2-route-private-default: aws-ec2.route {
       route-table-id:         resource.ec2-route-table-private.route-table-id
       destination-cidr-block: '0.0.0.0/0'
       nat-gateway-id:         resource.ec2-nat-gateway-it.nat-gateway-id
     }
-    ec2-route-table-association-public: aws.ec2-route-table-association {
+    ec2-route-table-association-public: aws-ec2.route-table-association {
       route-table-id: resource.ec2-route-table-public.route-table-id
       subnet-id:      resource.ec2-subnet-public.id
     }
-    ec2-route-table-association-private: aws.ec2-route-table-association {
+    ec2-route-table-association-private: aws-ec2.route-table-association {
       route-table-id: resource.ec2-route-table-private.route-table-id
       subnet-id:      resource.ec2-subnet-private.id
     }
     # The EIP keeps literal tags: ministack accepts AllocateAddress without
     # recording its tags, so an input-driven change would chase a value the
     # emulator never stores.
-    ec2-eip-nat: aws.ec2-eip {
+    ec2-eip-nat: aws-ec2.eip {
       tags: { unobin: 'vpc-routing-it' }
     }
-    ec2-nat-gateway-it: aws.ec2-nat-gateway {
+    ec2-nat-gateway-it: aws-ec2.nat-gateway {
       subnet-id:     resource.ec2-subnet-public.id
       allocation-id: resource.ec2-eip-nat.allocation-id
       tags:          local.tags
     }
-    ec2-vpc-endpoint-s3: aws.ec2-vpc-endpoint {
+    ec2-vpc-endpoint-s3: aws-ec2.vpc-endpoint {
       vpc-id:          resource.ec2-vpc-it.vpc-id
       service-name:    'com.amazonaws.us-east-1.s3'
       route-table-ids: local.endpoint-route-table-ids
