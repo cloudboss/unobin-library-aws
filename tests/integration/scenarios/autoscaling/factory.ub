@@ -11,13 +11,19 @@ factory: {
     through a new default version, and tags through the tag sync.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-autoscaling: 'github.com/cloudboss/unobin-library-aws//service/autoscaling'
+    aws-ec2:         'github.com/cloudboss/unobin-library-aws//service/ec2'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-autoscaling: input.aws-config
+    aws-ec2:         input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     desired-capacity: { type: integer, default: 0 }
@@ -44,12 +50,12 @@ factory: {
   }
 
   data-sources: {
-    ec2-ami-al2023: aws.ec2-ami {
+    ec2-ami-al2023: aws-ec2.ami {
       owners:      ['amazon']
       most-recent: true
       filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
     }
-    ec2-availability-zones-available: aws.ec2-availability-zones {
+    ec2-availability-zones-available: aws-ec2.availability-zones {
       state: 'available'
     }
   }
@@ -57,16 +63,16 @@ factory: {
   locals: { tags: { unobin: 'autoscaling-it', stage: input.stage ?? 'initial' } }
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: '10.30.0.0/16'
     }
-    ec2-subnet-a: aws.ec2-subnet {
+    ec2-subnet-a: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.30.1.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              local.tags
     }
-    ec2-launch-template-it: aws.ec2-launch-template {
+    ec2-launch-template-it: aws-ec2.launch-template {
       name: 'unobin-it-asg-lt'
       data: {
         image-id:           data-source.ec2-ami-al2023.image-id
@@ -76,7 +82,7 @@ factory: {
       }
       tags: local.tags
     }
-    autoscaling-group-it: aws.autoscaling-group {
+    autoscaling-group-it: aws-autoscaling.group {
       name:                'unobin-it-asg'
       min-size:            0
       max-size:            input.max-size
@@ -89,13 +95,13 @@ factory: {
       health-check-type: 'EC2'
       tags:              [{ key: 'unobin', value: 'autoscaling-it', propagate-at-launch: true }]
     }
-    ec2-volume-it: aws.ec2-volume {
+    ec2-volume-it: aws-ec2.volume {
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       size:              1
       type:              'gp3'
       tags:              local.tags
     }
-    autoscaling-policy-it: aws.autoscaling-policy {
+    autoscaling-policy-it: aws-autoscaling.policy {
       autoscaling-group-name: resource.autoscaling-group-it.name
       name:                   'unobin-it-scale-out'
       policy-type:            'SimpleScaling'
@@ -103,7 +109,7 @@ factory: {
       scaling-adjustment:     1
       cooldown:               input.policy-cooldown
     }
-    autoscaling-lifecycle-hook-it: aws.autoscaling-lifecycle-hook {
+    autoscaling-lifecycle-hook-it: aws-autoscaling.lifecycle-hook {
       autoscaling-group-name: resource.autoscaling-group-it.name
       name:                   'unobin-it-drain'
       lifecycle-transition:   'autoscaling:EC2_INSTANCE_TERMINATING'

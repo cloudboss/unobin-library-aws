@@ -9,13 +9,25 @@ factory: {
     UpdateCapacityProvider, PutClusterCapacityProviders, and UpdateService.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-autoscaling: 'github.com/cloudboss/unobin-library-aws//service/autoscaling'
+    aws-ec2:         'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-ecr:         'github.com/cloudboss/unobin-library-aws//service/ecr'
+    aws-ecs:         'github.com/cloudboss/unobin-library-aws//service/ecs'
+    aws-iam:         'github.com/cloudboss/unobin-library-aws//service/iam'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-autoscaling: input.aws-config
+    aws-ec2:         input.aws-config
+    aws-ecr:         input.aws-config
+    aws-ecs:         input.aws-config
+    aws-iam:         input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     scan-on-push: {
@@ -45,27 +57,27 @@ factory: {
   }
 
   data-sources: {
-    ec2-ami-al2023: aws.ec2-ami {
+    ec2-ami-al2023: aws-ec2.ami {
       owners:      ['amazon']
       most-recent: true
       filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
     }
-    ec2-availability-zones-available: aws.ec2-availability-zones {
+    ec2-availability-zones-available: aws-ec2.availability-zones {
       state: 'available'
     }
   }
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: '10.64.0.0/16'
     }
-    ec2-subnet-a: aws.ec2-subnet {
+    ec2-subnet-a: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.64.1.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'ecs-it' }
     }
-    ec2-launch-template-cp: aws.ec2-launch-template {
+    ec2-launch-template-cp: aws-ec2.launch-template {
       name: 'unobin-it-ecs-cp-lt'
       data: {
         image-id:         data-source.ec2-ami-al2023.image-id
@@ -74,7 +86,7 @@ factory: {
       }
       tags: { unobin: 'ecs-it' }
     }
-    autoscaling-group-cp: aws.autoscaling-group {
+    autoscaling-group-cp: aws-autoscaling.group {
       name:                'unobin-it-ecs-cp-asg'
       min-size:            0
       max-size:            1
@@ -87,7 +99,7 @@ factory: {
       health-check-type: 'EC2'
       tags:              [{ key: 'unobin', value: 'ecs-it', propagate-at-launch: true }]
     }
-    ecs-capacity-provider-it: aws.ecs-capacity-provider {
+    ecs-capacity-provider-it: aws-ecs.capacity-provider {
       name: 'unobin-it-ecs-cp'
       auto-scaling-group-provider: {
         auto-scaling-group-arn:         resource.autoscaling-group-cp.arn
@@ -101,7 +113,7 @@ factory: {
         stage:  input.provider-stage ?? 'initial'
       }
     }
-    ecr-repository-repo: aws.ecr-repository {
+    ecr-repository-repo: aws-ecr.repository {
       name:         'unobin-it-ecs'
       scan-on-push: input.scan-on-push
       lifecycle-policy: '''\-
@@ -110,7 +122,7 @@ factory: {
         '''
       tags: { unobin: 'ecs-it' }
     }
-    ecs-cluster-it: aws.ecs-cluster {
+    ecs-cluster-it: aws-ecs.cluster {
       name:               'unobin-it-ecs'
       capacity-providers: ['FARGATE', 'FARGATE_SPOT']
       default-capacity-provider-strategy: [
@@ -118,18 +130,18 @@ factory: {
       ]
       tags: { unobin: 'ecs-it' }
     }
-    iam-role-exec: aws.iam-role {
+    iam-role-exec: aws-iam.role {
       role-name: 'unobin-it-ecs-exec'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
         {"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
     }
-    iam-role-policy-attachment-exec: aws.iam-role-policy-attachment {
+    iam-role-policy-attachment-exec: aws-iam.role-policy-attachment {
       role-name:  resource.iam-role-exec.role-name
       policy-arn: 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
     }
-    ecs-task-definition-it: aws.ecs-task-definition {
+    ecs-task-definition-it: aws-ecs.task-definition {
       family:                   'unobin-it-ecs'
       cpu:                      '256'
       memory:                   '512'
@@ -145,7 +157,7 @@ factory: {
       ]
       tags: { unobin: 'ecs-it' }
     }
-    ecs-service-it: aws.ecs-service {
+    ecs-service-it: aws-ecs.service {
       name:                     'unobin-it-ecs'
       cluster:                  resource.ecs-cluster-it.arn
       task-definition:          resource.ecs-task-definition-it.arn
