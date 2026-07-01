@@ -9,13 +9,23 @@ factory: {
     UpdateStage, UpdateApiMapping, domain tag sync, and UpdateFunctionUrlConfig.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-acm:          'github.com/cloudboss/unobin-library-aws//service/acm'
+    aws-apigatewayv2: 'github.com/cloudboss/unobin-library-aws//service/apigatewayv2'
+    aws-iam:          'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambda:       'github.com/cloudboss/unobin-library-aws//service/lambda'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-acm:          input.aws-config
+    aws-apigatewayv2: input.aws-config
+    aws-iam:          input.aws-config
+    aws-lambda:       input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     api-description: {
@@ -56,14 +66,14 @@ factory: {
   }
 
   resources: {
-    iam-role-fn: aws.iam-role {
+    iam-role-fn: aws-iam.role {
       role-name: 'unobin-it-apigatewayv2'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
         {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
     }
-    lambda-function-fn: aws.lambda-function {
+    lambda-function-fn: aws-lambda.function {
       function-name: 'unobin-it-apigatewayv2'
       role:          resource.iam-role-fn.arn
       runtime:       'python3.12'
@@ -71,21 +81,21 @@ factory: {
       code:          { zip-file-path: '/tmp/unobin-it-apigatewayv2.zip' }
       tags:          { unobin: 'apigatewayv2-it' }
     }
-    apigatewayv2-api-it: aws.apigatewayv2-api {
+    apigatewayv2-api-it: aws-apigatewayv2.api {
       name:               'unobin-it-apigatewayv2'
       protocol-type:      'HTTP'
       description:        input.api-description
       cors-configuration: { allow-origins: ['*'], allow-methods: ['GET'] }
       tags:               { unobin: 'apigatewayv2-it' }
     }
-    apigatewayv2-integration-it: aws.apigatewayv2-integration {
+    apigatewayv2-integration-it: aws-apigatewayv2.integration {
       api-id:                 resource.apigatewayv2-api-it.api-id
       integration-type:       'AWS_PROXY'
       integration-uri:        resource.lambda-function-fn.arn
       payload-format-version: '2.0'
       timeout-in-millis:      input.integration-timeout
     }
-    apigatewayv2-authorizer-it: aws.apigatewayv2-authorizer {
+    apigatewayv2-authorizer-it: aws-apigatewayv2.authorizer {
       api-id:                            resource.apigatewayv2-api-it.api-id
       authorizer-type:                   'REQUEST'
       identity-sources:                  ['$request.header.Authorization']
@@ -94,7 +104,7 @@ factory: {
       authorizer-uri:                    resource.lambda-function-fn.invoke-arn
       enable-simple-responses:           true
     }
-    apigatewayv2-route-it: aws.apigatewayv2-route {
+    apigatewayv2-route-it: aws-apigatewayv2.route {
       api-id:             resource.apigatewayv2-api-it.api-id
       route-key:          'GET /hello'
       authorization-type: 'CUSTOM'
@@ -102,14 +112,14 @@ factory: {
       operation-name:     input.operation-name
       target:             $'''integrations/{{ resource.apigatewayv2-integration-it.integration-id }}'''
     }
-    apigatewayv2-stage-it: aws.apigatewayv2-stage {
+    apigatewayv2-stage-it: aws-apigatewayv2.stage {
       api-id:          resource.apigatewayv2-api-it.api-id
       name:            '$default'
       auto-deploy:     true
       stage-variables: { GREETING: input.stage-greeting }
       tags:            { unobin: 'apigatewayv2-it' }
     }
-    acm-certificate-domain: aws.acm-certificate {
+    acm-certificate-domain: aws-acm.certificate {
       certificate-body: '''|-
         -----BEGIN CERTIFICATE-----
         MIIDbDCCAlSgAwIBAgIUfDaefT2sDefrfhNup19KkLQTuPMwDQYJKoZIhvcNAQEL
@@ -165,7 +175,7 @@ factory: {
         '''
       tags: { unobin: 'apigatewayv2-domain-cert-it' }
     }
-    apigatewayv2-domain-name-it: aws.apigatewayv2-domain-name {
+    apigatewayv2-domain-name-it: aws-apigatewayv2.domain-name {
       domain-name: 'unobin-it-apigatewayv2.example.com'
       domain-name-configurations: [
         {
@@ -178,24 +188,24 @@ factory: {
       routing-mode: 'API_MAPPING_ONLY'
       tags:         { unobin: 'apigatewayv2-domain-it', pass: input.domain-tag-value }
     }
-    apigatewayv2-api-mapping-it: aws.apigatewayv2-api-mapping {
+    apigatewayv2-api-mapping-it: aws-apigatewayv2.api-mapping {
       api-id:          resource.apigatewayv2-api-it.api-id
       domain-name:     resource.apigatewayv2-domain-name-it.domain-name
       stage:           resource.apigatewayv2-stage-it.name
       api-mapping-key: input.api-mapping-key
     }
-    lambda-permission-apigw: aws.lambda-permission {
+    lambda-permission-apigw: aws-lambda.permission {
       function-name: resource.lambda-function-fn.function-name
       statement-id:  'unobin-it-apigw-invoke'
       action:        'lambda:InvokeFunction'
       principal:     'apigateway.amazonaws.com'
     }
-    lambda-function-url-it: aws.lambda-function-url {
+    lambda-function-url-it: aws-lambda.function-url {
       function-name: resource.lambda-function-fn.function-name
       auth-type:     'NONE'
       cors:          { allow-origins: ['*'], max-age: input.url-max-age }
     }
-    lambda-permission-url: aws.lambda-permission {
+    lambda-permission-url: aws-lambda.permission {
       function-name:          resource.lambda-function-fn.function-name
       statement-id:           'unobin-it-url-public'
       action:                 'lambda:InvokeFunctionUrl'

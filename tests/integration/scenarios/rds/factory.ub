@@ -9,13 +9,19 @@ factory: {
     can change them in place through the parameter reconcile and the modify calls.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-rds: 'github.com/cloudboss/unobin-library-aws//service/rds'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-ec2: input.aws-config
+    aws-rds: input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     instance-parameters: {
@@ -34,48 +40,48 @@ factory: {
   }
 
   data-sources: {
-    ec2-availability-zones-available: aws.ec2-availability-zones {
+    ec2-availability-zones-available: aws-ec2.availability-zones {
       state: 'available'
     }
   }
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: '10.61.0.0/16'
     }
-    ec2-subnet-a: aws.ec2-subnet {
+    ec2-subnet-a: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.61.1.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[0]
       tags:              { unobin: 'rds-it' }
     }
-    ec2-subnet-b: aws.ec2-subnet {
+    ec2-subnet-b: aws-ec2.subnet {
       vpc-id:            resource.ec2-vpc-it.vpc-id
       cidr-block:        '10.61.2.0/24'
       availability-zone: data-source.ec2-availability-zones-available.names[1]
       tags:              { unobin: 'rds-it' }
     }
-    rds-subnet-group-it: aws.rds-subnet-group {
+    rds-subnet-group-it: aws-rds.subnet-group {
       name:        'unobin-it-rds'
       description: 'unobin rds integration test subnet group'
       subnet-ids:  [resource.ec2-subnet-a.id, resource.ec2-subnet-b.id]
       tags:        { unobin: 'rds-it' }
     }
-    rds-parameter-group-it: aws.rds-parameter-group {
+    rds-parameter-group-it: aws-rds.parameter-group {
       name:        'unobin-it-rds-pg'
       family:      'postgres16'
       description: 'unobin rds integration test parameter group'
       parameters:  input.instance-parameters
       tags:        { unobin: 'rds-it' }
     }
-    rds-cluster-parameter-group-it: aws.rds-cluster-parameter-group {
+    rds-cluster-parameter-group-it: aws-rds.cluster-parameter-group {
       name:        'unobin-it-rds-cpg'
       family:      'aurora-postgresql16'
       description: 'unobin rds integration test cluster parameter group'
       parameters:  [{ name: 'log_connections', value: '1' }]
       tags:        { unobin: 'rds-it' }
     }
-    rds-cluster-it: aws.rds-cluster {
+    rds-cluster-it: aws-rds.cluster {
       cluster-identifier:   'unobin-it-aurora'
       engine:               'aurora-postgresql'
       master-username:      'unobin'
@@ -85,14 +91,14 @@ factory: {
       skip-final-snapshot:  true
       tags:                 { unobin: 'rds-it' }
     }
-    rds-cluster-instance-one: aws.rds-cluster-instance {
+    rds-cluster-instance-one: aws-rds.cluster-instance {
       identifier:         'unobin-it-aurora-one'
       cluster-identifier: resource.rds-cluster-it.cluster-identifier
       engine:             'aurora-postgresql'
       instance-class:     'db.serverless'
       tags:               { unobin: 'rds-it' }
     }
-    rds-instance-it: aws.rds-instance {
+    rds-instance-it: aws-rds.instance {
       identifier:              'unobin-it-db'
       engine:                  'postgres'
       instance-class:          'db.t4g.micro'

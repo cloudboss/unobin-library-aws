@@ -10,13 +10,19 @@ factory: {
     path, the check through a plain attribute modify, and tags through the tag sync.
     '''
 
-  imports: { aws: 'github.com/cloudboss/unobin-library-aws' }
+  imports: {
+    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-sts: 'github.com/cloudboss/unobin-library-aws//service/sts'
+  }
 
-  library-configs: { aws: input.aws-config }
+  library-configs: {
+    aws-ec2: input.aws-config
+    aws-sts: input.aws-config
+  }
 
   inputs: {
     aws-config: {
-      type:    library-config('github.com/cloudboss/unobin-library-aws')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
     instance-type: { type: string, default: 't3.micro', description: 'Instance type to launch' }
@@ -31,43 +37,43 @@ factory: {
   }
 
   data-sources: {
-    ec2-ami-al2023: aws.ec2-ami {
+    ec2-ami-al2023: aws-ec2.ami {
       owners:      ['amazon']
       most-recent: true
       filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
     }
-    ec2-availability-zones-available: aws.ec2-availability-zones {
+    ec2-availability-zones-available: aws-ec2.availability-zones {
       state: 'available'
     }
-    sts-caller-identity-it: aws.sts-caller-identity {}
+    sts-caller-identity-it: aws-sts.caller-identity {}
   }
 
   locals: { tags: { unobin: 'instance-it', stage: input.stage ?? 'initial' } }
 
   resources: {
-    ec2-vpc-it: aws.ec2-vpc {
+    ec2-vpc-it: aws-ec2.vpc {
       cidr-block: '10.63.0.0/16'
     }
-    ec2-subnet-a: aws.ec2-subnet {
+    ec2-subnet-a: aws-ec2.subnet {
       vpc-id:               resource.ec2-vpc-it.vpc-id
       cidr-block:           '10.63.1.0/24'
       availability-zone-id: data-source.ec2-availability-zones-available.zone-ids[0]
       tags:                 local.tags
     }
-    ec2-security-group-it: aws.ec2-security-group {
+    ec2-security-group-it: aws-ec2.security-group {
       name:        'unobin-it-instance'
       description: 'unobin instance integration test security group'
       vpc-id:      resource.ec2-vpc-it.vpc-id
       tags:        local.tags
     }
-    ec2-key-pair-it: aws.ec2-key-pair {
+    ec2-key-pair-it: aws-ec2.key-pair {
       key-name: 'unobin-it-instance'
       public-key: '''>-
         ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN8Epl+b+PuQeE0tmbfPGaBNoGtTh1rR4MpfC0g4NhEt unobin-it
         '''
       tags: local.tags
     }
-    ec2-instance-it: aws.ec2-instance {
+    ec2-instance-it: aws-ec2.instance {
       ami:                    data-source.ec2-ami-al2023.image-id
       instance-type:          input.instance-type
       subnet-id:              resource.ec2-subnet-a.id
