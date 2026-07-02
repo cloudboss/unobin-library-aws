@@ -1,0 +1,276 @@
+factory: {
+  description: '''>-
+    Creates a Lambda MicroVM image from a Python HTTP service, starts
+    one MicroVM, sends an authenticated HTTP request, and terminates it.
+    '''
+
+  imports: {
+    std:                'github.com/cloudboss/unobin-library-std'
+    aws-cloudwatchlogs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs'
+    aws-iam:            'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambdamicrovms: 'github.com/cloudboss/unobin-library-aws//service/lambdamicrovms'
+    aws-s3:             'github.com/cloudboss/unobin-library-aws//service/s3'
+  }
+
+  library-configs: {
+    aws-cloudwatchlogs: input.aws-config
+    aws-iam:            input.aws-config
+    aws-lambdamicrovms: input.aws-config
+    aws-s3:             input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    stack-key: {
+      type:        string
+      description: 'Unique lowercase key used in names created by this stack'
+      pattern:     '^[a-z][a-z0-9-]{2,31}$'
+    }
+    app-source-dir: {
+      type:        string
+      default:     'app'
+      description: 'Directory containing the Dockerfile and application source'
+    }
+    artifact-zip-path: {
+      type:        string
+      default:     '.unobin/build/microvm-http.zip'
+      description: 'Local path where the zip artifact is written'
+    }
+    microvm-memory-in-mib: {
+      type:        integer
+      default:     512
+      minimum:     128
+      description: 'Minimum memory for the MicroVM image'
+    }
+    microvm-port: {
+      type:        integer
+      default:     8080
+      minimum:     1
+      maximum:     65535
+      description: 'HTTP port exposed by the application'
+    }
+    microvm-maximum-duration-in-seconds: {
+      type:        integer
+      default:     600
+      minimum:     1
+      maximum:     28800
+      description: 'Maximum lifetime of each MicroVM run'
+    }
+    request-path: {
+      type:        string
+      default:     '/'
+      description: 'Path requested after the MicroVM passes its health check'
+    }
+    readiness-timeout: {
+      type:        integer
+      default:     300000000000
+      description: 'Health-check polling timeout in nanoseconds'
+    }
+    readiness-interval: {
+      type:        integer
+      default:     5000000000
+      description: 'Health-check polling interval in nanoseconds'
+    }
+    http-timeout: {
+      type:        integer
+      default:     30000000000
+      description: 'HTTP request timeout in nanoseconds'
+    }
+  }
+
+  locals: {
+    name-prefix:     $'unobin-{{ input.stack-key }}'
+    artifact-bucket: $'{{ local.name-prefix }}-artifacts'
+    artifact-key:    $'artifacts/{{ input.stack-key }}/app.zip'
+    artifact-uri:    $'s3://{{ resource.artifact-bucket.bucket }}/{{ resource.artifact-object.key }}'
+    log-group-name:  $'/aws/lambda/microvms/{{ input.stack-key }}'
+    tags: {
+      unobin:    'lambdamicrovms-http-example'
+      stack-key: input.stack-key
+    }
+  }
+
+  data-sources: {
+    managed-microvm-images: aws-lambdamicrovms.managed-microvm-images {}
+  }
+
+  resources: {
+    artifact-zip: std.archive-zipfile {
+      path:             input.artifact-zip-path
+      source-dir:       input.app-source-dir
+      create-directory: true
+    }
+    artifact-bucket: aws-s3.bucket {
+      bucket:           local.artifact-bucket
+      empty-on-destroy: true
+      public-access-block: {
+        block-public-acls:       true
+        block-public-policy:     true
+        ignore-public-acls:      true
+        restrict-public-buckets: true
+      }
+      tags: local.tags
+    }
+    artifact-object: aws-s3.object {
+      bucket:           resource.artifact-bucket.bucket
+      key:              local.artifact-key
+      body-path:        input.artifact-zip-path
+      content-type:     'application/zip'
+      metadata:         { archive-sha256: resource.artifact-zip.sha256 }
+      purge-on-destroy: true
+      tags:             local.tags
+    }
+    microvm-log-group: aws-cloudwatchlogs.log-group {
+      name:              local.log-group-name
+      retention-in-days: 7
+      tags:              local.tags
+    }
+    build-role: aws-iam.role {
+      role-name: $'{{ local.name-prefix }}-microvm-build'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+      tags: local.tags
+    }
+    build-policy: aws-iam.policy {
+      policy-name: $'{{ local.name-prefix }}-microvm-build'
+      policy-document: $'''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:
+        GetObjectVersion"],"Resource":"{{ resource.artifact-object.arn }}"},{"Effect":"Allow",
+        "Action":"logs:CreateLogGroup","Resource":"*"},{"Effect":"Allow","Action":["logs:
+        CreateLogStream","logs:PutLogEvents"],"Resource":"{{ resource.microvm-log-group.arn }}:*"}]}
+        '''
+      tags: local.tags
+    }
+    build-policy-attachment: aws-iam.role-policy-attachment {
+      @depends-on: [resource.build-role]
+      role-name:   $'{{ local.name-prefix }}-microvm-build'
+      policy-arn:  resource.build-policy.arn
+    }
+    execution-role: aws-iam.role {
+      role-name: $'{{ local.name-prefix }}-microvm-exec'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+      tags: local.tags
+    }
+    execution-policy: aws-iam.policy {
+      policy-name: $'{{ local.name-prefix }}-microvm-exec'
+      policy-document: $'''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"logs:
+        CreateLogGroup","Resource":"*"},{"Effect":"Allow","Action":["logs:CreateLogStream",
+        "logs:PutLogEvents"],"Resource":"{{ resource.microvm-log-group.arn }}:*"}]}
+        '''
+      tags: local.tags
+    }
+    execution-policy-attachment: aws-iam.role-policy-attachment {
+      @depends-on: [resource.execution-role]
+      role-name:   $'{{ local.name-prefix }}-microvm-exec'
+      policy-arn:  resource.execution-policy.arn
+    }
+    microvm-image: aws-lambdamicrovms.microvm-image {
+      @depends-on:          [resource.build-policy-attachment, resource.microvm-log-group]
+      name:                 $'{{ local.name-prefix }}-microvm-http'
+      base-image-arn:       data-source.managed-microvm-images.items[0].image-arn
+      build-role-arn:       resource.build-role.arn
+      code-artifact:        { uri: local.artifact-uri }
+      cpu-configurations:   [{ architecture: 'ARM_64' }]
+      resources:            [{ minimum-memory-in-mib: input.microvm-memory-in-mib }]
+      logging:              { cloud-watch: { log-group: local.log-group-name } }
+      tags:                 local.tags
+      terminate-on-destroy: true
+    }
+  }
+
+  actions: {
+    run-microvm: aws-lambdamicrovms.run-microvm {
+      @depends-on:        [resource.execution-policy-attachment]
+      @trigger:           'always'
+      execution-role-arn: resource.execution-role.arn
+      image-identifier:   resource.microvm-image.image-arn
+      image-version:      resource.microvm-image.latest-active-image-version
+      ingress-network-connectors: [
+        'arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS',
+      ]
+      logging:                     { cloud-watch: { log-group: local.log-group-name } }
+      maximum-duration-in-seconds: input.microvm-maximum-duration-in-seconds
+    }
+    microvm-auth-token: aws-lambdamicrovms.create-microvm-auth-token {
+      microvm-identifier:    action.run-microvm.microvm-id
+      expiration-in-minutes: 10
+      allowed-ports:         [{ port: input.microvm-port }]
+    }
+    microvm-ready: std.exec-wait-for {
+      @trigger: action.run-microvm.microvm-id
+      argv: [
+        'sh',
+        '-c',
+        '''|-
+          mkdir -p .unobin/build
+          log=.unobin/build/microvm-ready.log
+          tmp=.unobin/build/microvm-ready-body.$$
+          code=$(curl -sS --connect-timeout 5 -m 15 -o "${tmp}" -w "%{http_code}" \
+              -H "X-aws-proxy-auth: ${MICROVM_AUTH_TOKEN}" "${MICROVM_HEALTH_URL}")
+          rc=${?}
+          {
+              date -u
+              echo "url=${MICROVM_HEALTH_URL}"
+              echo "curl_exit=${rc} http_code=${code}"
+              cat "${tmp}"
+              echo
+          } >> "${log}"
+          rm -f "${tmp}"
+          if [ "${rc}" -eq 0 ]; then
+              case "${code}" in
+              2*|3*) exit 0;;
+              esac
+          fi
+          exit 1
+          ''',
+      ]
+      environment: {
+        'MICROVM_AUTH_TOKEN': action.microvm-auth-token.auth-token['X-aws-proxy-auth']
+        'MICROVM_HEALTH_URL': $'https://{{ action.run-microvm.endpoint }}/health'
+      }
+      interval: input.readiness-interval
+      timeout:  input.readiness-timeout
+    }
+    microvm-request: std.exec-wait-for {
+      @trigger: action.microvm-ready.duration
+      argv: [
+        'sh',
+        '-c',
+        '''|-
+          curl -sSf --connect-timeout 5 -m 30 \
+              -H "X-aws-proxy-auth: ${MICROVM_AUTH_TOKEN}" "${MICROVM_REQUEST_URL}"
+          ''',
+      ]
+      environment: {
+        'MICROVM_AUTH_TOKEN':  action.microvm-auth-token.auth-token['X-aws-proxy-auth']
+        'MICROVM_REQUEST_URL': $'https://{{ action.run-microvm.endpoint }}{{ input.request-path }}'
+      }
+      timeout: input.http-timeout
+    }
+    terminate-microvm: aws-lambdamicrovms.terminate-microvm {
+      @trigger:           $'{{ action.microvm-request.duration }}:{{ action.run-microvm.microvm-id }}'
+      microvm-identifier: action.run-microvm.microvm-id
+    }
+  }
+
+  outputs: {
+    image-arn:             { value: resource.microvm-image.image-arn }
+    image-version:         { value: resource.microvm-image.latest-active-image-version }
+    microvm-id:            { value: action.run-microvm.microvm-id }
+    microvm-endpoint:      { value: action.run-microvm.endpoint }
+    ready-attempts:        { value: action.microvm-ready.attempts }
+    ready-response:        { value: action.microvm-ready.stdout }
+    request-attempts:      { value: action.microvm-request.attempts }
+    http-body:             { value: action.microvm-request.stdout }
+    terminated-microvm-id: { value: action.terminate-microvm.microvm-identifier }
+  }
+}

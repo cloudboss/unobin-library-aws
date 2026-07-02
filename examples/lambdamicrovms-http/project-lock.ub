@@ -1,0 +1,11 @@
+project-lock: {
+  version:   1
+  toolchain: { unobin-version: 'v0.10.1' }
+  deps: {
+    'github.com/cloudboss/unobin-library-std': {
+      kind:    go
+      version: 'v0.3.0'
+      commit:  'd7aa5da119d41dff5da6a66bb91f939935fad861'
+    }
+  }
+}

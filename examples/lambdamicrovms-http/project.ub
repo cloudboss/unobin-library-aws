@@ -1,0 +1,13 @@
+project: {
+  requires: {
+    'github.com/cloudboss/unobin-library-aws': {
+      version: 'v0.0.0-unobin-replaced'
+    }
+    'github.com/cloudboss/unobin-library-std': {
+      version: 'v0.3.0'
+    }
+  }
+  replace: {
+    'github.com/cloudboss/unobin-library-aws': '../..'
+  }
+}
