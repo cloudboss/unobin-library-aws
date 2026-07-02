@@ -191,6 +191,25 @@ func TestMicrovmImageUpdateSkipsPutWhenOnlyTagsChanged(t *testing.T) {
 	assert.Empty(t, fake.sent(putRoute))
 }
 
+func TestMicrovmImageUpdateSkipsPutWhenOnlyTerminateOnDestroyChanged(t *testing.T) {
+	fake := newFakeLambdaMicrovms(t)
+	putRoute := "PUT /2025-09-09/microvm-images/image-1"
+	fake.on("GET /2025-09-09/microvm-images/image-1", func(n int) (int, string) {
+		return http.StatusOK, microvmImageGetResponse("image-1", "demo", "UPDATED")
+	})
+
+	prior := testMicrovmImage(nil)
+	current := testMicrovmImage(nil)
+	current.TerminateOnDestroy = aws.Bool(true)
+	_, err := current.Update(context.Background(), fake.configuration(),
+		runtime.Prior[MicrovmImage, *MicrovmImageOutput]{
+			Inputs:  *prior,
+			Outputs: &MicrovmImageOutput{ImageArn: "image-1"},
+		})
+	require.NoError(t, err)
+	assert.Empty(t, fake.sent(putRoute))
+}
+
 func TestMicrovmImageDeleteWaitsUntilGone(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	fake.on("DELETE /2025-09-09/microvm-images/image-1", func(n int) (int, string) {
@@ -203,6 +222,51 @@ func TestMicrovmImageDeleteWaitsUntilGone(t *testing.T) {
 	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
 		&MicrovmImageOutput{ImageArn: "image-1"})
 	assert.NoError(t, err)
+}
+
+func TestMicrovmImageDeleteDoesNotTerminateMicrovmsByDefault(t *testing.T) {
+	fake := newFakeLambdaMicrovms(t)
+	fake.on("DELETE /2025-09-09/microvm-images/image-1", func(n int) (int, string) {
+		return http.StatusBadRequest,
+			`{"__type":"ValidationException","message":"Cannot delete MicroVM image with running MicroVMs"}`
+	})
+
+	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
+		&MicrovmImageOutput{ImageArn: "image-1"})
+	require.ErrorContains(t, err, "Cannot delete MicroVM image with running MicroVMs")
+}
+
+func TestMicrovmImageDeleteTerminatesMicrovmsBeforeDeletingImage(t *testing.T) {
+	fake := newFakeLambdaMicrovms(t)
+	listRoute := "GET /2025-09-09/microvms"
+	terminateRoute := "DELETE /2025-09-09/microvms/microvm-1"
+	deleteRoute := "DELETE /2025-09-09/microvm-images/image-1"
+	fake.on(listRoute, func(n int) (int, string) {
+		if n == 1 {
+			return http.StatusOK, microvmItemsResponse("microvm-1", "image-1", "RUNNING")
+		}
+		return http.StatusOK, `{"items":[]}`
+	})
+	fake.on(terminateRoute, func(n int) (int, string) { return http.StatusOK, `{}` })
+	fake.on(deleteRoute, func(n int) (int, string) {
+		if len(fake.sent(terminateRoute)) == 0 {
+			return http.StatusBadRequest,
+				`{"__type":"ValidationException","message":"Cannot delete MicroVM image with running MicroVMs"}`
+		}
+		return http.StatusOK, `{"imageIdentifier":"image-1","state":"DELETING"}`
+	})
+	fake.on("GET /2025-09-09/microvm-images/image-1", func(n int) (int, string) {
+		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
+	})
+
+	err := (&MicrovmImage{TerminateOnDestroy: aws.Bool(true)}).Delete(
+		context.Background(), fake.configuration(), &MicrovmImageOutput{ImageArn: "image-1"})
+	require.NoError(t, err)
+	assert.Len(t, fake.sent(terminateRoute), 1)
+	queries := fake.queries(listRoute)
+	require.Len(t, queries, 2)
+	assert.Equal(t, "image-1", queries[0].Get("imageIdentifier"))
+	assert.Equal(t, "image-1", queries[1].Get("imageIdentifier"))
 }
 
 func TestMicrovmImageDeleteTreatsInitialNotFoundAsSuccess(t *testing.T) {
@@ -253,6 +317,18 @@ func microvmImageGetResponse(imageArn, name, state string) string {
 		"latestActiveImageVersion":"1",
 		"latestFailedImageVersion":"2",
 		"tags":{"env":"test"}
+	}`
+}
+
+func microvmItemsResponse(microvmID, imageArn, state string) string {
+	return `{
+		"items":[{
+			"microvmId":"` + microvmID + `",
+			"imageArn":"` + imageArn + `",
+			"imageVersion":"1",
+			"state":"` + state + `",
+			"startedAt":1782691200
+		}]
 	}`
 }
 

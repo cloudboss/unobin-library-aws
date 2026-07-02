@@ -37,6 +37,7 @@ type MicrovmImage struct {
 	Logging                  *Logging            `ub:"logging"`
 	Resources                *[]Resources        `ub:"resources"`
 	Tags                     *map[string]string  `ub:"tags"`
+	TerminateOnDestroy       *bool               `ub:"terminate-on-destroy"`
 }
 
 func (r *MicrovmImage) SchemaVersion() int { return 1 }
@@ -209,6 +210,11 @@ func (r *MicrovmImage) Delete(
 		return err
 	}
 	imageArn := prior.ImageArn
+	if aws.ToBool(r.TerminateOnDestroy) {
+		if err := r.terminateMicrovms(ctx, client, imageArn); err != nil {
+			return err
+		}
+	}
 	_, err = client.DeleteMicrovmImage(ctx, &awslambdamicrovms.DeleteMicrovmImageInput{
 		ImageIdentifier: aws.String(imageArn),
 	})
@@ -237,6 +243,84 @@ func (r *MicrovmImage) Delete(
 			return false, nil
 		}
 	}, wait.WithTimeout(microvmImageDeleteTimeout), wait.WithInterval(microvmImagePollInterval))
+}
+
+func (r *MicrovmImage) terminateMicrovms(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) error {
+	items, err := r.activeMicrovms(ctx, client, imageArn)
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	for _, item := range items {
+		if !microvmCanTerminate(item.State) {
+			continue
+		}
+		microvmID := aws.ToString(item.MicrovmId)
+		if microvmID == "" {
+			return fmt.Errorf("list Microvms for image %s returned item without microvm id", imageArn)
+		}
+		_, err := client.TerminateMicrovm(ctx, &awslambdamicrovms.TerminateMicrovmInput{
+			MicrovmIdentifier: aws.String(microvmID),
+		})
+		if err != nil {
+			if isNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("terminate Microvm %s for image %s: %w", microvmID, imageArn, err)
+		}
+	}
+	return wait.Until(ctx, "Microvms for image "+imageArn,
+		func(ctx context.Context) (bool, error) {
+			items, err := r.activeMicrovms(ctx, client, imageArn)
+			if err != nil {
+				return false, err
+			}
+			return len(items) == 0, nil
+		},
+		wait.WithTimeout(microvmImageDeleteTimeout),
+		wait.WithInterval(microvmImagePollInterval))
+}
+
+func (r *MicrovmImage) activeMicrovms(
+	ctx context.Context,
+	client *awslambdamicrovms.Client,
+	imageArn string,
+) ([]lambdamicrovmstypes.MicrovmItem, error) {
+	items := []lambdamicrovmstypes.MicrovmItem{}
+	paginator := awslambdamicrovms.NewListMicrovmsPaginator(client,
+		&awslambdamicrovms.ListMicrovmsInput{ImageIdentifier: aws.String(imageArn)})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list Microvms for image %s: %w", imageArn, err)
+		}
+		for _, item := range page.Items {
+			if microvmBlocksImageDelete(item.State) {
+				items = append(items, item)
+			}
+		}
+	}
+	return items, nil
+}
+
+func microvmBlocksImageDelete(state lambdamicrovmstypes.MicrovmState) bool {
+	return state != lambdamicrovmstypes.MicrovmStateTerminated
+}
+
+func microvmCanTerminate(state lambdamicrovmstypes.MicrovmState) bool {
+	switch state {
+	case lambdamicrovmstypes.MicrovmStateTerminated,
+		lambdamicrovmstypes.MicrovmStateTerminating:
+		return false
+	default:
+		return true
+	}
 }
 
 func (r *MicrovmImage) createInput() (*awslambdamicrovms.CreateMicrovmImageInput, error) {
@@ -422,7 +506,9 @@ func (r *MicrovmImage) syncTags(
 func (r *MicrovmImage) nonTagInputsChanged(prior MicrovmImage) bool {
 	current := *r
 	current.Tags = nil
+	current.TerminateOnDestroy = nil
 	prior.Tags = nil
+	prior.TerminateOnDestroy = nil
 	return !reflect.DeepEqual(prior, current)
 }
 

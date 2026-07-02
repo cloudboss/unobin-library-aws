@@ -140,6 +140,7 @@ func TestLambdaMicrovmSchemas(t *testing.T) {
 			"logging":                    typecheck.TOptional(loggingType()),
 			"resources":                  typecheck.TOptional(typecheck.TList(resourcesType())),
 			"tags":                       typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			"terminate-on-destroy":       typecheck.TOptional(typecheck.TBoolean()),
 		},
 		Outputs: microvmImageOutputTypes(),
 	}, schema.Resources["microvm-image"])
