@@ -1,0 +1,85 @@
+factory: {
+  description: '''>-
+    Resolves AWS metadata data sources. The named region and service id
+    come from inputs so the update pass recalculates derived endpoints,
+    DNS names, and service support without creating cloud resources.
+    '''
+
+  imports: {
+    aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
+  }
+
+  library-configs: {
+    aws-meta: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    named-region: {
+      type:        string
+      default:     'us-east-1'
+      description: 'Region passed to metadata lookups that do not need the configured region'
+    }
+    service-id: {
+      type:        string
+      default:     'ec2'
+      description: 'Service endpoint identifier passed to the service lookup'
+    }
+    ip-ranges-url: {
+      type:        optional(string)
+      description: 'URL of the AWS IP ranges document'
+    }
+  }
+
+  data-sources: {
+    arn-it: aws-meta.arn {
+      arn: 'arn:aws:lambda:us-east-1:123456789012:function:unobin-it'
+    }
+    ip-ranges-it: aws-meta.ip-ranges {
+      regions:  ['GLOBAL']
+      services: ['CLOUDFRONT']
+      url:      input.ip-ranges-url
+    }
+    partition-it: aws-meta.partition {}
+    current-region-it: aws-meta.region {}
+    named-region-it: aws-meta.region {
+      region: input.named-region
+    }
+    regions-it: aws-meta.regions {
+      all-regions: true
+    }
+    service-it: aws-meta.service {
+      region:     input.named-region
+      service-id: input.service-id
+    }
+    service-principal-it: aws-meta.service-principal {
+      region:       'cn-north-1'
+      service-name: 'logs'
+    }
+  }
+
+  outputs: {
+    arn-account:            { value: data-source.arn-it.account }
+    arn-partition:          { value: data-source.arn-it.partition }
+    arn-region:             { value: data-source.arn-it.region }
+    arn-resource:           { value: data-source.arn-it.resource }
+    arn-service:            { value: data-source.arn-it.service }
+    ip-ranges-cidr-blocks:  { value: data-source.ip-ranges-it.cidr-blocks }
+    ip-ranges-create-date:  { value: data-source.ip-ranges-it.create-date }
+    ip-ranges-sync-token:   { value: data-source.ip-ranges-it.sync-token }
+    partition:              { value: data-source.partition-it.partition }
+    partition-dns-suffix:   { value: data-source.partition-it.dns-suffix }
+    current-region:         { value: data-source.current-region-it.region }
+    named-region:           { value: data-source.named-region-it.region }
+    named-region-endpoint:  { value: data-source.named-region-it.endpoint }
+    regions:                { value: data-source.regions-it.names }
+    service-dns-name:       { value: data-source.service-it.dns-name }
+    service-partition:      { value: data-source.service-it.partition }
+    service-supported:      { value: data-source.service-it.supported }
+    service-principal-name: { value: data-source.service-principal-it.name }
+    service-principal:      { value: data-source.service-principal-it.suffix }
+  }
+}

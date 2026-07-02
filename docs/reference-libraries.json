@@ -1,6 +1,13 @@
 {
   "libraries": [
     {
+      "title": "AWS metadata",
+      "slug": "meta",
+      "package": "meta",
+      "module": "github.com/cloudboss/unobin-library-aws//meta",
+      "alias": "aws-meta"
+    },
+    {
       "title": "ACM",
       "slug": "acm",
       "package": "service/acm",

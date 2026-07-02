@@ -226,7 +226,7 @@ for sdir in "${@}"; do
         (
             [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${REPO_DIR}"
-            VERIFY_PHASE=applied go run "./${rel}/verify"
+            VERIFY_BUILD_DIR="${build_dir}" VERIFY_PHASE=applied go run "./${rel}/verify"
         ) || failed_step="verify-applied"
     fi
 
@@ -254,7 +254,7 @@ for sdir in "${@}"; do
         (
             [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
             cd "${REPO_DIR}"
-            VERIFY_PHASE=updated go run "./${rel}/verify"
+            VERIFY_BUILD_DIR="${build_dir}" VERIFY_PHASE=updated go run "./${rel}/verify"
         ) || failed_step="verify-updated"
     fi
 
@@ -276,7 +276,7 @@ for sdir in "${@}"; do
                 (
                     [ -f "${sdir}/.env-${TIER}" ] && set -a && . "${sdir}/.env-${TIER}"
                     cd "${REPO_DIR}"
-                    VERIFY_PHASE=destroyed go run "./${rel}/verify"
+                    VERIFY_BUILD_DIR="${build_dir}" VERIFY_PHASE=destroyed go run "./${rel}/verify"
                 ) || failed_step="verify-destroyed"
             fi
         elif [ -z "${failed_step}" ]; then

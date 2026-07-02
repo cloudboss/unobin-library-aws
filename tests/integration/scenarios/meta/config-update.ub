@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    inputs: {
+      named-region: 'us-east-2'
+      service-id:   's3'
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

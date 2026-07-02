@@ -1,8 +1,8 @@
 # AWS libraries
 
-The AWS packages provide Unobin resources, data sources, and actions backed by
-AWS services. Import only the service packages a factory uses and pass each
-service alias the same AWS configuration value when they share settings.
+The AWS packages provide Unobin resources, data sources, actions, and AWS
+metadata lookups. Import only the packages a factory uses and pass each alias
+the same AWS configuration value when they share settings.
 
 ```
 factory: {
@@ -100,10 +100,10 @@ See [configuration reference](reference/configuration.md) for every field.
 
 ## Reference
 
-The generated reference groups kinds by service and lists each service import
-path, suggested alias, inputs, outputs, defaults, constraints, and sensitive
-fields.
+The generated reference groups kinds by package and lists each import path,
+suggested alias, inputs, outputs, defaults, constraints, and sensitive fields.
 
 - [Reference overview](reference/)
 - [Configuration](reference/configuration.md)
+- [AWS metadata](reference/meta/index.md)
 - [S3 bucket resource](reference/s3/resources/bucket.md)
