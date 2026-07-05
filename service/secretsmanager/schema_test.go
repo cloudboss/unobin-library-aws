@@ -14,8 +14,7 @@ import (
 )
 
 // TestLibraryRegistersSecretsmanager checks the runtime registration: the
-// Secrets Manager resources are present under Resources and dispatch to their
-// output types.
+// Secrets Manager resources and data sources dispatch to their output types.
 func TestLibraryRegistersSecretsmanager(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
@@ -23,16 +22,25 @@ func TestLibraryRegistersSecretsmanager(t *testing.T) {
 		"secret-version": reflect.TypeFor[*svc.SecretVersionOutput](),
 	}
 	for key, outputType := range resources {
-		t.Run(key, func(t *testing.T) {
+		t.Run("resource/"+key, func(t *testing.T) {
 			require.Contains(t, lib.Resources, key)
 			assert.Equal(t, outputType, lib.Resources[key].OutputType())
+		})
+	}
+	dataSources := map[string]reflect.Type{
+		"secret-version": reflect.TypeFor[*svc.SecretVersionDataOutput](),
+	}
+	for key, outputType := range dataSources {
+		t.Run("data-source/"+key, func(t *testing.T) {
+			require.Contains(t, lib.DataSources, key)
+			assert.Equal(t, outputType, lib.DataSources[key].OutputType())
 		})
 	}
 }
 
 // TestSecretsmanagerSchemas asserts the whole derived TypeSchema for the
-// Secrets Manager resources: input and output field types, sensitive payloads,
-// constraints, and optional defaults.
+// Secrets Manager resources and data sources: input and output field types,
+// sensitive payloads, constraints, and optional defaults.
 func TestSecretsmanagerSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -107,9 +115,38 @@ func TestSecretsmanagerSchemas(t *testing.T) {
 		},
 	}
 	for key, want := range resources {
-		t.Run(key, func(t *testing.T) {
+		t.Run("resource/"+key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assertTypeSchemaEqual(t, want, schema.Resources[key])
+		})
+	}
+
+	dataSources := map[string]*runtime.TypeSchema{
+		"secret-version": {
+			Inputs: map[string]typecheck.Type{
+				"secret-id":     typecheck.TString(),
+				"version-id":    typecheck.TOptional(typecheck.TString()),
+				"version-stage": typecheck.TOptional(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":            typecheck.TString(),
+				"created-date":   typecheck.TString(),
+				"name":           typecheck.TString(),
+				"secret-binary":  typecheck.TString(),
+				"secret-string":  typecheck.TString(),
+				"version-id":     typecheck.TString(),
+				"version-stages": typecheck.TList(typecheck.TString()),
+			},
+			SensitiveOutputs: []string{"secret-binary", "secret-string"},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.version-stage", Value: "'AWSCURRENT'"},
+			},
+		},
+	}
+	for key, want := range dataSources {
+		t.Run("data-source/"+key, func(t *testing.T) {
+			require.Contains(t, schema.DataSources, key)
+			assertTypeSchemaEqual(t, want, schema.DataSources[key])
 		})
 	}
 }

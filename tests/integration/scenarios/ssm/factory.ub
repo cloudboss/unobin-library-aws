@@ -37,8 +37,17 @@ factory: {
     }
   }
 
+  data-sources: {
+    ssm-parameter-lookup: aws-ssm.parameter {
+      name: resource.ssm-parameter-it.name
+    }
+  }
+
   outputs: {
-    parameter-arn:     { value: resource.ssm-parameter-it.arn }
-    parameter-version: { value: resource.ssm-parameter-it.version }
+    parameter-arn:                 { value: resource.ssm-parameter-it.arn }
+    parameter-version:             { value: resource.ssm-parameter-it.version }
+    parameter-data-name:           { value: data-source.ssm-parameter-lookup.name }
+    parameter-data-type:           { value: data-source.ssm-parameter-lookup.type }
+    parameter-data-insecure-value: { value: data-source.ssm-parameter-lookup.insecure-value }
   }
 }

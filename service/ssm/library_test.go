@@ -57,15 +57,25 @@ func TestLibraryRegistersSSMLocalKinds(t *testing.T) {
 	require.Equal(t, []string{
 		"parameter",
 	}, sortedKeys(lib.Resources))
-	require.Empty(t, sortedKeys(lib.DataSources))
+	require.Equal(t, []string{
+		"parameter",
+	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
 		"parameter": reflect.TypeFor[*svc.ParameterOutput](),
 	}
 	for name, outputType := range resourceOutputs {
-		t.Run(name, func(t *testing.T) {
+		t.Run("resource/"+name, func(t *testing.T) {
 			require.Equal(t, outputType, lib.Resources[name].OutputType())
+		})
+	}
+	dataSourceOutputs := map[string]reflect.Type{
+		"parameter": reflect.TypeFor[*svc.ParameterDataOutput](),
+	}
+	for name, outputType := range dataSourceOutputs {
+		t.Run("data-source/"+name, func(t *testing.T) {
+			require.Equal(t, outputType, lib.DataSources[name].OutputType())
 		})
 	}
 }
@@ -94,6 +104,8 @@ func TestReadSSMServiceSchema(t *testing.T) {
 	require.Equal(t, []string{
 		"parameter",
 	}, sortedKeys(schema.Resources))
-	require.Empty(t, sortedKeys(schema.DataSources))
+	require.Equal(t, []string{
+		"parameter",
+	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

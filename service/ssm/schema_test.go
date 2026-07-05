@@ -14,23 +14,33 @@ import (
 )
 
 // TestLibraryRegistersSsm checks the runtime registration: the SSM parameter
-// resource is present under Resources and dispatches to its output type.
+// resource and data source are present under their categories and dispatch to
+// their output types.
 func TestLibraryRegistersSsm(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
 		"parameter": reflect.TypeFor[*svc.ParameterOutput](),
 	}
 	for key, outputType := range resources {
-		t.Run(key, func(t *testing.T) {
+		t.Run("resource/"+key, func(t *testing.T) {
 			require.Contains(t, lib.Resources, key)
 			assert.Equal(t, outputType, lib.Resources[key].OutputType())
 		})
 	}
+	dataSources := map[string]reflect.Type{
+		"parameter": reflect.TypeFor[*svc.ParameterDataOutput](),
+	}
+	for key, outputType := range dataSources {
+		t.Run("data-source/"+key, func(t *testing.T) {
+			require.Contains(t, lib.DataSources, key)
+			assert.Equal(t, outputType, lib.DataSources[key].OutputType())
+		})
+	}
 }
 
-// TestSsmSchemas asserts the whole derived TypeSchema for the SSM parameter:
-// input and output field types, the value cross-field and enum constraints the
-// Constraints method declares, and the optional defaults.
+// TestSsmSchemas asserts the whole derived TypeSchema for the SSM parameter
+// resource and data source: input and output field types, sensitivity, defaults,
+// and the resource's derived constraints.
 func TestSsmSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
@@ -92,9 +102,36 @@ func TestSsmSchemas(t *testing.T) {
 		},
 	}
 	for key, want := range resources {
-		t.Run(key, func(t *testing.T) {
+		t.Run("resource/"+key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assertTypeSchemaEqual(t, want, schema.Resources[key])
+		})
+	}
+
+	dataSources := map[string]*runtime.TypeSchema{
+		"parameter": {
+			Inputs: map[string]typecheck.Type{
+				"name":            typecheck.TString(),
+				"with-decryption": typecheck.TOptional(typecheck.TBoolean()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":            typecheck.TString(),
+				"insecure-value": typecheck.TOptional(typecheck.TString()),
+				"name":           typecheck.TString(),
+				"type":           typecheck.TString(),
+				"value":          typecheck.TString(),
+				"version":        typecheck.TInteger(),
+			},
+			SensitiveOutputs: []string{"value"},
+			Defaults: []lang.DefaultSpec{
+				{Field: "input.with-decryption", Value: "true"},
+			},
+		},
+	}
+	for key, want := range dataSources {
+		t.Run("data-source/"+key, func(t *testing.T) {
+			require.Contains(t, schema.DataSources, key)
+			assertTypeSchemaEqual(t, want, schema.DataSources[key])
 		})
 	}
 }

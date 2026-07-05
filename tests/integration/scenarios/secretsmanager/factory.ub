@@ -2,8 +2,9 @@ factory: {
   description: '''>-
     Manages a Secrets Manager secret whose string value and description come from inputs
     so the update pass writes a new version through PutSecretValue and updates the
-    description in place. It also creates a separate labeled secret version. The recovery
-    window is zero so destroy force-deletes the secret and a re-run can recreate it.
+    description in place. It also creates a separate labeled secret version and reads
+    both values through secret-version data sources. The recovery window is zero so
+    destroy force-deletes the secret and a re-run can recreate it.
     '''
 
   imports: { aws-secretsmanager: 'github.com/cloudboss/unobin-library-aws//service/secretsmanager' }
@@ -48,11 +49,32 @@ factory: {
     }
   }
 
+  data-sources: {
+    secretsmanager-secret-current-lookup: aws-secretsmanager.secret-version {
+      secret-id: resource.secretsmanager-secret-it.arn
+    }
+
+    secretsmanager-secret-managed-version-lookup: aws-secretsmanager.secret-version {
+      secret-id:      resource.secretsmanager-secret-it.arn
+      version-id:     resource.secretsmanager-secret-version-it.version-id
+      version-stage:  'AWSCURRENT'
+    }
+  }
+
   outputs: {
     secret-arn:        { value: resource.secretsmanager-secret-it.arn }
     secret-version-id: { value: resource.secretsmanager-secret-it.version-id }
+    current-secret-data-version-id: {
+      value: data-source.secretsmanager-secret-current-lookup.version-id
+    }
     managed-secret-version-id: {
       value: resource.secretsmanager-secret-version-it.version-id
+    }
+    managed-secret-data-version-id: {
+      value: data-source.secretsmanager-secret-managed-version-lookup.version-id
+    }
+    managed-secret-data-stages: {
+      value: data-source.secretsmanager-secret-managed-version-lookup.version-stages
     }
   }
 }
