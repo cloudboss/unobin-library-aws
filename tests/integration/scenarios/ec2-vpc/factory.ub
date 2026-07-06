@@ -62,12 +62,12 @@ factory: {
   }
 
   data-sources: {
-    ec2-vpc-data-it: aws-ec2.vpc-data {
+    ec2-vpc-lookup: aws-ec2.vpc {
       vpc-id:     resource.ec2-vpc-it.vpc-id
       cidr-block: input.cidr-block
       filter:     [{ name: 'vpc-id', values: [resource.ec2-vpc-it.vpc-id] }]
     }
-    ec2-security-group-data-it: aws-ec2.security-group-data {
+    ec2-security-group-lookup: aws-ec2.security-group {
       id:     resource.ec2-security-group-it.id
       name:   'unobin-it-sg'
       vpc-id: resource.ec2-vpc-it.vpc-id
@@ -85,15 +85,15 @@ factory: {
     egress-rule-id: {
       value: resource.ec2-security-group-egress-rule-it.security-group-rule-id
     }
-    lookup-vpc-id:                     { value: data-source.ec2-vpc-data-it.vpc-id }
-    lookup-vpc-arn:                    { value: data-source.ec2-vpc-data-it.arn }
-    lookup-vpc-cidr-block:             { value: data-source.ec2-vpc-data-it.cidr-block }
-    lookup-vpc-dns-support:            { value: data-source.ec2-vpc-data-it.enable-dns-support }
-    lookup-security-group-id:          { value: data-source.ec2-security-group-data-it.id }
-    lookup-security-group-arn:         { value: data-source.ec2-security-group-data-it.arn }
-    lookup-security-group-description: { value: data-source.ec2-security-group-data-it.description }
-    lookup-security-group-name:        { value: data-source.ec2-security-group-data-it.name }
-    lookup-security-group-vpc-id:      { value: data-source.ec2-security-group-data-it.vpc-id }
-    lookup-security-group-tags:        { value: data-source.ec2-security-group-data-it.tags }
+    lookup-vpc-id:                     { value: data-source.ec2-vpc-lookup.vpc-id }
+    lookup-vpc-arn:                    { value: data-source.ec2-vpc-lookup.arn }
+    lookup-vpc-cidr-block:             { value: data-source.ec2-vpc-lookup.cidr-block }
+    lookup-vpc-dns-support:            { value: data-source.ec2-vpc-lookup.enable-dns-support }
+    lookup-security-group-id:          { value: data-source.ec2-security-group-lookup.id }
+    lookup-security-group-arn:         { value: data-source.ec2-security-group-lookup.arn }
+    lookup-security-group-description: { value: data-source.ec2-security-group-lookup.description }
+    lookup-security-group-name:        { value: data-source.ec2-security-group-lookup.name }
+    lookup-security-group-vpc-id:      { value: data-source.ec2-security-group-lookup.vpc-id }
+    lookup-security-group-tags:        { value: data-source.ec2-security-group-lookup.tags }
   }
 }

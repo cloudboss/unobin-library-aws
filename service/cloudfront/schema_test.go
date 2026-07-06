@@ -32,8 +32,8 @@ func TestLibraryRegistersCloudfront(t *testing.T) {
 
 	originRequestPolicyDataOutput := reflect.TypeFor[*svc.OriginRequestPolicyDataOutput]()
 	dataSources := map[string]reflect.Type{
-		"cache-policy-data":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
-		"origin-request-policy-data": originRequestPolicyDataOutput,
+		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
+		"origin-request-policy": originRequestPolicyDataOutput,
 	}
 	for key, outputType := range dataSources {
 		t.Run(key, func(t *testing.T) {
@@ -500,7 +500,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 	})
 
 	dataSources := map[string]*runtime.TypeSchema{
-		"cache-policy-data": {
+		"cache-policy": {
 			Inputs: map[string]typecheck.Type{
 				"id":   typecheck.TOptional(typecheck.TString()),
 				"name": typecheck.TOptional(typecheck.TString()),
@@ -521,7 +521,7 @@ func TestCloudfrontSchemas(t *testing.T) {
 				{Kind: "exactly-one-of", Fields: []string{"input.id", "input.name"}},
 			},
 		},
-		"origin-request-policy-data": {
+		"origin-request-policy": {
 			Inputs: map[string]typecheck.Type{
 				"id":   typecheck.TOptional(typecheck.TString()),
 				"name": typecheck.TOptional(typecheck.TString()),

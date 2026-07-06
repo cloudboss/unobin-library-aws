@@ -41,7 +41,7 @@ factory: {
     ec2-subnets-empty: aws-ec2.subnets {
       filter: [{ name: 'tag:unobin', values: ['vpc-routing-it-missing'] }]
     }
-    ec2-subnet-data-public: aws-ec2.subnet-data {
+    ec2-subnet-public-lookup: aws-ec2.subnet {
       id:                resource.ec2-subnet-public.id
       availability-zone: resource.ec2-subnet-public.availability-zone
       default-for-az:    false
@@ -135,7 +135,7 @@ factory: {
     vpc-endpoint-id:              { value: resource.ec2-vpc-endpoint-s3.vpc-endpoint-id }
     subnet-ids-by-lookup:         { value: data-source.ec2-subnets-it.ids }
     empty-subnet-ids:             { value: data-source.ec2-subnets-empty.ids }
-    public-subnet-id-by-lookup:   { value: data-source.ec2-subnet-data-public.id }
-    public-subnet-cidr-by-lookup: { value: data-source.ec2-subnet-data-public.cidr-block }
+    public-subnet-id-by-lookup:   { value: data-source.ec2-subnet-public-lookup.id }
+    public-subnet-cidr-by-lookup: { value: data-source.ec2-subnet-public-lookup.cidr-block }
   }
 }

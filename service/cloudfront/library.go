@@ -39,8 +39,8 @@ func Library() *runtime.Library {
 			"distribution": makeResource[svc.Distribution, *svc.DistributionOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"cache-policy-data": makeDataSource[svc.CachePolicyData, *svc.CachePolicyDataOutput](),
-			"origin-request-policy-data": makeDataSource[
+			"cache-policy": makeDataSource[svc.CachePolicyData, *svc.CachePolicyDataOutput](),
+			"origin-request-policy": makeDataSource[
 				svc.OriginRequestPolicyData, *svc.OriginRequestPolicyDataOutput](),
 		},
 	}

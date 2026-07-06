@@ -59,7 +59,7 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 		"certificate-validation",
 	}, sortedKeys(lib.Resources))
 	require.Equal(t, []string{
-		"certificate-data",
+		"certificate",
 	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
@@ -74,7 +74,7 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"certificate-data": reflect.TypeFor[*svc.CertificateDataOutput](),
+		"certificate": reflect.TypeFor[*svc.CertificateDataOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -109,7 +109,7 @@ func TestReadACMServiceSchema(t *testing.T) {
 		"certificate-validation",
 	}, sortedKeys(schema.Resources))
 	require.Equal(t, []string{
-		"certificate-data",
+		"certificate",
 	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

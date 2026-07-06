@@ -61,8 +61,8 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 		"response-headers-policy",
 	}, sortedKeys(lib.Resources))
 	require.Equal(t, []string{
-		"cache-policy-data",
-		"origin-request-policy-data",
+		"cache-policy",
+		"origin-request-policy",
 	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
@@ -79,8 +79,8 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"cache-policy-data":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
-		"origin-request-policy-data": reflect.TypeFor[*svc.OriginRequestPolicyDataOutput](),
+		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
+		"origin-request-policy": reflect.TypeFor[*svc.OriginRequestPolicyDataOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -117,8 +117,8 @@ func TestReadCloudFrontServiceSchema(t *testing.T) {
 		"response-headers-policy",
 	}, sortedKeys(schema.Resources))
 	require.Equal(t, []string{
-		"cache-policy-data",
-		"origin-request-policy-data",
+		"cache-policy",
+		"origin-request-policy",
 	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

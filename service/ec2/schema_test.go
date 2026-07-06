@@ -1534,20 +1534,20 @@ func TestEc2SubnetsSchema(t *testing.T) {
 }
 
 // TestLibraryRegistersEc2SubnetData checks the runtime registration:
-// ec2-subnet-data is present under DataSources and dispatches to SubnetDataOutput.
+// ec2-subnet is present under DataSources and dispatches to SubnetDataOutput.
 func TestLibraryRegistersEc2SubnetData(t *testing.T) {
 	lib := Library()
-	require.Contains(t, lib.DataSources, "subnet-data")
+	require.Contains(t, lib.DataSources, "subnet")
 	assert.Equal(t, reflect.TypeFor[*svc.SubnetDataOutput](),
-		lib.DataSources["subnet-data"].OutputType())
+		lib.DataSources["subnet"].OutputType())
 }
 
 // TestEc2SubnetDataSchema asserts the whole derived TypeSchema for the
-// ec2-subnet-data data source: its query inputs, subnet outputs, and declared
+// ec2-subnet data source: its query inputs, subnet outputs, and declared
 // optional defaults.
 func TestEc2SubnetDataSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Contains(t, schema.DataSources, "subnet-data")
+	require.Contains(t, schema.DataSources, "subnet")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
 			"availability-zone":    typecheck.TOptional(typecheck.TString()),
@@ -1594,25 +1594,25 @@ func TestEc2SubnetDataSchema(t *testing.T) {
 			"vpc-id": typecheck.TString(),
 		},
 	}
-	assertTypeSchemaEqual(t, want, schema.DataSources["subnet-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["subnet"])
 }
 
 // TestLibraryRegistersEc2SecurityGroupData checks the runtime registration:
-// ec2-security-group-data is present under DataSources and dispatches to
+// ec2-security-group is present under DataSources and dispatches to
 // SecurityGroupDataOutput.
 func TestLibraryRegistersEc2SecurityGroupData(t *testing.T) {
 	lib := Library()
-	require.Contains(t, lib.DataSources, "security-group-data")
+	require.Contains(t, lib.DataSources, "security-group")
 	assert.Equal(t, reflect.TypeFor[*svc.SecurityGroupDataOutput](),
-		lib.DataSources["security-group-data"].OutputType())
+		lib.DataSources["security-group"].OutputType())
 }
 
 // TestEc2SecurityGroupDataSchema asserts the whole derived TypeSchema for the
-// ec2-security-group-data data source: its query inputs, security group outputs,
+// ec2-security-group data source: its query inputs, security group outputs,
 // and declared optional defaults.
 func TestEc2SecurityGroupDataSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Contains(t, schema.DataSources, "security-group-data")
+	require.Contains(t, schema.DataSources, "security-group")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
 			"filter": typecheck.TOptional(typecheck.TList(typecheck.TObject([]typecheck.ObjectField{
@@ -1633,24 +1633,24 @@ func TestEc2SecurityGroupDataSchema(t *testing.T) {
 			"vpc-id":      typecheck.TString(),
 		},
 	}
-	assertTypeSchemaEqual(t, want, schema.DataSources["security-group-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["security-group"])
 }
 
 // TestLibraryRegistersEc2VpcData checks the runtime registration:
-// ec2-vpc-data is present under DataSources and dispatches to VpcDataOutput.
+// ec2-vpc is present under DataSources and dispatches to VpcDataOutput.
 func TestLibraryRegistersEc2VpcData(t *testing.T) {
 	lib := Library()
-	require.Contains(t, lib.DataSources, "vpc-data")
+	require.Contains(t, lib.DataSources, "vpc")
 	assert.Equal(t, reflect.TypeFor[*svc.VpcDataOutput](),
-		lib.DataSources["vpc-data"].OutputType())
+		lib.DataSources["vpc"].OutputType())
 }
 
 // TestEc2VpcDataSchema asserts the whole derived TypeSchema for the
-// ec2-vpc-data data source: its query inputs, enriched VPC outputs, and the
+// ec2-vpc data source: its query inputs, enriched VPC outputs, and the
 // declared optional defaults.
 func TestEc2VpcDataSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Contains(t, schema.DataSources, "vpc-data")
+	require.Contains(t, schema.DataSources, "vpc")
 	want := &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{
 			"vpc-id":          typecheck.TOptional(typecheck.TString()),
@@ -1687,5 +1687,5 @@ func TestEc2VpcDataSchema(t *testing.T) {
 			"tags":                                 typecheck.TMap(typecheck.TString()),
 		},
 	}
-	assertTypeSchemaEqual(t, want, schema.DataSources["vpc-data"])
+	assertTypeSchemaEqual(t, want, schema.DataSources["vpc"])
 }

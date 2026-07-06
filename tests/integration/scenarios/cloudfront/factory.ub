@@ -32,10 +32,10 @@ factory: {
   }
 
   data-sources: {
-    cloudfront-cache-policy-caching-optimized: aws-cloudfront.cache-policy-data {
+    cloudfront-cache-policy-caching-optimized: aws-cloudfront.cache-policy {
       name: 'Managed-CachingOptimized'
     }
-    cloudfront-origin-request-policy-cors-s3: aws-cloudfront.origin-request-policy-data {
+    cloudfront-origin-request-policy-cors-s3: aws-cloudfront.origin-request-policy {
       name: 'Managed-CORS-S3Origin'
     }
   }

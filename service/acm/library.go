@@ -37,7 +37,7 @@ func Library() *runtime.Library {
 				svc.CertificateValidation, *svc.CertificateValidationOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"certificate-data": makeDataSource[svc.CertificateData, *svc.CertificateDataOutput](),
+			"certificate": makeDataSource[svc.CertificateData, *svc.CertificateDataOutput](),
 		},
 	}
 }

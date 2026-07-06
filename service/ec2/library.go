@@ -53,12 +53,12 @@ func Library() *runtime.Library {
 			"instance":     makeResource[svc.Instance, *svc.InstanceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"ami":                 makeDataSource[svc.AMI, *svc.AMIOutput](),
-			"availability-zones":  makeDataSource[svc.AvailabilityZones, *svc.AvailabilityZonesOutput](),
-			"subnets":             makeDataSource[svc.Subnets, *svc.SubnetsOutput](),
-			"subnet-data":         makeDataSource[svc.SubnetData, *svc.SubnetDataOutput](),
-			"security-group-data": makeDataSource[svc.SecurityGroupData, *svc.SecurityGroupDataOutput](),
-			"vpc-data":            makeDataSource[svc.VpcData, *svc.VpcDataOutput](),
+			"ami":                makeDataSource[svc.AMI, *svc.AMIOutput](),
+			"availability-zones": makeDataSource[svc.AvailabilityZones, *svc.AvailabilityZonesOutput](),
+			"subnets":            makeDataSource[svc.Subnets, *svc.SubnetsOutput](),
+			"subnet":             makeDataSource[svc.SubnetData, *svc.SubnetDataOutput](),
+			"security-group":     makeDataSource[svc.SecurityGroupData, *svc.SecurityGroupDataOutput](),
+			"vpc":                makeDataSource[svc.VpcData, *svc.VpcDataOutput](),
 		},
 	}
 }

@@ -37,7 +37,7 @@ factory: {
   }
 
   data-sources: {
-    acm-certificate-lookup: aws-acm.certificate-data {
+    acm-certificate-lookup: aws-acm.certificate {
       domain:      resource.acm-certificate-it.domain-name
       tags:        { unobin: 'acm-it' }
       statuses:    ['PENDING_VALIDATION']

@@ -33,9 +33,9 @@ func TestLibraryRegistersAcmResources(t *testing.T) {
 // certificate lookup under DataSources.
 func TestLibraryRegistersAcmDataSources(t *testing.T) {
 	lib := Library()
-	require.Contains(t, lib.DataSources, "certificate-data")
+	require.Contains(t, lib.DataSources, "certificate")
 	assert.Equal(t, reflect.TypeFor[*svc.CertificateDataOutput](),
-		lib.DataSources["certificate-data"].OutputType())
+		lib.DataSources["certificate"].OutputType())
 }
 
 // TestAcmSchemas asserts the derived TypeSchema for the ACM resources and data
@@ -197,7 +197,7 @@ func TestAcmSchemas(t *testing.T) {
 	}
 
 	dataSources := map[string]*runtime.TypeSchema{
-		"certificate-data": {
+		"certificate": {
 			Inputs: map[string]typecheck.Type{
 				"domain":      typecheck.TOptional(typecheck.TString()),
 				"key-types":   typecheck.TOptional(typecheck.TList(typecheck.TString())),

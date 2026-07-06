@@ -75,10 +75,10 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 	require.Equal(t, []string{
 		"ami",
 		"availability-zones",
-		"security-group-data",
-		"subnet-data",
+		"security-group",
+		"subnet",
 		"subnets",
-		"vpc-data",
+		"vpc",
 	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
@@ -106,12 +106,12 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 		})
 	}
 	dataSourcesOutputs := map[string]reflect.Type{
-		"ami":                 reflect.TypeFor[*svc.AMIOutput](),
-		"availability-zones":  reflect.TypeFor[*svc.AvailabilityZonesOutput](),
-		"subnets":             reflect.TypeFor[*svc.SubnetsOutput](),
-		"subnet-data":         reflect.TypeFor[*svc.SubnetDataOutput](),
-		"security-group-data": reflect.TypeFor[*svc.SecurityGroupDataOutput](),
-		"vpc-data":            reflect.TypeFor[*svc.VpcDataOutput](),
+		"ami":                reflect.TypeFor[*svc.AMIOutput](),
+		"availability-zones": reflect.TypeFor[*svc.AvailabilityZonesOutput](),
+		"subnets":            reflect.TypeFor[*svc.SubnetsOutput](),
+		"subnet":             reflect.TypeFor[*svc.SubnetDataOutput](),
+		"security-group":     reflect.TypeFor[*svc.SecurityGroupDataOutput](),
+		"vpc":                reflect.TypeFor[*svc.VpcDataOutput](),
 	}
 	for name, outputType := range dataSourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -163,10 +163,10 @@ func TestReadEC2ServiceSchema(t *testing.T) {
 	require.Equal(t, []string{
 		"ami",
 		"availability-zones",
-		"security-group-data",
-		"subnet-data",
+		"security-group",
+		"subnet",
 		"subnets",
-		"vpc-data",
+		"vpc",
 	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }
