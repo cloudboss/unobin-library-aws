@@ -7,12 +7,15 @@ import (
 	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 )
 
-type Microvms struct {
+type MicrovmsDataSource struct {
 	ImageIdentifier *string `ub:"image-identifier"`
 	ImageVersion    *string `ub:"image-version"`
 }
 
-func (r *Microvms) Read(ctx context.Context, cfg *awsCfg) (*MicrovmsOutput, error) {
+func (r *MicrovmsDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*MicrovmsDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -32,5 +35,5 @@ func (r *Microvms) Read(ctx context.Context, cfg *awsCfg) (*MicrovmsOutput, erro
 			items = append(items, microvmSummaryFromSDK(item))
 		}
 	}
-	return &MicrovmsOutput{Items: items}, nil
+	return &MicrovmsDataSourceOutput{Items: items}, nil
 }

@@ -62,8 +62,8 @@ func TestLibraryRegistersSQSLocalResources(t *testing.T) {
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
-		"queue":        reflect.TypeFor[*svc.QueueOutput](),
-		"queue-policy": reflect.TypeFor[*svc.QueuePolicyOutput](),
+		"queue":        reflect.TypeFor[*svc.QueueResourceOutput](),
+		"queue-policy": reflect.TypeFor[*svc.QueuePolicyResourceOutput](),
 	}
 	for name, outputType := range outputs {
 		t.Run(name, func(t *testing.T) {

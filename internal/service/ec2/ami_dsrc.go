@@ -18,7 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// AMI looks up a single EC2 AMI with DescribeImages and selects one
+// AMIDataSource looks up a single EC2 AMI with DescribeImages and selects one
 // deterministically. The query inputs owners, executable-users, filters,
 // image-ids, and include-deprecated reach the DescribeImages call; most-recent,
 // name-regex, and allow-unsafe-filter act client-side and never reach AWS. The
@@ -39,7 +39,7 @@ import (
 // second request per read for a niche UEFI value, it passes an image id where an
 // instance id is expected, and nothing downstream consumes it, so uefi-data is
 // omitted from the output.
-type AMI struct {
+type AMIDataSource struct {
 	Owners            *[]string    `ub:"owners"`
 	ExecutableUsers   *[]string    `ub:"executable-users"`
 	Filters           *[]AMIFilter `ub:"filters"`
@@ -60,7 +60,7 @@ type AMIFilter struct {
 	Values []string `ub:"values"`
 }
 
-// AMIOutput holds the chosen image's attributes. The arn is composed locally as
+// AMIDataSourceOutput holds the chosen image's attributes. The arn is composed locally as
 // a regional, account-less ARN, not read from DescribeImages, which does not
 // return it. root-snapshot-id is derived from the block-device mapping whose
 // device name matches the root device. The exotic image attributes
@@ -70,7 +70,7 @@ type AMIFilter struct {
 // ramdisk-id, state-reason, tpm-support, usage-operation, tags) are deliberately
 // omitted; none is consumed downstream and they can be added when a real
 // reference appears.
-type AMIOutput struct {
+type AMIDataSourceOutput struct {
 	ImageId            string `ub:"image-id"`
 	Arn                string `ub:"arn"`
 	OwnerId            string `ub:"owner-id"`
@@ -91,7 +91,7 @@ type AMIOutput struct {
 // rule on owners and the requirement that name-regex compile are runtime checks
 // enforced in Read, since neither an element-value test nor a regex-validity
 // test is a derivable constraint.
-func (r AMI) Constraints() []constraint.Constraint {
+func (r AMIDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Owners)).
 			Require(constraint.MinItems(r.Owners, 1)).
@@ -103,7 +103,7 @@ func (r AMI) Constraints() []constraint.Constraint {
 // the unsafe-filter guard, paginates DescribeImages in full, applies the
 // client-side name-regex filter, then selects the single result -- erroring on
 // no match or, without most-recent, on more than one.
-func (r *AMI) Read(ctx context.Context, cfg *awsCfg) (*AMIOutput, error) {
+func (r *AMIDataSource) Read(ctx context.Context, cfg *awsCfg) (*AMIDataSourceOutput, error) {
 	nameRegex, err := r.compileNameRegex()
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (r *AMI) Read(ctx context.Context, cfg *awsCfg) (*AMIOutput, error) {
 
 // compileNameRegex compiles the name-regex input, returning a nil matcher when
 // it is unset. A value that does not compile is a clear, field-named error.
-func (r *AMI) compileNameRegex() (*regexp.Regexp, error) {
+func (r *AMIDataSource) compileNameRegex() (*regexp.Regexp, error) {
 	if r.NameRegex == nil {
 		return nil, nil
 	}
@@ -153,7 +153,7 @@ func (r *AMI) compileNameRegex() (*regexp.Regexp, error) {
 // checkOwnersElements rejects an owners list that holds an empty-string element,
 // the second half of Terraform's owners validation that a derived constraint
 // cannot express.
-func (r *AMI) checkOwnersElements() error {
+func (r *AMIDataSource) checkOwnersElements() error {
 	if r.Owners != nil && slices.Contains(*r.Owners, "") {
 		return errors.New("owners must not contain an empty value")
 	}
@@ -166,7 +166,7 @@ func (r *AMI) checkOwnersElements() error {
 // image-ids is non-empty, or when a filter is named image-id or owner-id. An
 // owner-alias filter does not count, matching Terraform. Setting
 // allow-unsafe-filter accepts the risk and skips the block.
-func (r *AMI) checkUnsafeFilter() error {
+func (r *AMIDataSource) checkUnsafeFilter() error {
 	if !aws.ToBool(r.MostRecent) || aws.ToBool(r.AllowUnsafeFilter) {
 		return nil
 	}
@@ -189,7 +189,7 @@ func (r *AMI) checkUnsafeFilter() error {
 // is treated as zero results so it funnels into Read's no-results message rather
 // than a raw SDK error. The path adds no retry or waiter: DescribeImages is
 // consistent enough for a one-shot lookup.
-func (r *AMI) findImages(
+func (r *AMIDataSource) findImages(
 	ctx context.Context, client *ec2.Client,
 ) ([]ec2types.Image, error) {
 	in := &ec2.DescribeImagesInput{
@@ -225,11 +225,11 @@ func (r *AMI) findImages(
 // output builds the chosen image's attributes. The ARN is composed locally as a
 // regional, account-less ARN: arn:<partition>:ec2:<region>::image/<image-id>,
 // with an empty account-id segment, since DescribeImages does not return it.
-func (r *AMI) output(client *ec2.Client, image ec2types.Image) *AMIOutput {
+func (r *AMIDataSource) output(client *ec2.Client, image ec2types.Image) *AMIDataSourceOutput {
 	imageID := aws.ToString(image.ImageId)
 	reg := region(client)
 	arn := fmt.Sprintf("arn:%s:ec2:%s::image/%s", partition.Of(reg), reg, imageID)
-	return &AMIOutput{
+	return &AMIDataSourceOutput{
 		ImageId:            imageID,
 		Arn:                arn,
 		OwnerId:            aws.ToString(image.OwnerId),

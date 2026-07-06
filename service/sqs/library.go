@@ -23,8 +23,8 @@ func Library() *runtime.Library {
 		Description:   "AWS SQS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"queue":        makeResource[svc.Queue, *svc.QueueOutput](),
-			"queue-policy": makeResource[svc.QueuePolicy, *svc.QueuePolicyOutput](),
+			"queue":        makeResource[svc.QueueResource, *svc.QueueResourceOutput](),
+			"queue-policy": makeResource[svc.QueuePolicyResource, *svc.QueuePolicyResourceOutput](),
 		},
 	}
 }

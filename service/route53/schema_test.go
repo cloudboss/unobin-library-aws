@@ -19,8 +19,8 @@ import (
 func TestLibraryRegistersRoute53Resources(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"hosted-zone": reflect.TypeFor[*svc.HostedZoneOutput](),
-		"record-set":  reflect.TypeFor[*svc.RecordSetOutput](),
+		"hosted-zone": reflect.TypeFor[*svc.HostedZoneResourceOutput](),
+		"record-set":  reflect.TypeFor[*svc.RecordSetResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -35,7 +35,7 @@ func TestLibraryRegistersRoute53Resources(t *testing.T) {
 func TestLibraryRegistersRoute53DataSources(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "zone")
-	assert.Equal(t, reflect.TypeFor[*svc.ZoneDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ZoneDataSourceOutput](),
 		lib.DataSources["zone"].OutputType())
 }
 

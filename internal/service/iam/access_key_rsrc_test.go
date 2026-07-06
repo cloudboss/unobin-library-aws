@@ -33,7 +33,7 @@ func TestAccessKeyCreateReturnsPlaintextSecretAndSetsInactive(t *testing.T) {
 		return 200, emptyIAMResultXML("UpdateAccessKey")
 	})
 
-	out, err := (&AccessKey{UserName: "test-user", Status: "Inactive"}).Create(
+	out, err := (&AccessKeyResource{UserName: "test-user", Status: "Inactive"}).Create(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, "AKIATEST", out.AccessKeyId)
@@ -58,7 +58,7 @@ func TestAccessKeyCreateUsesDefaultActiveStatus(t *testing.T) {
 			"test-user", "AKIAACTIVE", "test-secret", "Active")
 	})
 
-	out, err := (&AccessKey{UserName: "test-user"}).Create(
+	out, err := (&AccessKeyResource{UserName: "test-user"}).Create(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, "AKIAACTIVE", out.AccessKeyId)
@@ -73,7 +73,8 @@ func TestAccessKeyCreateRequiresSecret(t *testing.T) {
 		return 200, createAccessKeyResponseXML("test-user", "AKIATEST", "", "Active")
 	})
 
-	_, err := (&AccessKey{UserName: "test-user"}).Create(context.Background(), fake.configuration())
+	_, err := (&AccessKeyResource{UserName: "test-user"}).Create(
+		context.Background(), fake.configuration())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "secret access key")
 }
@@ -92,7 +93,7 @@ func TestAccessKeyReadPaginatesAndPreservesSecretOutputs(t *testing.T) {
 		return 200, listAccessKeysPageXML(false, "",
 			accessKeyMetadataXML("test-user", "AKIAMATCH", "Inactive"))
 	})
-	prior := &AccessKeyOutput{
+	prior := &AccessKeyResourceOutput{
 		AccessKeyId:                "AKIAMATCH",
 		UserName:                   "test-user",
 		Secret:                     aws.String("secret"),
@@ -102,7 +103,7 @@ func TestAccessKeyReadPaginatesAndPreservesSecretOutputs(t *testing.T) {
 		KeyFingerprint:             aws.String("fingerprint"),
 	}
 
-	out, err := (&AccessKey{UserName: "desired-user"}).Read(
+	out, err := (&AccessKeyResource{UserName: "desired-user"}).Read(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Equal(t, "AKIAMATCH", out.AccessKeyId)
@@ -127,8 +128,8 @@ func TestAccessKeyReadMapsNoSuchEntityToNotFound(t *testing.T) {
 		return 400, noSuchEntityResponseXML()
 	})
 
-	_, err := (&AccessKey{UserName: "missing-user"}).Read(
-		context.Background(), fake.configuration(), &AccessKeyOutput{AccessKeyId: "AKIAMISS"})
+	_, err := (&AccessKeyResource{UserName: "missing-user"}).Read(
+		context.Background(), fake.configuration(), &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -139,8 +140,8 @@ func TestAccessKeyReadMapsMissingKeyToNotFound(t *testing.T) {
 			accessKeyMetadataXML("test-user", "AKIAOTHER", "Active"))
 	})
 
-	_, err := (&AccessKey{UserName: "test-user"}).Read(
-		context.Background(), fake.configuration(), &AccessKeyOutput{AccessKeyId: "AKIAMISS"})
+	_, err := (&AccessKeyResource{UserName: "test-user"}).Read(
+		context.Background(), fake.configuration(), &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -157,19 +158,23 @@ func TestAccessKeyUpdateReconcilesObservedStatusDrift(t *testing.T) {
 		return 200, listAccessKeysPageXML(false, "",
 			accessKeyMetadataXML("test-user", "AKIATEST", "Active"))
 	})
-	prior := runtime.Prior[AccessKey, *AccessKeyOutput]{
-		Inputs: AccessKey{UserName: "test-user", Status: "Active"},
-		Outputs: &AccessKeyOutput{
+	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]{
+		Inputs: AccessKeyResource{UserName: "test-user", Status: "Active"},
+		Outputs: &AccessKeyResourceOutput{
 			AccessKeyId:       "AKIATEST",
 			UserName:          "test-user",
 			Status:            "Active",
 			Secret:            aws.String("secret"),
 			SesSmtpPasswordV4: aws.String("smtp"),
 		},
-		Observed: &AccessKeyOutput{AccessKeyId: "AKIATEST", UserName: "test-user", Status: "Inactive"},
+		Observed: &AccessKeyResourceOutput{
+			AccessKeyId: "AKIATEST",
+			UserName:    "test-user",
+			Status:      "Inactive",
+		},
 	}
 
-	out, err := (&AccessKey{UserName: "test-user", Status: "Active"}).Update(
+	out, err := (&AccessKeyResource{UserName: "test-user", Status: "Active"}).Update(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Equal(t, "Active", out.Status)
@@ -181,14 +186,22 @@ func TestAccessKeyUpdateReconcilesObservedStatusDrift(t *testing.T) {
 
 func TestAccessKeyUpdateReturnsObservedWhenStatusMatches(t *testing.T) {
 	fake := newFakeIAM(t)
-	observed := &AccessKeyOutput{AccessKeyId: "AKIATEST", UserName: "test-user", Status: "Active"}
-	prior := runtime.Prior[AccessKey, *AccessKeyOutput]{
-		Inputs:   AccessKey{UserName: "test-user", Status: "Active"},
-		Outputs:  &AccessKeyOutput{AccessKeyId: "AKIATEST", UserName: "test-user", Status: "Active"},
+	observed := &AccessKeyResourceOutput{
+		AccessKeyId: "AKIATEST",
+		UserName:    "test-user",
+		Status:      "Active",
+	}
+	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]{
+		Inputs: AccessKeyResource{UserName: "test-user", Status: "Active"},
+		Outputs: &AccessKeyResourceOutput{
+			AccessKeyId: "AKIATEST",
+			UserName:    "test-user",
+			Status:      "Active",
+		},
 		Observed: observed,
 	}
 
-	out, err := (&AccessKey{UserName: "test-user", Status: "Active"}).Update(
+	out, err := (&AccessKeyResource{UserName: "test-user", Status: "Active"}).Update(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Same(t, observed, out)
@@ -203,9 +216,9 @@ func TestAccessKeyDeleteUsesPriorUserNameAndTreatsNoSuchEntityAsSuccess(t *testi
 		return 400, noSuchEntityResponseXML()
 	})
 
-	err := (&AccessKey{UserName: "new-user"}).Delete(
+	err := (&AccessKeyResource{UserName: "new-user"}).Delete(
 		context.Background(), fake.configuration(),
-		&AccessKeyOutput{AccessKeyId: "AKIATEST", UserName: "old-user"})
+		&AccessKeyResourceOutput{AccessKeyId: "AKIATEST", UserName: "old-user"})
 	require.NoError(t, err)
 }
 

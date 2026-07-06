@@ -23,12 +23,12 @@ func Library() *runtime.Library {
 		Description:   "AWS S3 library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"bucket": makeResource[svc.Bucket, *svc.BucketOutput](),
+			"bucket": makeResource[svc.BucketResource, *svc.BucketResourceOutput](),
 			"bucket-notification": makeResource[
-				svc.BucketNotification, *svc.BucketNotificationOutput](),
+				svc.BucketNotificationResource, *svc.BucketNotificationResourceOutput](),
 			"bucket-policy": makeResource[
-				svc.BucketPolicy, *svc.BucketPolicyOutput](),
-			"object": makeResource[svc.Object, *svc.ObjectOutput](),
+				svc.BucketPolicyResource, *svc.BucketPolicyResourceOutput](),
+			"object": makeResource[svc.ObjectResource, *svc.ObjectResourceOutput](),
 		},
 	}
 }

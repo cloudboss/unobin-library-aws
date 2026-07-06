@@ -27,7 +27,7 @@ import (
 // passes a bus name through when the user chose a non-default one.
 const defaultEventBusName = "default"
 
-// Rule is an EventBridge rule: a named match, on either an event pattern or a
+// RuleResource is an EventBridge rule: a named match, on either an event pattern or a
 // schedule, against an event bus. The fields mirror the EventBridge PutRule
 // API, which is also the call an update makes. The rule name and event bus fix
 // the rule's identity and ARN, so a change to either replaces the rule; the
@@ -39,7 +39,7 @@ const defaultEventBusName = "default"
 // the description is at most 512 characters, the schedule expression is at most
 // 256 characters, and the event pattern is valid JSON of at most 4096
 // characters.
-type Rule struct {
+type RuleResource struct {
 	Name               string             `ub:"name"`
 	EventBusName       *string            `ub:"event-bus-name"`
 	Description        *string            `ub:"description"`
@@ -51,20 +51,20 @@ type Rule struct {
 	ForceDestroy       *bool              `ub:"force-destroy"`
 }
 
-// RuleOutput holds the value EventBridge computes for a rule. The ARN is the
+// RuleResourceOutput holds the value EventBridge computes for a rule. The ARN is the
 // rule's stable handle and CloudFormation primary identifier, read from
 // DescribeRule once the rule is visible.
-type RuleOutput struct {
+type RuleResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *Rule) SchemaVersion() int { return 1 }
+func (r *RuleResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EventBridge cannot change on an existing rule.
 // The name is baked into the rule's ARN at creation, and a rule belongs to one
 // event bus for its lifetime, so changing either requires a new rule. Every
 // other input is reconciled in place by Update.
-func (r *Rule) ReplaceFields() []string {
+func (r *RuleResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"event-bus-name",
@@ -76,7 +76,7 @@ func (r *Rule) ReplaceFields() []string {
 // the two must be set, though both may be. When state is set it must be one of
 // the three valid rule states; an unset state lets EventBridge apply its own
 // default of ENABLED.
-func (r Rule) Constraints() []constraint.Constraint {
+func (r RuleResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtLeastOneOf(r.EventPattern, r.ScheduleExpression),
 		constraint.When(constraint.Present(r.State)).
@@ -86,7 +86,7 @@ func (r Rule) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Rule) Create(ctx context.Context, cfg *awsCfg) (*RuleOutput, error) {
+func (r *RuleResource) Create(ctx context.Context, cfg *awsCfg) (*RuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,11 @@ func (r *Rule) Create(ctx context.Context, cfg *awsCfg) (*RuleOutput, error) {
 	return r.read(ctx, client)
 }
 
-func (r *Rule) Read(ctx context.Context, cfg *awsCfg, prior *RuleOutput) (*RuleOutput, error) {
+func (r *RuleResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RuleResourceOutput,
+) (*RuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -130,7 +134,10 @@ func (r *Rule) Read(ctx context.Context, cfg *awsCfg, prior *RuleOutput) (*RuleO
 // read fetches the rule and returns its computed output. A rule that has gone
 // missing is drift, which DescribeRule reports as ResourceNotFound and read
 // turns into runtime.ErrNotFound so the runtime recreates it.
-func (r *Rule) read(ctx context.Context, client *eventbridge.Client) (*RuleOutput, error) {
+func (r *RuleResource) read(
+	ctx context.Context,
+	client *eventbridge.Client,
+) (*RuleResourceOutput, error) {
 	resp, err := client.DescribeRule(ctx, &eventbridge.DescribeRuleInput{
 		Name:         aws.String(r.Name),
 		EventBusName: r.eventBusName(),
@@ -141,12 +148,12 @@ func (r *Rule) read(ctx context.Context, client *eventbridge.Client) (*RuleOutpu
 		}
 		return nil, fmt.Errorf("describe rule: %w", err)
 	}
-	return &RuleOutput{Arn: aws.ToString(resp.Arn)}, nil
+	return &RuleResourceOutput{Arn: aws.ToString(resp.Arn)}, nil
 }
 
-func (r *Rule) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Rule, *RuleOutput],
-) (*RuleOutput, error) {
+func (r *RuleResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RuleResource, *RuleResourceOutput],
+) (*RuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -182,7 +189,7 @@ func (r *Rule) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Rule) Delete(ctx context.Context, cfg *awsCfg, prior *RuleOutput) error {
+func (r *RuleResource) Delete(ctx context.Context, cfg *awsCfg, prior *RuleResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -212,7 +219,7 @@ func (r *Rule) Delete(ctx context.Context, cfg *awsCfg, prior *RuleOutput) error
 // putRuleInput builds the PutRule request from the rule's inputs. State is
 // omitted when unset so EventBridge applies its default of ENABLED, and the
 // event bus is omitted unless the user chose a non-default one.
-func (r *Rule) putRuleInput() *eventbridge.PutRuleInput {
+func (r *RuleResource) putRuleInput() *eventbridge.PutRuleInput {
 	in := &eventbridge.PutRuleInput{
 		Name:               aws.String(r.Name),
 		EventBusName:       r.eventBusName(),
@@ -232,7 +239,7 @@ func (r *Rule) putRuleInput() *eventbridge.PutRuleInput {
 // prior inputs. The name and event bus are the rule's identity and force a
 // replace rather than an update; tags reconcile through the tag API, and
 // force-destroy acts only at delete, so none of those is tested here.
-func (r *Rule) putRuleChanged(prior Rule) bool {
+func (r *RuleResource) putRuleChanged(prior RuleResource) bool {
 	return runtime.Changed(prior.Description, r.Description) ||
 		runtime.Changed(prior.EventPattern, r.EventPattern) ||
 		runtime.Changed(prior.ScheduleExpression, r.ScheduleExpression) ||
@@ -244,7 +251,7 @@ func (r *Rule) putRuleChanged(prior Rule) bool {
 // rule's IAM role was created moments earlier and is not yet assumable. That
 // race clears once the role propagates, so the retry runs over a bounded
 // window.
-func (r *Rule) putRule(
+func (r *RuleResource) putRule(
 	ctx context.Context, client *eventbridge.Client, in *eventbridge.PutRuleInput,
 ) error {
 	return retry.OnError(ctx, isRoleNotYetAssumable,
@@ -258,7 +265,7 @@ func (r *Rule) putRule(
 // PutRule returns before the rule is consistently readable. A not-found read
 // means the create is still propagating, so the wait keeps polling; any other
 // error stops it.
-func (r *Rule) waitVisible(ctx context.Context, client *eventbridge.Client) error {
+func (r *RuleResource) waitVisible(ctx context.Context, client *eventbridge.Client) error {
 	what := fmt.Sprintf("rule %s", r.Name)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := client.DescribeRule(ctx, &eventbridge.DescribeRuleInput{
@@ -278,7 +285,7 @@ func (r *Rule) waitVisible(ctx context.Context, client *eventbridge.Client) erro
 // eventBusName returns the event bus to send on a request, or nil to let
 // EventBridge use the default bus. An unset, empty, or "default" bus is left
 // off the request rather than passed as the literal "default".
-func (r *Rule) eventBusName() *string {
+func (r *RuleResource) eventBusName() *string {
 	if r.EventBusName == nil {
 		return nil
 	}
@@ -293,7 +300,7 @@ func (r *Rule) eventBusName() *string {
 // tags through ListTagsForResource and writing changes with TagResource and
 // UntagResource. EventBridge addresses a rule's tags by its ARN, so the tags
 // are read to obtain it.
-func (r *Rule) syncTags(ctx context.Context, client *eventbridge.Client) error {
+func (r *RuleResource) syncTags(ctx context.Context, client *eventbridge.Client) error {
 	resp, err := client.DescribeRule(ctx, &eventbridge.DescribeRuleInput{
 		Name:         aws.String(r.Name),
 		EventBusName: r.eventBusName(),

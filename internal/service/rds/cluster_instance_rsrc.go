@@ -128,7 +128,7 @@ var clusterInstanceDeletedPending = map[string]bool{
 	"modifying":               true,
 }
 
-// ClusterInstance is one member of an Aurora or Multi-AZ DB cluster. The cluster
+// ClusterInstanceResource is one member of an Aurora or Multi-AZ DB cluster. The cluster
 // owns the storage, master credentials, encryption, and backup retention, so a
 // member declares only its compute class, placement, monitoring, and
 // Performance Insights settings, plus the cluster it joins. The cluster
@@ -146,7 +146,7 @@ var clusterInstanceDeletedPending = map[string]bool{
 //
 // A member of a cluster never owns a snapshot, so there are no final-snapshot,
 // storage, credential, or KMS inputs here; the cluster owns all of those.
-type ClusterInstance struct {
+type ClusterInstanceResource struct {
 	ClusterIdentifier                  string             `ub:"cluster-identifier"`
 	InstanceClass                      string             `ub:"instance-class"`
 	Engine                             string             `ub:"engine"`
@@ -172,7 +172,7 @@ type ClusterInstance struct {
 	Tags                               *map[string]string `ub:"tags"`
 }
 
-// ClusterInstanceOutput holds the values RDS computes or fills for a cluster
+// ClusterInstanceResourceOutput holds the values RDS computes or fills for a cluster
 // member. The ARN is the member's handle. The endpoint and port are assigned
 // only once the member is provisioned, so they settle after the create wait.
 // The writer flag, taken from the cluster's member list, says whether this
@@ -182,7 +182,7 @@ type ClusterInstance struct {
 // Availability Zone, CA certificate identifier, parameter group, and the backup
 // and maintenance windows are filled by RDS when omitted, so a consumer reads
 // the value the cloud settled on.
-type ClusterInstanceOutput struct {
+type ClusterInstanceResourceOutput struct {
 	Arn                        string `ub:"arn"`
 	Endpoint                   string `ub:"endpoint"`
 	Port                       int64  `ub:"port"`
@@ -199,14 +199,14 @@ type ClusterInstanceOutput struct {
 	PreferredMaintenanceWindow string `ub:"preferred-maintenance-window"`
 }
 
-func (r *ClusterInstance) SchemaVersion() int { return 1 }
+func (r *ClusterInstanceResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when a member is created. The
 // cluster it joins, its identifier, its engine, its Availability Zone, its
 // subnet group, and its custom instance profile cannot be changed on an existing
 // member, so a change to any of them requires a new member. Every other input is
 // reconciled in place by Update.
-func (r *ClusterInstance) ReplaceFields() []string {
+func (r *ClusterInstanceResource) ReplaceFields() []string {
 	return []string{
 		"availability-zone",
 		"cluster-identifier",
@@ -224,7 +224,7 @@ func (r *ClusterInstance) ReplaceFields() []string {
 // identifier, the custom instance profile, the engine, the backup window, the
 // maintenance window, and the Performance Insights KMS ARN are likewise checked
 // in code, since a pattern is not a constraint.
-func (r ClusterInstance) Constraints() []constraint.Constraint {
+func (r ClusterInstanceResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.PerformanceInsightsRetentionPeriod)).
 			Require(constraint.AtLeast(r.PerformanceInsightsRetentionPeriod, 7),
@@ -233,7 +233,10 @@ func (r ClusterInstance) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ClusterInstance) Create(ctx context.Context, cfg *awsCfg) (*ClusterInstanceOutput, error) {
+func (r *ClusterInstanceResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ClusterInstanceResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -263,7 +266,7 @@ func (r *ClusterInstance) Create(ctx context.Context, cfg *awsCfg) (*ClusterInst
 
 // createInstance issues CreateDBInstance, retrying for up to two minutes while
 // RDS rejects a just-created enhanced-monitoring role it cannot yet assume.
-func (r *ClusterInstance) createInstance(
+func (r *ClusterInstanceResource) createInstance(
 	ctx context.Context, client *rds.Client,
 ) (*rds.CreateDBInstanceOutput, error) {
 	in := r.createInput()
@@ -285,7 +288,7 @@ func (r *ClusterInstance) createInstance(
 // public accessibility are sent unconditionally so the member's setting is
 // explicit; the rest are sent only when configured, letting RDS apply its own
 // default for an omitted field.
-func (r *ClusterInstance) createInput() *rds.CreateDBInstanceInput {
+func (r *ClusterInstanceResource) createInput() *rds.CreateDBInstanceInput {
 	in := &rds.CreateDBInstanceInput{
 		DBClusterIdentifier:                aws.String(r.ClusterIdentifier),
 		DBInstanceClass:                    aws.String(r.InstanceClass),
@@ -318,7 +321,7 @@ func (r *ClusterInstance) createInput() *rds.CreateDBInstanceInput {
 // reboots, and waits again. Each wait re-confirms the available state on
 // consecutive reads, since the member's status transition can lag the call
 // that starts it and a stale available read would end the wait early.
-func (r *ClusterInstance) reconcileCACertificate(
+func (r *ClusterInstanceResource) reconcileCACertificate(
 	ctx context.Context, client *rds.Client, created *rdstypes.DBInstance,
 ) error {
 	if r.CACertificateIdentifier == nil {
@@ -347,9 +350,11 @@ func (r *ClusterInstance) reconcileCACertificate(
 	return r.waitAvailableSettled(ctx, client)
 }
 
-func (r *ClusterInstance) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceOutput,
-) (*ClusterInstanceOutput, error) {
+func (r *ClusterInstanceResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ClusterInstanceResourceOutput,
+) (*ClusterInstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -360,9 +365,9 @@ func (r *ClusterInstance) Read(
 // read fetches the member by identifier, then reads its cluster to derive the
 // writer flag from the cluster's member list. A missing member, by typed fault
 // or empty result, maps to runtime.ErrNotFound so a plan recreates it.
-func (r *ClusterInstance) read(
+func (r *ClusterInstanceResource) read(
 	ctx context.Context, client *rds.Client,
-) (*ClusterInstanceOutput, error) {
+) (*ClusterInstanceResourceOutput, error) {
 	inst, err := r.findInstance(ctx, client)
 	if err != nil {
 		return nil, err
@@ -371,7 +376,7 @@ func (r *ClusterInstance) read(
 	if err != nil {
 		return nil, err
 	}
-	out := &ClusterInstanceOutput{
+	out := &ClusterInstanceResourceOutput{
 		Arn:                        aws.ToString(inst.DBInstanceArn),
 		Writer:                     writer,
 		DbiResourceId:              aws.ToString(inst.DbiResourceId),
@@ -399,7 +404,7 @@ func (r *ClusterInstance) read(
 // member at all, which is a hard error rather than a normal path. A cluster that
 // no longer exists, or that no longer lists this member, leaves the writer flag
 // false.
-func (r *ClusterInstance) readWriter(
+func (r *ClusterInstanceResource) readWriter(
 	ctx context.Context, client *rds.Client, inst *rdstypes.DBInstance,
 ) (bool, error) {
 	clusterID := aws.ToString(inst.DBClusterIdentifier)
@@ -431,7 +436,7 @@ func (r *ClusterInstance) readWriter(
 // findInstance describes the member by identifier and returns it. A missing
 // member, whether RDS reports it as a typed fault or as an empty result, maps to
 // runtime.ErrNotFound.
-func (r *ClusterInstance) findInstance(
+func (r *ClusterInstanceResource) findInstance(
 	ctx context.Context, client *rds.Client,
 ) (*rdstypes.DBInstance, error) {
 	resp, err := client.DescribeDBInstances(ctx, &rds.DescribeDBInstancesInput{
@@ -450,9 +455,11 @@ func (r *ClusterInstance) findInstance(
 	return &resp.DBInstances[0], nil
 }
 
-func (r *ClusterInstance) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterInstance, *ClusterInstanceOutput],
-) (*ClusterInstanceOutput, error) {
+func (r *ClusterInstanceResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
+) (*ClusterInstanceResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -479,7 +486,7 @@ func (r *ClusterInstance) Update(
 
 // modify issues one ModifyDBInstance, retrying for up to two minutes while RDS
 // rejects a just-created enhanced-monitoring role it cannot yet assume.
-func (r *ClusterInstance) modify(
+func (r *ClusterInstanceResource) modify(
 	ctx context.Context, client *rds.Client, in *rds.ModifyDBInstanceInput,
 ) error {
 	err := retry.OnError(ctx, clusterInstanceIAMPropagating, func(ctx context.Context) error {
@@ -498,8 +505,8 @@ func (r *ClusterInstance) modify(
 // any one of them changing sends all three, with the enabled flag always set,
 // since RDS treats them as a unit. The CA certificate change rides this one call
 // on update; its reboot is handled by the availability wait that follows.
-func (r *ClusterInstance) modifyInput(
-	prior runtime.Prior[ClusterInstance, *ClusterInstanceOutput],
+func (r *ClusterInstanceResource) modifyInput(
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
 ) (*rds.ModifyDBInstanceInput, bool) {
 	p := prior.Inputs
 	in := &rds.ModifyDBInstanceInput{
@@ -568,8 +575,8 @@ func (r *ClusterInstance) modifyInput(
 // Insights inputs differ from the prior inputs. They are reconciled together,
 // since RDS treats the toggle, the KMS key, and the retention period as one
 // setting.
-func (r *ClusterInstance) performanceInsightsChanged(
-	prior runtime.Prior[ClusterInstance, *ClusterInstanceOutput],
+func (r *ClusterInstanceResource) performanceInsightsChanged(
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
 ) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.PerformanceInsightsEnabled, r.PerformanceInsightsEnabled) ||
@@ -577,9 +584,8 @@ func (r *ClusterInstance) performanceInsightsChanged(
 		runtime.Changed(p.PerformanceInsightsRetentionPeriod, r.PerformanceInsightsRetentionPeriod)
 }
 
-func (r *ClusterInstance) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceOutput,
-) error {
+func (r *ClusterInstanceResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -597,7 +603,7 @@ func (r *ClusterInstance) Delete(
 // last in a read-replica cluster, the cluster is promoted out of read-replica
 // mode and the delete is retried once. A member already gone, or already on its
 // way out, counts as deleted.
-func (r *ClusterInstance) deleteInstance(ctx context.Context, client *rds.Client) error {
+func (r *ClusterInstanceResource) deleteInstance(ctx context.Context, client *rds.Client) error {
 	in := &rds.DeleteDBInstanceInput{
 		DBInstanceIdentifier: aws.String(r.Identifier),
 	}
@@ -624,7 +630,7 @@ func (r *ClusterInstance) deleteInstance(ctx context.Context, client *rds.Client
 // so its last member can be deleted, then waits for the cluster to return to the
 // available state. The cluster identifier is the correct target here, not the
 // member identifier.
-func (r *ClusterInstance) promoteCluster(ctx context.Context, client *rds.Client) error {
+func (r *ClusterInstanceResource) promoteCluster(ctx context.Context, client *rds.Client) error {
 	if _, err := client.PromoteReadReplicaDBCluster(ctx,
 		&rds.PromoteReadReplicaDBClusterInput{
 			DBClusterIdentifier: aws.String(r.ClusterIdentifier),
@@ -650,7 +656,7 @@ func (r *ClusterInstance) promoteCluster(ctx context.Context, client *rds.Client
 // already gone, reported as the not-found fault, is deleted. A member already on
 // its way out, reported as an invalid-state fault saying so, proceeds to the
 // deletion wait. Any other error fails the delete.
-func (r *ClusterInstance) tolerateDeleted(err error) error {
+func (r *ClusterInstanceResource) tolerateDeleted(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -669,7 +675,7 @@ func (r *ClusterInstance) tolerateDeleted(err error) error {
 // waitAvailable polls the member until it reaches an available state, treating
 // the settling states as not-ready and any other state as a failure. It runs up
 // to ninety minutes, since a member can take many minutes to join or modify.
-func (r *ClusterInstance) waitAvailable(ctx context.Context, client *rds.Client) error {
+func (r *ClusterInstanceResource) waitAvailable(ctx context.Context, client *rds.Client) error {
 	return r.waitAvailableEvery(ctx, client, 1, 30*time.Second)
 }
 
@@ -678,7 +684,10 @@ func (r *ClusterInstance) waitAvailable(ctx context.Context, client *rds.Client)
 // transition can lag the call that starts it, so a single available read taken
 // before the member leaves the available state would end the wait early. The
 // short poll suits re-confirming a value that is already present.
-func (r *ClusterInstance) waitAvailableSettled(ctx context.Context, client *rds.Client) error {
+func (r *ClusterInstanceResource) waitAvailableSettled(
+	ctx context.Context,
+	client *rds.Client,
+) error {
 	return r.waitAvailableEvery(ctx, client, 3, 10*time.Second)
 }
 
@@ -686,7 +695,7 @@ func (r *ClusterInstance) waitAvailableSettled(ctx context.Context, client *rds.
 // waitAvailableSettled. A describe right after a create can briefly miss the
 // new member, so a short run of not-found reads counts as not-ready rather
 // than failing the wait; a persistent not-found still fails it.
-func (r *ClusterInstance) waitAvailableEvery(
+func (r *ClusterInstanceResource) waitAvailableEvery(
 	ctx context.Context, client *rds.Client, consecutive int, interval time.Duration,
 ) error {
 	what := fmt.Sprintf("db instance %s to become available", r.Identifier)
@@ -716,7 +725,7 @@ func (r *ClusterInstance) waitAvailableEvery(
 // waitDeleted polls until the member is gone. A not-found, by typed fault or
 // empty result, is the target state; a member still in a deleting state is
 // not-ready; any other state fails the wait. It runs up to ninety minutes.
-func (r *ClusterInstance) waitDeleted(ctx context.Context, client *rds.Client) error {
+func (r *ClusterInstanceResource) waitDeleted(ctx context.Context, client *rds.Client) error {
 	what := fmt.Sprintf("db instance %s to be deleted", r.Identifier)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		inst, err := r.findInstance(ctx, client)
@@ -740,7 +749,7 @@ func (r *ClusterInstance) waitDeleted(ctx context.Context, client *rds.Client) e
 // profile prefix, the engine value, the backup and maintenance window formats,
 // the Performance Insights retention set, and the Performance Insights KMS ARN
 // are each verified here so a malformed value fails before any API call.
-func (r *ClusterInstance) validate() error {
+func (r *ClusterInstanceResource) validate() error {
 	if !clusterInstanceIdentifierPattern.MatchString(r.Identifier) {
 		return fmt.Errorf("identifier %q must be lowercase alphanumeric and hyphens, "+
 			"start with a letter, and have no doubled or trailing hyphen", r.Identifier)

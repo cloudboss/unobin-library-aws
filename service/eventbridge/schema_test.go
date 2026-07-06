@@ -19,9 +19,9 @@ import (
 func TestLibraryRegistersEventbridge(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"event-bus": reflect.TypeFor[*svc.EventBusOutput](),
-		"rule":      reflect.TypeFor[*svc.RuleOutput](),
-		"target":    reflect.TypeFor[*svc.TargetOutput](),
+		"event-bus": reflect.TypeFor[*svc.EventBusResourceOutput](),
+		"rule":      reflect.TypeFor[*svc.RuleResourceOutput](),
+		"target":    reflect.TypeFor[*svc.TargetResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

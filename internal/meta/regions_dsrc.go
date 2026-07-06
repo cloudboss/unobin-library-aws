@@ -10,8 +10,8 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
-// Regions lists AWS regions returned by EC2 DescribeRegions.
-type Regions struct {
+// RegionsDataSource lists AWS regions returned by EC2 DescribeRegions.
+type RegionsDataSource struct {
 	AllRegions *bool            `ub:"all-regions"`
 	Filters    *[]RegionsFilter `ub:"filters"`
 }
@@ -22,13 +22,16 @@ type RegionsFilter struct {
 	Values []string `ub:"values"`
 }
 
-// RegionsOutput contains the matched region names.
-type RegionsOutput struct {
+// RegionsDataSourceOutput contains the matched region names.
+type RegionsDataSourceOutput struct {
 	Names     []string `ub:"names"`
 	Partition string   `ub:"partition"`
 }
 
-func (d *Regions) Read(ctx context.Context, cfg *awsCfg) (*RegionsOutput, error) {
+func (d *RegionsDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*RegionsDataSourceOutput, error) {
 	client, sdkCfg, err := newEC2Client(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -49,10 +52,10 @@ func (d *Regions) Read(ctx context.Context, cfg *awsCfg) (*RegionsOutput, error)
 		}
 	}
 	slices.Sort(names)
-	return &RegionsOutput{Names: names, Partition: info.Partition.ID()}, nil
+	return &RegionsDataSourceOutput{Names: names, Partition: info.Partition.ID()}, nil
 }
 
-func (d *Regions) describeInput() *ec2.DescribeRegionsInput {
+func (d *RegionsDataSource) describeInput() *ec2.DescribeRegionsInput {
 	in := &ec2.DescribeRegionsInput{}
 	if d.AllRegions != nil {
 		in.AllRegions = aws.Bool(*d.AllRegions)

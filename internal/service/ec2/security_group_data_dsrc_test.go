@@ -15,7 +15,7 @@ import (
 
 const securityGroupDataID = "sg-0123456789abcdef0"
 
-func describeSecurityGroupDataPageXML(nextToken string, items ...string) string {
+func describeSecurityGroupDataSourcePageXML(nextToken string, items ...string) string {
 	next := ""
 	if nextToken != "" {
 		next = fmt.Sprintf("<nextToken>%s</nextToken>", nextToken)
@@ -43,16 +43,16 @@ func securityGroupDataItemXML(id string) string {
 </item>`, id)
 }
 
-func TestSecurityGroupDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
+func TestSecurityGroupDataSourceReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSecurityGroups", func(n int, form url.Values) (int, string) {
 		switch n {
 		case 1:
 			assert.Empty(t, form.Get("NextToken"))
-			return 200, describeSecurityGroupDataPageXML("token-2")
+			return 200, describeSecurityGroupDataSourcePageXML("token-2")
 		case 2:
 			assert.Equal(t, "token-2", form.Get("NextToken"))
-			return 200, describeSecurityGroupDataPageXML("",
+			return 200, describeSecurityGroupDataSourcePageXML("",
 				securityGroupDataItemXML(securityGroupDataID))
 		default:
 			t.Fatalf("unexpected DescribeSecurityGroups call %d", n)
@@ -61,12 +61,12 @@ func TestSecurityGroupDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &SecurityGroupData{
+	r := &SecurityGroupDataSource{
 		Id:    aws.String(securityGroupDataID),
 		Name:  aws.String("unobin-it-sg"),
 		VpcId: aws.String("vpc-0123456789abcdef0"),
 		Tags:  new(map[string]string{"unobin": "ec2-security-group-data"}),
-		Filter: new([]SecurityGroupDataFilter{
+		Filter: new([]SecurityGroupDataSourceFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
@@ -98,18 +98,18 @@ func TestSecurityGroupDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	assertEC2Filter(t, sent[0], "empty-values", []string{})
 }
 
-func TestSecurityGroupDataReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
+func TestSecurityGroupDataSourceReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSecurityGroups", func(_ int, form url.Values) (int, string) {
 		for key := range form {
 			assert.False(t, strings.HasPrefix(key, "Filter."), "unexpected filter %s", key)
 			assert.False(t, strings.HasPrefix(key, "GroupId."), "unexpected group id %s", key)
 		}
-		return 200, describeSecurityGroupDataPageXML("")
+		return 200, describeSecurityGroupDataSourcePageXML("")
 	})
 	cfg := fake.configuration()
 
-	r := &SecurityGroupData{Id: aws.String(""), Name: aws.String(""), VpcId: aws.String("")}
+	r := &SecurityGroupDataSource{Id: aws.String(""), Name: aws.String(""), VpcId: aws.String("")}
 	out, err := r.Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
@@ -117,7 +117,7 @@ func TestSecurityGroupDataReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T
 	assert.EqualError(t, err, "no matching EC2 Security Group found")
 }
 
-func TestSecurityGroupDataReadTreatsNotFoundAsLookupError(t *testing.T) {
+func TestSecurityGroupDataSourceReadTreatsNotFoundAsLookupError(t *testing.T) {
 	cases := []string{"InvalidGroup.NotFound", "InvalidSecurityGroupID.NotFound"}
 	for _, code := range cases {
 		t.Run(code, func(t *testing.T) {
@@ -127,7 +127,7 @@ func TestSecurityGroupDataReadTreatsNotFoundAsLookupError(t *testing.T) {
 			})
 			cfg := fake.configuration()
 
-			r := &SecurityGroupData{Id: aws.String("sg-missing")}
+			r := &SecurityGroupDataSource{Id: aws.String("sg-missing")}
 			out, err := r.Read(context.Background(), cfg)
 			require.Error(t, err)
 			assert.Nil(t, out)
@@ -137,16 +137,16 @@ func TestSecurityGroupDataReadTreatsNotFoundAsLookupError(t *testing.T) {
 	}
 }
 
-func TestSecurityGroupDataReadErrorsOnMultipleMatches(t *testing.T) {
+func TestSecurityGroupDataSourceReadErrorsOnMultipleMatches(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSecurityGroups", func(int, url.Values) (int, string) {
-		return 200, describeSecurityGroupDataPageXML("",
+		return 200, describeSecurityGroupDataSourcePageXML("",
 			securityGroupDataItemXML(securityGroupDataID),
 			securityGroupDataItemXML("sg-11111111111111111"))
 	})
 	cfg := fake.configuration()
 
-	out, err := (&SecurityGroupData{Name: aws.String("unobin-it-sg")}).Read(
+	out, err := (&SecurityGroupDataSource{Name: aws.String("unobin-it-sg")}).Read(
 		context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)

@@ -19,28 +19,28 @@ func TestEventBusValidate(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		mutate  func(*EventBus)
+		mutate  func(*EventBusResource)
 		wantErr string
 	}{
 		{name: "valid"},
 		{
 			name:    "default name",
-			mutate:  func(r *EventBus) { r.Name = defaultEventBusName },
+			mutate:  func(r *EventBusResource) { r.Name = defaultEventBusName },
 			wantErr: `name cannot be "default"`,
 		},
 		{
 			name:    "long name",
-			mutate:  func(r *EventBus) { r.Name = longName },
+			mutate:  func(r *EventBusResource) { r.Name = longName },
 			wantErr: "name must be between 1 and 256 characters",
 		},
 		{
 			name:    "valid partner source",
-			mutate:  func(r *EventBus) { r.EventSourceName = &validPartner },
+			mutate:  func(r *EventBusResource) { r.EventSourceName = &validPartner },
 			wantErr: "",
 		},
 		{
 			name: "invalid partner source",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := "aws.partner/only-one-segment"
 				r.EventSourceName = &v
 			},
@@ -48,7 +48,7 @@ func TestEventBusValidate(t *testing.T) {
 		},
 		{
 			name: "empty kms key",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := ""
 				r.KmsKeyIdentifier = &v
 			},
@@ -56,13 +56,13 @@ func TestEventBusValidate(t *testing.T) {
 		},
 		{
 			name: "valid dead-letter arn",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				r.DeadLetterConfig = &EventBusDeadLetterConfig{Arn: &queueArn}
 			},
 		},
 		{
 			name: "invalid dead-letter arn",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := "not-an-arn"
 				r.DeadLetterConfig = &EventBusDeadLetterConfig{Arn: &v}
 			},
@@ -70,7 +70,7 @@ func TestEventBusValidate(t *testing.T) {
 		},
 		{
 			name: "invalid dead-letter arn partition",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := "arn:aws123:sqs:us-east-1:123456789012:queue"
 				r.DeadLetterConfig = &EventBusDeadLetterConfig{Arn: &v}
 			},
@@ -78,7 +78,7 @@ func TestEventBusValidate(t *testing.T) {
 		},
 		{
 			name: "invalid dead-letter arn region",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := "arn:aws:sqs:useast1:123456789012:queue"
 				r.DeadLetterConfig = &EventBusDeadLetterConfig{Arn: &v}
 			},
@@ -86,7 +86,7 @@ func TestEventBusValidate(t *testing.T) {
 		},
 		{
 			name: "invalid dead-letter arn account",
-			mutate: func(r *EventBus) {
+			mutate: func(r *EventBusResource) {
 				v := "arn:aws:sqs:us-east-1:123:queue"
 				r.DeadLetterConfig = &EventBusDeadLetterConfig{Arn: &v}
 			},
@@ -96,7 +96,7 @@ func TestEventBusValidate(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			r := EventBus{Name: "unobin-test-bus"}
+			r := EventBusResource{Name: "unobin-test-bus"}
 			if tt.mutate != nil {
 				tt.mutate(&r)
 			}

@@ -66,12 +66,12 @@ func TestLibraryRegistersRDSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"subnet-group":            reflect.TypeFor[*svc.SubnetGroupOutput](),
-		"parameter-group":         reflect.TypeFor[*svc.ParameterGroupOutput](),
-		"cluster-parameter-group": reflect.TypeFor[*svc.ClusterParameterGroupOutput](),
-		"cluster":                 reflect.TypeFor[*svc.ClusterOutput](),
-		"cluster-instance":        reflect.TypeFor[*svc.ClusterInstanceOutput](),
-		"instance":                reflect.TypeFor[*svc.InstanceOutput](),
+		"subnet-group":            reflect.TypeFor[*svc.SubnetGroupResourceOutput](),
+		"parameter-group":         reflect.TypeFor[*svc.ParameterGroupResourceOutput](),
+		"cluster-parameter-group": reflect.TypeFor[*svc.ClusterParameterGroupResourceOutput](),
+		"cluster":                 reflect.TypeFor[*svc.ClusterResourceOutput](),
+		"cluster-instance":        reflect.TypeFor[*svc.ClusterInstanceResourceOutput](),
+		"instance":                reflect.TypeFor[*svc.InstanceResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

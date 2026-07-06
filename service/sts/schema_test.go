@@ -18,7 +18,7 @@ import (
 func TestLibraryRegistersStsCallerIdentity(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "caller-identity")
-	assert.Equal(t, reflect.TypeFor[*svc.CallerIdentityOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.CallerIdentityDataSourceOutput](),
 		lib.DataSources["caller-identity"].OutputType())
 }
 

@@ -13,14 +13,14 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
 )
 
-// Alias gives a Lambda function version a stable name, the way CloudFormation
+// AliasResource gives a Lambda function version a stable name, the way CloudFormation
 // models AWS::Lambda::Alias. The function and alias name identify the alias and
 // are fixed at creation; the target version, description, and routing weights
 // reconcile in place through UpdateAlias. Removing description means the
 // desired description is the empty string, and removing routing-config means the
 // desired traffic-shift configuration is empty, so update sends both members
 // explicitly instead of omitting them.
-type Alias struct {
+type AliasResource struct {
 	Name            string              `ub:"name"`
 	FunctionName    string              `ub:"function-name"`
 	FunctionVersion string              `ub:"function-version"`
@@ -36,38 +36,38 @@ type AliasRoutingConfig struct {
 	AdditionalVersionWeights *map[string]float64 `ub:"additional-version-weights"`
 }
 
-// AliasOutput holds the values Lambda computes for an alias and the identity
+// AliasResourceOutput holds the values Lambda computes for an alias and the identity
 // handles needed to address the same alias later. Arn is the alias ARN returned
 // by GetAlias, and InvokeArn is the API Gateway integration target composed
 // from it. FunctionName and Name are stored as prior handles because both are
 // replace fields, so a replacement delete or read must use the old identity.
-type AliasOutput struct {
+type AliasResourceOutput struct {
 	Arn          string `ub:"arn"`
 	InvokeArn    string `ub:"invoke-arn"`
 	FunctionName string `ub:"function-name"`
 	Name         string `ub:"name"`
 }
 
-func (r *Alias) SchemaVersion() int { return 1 }
+func (r *AliasResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the two inputs that identify the alias. Lambda has no
 // operation to move an alias to a different function or rename it, so changing
 // either field replaces the alias.
-func (r *Alias) ReplaceFields() []string {
+func (r *AliasResource) ReplaceFields() []string {
 	return []string{
 		"function-name",
 		"name",
 	}
 }
 
-func (r *Alias) EquivalentInput(field string, prior, current Alias) bool {
+func (r *AliasResource) EquivalentInput(field string, prior, current AliasResource) bool {
 	if field != "function-name" {
 		return false
 	}
 	return equivalentFunctionNameOrARN(prior.FunctionName, current.FunctionName)
 }
 
-func (r *Alias) Create(ctx context.Context, cfg *awsCfg) (*AliasOutput, error) {
+func (r *AliasResource) Create(ctx context.Context, cfg *awsCfg) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,11 @@ func (r *Alias) Create(ctx context.Context, cfg *awsCfg) (*AliasOutput, error) {
 // replacement read receives the new inputs on the receiver, so using the prior
 // handles is what still finds the old alias. A typed Lambda not-found or an
 // empty GetAlias result maps to runtime.ErrNotFound.
-func (r *Alias) Read(ctx context.Context, cfg *awsCfg, prior *AliasOutput) (*AliasOutput, error) {
+func (r *AliasResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *AliasResourceOutput,
+) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -101,9 +105,9 @@ func (r *Alias) Read(ctx context.Context, cfg *awsCfg, prior *AliasOutput) (*Ali
 // when any of them changed. Description is always sent, using an explicit empty
 // string when absent, and routing-config is always sent, using an empty config
 // when absent, so removed values clear in AWS instead of being left in place.
-func (r *Alias) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Alias, *AliasOutput],
-) (*AliasOutput, error) {
+func (r *AliasResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AliasResource, *AliasResourceOutput],
+) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -132,7 +136,7 @@ func (r *Alias) Update(
 // Delete removes the alias by the prior identity, because a replacement delete
 // receives the replacement's new inputs on the receiver. A missing alias is
 // already deleted and is therefore a successful outcome.
-func (r *Alias) Delete(ctx context.Context, cfg *awsCfg, prior *AliasOutput) error {
+func (r *AliasResource) Delete(ctx context.Context, cfg *awsCfg, prior *AliasResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -147,9 +151,9 @@ func (r *Alias) Delete(ctx context.Context, cfg *awsCfg, prior *AliasOutput) err
 	return nil
 }
 
-func (r *Alias) read(
+func (r *AliasResource) read(
 	ctx context.Context, client *lambda.Client, functionName, name string,
-) (*AliasOutput, error) {
+) (*AliasResourceOutput, error) {
 	resp, err := client.GetAlias(ctx, &lambda.GetAliasInput{
 		FunctionName: aws.String(functionName),
 		Name:         aws.String(name),
@@ -166,7 +170,7 @@ func (r *Alias) read(
 	arn := aws.ToString(resp.AliasArn)
 	region := region(client)
 	part := partition.Of(region)
-	return &AliasOutput{
+	return &AliasResourceOutput{
 		Arn:          arn,
 		InvokeArn:    functionInvokeARN(part, region, arn),
 		FunctionName: functionName,
@@ -174,7 +178,7 @@ func (r *Alias) read(
 	}, nil
 }
 
-func (r *Alias) mutableChanged(prior Alias) bool {
+func (r *AliasResource) mutableChanged(prior AliasResource) bool {
 	return runtime.Changed(prior.FunctionVersion, r.FunctionVersion) ||
 		runtime.Changed(prior.Description, r.Description) ||
 		runtime.Changed(prior.RoutingConfig, r.RoutingConfig)

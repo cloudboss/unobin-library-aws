@@ -83,22 +83,22 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"vpc":                         reflect.TypeFor[*svc.VpcOutput](),
-		"security-group":              reflect.TypeFor[*svc.SecurityGroupOutput](),
-		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleOutput](),
-		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleOutput](),
-		"subnet":                      reflect.TypeFor[*svc.SubnetOutput](),
-		"volume":                      reflect.TypeFor[*svc.VolumeOutput](),
-		"launch-template":             reflect.TypeFor[*svc.LaunchTemplateOutput](),
-		"internet-gateway":            reflect.TypeFor[*svc.InternetGatewayOutput](),
-		"route-table":                 reflect.TypeFor[*svc.RouteTableOutput](),
-		"route":                       reflect.TypeFor[*svc.RouteOutput](),
-		"route-table-association":     reflect.TypeFor[*svc.RouteTableAssociationOutput](),
-		"eip":                         reflect.TypeFor[*svc.EipOutput](),
-		"nat-gateway":                 reflect.TypeFor[*svc.NatGatewayOutput](),
-		"vpc-endpoint":                reflect.TypeFor[*svc.VpcEndpointOutput](),
-		"key-pair":                    reflect.TypeFor[*svc.KeyPairOutput](),
-		"instance":                    reflect.TypeFor[*svc.InstanceOutput](),
+		"vpc":                         reflect.TypeFor[*svc.VpcResourceOutput](),
+		"security-group":              reflect.TypeFor[*svc.SecurityGroupResourceOutput](),
+		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleResourceOutput](),
+		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleResourceOutput](),
+		"subnet":                      reflect.TypeFor[*svc.SubnetResourceOutput](),
+		"volume":                      reflect.TypeFor[*svc.VolumeResourceOutput](),
+		"launch-template":             reflect.TypeFor[*svc.LaunchTemplateResourceOutput](),
+		"internet-gateway":            reflect.TypeFor[*svc.InternetGatewayResourceOutput](),
+		"route-table":                 reflect.TypeFor[*svc.RouteTableResourceOutput](),
+		"route":                       reflect.TypeFor[*svc.RouteResourceOutput](),
+		"route-table-association":     reflect.TypeFor[*svc.RouteTableAssociationResourceOutput](),
+		"eip":                         reflect.TypeFor[*svc.EipResourceOutput](),
+		"nat-gateway":                 reflect.TypeFor[*svc.NatGatewayResourceOutput](),
+		"vpc-endpoint":                reflect.TypeFor[*svc.VpcEndpointResourceOutput](),
+		"key-pair":                    reflect.TypeFor[*svc.KeyPairResourceOutput](),
+		"instance":                    reflect.TypeFor[*svc.InstanceResourceOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -106,12 +106,12 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 		})
 	}
 	dataSourcesOutputs := map[string]reflect.Type{
-		"ami":                reflect.TypeFor[*svc.AMIOutput](),
-		"availability-zones": reflect.TypeFor[*svc.AvailabilityZonesOutput](),
-		"subnets":            reflect.TypeFor[*svc.SubnetsOutput](),
-		"subnet":             reflect.TypeFor[*svc.SubnetDataOutput](),
-		"security-group":     reflect.TypeFor[*svc.SecurityGroupDataOutput](),
-		"vpc":                reflect.TypeFor[*svc.VpcDataOutput](),
+		"ami":                reflect.TypeFor[*svc.AMIDataSourceOutput](),
+		"availability-zones": reflect.TypeFor[*svc.AvailabilityZonesDataSourceOutput](),
+		"subnets":            reflect.TypeFor[*svc.SubnetsDataSourceOutput](),
+		"subnet":             reflect.TypeFor[*svc.SubnetDataSourceOutput](),
+		"security-group":     reflect.TypeFor[*svc.SecurityGroupDataSourceOutput](),
+		"vpc":                reflect.TypeFor[*svc.VpcDataSourceOutput](),
 	}
 	for name, outputType := range dataSourcesOutputs {
 		t.Run(name, func(t *testing.T) {

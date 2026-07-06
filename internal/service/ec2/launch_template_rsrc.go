@@ -17,7 +17,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// LaunchTemplate is an EC2 launch template: a named, versioned object holding
+// LaunchTemplateResource is an EC2 launch template: a named, versioned object holding
 // the configuration to launch instances from. Each change to the instance
 // configuration is an immutable new version (CreateLaunchTemplateVersion), and
 // the template's default version is set by a separate call (ModifyLaunchTemplate)
@@ -32,7 +32,7 @@ import (
 // fields), secondary-interfaces (a recent multi-interface block), and
 // instance-requirements (the attribute-based instance-type selection tree).
 // With instance-requirements absent, instance-type is a plain optional field.
-type LaunchTemplate struct {
+type LaunchTemplateResource struct {
 	Name                 string             `ub:"name"`
 	VersionDescription   *string            `ub:"version-description"`
 	DefaultVersion       *int64             `ub:"default-version"`
@@ -41,23 +41,23 @@ type LaunchTemplate struct {
 	Data                 LaunchTemplateData `ub:"data"`
 }
 
-// LaunchTemplateOutput holds the values the cloud computes for a launch
+// LaunchTemplateResourceOutput holds the values the cloud computes for a launch
 // template: its id and the latest and default version numbers. The
 // default version is server-assigned at create (version 1) and changes when a
 // default-version modify runs, so the cloud value is exposed for a consumer that
 // wants the real current default.
-type LaunchTemplateOutput struct {
+type LaunchTemplateResourceOutput struct {
 	LaunchTemplateId string `ub:"launch-template-id"`
 	LatestVersion    int64  `ub:"latest-version"`
 	DefaultVersion   int64  `ub:"default-version"`
 }
 
-func (r *LaunchTemplate) SchemaVersion() int { return 1 }
+func (r *LaunchTemplateResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that force a replacement. Only the template
 // name is fixed at creation; every instance-config change becomes a new version
 // in place.
-func (r *LaunchTemplate) ReplaceFields() []string {
+func (r *LaunchTemplateResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
@@ -73,7 +73,7 @@ func (r *LaunchTemplate) ReplaceFields() []string {
 // checked in code when the version is built, and the element enums and bounds
 // are validated by AWS, as are the instance-type burstable gate and the name
 // charset.
-func (r LaunchTemplate) Constraints() []constraint.Constraint {
+func (r LaunchTemplateResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.DefaultVersion, r.UpdateDefaultVersion),
 		constraint.AtMostOneOf(r.Data.SecurityGroups, r.Data.SecurityGroupIds),
@@ -153,7 +153,10 @@ func (r LaunchTemplate) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LaunchTemplate) Create(ctx context.Context, cfg *awsCfg) (*LaunchTemplateOutput, error) {
+func (r *LaunchTemplateResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*LaunchTemplateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -200,9 +203,11 @@ func (r *LaunchTemplate) Create(ctx context.Context, cfg *awsCfg) (*LaunchTempla
 	return r.read(ctx, client, id)
 }
 
-func (r *LaunchTemplate) Read(
-	ctx context.Context, cfg *awsCfg, prior *LaunchTemplateOutput,
-) (*LaunchTemplateOutput, error) {
+func (r *LaunchTemplateResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LaunchTemplateResourceOutput,
+) (*LaunchTemplateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -210,9 +215,11 @@ func (r *LaunchTemplate) Read(
 	return r.read(ctx, client, prior.LaunchTemplateId)
 }
 
-func (r *LaunchTemplate) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LaunchTemplate, *LaunchTemplateOutput],
-) (*LaunchTemplateOutput, error) {
+func (r *LaunchTemplateResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[LaunchTemplateResource, *LaunchTemplateResourceOutput],
+) (*LaunchTemplateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -257,11 +264,10 @@ func (r *LaunchTemplate) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *LaunchTemplate) Delete(
+func (r *LaunchTemplateResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LaunchTemplateOutput,
-) error {
+	prior *LaunchTemplateResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -284,7 +290,7 @@ func (r *LaunchTemplate) Delete(
 // differ from the prior apply: the whole data block plus the version
 // description. A version is built whole from these, so a change to any of them
 // produces a new version.
-func (r *LaunchTemplate) dataChanged(prior LaunchTemplate) bool {
+func (r *LaunchTemplateResource) dataChanged(prior LaunchTemplateResource) bool {
 	return runtime.Changed(prior.Data, r.Data) ||
 		runtime.Changed(prior.VersionDescription, r.VersionDescription)
 }
@@ -293,7 +299,7 @@ func (r *LaunchTemplate) dataChanged(prior LaunchTemplate) bool {
 // inputs and returns its version number. The version request is the same data
 // the create call sends, so a version reflects exactly the declared
 // configuration.
-func (r *LaunchTemplate) createVersion(
+func (r *LaunchTemplateResource) createVersion(
 	ctx context.Context, client *ec2.Client, id string,
 ) (int64, error) {
 	data, err := launchTemplateData(r.Data)
@@ -313,7 +319,7 @@ func (r *LaunchTemplate) createVersion(
 }
 
 // modifyDefaultVersion sets the template's default version to the given number.
-func (r *LaunchTemplate) modifyDefaultVersion(
+func (r *LaunchTemplateResource) modifyDefaultVersion(
 	ctx context.Context, client *ec2.Client, id, version string,
 ) error {
 	_, err := client.ModifyLaunchTemplate(ctx, &ec2.ModifyLaunchTemplateInput{
@@ -330,7 +336,7 @@ func (r *LaunchTemplate) modifyDefaultVersion(
 // write lags, so the template must be returned by three consecutive describes
 // before the wait passes. Create polls by name, the value known before the id is
 // committed; update polls by id.
-func (r *LaunchTemplate) waitFound(
+func (r *LaunchTemplateResource) waitFound(
 	ctx context.Context, client *ec2.Client, idOrName string, byName bool,
 ) error {
 	what := fmt.Sprintf("launch template %s", idOrName)
@@ -356,14 +362,14 @@ func (r *LaunchTemplate) waitFound(
 // read fetches the template and composes the output. The describe response
 // holds the id and the latest and default version numbers; no nested instance
 // configuration is echoed into the output.
-func (r *LaunchTemplate) read(
+func (r *LaunchTemplateResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*LaunchTemplateOutput, error) {
+) (*LaunchTemplateResourceOutput, error) {
 	tmpl, err := describeLaunchTemplate(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	return &LaunchTemplateOutput{
+	return &LaunchTemplateResourceOutput{
 		LaunchTemplateId: id,
 		LatestVersion:    aws.ToInt64(tmpl.LatestVersionNumber),
 		DefaultVersion:   aws.ToInt64(tmpl.DefaultVersionNumber),

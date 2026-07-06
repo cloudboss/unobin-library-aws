@@ -10,7 +10,7 @@ import (
 )
 
 func TestApiMappingReplaceFields(t *testing.T) {
-	var r ApiMapping
+	var r ApiMappingResource
 
 	assert.Equal(t, []string{"api-id", "domain-name"}, r.ReplaceFields())
 }
@@ -26,7 +26,7 @@ func TestApiMappingCreateInputOmitsEmptyKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := ApiMapping{
+			r := ApiMappingResource{
 				ApiId:         "api-123",
 				DomainName:    "api.example.com",
 				Stage:         "$default",
@@ -44,7 +44,7 @@ func TestApiMappingCreateInputOmitsEmptyKey(t *testing.T) {
 }
 
 func TestApiMappingCreateInputIncludesNonEmptyKey(t *testing.T) {
-	r := ApiMapping{
+	r := ApiMappingResource{
 		ApiId:         "api-123",
 		DomainName:    "api.example.com",
 		Stage:         "$default",
@@ -57,7 +57,7 @@ func TestApiMappingCreateInputIncludesNonEmptyKey(t *testing.T) {
 }
 
 func TestApiMappingUpdateInputUnchanged(t *testing.T) {
-	prior := apiMappingPrior(ApiMapping{
+	prior := apiMappingPrior(ApiMappingResource{
 		ApiId:         "api-123",
 		DomainName:    "api.example.com",
 		Stage:         "$default",
@@ -72,13 +72,13 @@ func TestApiMappingUpdateInputUnchanged(t *testing.T) {
 }
 
 func TestApiMappingUpdateInputClearsKey(t *testing.T) {
-	prior := apiMappingPrior(ApiMapping{
+	prior := apiMappingPrior(ApiMappingResource{
 		ApiId:         "api-123",
 		DomainName:    "api.example.com",
 		Stage:         "$default",
 		ApiMappingKey: aws.String("v1"),
 	})
-	r := ApiMapping{
+	r := ApiMappingResource{
 		ApiId:      "api-123",
 		DomainName: "api.example.com",
 		Stage:      "$default",
@@ -95,12 +95,12 @@ func TestApiMappingUpdateInputClearsKey(t *testing.T) {
 }
 
 func TestApiMappingUpdateInputChangedStage(t *testing.T) {
-	prior := apiMappingPrior(ApiMapping{
+	prior := apiMappingPrior(ApiMappingResource{
 		ApiId:      "api-123",
 		DomainName: "api.example.com",
 		Stage:      "blue",
 	})
-	r := ApiMapping{
+	r := ApiMappingResource{
 		ApiId:      "api-123",
 		DomainName: "api.example.com",
 		Stage:      "green",
@@ -113,10 +113,12 @@ func TestApiMappingUpdateInputChangedStage(t *testing.T) {
 	assert.Equal(t, "green", aws.ToString(in.Stage))
 }
 
-func apiMappingPrior(inputs ApiMapping) runtime.Prior[ApiMapping, *ApiMappingOutput] {
-	return runtime.Prior[ApiMapping, *ApiMappingOutput]{
+func apiMappingPrior(
+	inputs ApiMappingResource,
+) runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput] {
+	return runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput]{
 		Inputs: inputs,
-		Outputs: &ApiMappingOutput{
+		Outputs: &ApiMappingResourceOutput{
 			ApiMappingId: "mapping-123",
 			DomainName:   "api.example.com",
 		},

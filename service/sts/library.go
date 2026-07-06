@@ -32,7 +32,9 @@ func Library() *runtime.Library {
 		Description:   "AWS STS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"caller-identity": makeDataSource[svc.CallerIdentity, *svc.CallerIdentityOutput](),
+			"caller-identity": makeDataSource[
+				svc.CallerIdentityDataSource,
+				*svc.CallerIdentityDataSourceOutput](),
 		},
 	}
 }

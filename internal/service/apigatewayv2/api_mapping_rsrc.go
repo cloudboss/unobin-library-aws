@@ -9,34 +9,37 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// ApiMapping manages the mapping from a custom domain name path to one stage
+// ApiMappingResource manages the mapping from a custom domain name path to one stage
 // of an API Gateway v2 API. API Gateway addresses a mapping by its generated
 // mapping id plus the domain name, so both values are recorded for later reads
 // and deletes. Moving a mapping to another API or domain creates a new mapping;
 // the mapping key and stage update in place.
-type ApiMapping struct {
+type ApiMappingResource struct {
 	ApiId         string  `ub:"api-id"`
 	DomainName    string  `ub:"domain-name"`
 	Stage         string  `ub:"stage"`
 	ApiMappingKey *string `ub:"api-mapping-key"`
 }
 
-// ApiMappingOutput holds the mapping identity. DomainName is stored with the
+// ApiMappingResourceOutput holds the mapping identity. DomainName is stored with the
 // generated id because GetApiMapping and DeleteApiMapping require both, and a
 // replacement must delete the old mapping from the old domain.
-type ApiMappingOutput struct {
+type ApiMappingResourceOutput struct {
 	ApiMappingId string `ub:"api-mapping-id"`
 	DomainName   string `ub:"domain-name"`
 }
 
-func (r *ApiMapping) SchemaVersion() int { return 1 }
+func (r *ApiMappingResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs API Gateway cannot change in place.
-func (r *ApiMapping) ReplaceFields() []string {
+func (r *ApiMappingResource) ReplaceFields() []string {
 	return []string{"api-id", "domain-name"}
 }
 
-func (r *ApiMapping) Create(ctx context.Context, cfg *awsCfg) (*ApiMappingOutput, error) {
+func (r *ApiMappingResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ApiMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -60,9 +63,11 @@ func (r *ApiMapping) Create(ctx context.Context, cfg *awsCfg) (*ApiMappingOutput
 	return out, nil
 }
 
-func (r *ApiMapping) Read(
-	ctx context.Context, cfg *awsCfg, prior *ApiMappingOutput,
-) (*ApiMappingOutput, error) {
+func (r *ApiMappingResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ApiMappingResourceOutput,
+) (*ApiMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -70,9 +75,9 @@ func (r *ApiMapping) Read(
 	return r.read(ctx, client, prior.DomainName, prior.ApiMappingId)
 }
 
-func (r *ApiMapping) read(
+func (r *ApiMappingResource) read(
 	ctx context.Context, client *apigatewayv2.Client, domainName, apiMappingID string,
-) (*ApiMappingOutput, error) {
+) (*ApiMappingResourceOutput, error) {
 	var resp *apigatewayv2.GetApiMappingOutput
 	err := withConflictRetry(ctx, func(ctx context.Context) error {
 		var err error
@@ -91,15 +96,17 @@ func (r *ApiMapping) read(
 	if resp == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &ApiMappingOutput{
+	return &ApiMappingResourceOutput{
 		ApiMappingId: aws.ToString(resp.ApiMappingId),
 		DomainName:   domainName,
 	}, nil
 }
 
-func (r *ApiMapping) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ApiMapping, *ApiMappingOutput],
-) (*ApiMappingOutput, error) {
+func (r *ApiMappingResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput],
+) (*ApiMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -116,7 +123,11 @@ func (r *ApiMapping) Update(
 	return r.read(ctx, client, prior.Outputs.DomainName, prior.Outputs.ApiMappingId)
 }
 
-func (r *ApiMapping) Delete(ctx context.Context, cfg *awsCfg, prior *ApiMappingOutput) error {
+func (r *ApiMappingResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ApiMappingResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -134,7 +145,7 @@ func (r *ApiMapping) Delete(ctx context.Context, cfg *awsCfg, prior *ApiMappingO
 	return nil
 }
 
-func (r *ApiMapping) createInput() *apigatewayv2.CreateApiMappingInput {
+func (r *ApiMappingResource) createInput() *apigatewayv2.CreateApiMappingInput {
 	in := &apigatewayv2.CreateApiMappingInput{
 		ApiId:      aws.String(r.ApiId),
 		DomainName: aws.String(r.DomainName),
@@ -146,8 +157,8 @@ func (r *ApiMapping) createInput() *apigatewayv2.CreateApiMappingInput {
 	return in
 }
 
-func (r *ApiMapping) updateInput(
-	prior runtime.Prior[ApiMapping, *ApiMappingOutput],
+func (r *ApiMappingResource) updateInput(
+	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput],
 ) (*apigatewayv2.UpdateApiMappingInput, bool) {
 	apiMappingKeyChanged := runtime.Changed(prior.Inputs.ApiMappingKey, r.ApiMappingKey)
 	stageChanged := runtime.Changed(prior.Inputs.Stage, r.Stage)

@@ -18,8 +18,8 @@ import (
 func TestLibraryRegistersKmsResources(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"key":   reflect.TypeFor[*svc.KeyOutput](),
-		"alias": reflect.TypeFor[*svc.AliasOutput](),
+		"key":   reflect.TypeFor[*svc.KeyResourceOutput](),
+		"alias": reflect.TypeFor[*svc.AliasResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {

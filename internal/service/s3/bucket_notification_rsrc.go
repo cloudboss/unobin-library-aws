@@ -32,13 +32,13 @@ const (
 
 var directoryBucketNamePattern = regexp.MustCompile(`.+--[a-z0-9-]+--x-s3\z`)
 
-// BucketNotification manages the whole notification configuration of one S3
+// BucketNotificationResource manages the whole notification configuration of one S3
 // bucket. S3 has no create call for this resource: Create and Update both send
 // a complete PutBucketNotificationConfiguration request, and Delete sends the
 // same request with an empty configuration. Destination ids are optional API
 // fields; when omitted, the library sends stable generated ids and returns the
 // ids read back from S3.
-type BucketNotification struct {
+type BucketNotificationResource struct {
 	Bucket         string                              `ub:"bucket"`
 	Eventbridge    *bool                               `ub:"eventbridge"`
 	LambdaFunction *[]BucketNotificationLambdaFunction `ub:"lambda-function"`
@@ -70,10 +70,10 @@ type BucketNotificationTopic struct {
 	FilterSuffix *string  `ub:"filter-suffix"`
 }
 
-// BucketNotificationOutput holds the bucket identity, EventBridge presence,
+// BucketNotificationResourceOutput holds the bucket identity, EventBridge presence,
 // and the destination values read back from S3. Destination summaries use output
 // names that do not hide the destination input blocks.
-type BucketNotificationOutput struct {
+type BucketNotificationResourceOutput struct {
 	Bucket                  string                            `ub:"bucket"`
 	Eventbridge             bool                              `ub:"eventbridge"`
 	LambdaFunctionSummaries []BucketNotificationLambdaSummary `ub:"lambda-function-observed-summaries"`
@@ -124,9 +124,9 @@ type bucketNotificationV1DestinationOutput struct {
 	Id string `ub:"id"`
 }
 
-func (r *BucketNotification) SchemaVersion() int { return 3 }
+func (r *BucketNotificationResource) SchemaVersion() int { return 3 }
 
-func (r *BucketNotification) Migrate(
+func (r *BucketNotificationResource) Migrate(
 	oldVersion int, prior runtime.MigrationState,
 ) (runtime.MigrationState, error) {
 	switch oldVersion {
@@ -171,13 +171,13 @@ func (r *BucketNotification) Migrate(
 	return prior, nil
 }
 
-func (r *BucketNotification) ReplaceFields() []string {
+func (r *BucketNotificationResource) ReplaceFields() []string {
 	return []string{"bucket"}
 }
 
-func (r *BucketNotification) Create(
+func (r *BucketNotificationResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*BucketNotificationOutput, error) {
+) (*BucketNotificationResourceOutput, error) {
 	client, err := newBucketNotificationClient(ctx, cfg, r.Bucket)
 	if err != nil {
 		return nil, err
@@ -205,9 +205,11 @@ func (r *BucketNotification) Create(
 	return r.read(ctx, client, r.Bucket)
 }
 
-func (r *BucketNotification) Read(
-	ctx context.Context, cfg *awsCfg, prior *BucketNotificationOutput,
-) (*BucketNotificationOutput, error) {
+func (r *BucketNotificationResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *BucketNotificationResourceOutput,
+) (*BucketNotificationResourceOutput, error) {
 	client, err := newBucketNotificationClient(ctx, cfg, prior.Bucket)
 	if err != nil {
 		return nil, err
@@ -215,10 +217,10 @@ func (r *BucketNotification) Read(
 	return r.read(ctx, client, prior.Bucket)
 }
 
-func (r *BucketNotification) Update(
+func (r *BucketNotificationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[BucketNotification, *BucketNotificationOutput],
-) (*BucketNotificationOutput, error) {
+	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput],
+) (*BucketNotificationResourceOutput, error) {
 	bucket := prior.Outputs.Bucket
 	client, err := newBucketNotificationClient(ctx, cfg, bucket)
 	if err != nil {
@@ -240,9 +242,8 @@ func (r *BucketNotification) Update(
 	return r.read(ctx, client, bucket)
 }
 
-func (r *BucketNotification) Delete(
-	ctx context.Context, cfg *awsCfg, prior *BucketNotificationOutput,
-) error {
+func (r *BucketNotificationResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *BucketNotificationResourceOutput) error {
 	client, err := newBucketNotificationClient(ctx, cfg, prior.Bucket)
 	if err != nil {
 		return err
@@ -270,22 +271,22 @@ func (r *BucketNotification) Delete(
 	return nil
 }
 
-func (r *BucketNotification) needsPut(
-	prior runtime.Prior[BucketNotification, *BucketNotificationOutput],
+func (r *BucketNotificationResource) needsPut(
+	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput],
 	desired bucketNotificationDesired,
 ) bool {
 	return r.changed(prior.Inputs) || r.observedDrifted(prior.Observed, desired)
 }
 
-func (r *BucketNotification) changed(prior BucketNotification) bool {
+func (r *BucketNotificationResource) changed(prior BucketNotificationResource) bool {
 	return runtime.Changed(prior.Eventbridge, r.Eventbridge) ||
 		runtime.Changed(ptr.Value(prior.LambdaFunction), ptr.Value(r.LambdaFunction)) ||
 		runtime.Changed(ptr.Value(prior.Queue), ptr.Value(r.Queue)) ||
 		runtime.Changed(ptr.Value(prior.Topic), ptr.Value(r.Topic))
 }
 
-func (r *BucketNotification) observedDrifted(
-	observed *BucketNotificationOutput, desired bucketNotificationDesired,
+func (r *BucketNotificationResource) observedDrifted(
+	observed *BucketNotificationResourceOutput, desired bucketNotificationDesired,
 ) bool {
 	if observed == nil {
 		return false
@@ -316,7 +317,7 @@ func bucketNotificationTopicSummariesEqual(a, b []BucketNotificationTopicSummary
 	return (len(a) == 0 && len(b) == 0) || reflect.DeepEqual(a, b)
 }
 
-func (r *BucketNotification) put(
+func (r *BucketNotificationResource) put(
 	ctx context.Context, client *s3.Client, bucket string,
 	notification *s3types.NotificationConfiguration,
 ) error {
@@ -340,9 +341,9 @@ func (r *BucketNotification) put(
 	return nil
 }
 
-func (r *BucketNotification) read(
+func (r *BucketNotificationResource) read(
 	ctx context.Context, client *s3.Client, bucket string,
-) (*BucketNotificationOutput, error) {
+) (*BucketNotificationResourceOutput, error) {
 	resp, err := bucketNotificationFind(ctx, client, bucket)
 	if err != nil {
 		return nil, err
@@ -357,7 +358,7 @@ type bucketNotificationDesired struct {
 	topicSummaries          []BucketNotificationTopicSummary
 }
 
-func (r *BucketNotification) notificationConfiguration(
+func (r *BucketNotificationResource) notificationConfiguration(
 	ids bucketNotificationEffectiveIDSource,
 ) (bucketNotificationDesired, error) {
 	desired := bucketNotificationDesired{
@@ -387,7 +388,7 @@ func (r *BucketNotification) notificationConfiguration(
 	return desired, nil
 }
 
-func (r *BucketNotification) lambdaFunctionConfigurations(
+func (r *BucketNotificationResource) lambdaFunctionConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.LambdaFunctionConfiguration, []BucketNotificationLambdaSummary, error) {
 	if len(ptr.Value(r.LambdaFunction)) == 0 {
@@ -418,7 +419,7 @@ func (r *BucketNotification) lambdaFunctionConfigurations(
 	return configs, summaries, nil
 }
 
-func (r *BucketNotification) queueConfigurations(
+func (r *BucketNotificationResource) queueConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.QueueConfiguration, []BucketNotificationQueueSummary, error) {
 	if len(ptr.Value(r.Queue)) == 0 {
@@ -449,7 +450,7 @@ func (r *BucketNotification) queueConfigurations(
 	return configs, summaries, nil
 }
 
-func (r *BucketNotification) topicConfigurations(
+func (r *BucketNotificationResource) topicConfigurations(
 	ids bucketNotificationEffectiveIDSource,
 ) ([]s3types.TopicConfiguration, []BucketNotificationTopicSummary, error) {
 	if len(ptr.Value(r.Topic)) == 0 {
@@ -506,8 +507,8 @@ func bucketNotificationZero(resp *s3.GetBucketNotificationConfigurationOutput) b
 
 func bucketNotificationOutput(
 	bucket string, resp *s3.GetBucketNotificationConfigurationOutput,
-) *BucketNotificationOutput {
-	return &BucketNotificationOutput{
+) *BucketNotificationResourceOutput {
+	return &BucketNotificationResourceOutput{
 		Bucket:      bucket,
 		Eventbridge: resp.EventBridgeConfiguration != nil,
 		LambdaFunctionSummaries: bucketNotificationLambdaSummaries(
@@ -682,8 +683,8 @@ func bucketNotificationGeneratedID(prefix string) (string, error) {
 }
 
 type bucketNotificationEffectiveIDSource struct {
-	observed *BucketNotificationOutput
-	prior    *BucketNotificationOutput
+	observed *BucketNotificationResourceOutput
+	prior    *BucketNotificationResourceOutput
 }
 
 func (s bucketNotificationEffectiveIDSource) lambdaFunction(idx int) string {
@@ -707,21 +708,21 @@ func (s bucketNotificationEffectiveIDSource) topic(idx int) string {
 	return bucketNotificationTopicIDAt(s.prior, idx)
 }
 
-func bucketNotificationLambdaIDAt(out *BucketNotificationOutput, idx int) string {
+func bucketNotificationLambdaIDAt(out *BucketNotificationResourceOutput, idx int) string {
 	if out == nil || idx >= len(out.LambdaFunctionSummaries) {
 		return ""
 	}
 	return out.LambdaFunctionSummaries[idx].Id
 }
 
-func bucketNotificationQueueIDAt(out *BucketNotificationOutput, idx int) string {
+func bucketNotificationQueueIDAt(out *BucketNotificationResourceOutput, idx int) string {
 	if out == nil || idx >= len(out.QueueSummaries) {
 		return ""
 	}
 	return out.QueueSummaries[idx].Id
 }
 
-func bucketNotificationTopicIDAt(out *BucketNotificationOutput, idx int) string {
+func bucketNotificationTopicIDAt(out *BucketNotificationResourceOutput, idx int) string {
 	if out == nil || idx >= len(out.TopicSummaries) {
 		return ""
 	}

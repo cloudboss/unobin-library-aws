@@ -32,11 +32,11 @@ func Library() *runtime.Library {
 		Description:   "AWS Route 53 library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"hosted-zone": makeResource[svc.HostedZone, *svc.HostedZoneOutput](),
-			"record-set":  makeResource[svc.RecordSet, *svc.RecordSetOutput](),
+			"hosted-zone": makeResource[svc.HostedZoneResource, *svc.HostedZoneResourceOutput](),
+			"record-set":  makeResource[svc.RecordSetResource, *svc.RecordSetResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"zone": makeDataSource[svc.ZoneData, *svc.ZoneDataOutput](),
+			"zone": makeDataSource[svc.ZoneDataSource, *svc.ZoneDataSourceOutput](),
 		},
 	}
 }

@@ -14,7 +14,7 @@ import (
 )
 
 func TestMicrovmImageReplaceFields(t *testing.T) {
-	assert.Equal(t, []string{"name"}, (&MicrovmImage{}).ReplaceFields())
+	assert.Equal(t, []string{"name"}, (&MicrovmImageResource{}).ReplaceFields())
 }
 
 func TestMicrovmImageCreateWaitsAndReturnsReadOutput(t *testing.T) {
@@ -97,8 +97,8 @@ func TestMicrovmImageReadNotFound(t *testing.T) {
 		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
 	})
 
-	_, err := (&MicrovmImage{}).Read(context.Background(), fake.configuration(),
-		&MicrovmImageOutput{ImageArn: "missing"})
+	_, err := (&MicrovmImageResource{}).Read(context.Background(), fake.configuration(),
+		&MicrovmImageResourceOutput{ImageArn: "missing"})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -117,9 +117,9 @@ func TestMicrovmImageUpdatePutSendsFullDesiredConfig(t *testing.T) {
 	current := testMicrovmImage(nil)
 	current.Description = aws.String("new description")
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImage, *MicrovmImageOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
 			Inputs:  *prior,
-			Outputs: &MicrovmImageOutput{ImageArn: "image-1"},
+			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
 	require.NoError(t, err)
 	body := sentJSON(t, fake, putRoute, 0)
@@ -156,9 +156,9 @@ func TestMicrovmImageUpdateSyncsTags(t *testing.T) {
 	})
 	current.Description = aws.String("new description")
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImage, *MicrovmImageOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
 			Inputs:  *prior,
-			Outputs: &MicrovmImageOutput{ImageArn: "image-1"},
+			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"old"}, fake.queries(untagRoute)[0]["tagKeys"])
@@ -183,9 +183,9 @@ func TestMicrovmImageUpdateSkipsPutWhenOnlyTagsChanged(t *testing.T) {
 	prior := testMicrovmImage(map[string]string{"old": "value"})
 	current := testMicrovmImage(map[string]string{"new": "value"})
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImage, *MicrovmImageOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
 			Inputs:  *prior,
-			Outputs: &MicrovmImageOutput{ImageArn: "image-1"},
+			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
 	require.NoError(t, err)
 	assert.Empty(t, fake.sent(putRoute))
@@ -202,9 +202,9 @@ func TestMicrovmImageUpdateSkipsPutWhenOnlyTerminateOnDestroyChanged(t *testing.
 	current := testMicrovmImage(nil)
 	current.TerminateOnDestroy = aws.Bool(true)
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImage, *MicrovmImageOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
 			Inputs:  *prior,
-			Outputs: &MicrovmImageOutput{ImageArn: "image-1"},
+			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
 	require.NoError(t, err)
 	assert.Empty(t, fake.sent(putRoute))
@@ -219,8 +219,8 @@ func TestMicrovmImageDeleteWaitsUntilGone(t *testing.T) {
 		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
 	})
 
-	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageOutput{ImageArn: "image-1"})
+	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
+		&MicrovmImageResourceOutput{ImageArn: "image-1"})
 	assert.NoError(t, err)
 }
 
@@ -231,8 +231,8 @@ func TestMicrovmImageDeleteDoesNotTerminateMicrovmsByDefault(t *testing.T) {
 			`{"__type":"ValidationException","message":"Cannot delete MicroVM image with running MicroVMs"}`
 	})
 
-	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageOutput{ImageArn: "image-1"})
+	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
+		&MicrovmImageResourceOutput{ImageArn: "image-1"})
 	require.ErrorContains(t, err, "Cannot delete MicroVM image with running MicroVMs")
 }
 
@@ -259,8 +259,8 @@ func TestMicrovmImageDeleteTerminatesMicrovmsBeforeDeletingImage(t *testing.T) {
 		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
 	})
 
-	err := (&MicrovmImage{TerminateOnDestroy: aws.Bool(true)}).Delete(
-		context.Background(), fake.configuration(), &MicrovmImageOutput{ImageArn: "image-1"})
+	err := (&MicrovmImageResource{TerminateOnDestroy: aws.Bool(true)}).Delete(
+		context.Background(), fake.configuration(), &MicrovmImageResourceOutput{ImageArn: "image-1"})
 	require.NoError(t, err)
 	assert.Len(t, fake.sent(terminateRoute), 1)
 	queries := fake.queries(listRoute)
@@ -275,8 +275,8 @@ func TestMicrovmImageDeleteTreatsInitialNotFoundAsSuccess(t *testing.T) {
 		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
 	})
 
-	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageOutput{ImageArn: "image-1"})
+	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
+		&MicrovmImageResourceOutput{ImageArn: "image-1"})
 	assert.NoError(t, err)
 }
 
@@ -289,13 +289,13 @@ func TestMicrovmImageDeleteFailureStateReturnsError(t *testing.T) {
 		return http.StatusOK, microvmImageGetResponse("image-1", "demo", "DELETE_FAILED")
 	})
 
-	err := (&MicrovmImage{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageOutput{ImageArn: "image-1"})
+	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
+		&MicrovmImageResourceOutput{ImageArn: "image-1"})
 	require.ErrorContains(t, err, "DELETE_FAILED")
 }
 
-func testMicrovmImage(tags map[string]string) *MicrovmImage {
-	image := &MicrovmImage{
+func testMicrovmImage(tags map[string]string) *MicrovmImageResource {
+	image := &MicrovmImageResource{
 		Name:         "demo",
 		BaseImageArn: "base-1",
 		BuildRoleArn: "role-1",
@@ -332,8 +332,8 @@ func microvmItemsResponse(microvmID, imageArn, state string) string {
 	}`
 }
 
-func microvmImageOutput(imageArn, name, state string) *MicrovmImageOutput {
-	return &MicrovmImageOutput{
+func microvmImageOutput(imageArn, name, state string) *MicrovmImageResourceOutput {
+	return &MicrovmImageResourceOutput{
 		ImageArn:                 imageArn,
 		Name:                     name,
 		State:                    state,

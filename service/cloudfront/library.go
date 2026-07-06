@@ -32,16 +32,18 @@ func Library() *runtime.Library {
 		Description:   "AWS CloudFront library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"origin-access-control": makeResource[svc.OriginAccessControl, *svc.OriginAccessControlOutput](),
-			"function":              makeResource[svc.Function, *svc.FunctionOutput](),
+			"origin-access-control": makeResource[
+				svc.OriginAccessControlResource,
+				*svc.OriginAccessControlResourceOutput](),
+			"function": makeResource[svc.FunctionResource, *svc.FunctionResourceOutput](),
 			"response-headers-policy": makeResource[
-				svc.ResponseHeadersPolicy, *svc.ResponseHeadersPolicyOutput](),
-			"distribution": makeResource[svc.Distribution, *svc.DistributionOutput](),
+				svc.ResponseHeadersPolicyResource, *svc.ResponseHeadersPolicyResourceOutput](),
+			"distribution": makeResource[svc.DistributionResource, *svc.DistributionResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"cache-policy": makeDataSource[svc.CachePolicyData, *svc.CachePolicyDataOutput](),
+			"cache-policy": makeDataSource[svc.CachePolicyDataSource, *svc.CachePolicyDataSourceOutput](),
 			"origin-request-policy": makeDataSource[
-				svc.OriginRequestPolicyData, *svc.OriginRequestPolicyDataOutput](),
+				svc.OriginRequestPolicyDataSource, *svc.OriginRequestPolicyDataSourceOutput](),
 		},
 	}
 }

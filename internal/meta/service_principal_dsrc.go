@@ -5,24 +5,24 @@ import (
 	"errors"
 )
 
-// ServicePrincipal builds the service principal name for a service in the
+// ServicePrincipalDataSource builds the service principal name for a service in the
 // configured region's partition.
-type ServicePrincipal struct {
+type ServicePrincipalDataSource struct {
 	Region      *string `ub:"region"`
 	ServiceName string  `ub:"service-name"`
 }
 
-// ServicePrincipalOutput contains the principal name and domain suffix.
-type ServicePrincipalOutput struct {
+// ServicePrincipalDataSourceOutput contains the principal name and domain suffix.
+type ServicePrincipalDataSourceOutput struct {
 	Name   string `ub:"name"`
 	Region string `ub:"region"`
 	Suffix string `ub:"suffix"`
 }
 
-func (d *ServicePrincipal) Read(
+func (d *ServicePrincipalDataSource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*ServicePrincipalOutput, error) {
+) (*ServicePrincipalDataSourceOutput, error) {
 	if d.ServiceName == "" {
 		return nil, errors.New("service-name must not be empty")
 	}
@@ -39,7 +39,7 @@ func (d *ServicePrincipal) Read(
 		return nil, err
 	}
 	suffix := servicePrincipalSuffix(d.ServiceName, info.Partition.ID(), info.Partition.DNSSuffix())
-	return &ServicePrincipalOutput{
+	return &ServicePrincipalDataSourceOutput{
 		Name:   d.ServiceName + "." + suffix,
 		Region: region,
 		Suffix: suffix,

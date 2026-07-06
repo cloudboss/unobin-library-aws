@@ -39,7 +39,7 @@ var parameterDependencyBins = [][]string{
 	{"aurora_enhanced_binlog", "binlog_backup", "binlog_replication_globaldb"},
 }
 
-// ParameterGroup manages an RDS DB parameter group: a named, family-scoped set
+// ParameterGroupResource manages an RDS DB parameter group: a named, family-scoped set
 // of engine parameters a DB instance can reference. The group itself is made by
 // CreateDBParameterGroup from its name, family, and description; those three are
 // fixed once the group exists, so a change to any of them replaces the group.
@@ -47,7 +47,7 @@ var parameterDependencyBins = [][]string{
 // through ModifyDBParameterGroup for added or changed parameters and
 // ResetDBParameterGroup for removed ones, so it is a field that updates in
 // place. Tags are reconciled as a set.
-type ParameterGroup struct {
+type ParameterGroupResource struct {
 	Name        string                     `ub:"name"`
 	Family      string                     `ub:"family"`
 	Description string                     `ub:"description"`
@@ -67,20 +67,20 @@ type ParameterGroupParameter struct {
 	ApplyMethod *string `ub:"apply-method"`
 }
 
-// ParameterGroupOutput holds the value RDS computes for the group. The ARN is
+// ParameterGroupResourceOutput holds the value RDS computes for the group. The ARN is
 // the group's identity for tagging; downstream resources reference the group by
 // its name, which is an input.
-type ParameterGroupOutput struct {
+type ParameterGroupResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *ParameterGroup) SchemaVersion() int { return 1 }
+func (r *ParameterGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when the group is created. The name,
 // family, and description cannot be changed on an existing group, so a change to
 // any of them requires a new group. The parameter set and tags reconcile in
 // place.
-func (r *ParameterGroup) ReplaceFields() []string {
+func (r *ParameterGroupResource) ReplaceFields() []string {
 	return []string{"name", "family", "description"}
 }
 
@@ -91,7 +91,7 @@ func (r *ParameterGroup) ReplaceFields() []string {
 // alphanumerics with periods and hyphens, no doubled hyphen, no trailing
 // hyphen, at most 255 characters) are a pattern the constraint layer cannot
 // derive, so they are checked in Create against the requested name.
-func (r ParameterGroup) Constraints() []constraint.Constraint {
+func (r ParameterGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ForEach(r.Parameters, func(p ParameterGroupParameter) []constraint.Constraint {
 			return []constraint.Constraint{
@@ -103,7 +103,10 @@ func (r ParameterGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ParameterGroup) Create(ctx context.Context, cfg *awsCfg) (*ParameterGroupOutput, error) {
+func (r *ParameterGroupResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ParameterGroupResourceOutput, error) {
 	if err := validateParameterGroupName(r.Name); err != nil {
 		return nil, err
 	}
@@ -128,9 +131,11 @@ func (r *ParameterGroup) Create(ctx context.Context, cfg *awsCfg) (*ParameterGro
 	return r.read(ctx, client)
 }
 
-func (r *ParameterGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *ParameterGroupOutput,
-) (*ParameterGroupOutput, error) {
+func (r *ParameterGroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ParameterGroupResourceOutput,
+) (*ParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -147,9 +152,9 @@ func (r *ParameterGroup) Read(
 // part of the output. (The user-versus-engine-default source filter that
 // Terraform applies when persisting the parameter list does not apply here,
 // since the list is never persisted.)
-func (r *ParameterGroup) read(
+func (r *ParameterGroupResource) read(
 	ctx context.Context, client *rds.Client,
-) (*ParameterGroupOutput, error) {
+) (*ParameterGroupResourceOutput, error) {
 	pager := rds.NewDescribeDBParameterGroupsPaginator(client,
 		&rds.DescribeDBParameterGroupsInput{DBParameterGroupName: aws.String(r.Name)})
 	for pager.HasMorePages() {
@@ -164,15 +169,17 @@ func (r *ParameterGroup) read(
 			if aws.ToString(g.DBParameterGroupName) != r.Name {
 				continue
 			}
-			return &ParameterGroupOutput{Arn: aws.ToString(g.DBParameterGroupArn)}, nil
+			return &ParameterGroupResourceOutput{Arn: aws.ToString(g.DBParameterGroupArn)}, nil
 		}
 	}
 	return nil, runtime.ErrNotFound
 }
 
-func (r *ParameterGroup) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ParameterGroup, *ParameterGroupOutput],
-) (*ParameterGroupOutput, error) {
+func (r *ParameterGroupResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[ParameterGroupResource, *ParameterGroupResourceOutput],
+) (*ParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -193,11 +200,10 @@ func (r *ParameterGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *ParameterGroup) Delete(
+func (r *ParameterGroupResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ParameterGroupOutput,
-) error {
+	prior *ParameterGroupResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -226,7 +232,7 @@ func (r *ParameterGroup) Delete(
 // in dependency-aware chunks; parameters present in prior but absent now are
 // reset to their engine default with ResetDBParameterGroup. A parameter still in
 // the desired set is never reset, and the whole set is never reset at once.
-func (r *ParameterGroup) reconcileParameters(
+func (r *ParameterGroupResource) reconcileParameters(
 	ctx context.Context, client *rds.Client, prior []ParameterGroupParameter,
 ) error {
 	priorByName := make(map[string]ParameterGroupParameter, len(prior))

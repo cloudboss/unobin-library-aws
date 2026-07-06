@@ -32,27 +32,29 @@ func Library() *runtime.Library {
 		Description:   "AWS IAM library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"role":             makeResource[svc.Role, *svc.RoleOutput](),
-			"group":            makeResource[svc.Group, *svc.GroupOutput](),
-			"user":             makeResource[svc.User, *svc.UserOutput](),
-			"access-key":       makeResource[svc.AccessKey, *svc.AccessKeyOutput](),
-			"policy":           makeResource[svc.Policy, *svc.PolicyOutput](),
-			"instance-profile": makeResource[svc.InstanceProfile, *svc.InstanceProfileOutput](),
+			"role":       makeResource[svc.RoleResource, *svc.RoleResourceOutput](),
+			"group":      makeResource[svc.GroupResource, *svc.GroupResourceOutput](),
+			"user":       makeResource[svc.UserResource, *svc.UserResourceOutput](),
+			"access-key": makeResource[svc.AccessKeyResource, *svc.AccessKeyResourceOutput](),
+			"policy":     makeResource[svc.PolicyResource, *svc.PolicyResourceOutput](),
+			"instance-profile": makeResource[
+				svc.InstanceProfileResource,
+				*svc.InstanceProfileResourceOutput](),
 			"openid-connect-provider": makeResource[
-				svc.OpenIDConnectProvider, *svc.OpenIDConnectProviderOutput](),
+				svc.OpenIDConnectProviderResource, *svc.OpenIDConnectProviderResourceOutput](),
 			"role-policy-attachment": makeResource[
-				svc.RolePolicyAttachment, *svc.RolePolicyAttachmentOutput](),
+				svc.RolePolicyAttachmentResource, *svc.RolePolicyAttachmentResourceOutput](),
 			"group-policy-attachment": makeResource[
-				svc.GroupPolicyAttachment, *svc.GroupPolicyAttachmentOutput](),
+				svc.GroupPolicyAttachmentResource, *svc.GroupPolicyAttachmentResourceOutput](),
 			"user-policy-attachment": makeResource[
-				svc.UserPolicyAttachment, *svc.UserPolicyAttachmentOutput](),
-			"role-policy":  makeResource[svc.RolePolicy, *svc.RolePolicyOutput](),
-			"group-policy": makeResource[svc.GroupPolicy, *svc.GroupPolicyOutput](),
-			"user-policy":  makeResource[svc.UserPolicy, *svc.UserPolicyOutput](),
+				svc.UserPolicyAttachmentResource, *svc.UserPolicyAttachmentResourceOutput](),
+			"role-policy":  makeResource[svc.RolePolicyResource, *svc.RolePolicyResourceOutput](),
+			"group-policy": makeResource[svc.GroupPolicyResource, *svc.GroupPolicyResourceOutput](),
+			"user-policy":  makeResource[svc.UserPolicyResource, *svc.UserPolicyResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"openid-connect-provider": makeDataSource[
-				svc.OpenIDConnectProviderData, *svc.OpenIDConnectProviderDataOutput](),
+				svc.OpenIDConnectProviderDataSource, *svc.OpenIDConnectProviderDataSourceOutput](),
 		},
 	}
 }

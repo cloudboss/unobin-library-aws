@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParameterDataWithDecryptionDefault(t *testing.T) {
+func TestParameterDataSourceWithDecryptionDefault(t *testing.T) {
 	falseValue := false
 	trueValue := true
 	cases := map[string]struct {
@@ -23,13 +23,13 @@ func TestParameterDataWithDecryptionDefault(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			r := &ParameterData{WithDecryption: tc.input}
+			r := &ParameterDataSource{WithDecryption: tc.input}
 			assert.Equal(t, tc.want, r.withDecryption())
 		})
 	}
 }
 
-func TestParameterDataOutputInsecureValue(t *testing.T) {
+func TestParameterDataSourceOutputInsecureValue(t *testing.T) {
 	value := "plain"
 	out, err := parameterDataOutput("/input-name", &ssm.GetParameterOutput{
 		Parameter: &ssmtypes.Parameter{
@@ -47,7 +47,7 @@ func TestParameterDataOutputInsecureValue(t *testing.T) {
 	assert.Equal(t, value, *out.InsecureValue)
 }
 
-func TestParameterDataOutputSuppressesSecureInsecureValue(t *testing.T) {
+func TestParameterDataSourceOutputSuppressesSecureInsecureValue(t *testing.T) {
 	out, err := parameterDataOutput("/secure", &ssm.GetParameterOutput{
 		Parameter: &ssmtypes.Parameter{
 			Name:  aws.String("/secure"),
@@ -60,7 +60,7 @@ func TestParameterDataOutputSuppressesSecureInsecureValue(t *testing.T) {
 	assert.Nil(t, out.InsecureValue)
 }
 
-func TestParameterDataOutputRequiresParameter(t *testing.T) {
+func TestParameterDataSourceOutputRequiresParameter(t *testing.T) {
 	cases := map[string]*ssm.GetParameterOutput{
 		"nil response":  nil,
 		"nil parameter": {},

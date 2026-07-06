@@ -69,7 +69,7 @@ func replicaStatusRegions(status []SecretReplicaStatus) []string {
 // Region. The Regions present before but no longer desired are removed first,
 // since a Region cannot be removed and re-added in one pass; then the Regions
 // newly desired are replicated. A Region kept across the change is left alone.
-func (r *Secret) reconcileReplicas(
+func (r *SecretResource) reconcileReplicas(
 	ctx context.Context, client *secretsmanager.Client, arn string, prior *[]SecretReplica,
 ) error {
 	priorList := ptr.Value(prior)
@@ -110,7 +110,7 @@ func (r *Secret) reconcileReplicas(
 // removeReplicaRegions takes the given Regions out of the secret's replication.
 // A secret already gone is tolerated, so a delete that races a concurrent
 // removal does not fail.
-func (r *Secret) removeReplicaRegions(
+func (r *SecretResource) removeReplicaRegions(
 	ctx context.Context, client *secretsmanager.Client, arn string, regions []string,
 ) error {
 	if len(regions) == 0 {

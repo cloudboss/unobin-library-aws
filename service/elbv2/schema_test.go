@@ -18,22 +18,22 @@ import (
 func TestLibraryRegistersElbv2(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "load-balancer")
-	assert.Equal(t, reflect.TypeFor[*svc.LoadBalancerOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.LoadBalancerResourceOutput](),
 		lib.Resources["load-balancer"].OutputType())
 	require.Contains(t, lib.Resources, "target-group")
-	assert.Equal(t, reflect.TypeFor[*svc.TargetGroupOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.TargetGroupResourceOutput](),
 		lib.Resources["target-group"].OutputType())
 	require.Contains(t, lib.Resources, "target-group-attachment")
-	assert.Equal(t, reflect.TypeFor[*svc.TargetGroupAttachmentOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.TargetGroupAttachmentResourceOutput](),
 		lib.Resources["target-group-attachment"].OutputType())
 	require.Contains(t, lib.Resources, "listener")
-	assert.Equal(t, reflect.TypeFor[*svc.ListenerOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ListenerResourceOutput](),
 		lib.Resources["listener"].OutputType())
 	require.Contains(t, lib.Resources, "listener-rule")
-	assert.Equal(t, reflect.TypeFor[*svc.ListenerRuleOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ListenerRuleResourceOutput](),
 		lib.Resources["listener-rule"].OutputType())
 	require.Contains(t, lib.Resources, "listener-certificate")
-	assert.Equal(t, reflect.TypeFor[*svc.ListenerCertificateOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ListenerCertificateResourceOutput](),
 		lib.Resources["listener-certificate"].OutputType())
 }
 

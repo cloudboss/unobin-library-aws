@@ -9,12 +9,12 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-type MicrovmShellAuthToken struct {
+type MicrovmShellAuthTokenAction struct {
 	MicrovmIdentifier   string `ub:"microvm-identifier"`
 	ExpirationInMinutes int64  `ub:"expiration-in-minutes"`
 }
 
-func (r MicrovmShellAuthToken) Constraints() []constraint.Constraint {
+func (r MicrovmShellAuthTokenAction) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.AtLeast(r.ExpirationInMinutes, 1),
 			constraint.AtMost(r.ExpirationInMinutes, 60)).
@@ -22,10 +22,10 @@ func (r MicrovmShellAuthToken) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MicrovmShellAuthToken) Run(
+func (r *MicrovmShellAuthTokenAction) Run(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*MicrovmShellAuthTokenOutput, error) {
+) (*MicrovmShellAuthTokenActionOutput, error) {
 	expiration, err := int32FromInt64("expiration-in-minutes", r.ExpirationInMinutes)
 	if err != nil {
 		return nil, err
@@ -42,5 +42,5 @@ func (r *MicrovmShellAuthToken) Run(
 	if err != nil {
 		return nil, fmt.Errorf("create Microvm shell auth token %s: %w", r.MicrovmIdentifier, err)
 	}
-	return &MicrovmShellAuthTokenOutput{AuthToken: out.AuthToken}, nil
+	return &MicrovmShellAuthTokenActionOutput{AuthToken: out.AuthToken}, nil
 }

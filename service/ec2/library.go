@@ -32,33 +32,41 @@ func Library() *runtime.Library {
 		Description:   "AWS EC2 library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"vpc":            makeResource[svc.Vpc, *svc.VpcOutput](),
-			"security-group": makeResource[svc.SecurityGroup, *svc.SecurityGroupOutput](),
+			"vpc":            makeResource[svc.VpcResource, *svc.VpcResourceOutput](),
+			"security-group": makeResource[svc.SecurityGroupResource, *svc.SecurityGroupResourceOutput](),
 			"security-group-ingress-rule": makeResource[
-				svc.SecurityGroupIngressRule, *svc.SecurityGroupIngressRuleOutput](),
+				svc.SecurityGroupIngressRuleResource, *svc.SecurityGroupIngressRuleResourceOutput](),
 			"security-group-egress-rule": makeResource[
-				svc.SecurityGroupEgressRule, *svc.SecurityGroupEgressRuleOutput](),
-			"subnet":           makeResource[svc.Subnet, *svc.SubnetOutput](),
-			"volume":           makeResource[svc.Volume, *svc.VolumeOutput](),
-			"launch-template":  makeResource[svc.LaunchTemplate, *svc.LaunchTemplateOutput](),
-			"internet-gateway": makeResource[svc.InternetGateway, *svc.InternetGatewayOutput](),
-			"route-table":      makeResource[svc.RouteTable, *svc.RouteTableOutput](),
-			"route":            makeResource[svc.Route, *svc.RouteOutput](),
+				svc.SecurityGroupEgressRuleResource, *svc.SecurityGroupEgressRuleResourceOutput](),
+			"subnet": makeResource[svc.SubnetResource, *svc.SubnetResourceOutput](),
+			"volume": makeResource[svc.VolumeResource, *svc.VolumeResourceOutput](),
+			"launch-template": makeResource[
+				svc.LaunchTemplateResource,
+				*svc.LaunchTemplateResourceOutput](),
+			"internet-gateway": makeResource[
+				svc.InternetGatewayResource,
+				*svc.InternetGatewayResourceOutput](),
+			"route-table": makeResource[svc.RouteTableResource, *svc.RouteTableResourceOutput](),
+			"route":       makeResource[svc.RouteResource, *svc.RouteResourceOutput](),
 			"route-table-association": makeResource[
-				svc.RouteTableAssociation, *svc.RouteTableAssociationOutput](),
-			"eip":          makeResource[svc.Eip, *svc.EipOutput](),
-			"nat-gateway":  makeResource[svc.NatGateway, *svc.NatGatewayOutput](),
-			"vpc-endpoint": makeResource[svc.VpcEndpoint, *svc.VpcEndpointOutput](),
-			"key-pair":     makeResource[svc.KeyPair, *svc.KeyPairOutput](),
-			"instance":     makeResource[svc.Instance, *svc.InstanceOutput](),
+				svc.RouteTableAssociationResource, *svc.RouteTableAssociationResourceOutput](),
+			"eip":          makeResource[svc.EipResource, *svc.EipResourceOutput](),
+			"nat-gateway":  makeResource[svc.NatGatewayResource, *svc.NatGatewayResourceOutput](),
+			"vpc-endpoint": makeResource[svc.VpcEndpointResource, *svc.VpcEndpointResourceOutput](),
+			"key-pair":     makeResource[svc.KeyPairResource, *svc.KeyPairResourceOutput](),
+			"instance":     makeResource[svc.InstanceResource, *svc.InstanceResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"ami":                makeDataSource[svc.AMI, *svc.AMIOutput](),
-			"availability-zones": makeDataSource[svc.AvailabilityZones, *svc.AvailabilityZonesOutput](),
-			"subnets":            makeDataSource[svc.Subnets, *svc.SubnetsOutput](),
-			"subnet":             makeDataSource[svc.SubnetData, *svc.SubnetDataOutput](),
-			"security-group":     makeDataSource[svc.SecurityGroupData, *svc.SecurityGroupDataOutput](),
-			"vpc":                makeDataSource[svc.VpcData, *svc.VpcDataOutput](),
+			"ami": makeDataSource[svc.AMIDataSource, *svc.AMIDataSourceOutput](),
+			"availability-zones": makeDataSource[
+				svc.AvailabilityZonesDataSource,
+				*svc.AvailabilityZonesDataSourceOutput](),
+			"subnets": makeDataSource[svc.SubnetsDataSource, *svc.SubnetsDataSourceOutput](),
+			"subnet":  makeDataSource[svc.SubnetDataSource, *svc.SubnetDataSourceOutput](),
+			"security-group": makeDataSource[
+				svc.SecurityGroupDataSource,
+				*svc.SecurityGroupDataSourceOutput](),
+			"vpc": makeDataSource[svc.VpcDataSource, *svc.VpcDataSourceOutput](),
 		},
 	}
 }

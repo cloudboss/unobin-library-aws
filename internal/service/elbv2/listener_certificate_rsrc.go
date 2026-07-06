@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
-// ListenerCertificate associates one additional ACM certificate with an HTTPS
+// ListenerCertificateResource associates one additional ACM certificate with an HTTPS
 // or TLS listener, the certificates the listener offers over SNI beyond its
 // default. Both the listener and the certificate name the association, so a
 // change to either replaces it; there is nothing else to update and nothing the
@@ -23,30 +23,30 @@ import (
 // by paging the listener's certificates and finding the target among the
 // non-default ones, since the describe also returns the listener's own default
 // certificate, which this resource does not manage.
-type ListenerCertificate struct {
+type ListenerCertificateResource struct {
 	ListenerArn    string `ub:"listener-arn"`
 	CertificateArn string `ub:"certificate-arn"`
 }
 
-// ListenerCertificateOutput is empty. The association's identity is the pair of
+// ListenerCertificateResourceOutput is empty. The association's identity is the pair of
 // input ARNs, both referenceable as inputs, and the describe returns no
 // computed value this resource needs: the only added field, IsDefault, is
 // always false for a certificate it manages.
-type ListenerCertificateOutput struct{}
+type ListenerCertificateResourceOutput struct{}
 
-func (r *ListenerCertificate) SchemaVersion() int { return 1 }
+func (r *ListenerCertificateResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that fix the association's identity. The
 // listener and the certificate together name the association, so a change to
 // either is a different association and forces a new one. There is no field
 // that updates in place.
-func (r *ListenerCertificate) ReplaceFields() []string {
+func (r *ListenerCertificateResource) ReplaceFields() []string {
 	return []string{"listener-arn", "certificate-arn"}
 }
 
-func (r *ListenerCertificate) Create(
+func (r *ListenerCertificateResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*ListenerCertificateOutput, error) {
+) (*ListenerCertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -74,9 +74,11 @@ func (r *ListenerCertificate) Create(
 	return out, nil
 }
 
-func (r *ListenerCertificate) Read(
-	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateOutput,
-) (*ListenerCertificateOutput, error) {
+func (r *ListenerCertificateResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ListenerCertificateResourceOutput,
+) (*ListenerCertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -87,17 +89,16 @@ func (r *ListenerCertificate) Read(
 // Update has no work to do: both fields are replace-only, so a change to either
 // recreates the association rather than reaching Update. The interface still
 // requires the method, so it returns the prior outputs unchanged.
-func (r *ListenerCertificate) Update(
+func (r *ListenerCertificateResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ListenerCertificate, *ListenerCertificateOutput],
-) (*ListenerCertificateOutput, error) {
+	prior runtime.Prior[ListenerCertificateResource, *ListenerCertificateResourceOutput],
+) (*ListenerCertificateResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *ListenerCertificate) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateOutput,
-) error {
+func (r *ListenerCertificateResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -119,10 +120,10 @@ func (r *ListenerCertificate) Delete(
 
 // settleRead confirms a just-added certificate is visible, retrying find on
 // not-found for five minutes while the listener's certificate list catches up.
-func (r *ListenerCertificate) settleRead(
+func (r *ListenerCertificateResource) settleRead(
 	ctx context.Context, client *elbv2.Client,
-) (*ListenerCertificateOutput, error) {
-	var out *ListenerCertificateOutput
+) (*ListenerCertificateResourceOutput, error) {
+	var out *ListenerCertificateResourceOutput
 	err := retry.OnError(ctx, func(err error) bool {
 		return errors.Is(err, runtime.ErrNotFound)
 	}, func(ctx context.Context) error {
@@ -144,9 +145,9 @@ func (r *ListenerCertificate) settleRead(
 // also returns the listener's own default certificate, which this resource does
 // not manage, so the filter excludes IsDefault. A listener that is gone, or a
 // target absent from its certificates, is not-found, which drives recreate.
-func (r *ListenerCertificate) find(
+func (r *ListenerCertificateResource) find(
 	ctx context.Context, client *elbv2.Client,
-) (*ListenerCertificateOutput, error) {
+) (*ListenerCertificateResourceOutput, error) {
 	in := &elbv2.DescribeListenerCertificatesInput{
 		ListenerArn: aws.String(r.ListenerArn),
 		PageSize:    aws.Int32(400),
@@ -161,7 +162,7 @@ func (r *ListenerCertificate) find(
 		}
 		for _, c := range resp.Certificates {
 			if !aws.ToBool(c.IsDefault) && aws.ToString(c.CertificateArn) == r.CertificateArn {
-				return &ListenerCertificateOutput{}, nil
+				return &ListenerCertificateResourceOutput{}, nil
 			}
 		}
 		if aws.ToString(resp.NextMarker) == "" {

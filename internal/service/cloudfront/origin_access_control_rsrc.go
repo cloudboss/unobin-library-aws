@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// OriginAccessControl manages a CloudFront origin access control: the signed
+// OriginAccessControlResource manages a CloudFront origin access control: the signed
 // identity a distribution uses to reach a private origin, such as an S3 bucket
 // that blocks public access. All five settings live in one config struct and
 // reconcile in place, so no field forces a replace. CloudFront guards an update
@@ -20,7 +20,7 @@ import (
 // only from a read, not from the create. So the create routes through a read to
 // learn the ETag, and the ETag is an output the update and delete pass back as
 // the IfMatch concurrency token.
-type OriginAccessControl struct {
+type OriginAccessControlResource struct {
 	// Name identifies the origin access control. CloudFront limits it to 64
 	// characters; the bound is checked in validate, since the constraint layer
 	// counts bytes rather than the characters CloudFront limits.
@@ -35,21 +35,21 @@ type OriginAccessControl struct {
 	SigningProtocol               string  `ub:"signing-protocol"`
 }
 
-// OriginAccessControlOutput holds the values CloudFront computes for an origin
+// OriginAccessControlResourceOutput holds the values CloudFront computes for an origin
 // access control. Id is the stable handle used to read, update, and delete it
 // and the value a distribution links the origin access control by. ETag is the
 // config's current version, the concurrency token CloudFront requires as
 // IfMatch on an update or delete.
-type OriginAccessControlOutput struct {
+type OriginAccessControlResourceOutput struct {
 	Id   string `ub:"id"`
 	ETag string `ub:"etag"`
 }
 
-func (r *OriginAccessControl) SchemaVersion() int { return 1 }
+func (r *OriginAccessControlResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields is empty: every setting of an origin access control reconciles
 // in place through UpdateOriginAccessControl, so none forces a new resource.
-func (r *OriginAccessControl) ReplaceFields() []string {
+func (r *OriginAccessControlResource) ReplaceFields() []string {
 	return nil
 }
 
@@ -59,7 +59,7 @@ func (r *OriginAccessControl) ReplaceFields() []string {
 // holds. The name and description length bounds are counted in characters,
 // which the constraint layer measures in bytes, so they are checked in validate
 // rather than declared here.
-func (r OriginAccessControl) Constraints() []constraint.Constraint {
+func (r OriginAccessControlResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.OriginAccessControlOriginType,
 			"s3", "mediastore", "mediapackagev2", "lambda")).
@@ -76,7 +76,7 @@ func (r OriginAccessControl) Constraints() []constraint.Constraint {
 // layer cannot express, since it counts string length in bytes rather than in
 // the characters CloudFront limits: the name is 1 to 64 characters and the
 // description at most 256.
-func (r *OriginAccessControl) validate() error {
+func (r *OriginAccessControlResource) validate() error {
 	n := len(r.Name)
 	if n < 1 || n > 64 {
 		return errors.New("name must be between 1 and 64 characters")
@@ -90,7 +90,7 @@ func (r *OriginAccessControl) validate() error {
 // config builds the OriginAccessControlConfig sent on create and update. The
 // description is always present, defaulting to the empty string when unset, the
 // value CloudFront expects in the field.
-func (r *OriginAccessControl) config() *cloudfronttypes.OriginAccessControlConfig {
+func (r *OriginAccessControlResource) config() *cloudfronttypes.OriginAccessControlConfig {
 	return &cloudfronttypes.OriginAccessControlConfig{
 		Name:        aws.String(r.Name),
 		Description: aws.String(aws.ToString(r.Description)),
@@ -101,9 +101,9 @@ func (r *OriginAccessControl) config() *cloudfronttypes.OriginAccessControlConfi
 	}
 }
 
-func (r *OriginAccessControl) Create(
+func (r *OriginAccessControlResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*OriginAccessControlOutput, error) {
+) (*OriginAccessControlResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -124,12 +124,14 @@ func (r *OriginAccessControl) Create(
 	// The create response includes the id and the ETag, the concurrency token a
 	// later update or delete passes as IfMatch, so the outputs come straight from
 	// it with no follow-up read.
-	return &OriginAccessControlOutput{Id: id, ETag: aws.ToString(resp.ETag)}, nil
+	return &OriginAccessControlResourceOutput{Id: id, ETag: aws.ToString(resp.ETag)}, nil
 }
 
-func (r *OriginAccessControl) Read(
-	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlOutput,
-) (*OriginAccessControlOutput, error) {
+func (r *OriginAccessControlResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *OriginAccessControlResourceOutput,
+) (*OriginAccessControlResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -141,9 +143,9 @@ func (r *OriginAccessControl) Read(
 // origin access control maps to runtime.ErrNotFound so a plan recreates it. The
 // ETag comes from the top level of the response, not from the config, and is
 // the version token a later update or delete passes as IfMatch.
-func (r *OriginAccessControl) read(
+func (r *OriginAccessControlResource) read(
 	ctx context.Context, client *cloudfront.Client, id string,
-) (*OriginAccessControlOutput, error) {
+) (*OriginAccessControlResourceOutput, error) {
 	resp, err := client.GetOriginAccessControl(ctx, &cloudfront.GetOriginAccessControlInput{
 		Id: aws.String(id),
 	})
@@ -153,16 +155,16 @@ func (r *OriginAccessControl) read(
 		}
 		return nil, fmt.Errorf("get origin access control %s: %w", id, err)
 	}
-	return &OriginAccessControlOutput{
+	return &OriginAccessControlResourceOutput{
 		Id:   id,
 		ETag: aws.ToString(resp.ETag),
 	}, nil
 }
 
-func (r *OriginAccessControl) Update(
+func (r *OriginAccessControlResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[OriginAccessControl, *OriginAccessControlOutput],
-) (*OriginAccessControlOutput, error) {
+	prior runtime.Prior[OriginAccessControlResource, *OriginAccessControlResourceOutput],
+) (*OriginAccessControlResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -186,9 +188,8 @@ func (r *OriginAccessControl) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *OriginAccessControl) Delete(
-	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlOutput,
-) error {
+func (r *OriginAccessControlResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

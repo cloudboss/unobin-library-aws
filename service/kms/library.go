@@ -23,8 +23,8 @@ func Library() *runtime.Library {
 		Description:   "AWS KMS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"key":   makeResource[svc.Key, *svc.KeyOutput](),
-			"alias": makeResource[svc.Alias, *svc.AliasOutput](),
+			"key":   makeResource[svc.KeyResource, *svc.KeyResourceOutput](),
+			"alias": makeResource[svc.AliasResource, *svc.AliasResourceOutput](),
 		},
 	}
 }

@@ -15,7 +15,7 @@ import (
 )
 
 func TestSubscriptionFilterReplaceFields(t *testing.T) {
-	r := &SubscriptionFilter{}
+	r := &SubscriptionFilterResource{}
 	assert.Equal(t, []string{"destination-arn", "log-group-name", "name"},
 		r.ReplaceFields())
 }
@@ -24,7 +24,7 @@ func TestSubscriptionFilterPutInput(t *testing.T) {
 	roleArn := "arn:aws:iam::123456789012:role/logs"
 	criteria := "@aws.region = \"us-east-1\""
 	applyOnTransformedLogs := false
-	r := &SubscriptionFilter{
+	r := &SubscriptionFilterResource{
 		DestinationArn:         "arn:aws:lambda:us-east-1:123456789012:function:fn",
 		LogGroupName:           "group",
 		Name:                   "filter",
@@ -50,7 +50,7 @@ func TestSubscriptionFilterPutInput(t *testing.T) {
 }
 
 func TestSubscriptionFilterPutInputDefaults(t *testing.T) {
-	r := &SubscriptionFilter{
+	r := &SubscriptionFilterResource{
 		DestinationArn: "arn:aws:lambda:us-east-1:123456789012:function:fn",
 		LogGroupName:   "group",
 		Name:           "filter",
@@ -69,17 +69,17 @@ func TestSubscriptionFilterMutableInputChanged(t *testing.T) {
 	empty := ""
 	tests := []struct {
 		name    string
-		prior   SubscriptionFilter
-		current SubscriptionFilter
+		prior   SubscriptionFilterResource
+		current SubscriptionFilterResource
 		want    bool
 	}{
 		{
 			name: "effective defaults and set order match",
-			prior: SubscriptionFilter{
+			prior: SubscriptionFilterResource{
 				FilterPattern:    "",
 				EmitSystemFields: &[]string{"@aws.region", "@aws.account"},
 			},
-			current: SubscriptionFilter{
+			current: SubscriptionFilterResource{
 				FilterPattern:    "",
 				Distribution:     distributionByLogStream,
 				EmitSystemFields: &[]string{"@aws.account", "@aws.region", "@aws.account"},
@@ -89,20 +89,20 @@ func TestSubscriptionFilterMutableInputChanged(t *testing.T) {
 		},
 		{
 			name: "filter pattern changes",
-			prior: SubscriptionFilter{
+			prior: SubscriptionFilterResource{
 				FilterPattern: "",
 			},
-			current: SubscriptionFilter{
+			current: SubscriptionFilterResource{
 				FilterPattern: "{ $.level = \"info\" }",
 			},
 			want: true,
 		},
 		{
 			name: "system field set changes",
-			prior: SubscriptionFilter{
+			prior: SubscriptionFilterResource{
 				EmitSystemFields: &[]string{"@aws.account"},
 			},
-			current: SubscriptionFilter{
+			current: SubscriptionFilterResource{
 				EmitSystemFields: &[]string{"@aws.region"},
 			},
 			want: true,
@@ -122,34 +122,34 @@ func TestSubscriptionFilterManagedOutputDrifted(t *testing.T) {
 	applyOnTransformedLogs := false
 	tests := []struct {
 		name     string
-		current  SubscriptionFilter
-		observed *SubscriptionFilterOutput
+		current  SubscriptionFilterResource
+		observed *SubscriptionFilterResourceOutput
 		want     bool
 	}{
 		{
 			name:    "unmanaged role value only refreshes state",
-			current: SubscriptionFilter{},
-			observed: &SubscriptionFilterOutput{
+			current: SubscriptionFilterResource{},
+			observed: &SubscriptionFilterResourceOutput{
 				RoleArn: &roleArn,
 			},
 			want: false,
 		},
 		{
 			name: "managed role differs",
-			current: SubscriptionFilter{
+			current: SubscriptionFilterResource{
 				RoleArn: &roleArn,
 			},
-			observed: &SubscriptionFilterOutput{
+			observed: &SubscriptionFilterResourceOutput{
 				RoleArn: &otherRoleArn,
 			},
 			want: true,
 		},
 		{
 			name: "managed transformed-log flag differs",
-			current: SubscriptionFilter{
+			current: SubscriptionFilterResource{
 				ApplyOnTransformedLogs: &applyOnTransformedLogs,
 			},
-			observed: &SubscriptionFilterOutput{ApplyOnTransformedLogs: true},
+			observed: &SubscriptionFilterResourceOutput{ApplyOnTransformedLogs: true},
 			want:     true,
 		},
 	}
@@ -163,10 +163,10 @@ func TestSubscriptionFilterManagedOutputDrifted(t *testing.T) {
 
 func TestSubscriptionFilterShouldPut(t *testing.T) {
 	roleArn := "arn:aws:iam::123456789012:role/logs"
-	r := &SubscriptionFilter{RoleArn: &roleArn}
-	prior := runtime.Prior[SubscriptionFilter, *SubscriptionFilterOutput]{
-		Inputs: SubscriptionFilter{RoleArn: &roleArn},
-		Observed: &SubscriptionFilterOutput{
+	r := &SubscriptionFilterResource{RoleArn: &roleArn}
+	prior := runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput]{
+		Inputs: SubscriptionFilterResource{RoleArn: &roleArn},
+		Observed: &SubscriptionFilterResourceOutput{
 			RoleArn: aws.String("arn:aws:iam::123456789012:role/other"),
 		},
 	}
@@ -179,45 +179,45 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 		AssumeRole:                &awscfg.AssumeRole{},
 		AssumeRoleWithWebIdentity: &awscfg.AssumeRoleWithWebIdentity{},
 	}
-	valid := SubscriptionFilter{
+	valid := SubscriptionFilterResource{
 		DestinationArn: "arn:aws:lambda:us-east-1:123456789012:function:fn",
 		LogGroupName:   "new-group",
 		Name:           "new-filter",
 		FilterPattern:  "",
 	}
-	prior := &SubscriptionFilterOutput{
+	prior := &SubscriptionFilterResourceOutput{
 		LogGroupName: "old-group",
 		Name:         "old-filter",
 	}
 	tests := []struct {
 		name    string
-		mutate  func(*SubscriptionFilter)
+		mutate  func(*SubscriptionFilterResource)
 		wantErr string
 	}{
 		{
 			name: "invalid name",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Name = ""
 			},
 			wantErr: "name must be 1 to 512 bytes",
 		},
 		{
 			name: "invalid destination ARN",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.DestinationArn = "not-an-arn"
 			},
 			wantErr: "destination-arn must be a valid ARN",
 		},
 		{
 			name: "long filter pattern",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.FilterPattern = strings.Repeat("x", 1025)
 			},
 			wantErr: "filter-pattern must be at most 1024 bytes",
 		},
 		{
 			name: "long field selection criteria",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				criteria := strings.Repeat("x", 2001)
 				r.FieldSelectionCriteria = &criteria
 			},
@@ -225,7 +225,7 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 		},
 		{
 			name: "invalid role ARN",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				roleArn := "arn:aws:iam::123:role/logs"
 				r.RoleArn = &roleArn
 			},
@@ -233,14 +233,14 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 		},
 		{
 			name: "invalid distribution",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Distribution = "Nearest"
 			},
 			wantErr: "distribution must be ByLogStream or Random",
 		},
 		{
 			name: "invalid system field",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.EmitSystemFields = &[]string{"@aws.partition"}
 			},
 			wantErr: "emit-system-fields entry \"@aws.partition\"",
@@ -262,7 +262,7 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 }
 
 func TestSubscriptionFilterValidate(t *testing.T) {
-	valid := SubscriptionFilter{
+	valid := SubscriptionFilterResource{
 		DestinationArn: "arn:aws:lambda:us-east-1:123456789012:function:fn",
 		LogGroupName:   "group",
 		Name:           "filter",
@@ -270,7 +270,7 @@ func TestSubscriptionFilterValidate(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		mutate  func(*SubscriptionFilter)
+		mutate  func(*SubscriptionFilterResource)
 		wantErr string
 	}{
 		{
@@ -278,54 +278,54 @@ func TestSubscriptionFilterValidate(t *testing.T) {
 		},
 		{
 			name: "empty name",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Name = ""
 			},
 			wantErr: "name must be 1 to 512 bytes",
 		},
 		{
 			name: "multibyte name boundary",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Name = strings.Repeat("\u00e9", 256)
 			},
 		},
 		{
 			name: "multibyte name too long",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Name = strings.Repeat("\u00e9", 257)
 			},
 			wantErr: "name must be 1 to 512 bytes",
 		},
 		{
 			name: "long filter pattern",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.FilterPattern = strings.Repeat("x", 1025)
 			},
 			wantErr: "filter-pattern must be at most 1024 bytes",
 		},
 		{
 			name: "multibyte filter pattern boundary",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.FilterPattern = strings.Repeat("\u00e9", 512)
 			},
 		},
 		{
 			name: "multibyte filter pattern too long",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.FilterPattern = strings.Repeat("\u00e9", 513)
 			},
 			wantErr: "filter-pattern must be at most 1024 bytes",
 		},
 		{
 			name: "invalid destination ARN",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.DestinationArn = "not-an-arn"
 			},
 			wantErr: "destination-arn must be a valid ARN",
 		},
 		{
 			name: "long field selection criteria",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				criteria := strings.Repeat("x", 2001)
 				r.FieldSelectionCriteria = &criteria
 			},
@@ -333,7 +333,7 @@ func TestSubscriptionFilterValidate(t *testing.T) {
 		},
 		{
 			name: "invalid role ARN",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				roleArn := "arn:aws:iam::123:role/logs"
 				r.RoleArn = &roleArn
 			},
@@ -341,14 +341,14 @@ func TestSubscriptionFilterValidate(t *testing.T) {
 		},
 		{
 			name: "invalid distribution",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.Distribution = "Nearest"
 			},
 			wantErr: "distribution must be ByLogStream or Random",
 		},
 		{
 			name: "invalid system field",
-			mutate: func(r *SubscriptionFilter) {
+			mutate: func(r *SubscriptionFilterResource) {
 				r.EmitSystemFields = &[]string{"@aws.partition"}
 			},
 			wantErr: "emit-system-fields entry \"@aws.partition\"",

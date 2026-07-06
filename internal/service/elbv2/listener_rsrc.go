@@ -24,7 +24,7 @@ import (
 // ELBv2 rejects with CertificateNotFound until it propagates.
 const listenerWriteTimeout = 5 * time.Minute
 
-// Listener is an ELBv2 listener: the port and protocol a load balancer accepts
+// ListenerResource is an ELBv2 listener: the port and protocol a load balancer accepts
 // connections on, and the default action it takes for traffic that matches no
 // rule. The fields mirror CreateListener, which is also the call an update
 // makes through ModifyListener. The load balancer the listener belongs to is
@@ -41,7 +41,7 @@ const listenerWriteTimeout = 5 * time.Minute
 // constraints; Create and Update check only the residue a constraint cannot
 // express (the fixed-response status pattern, the forward arn-match, and an
 // explicitly empty action list).
-type Listener struct {
+type ListenerResource struct {
 	LoadBalancerArn string                  `ub:"load-balancer-arn"`
 	Port            *int64                  `ub:"port"`
 	Protocol        *string                 `ub:"protocol"`
@@ -52,24 +52,24 @@ type Listener struct {
 	Tags            *map[string]string      `ub:"tags"`
 }
 
-// ListenerOutput holds the values ELBv2 computes for a listener. Arn is the
+// ListenerResourceOutput holds the values ELBv2 computes for a listener. Arn is the
 // listener's stable handle and CloudFormation primary identifier. Protocol is
 // the canonical protocol ELBv2 reports, which an Application Load Balancer may
 // default from the presence of a certificate. SslPolicy is the security policy
 // ELBv2 settled on, which it picks a default for on an HTTPS or TLS listener.
-type ListenerOutput struct {
+type ListenerResourceOutput struct {
 	Arn       string `ub:"arn"`
 	Protocol  string `ub:"protocol"`
 	SslPolicy string `ub:"ssl-policy"`
 }
 
-func (r *Listener) SchemaVersion() int { return 1 }
+func (r *ListenerResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ELBv2 fixes when a listener is created. A
 // listener belongs to one load balancer for its lifetime, so changing the load
 // balancer requires a new listener. Every other input is reconciled in place by
 // ModifyListener.
-func (r *Listener) ReplaceFields() []string {
+func (r *ListenerResource) ReplaceFields() []string {
 	return []string{"load-balancer-arn"}
 }
 
@@ -84,7 +84,7 @@ func (r *Listener) ReplaceFields() []string {
 // weighted 0..999, and a forward that also sets target-group-arn names exactly
 // the one group matching it. Only the fixed-response status pattern stays in
 // code, since a constraint cannot take a pattern.
-func (r Listener) Constraints() []constraint.Constraint {
+func (r ListenerResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.OneOf(r.Protocol, "HTTPS", "TLS")).
 			Require(constraint.Present(r.SslPolicy), constraint.Present(r.CertificateArn)).
@@ -168,7 +168,10 @@ func (r Listener) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Listener) Create(ctx context.Context, cfg *awsCfg) (*ListenerOutput, error) {
+func (r *ListenerResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ListenerResourceOutput, error) {
 	if err := validateDefaultActions(r.DefaultAction); err != nil {
 		return nil, err
 	}
@@ -209,9 +212,8 @@ func (r *Listener) Create(ctx context.Context, cfg *awsCfg) (*ListenerOutput, er
 	return r.read(ctx, client, arn)
 }
 
-func (r *Listener) Read(
-	ctx context.Context, cfg *awsCfg, prior *ListenerOutput,
-) (*ListenerOutput, error) {
+func (r *ListenerResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *ListenerResourceOutput) (*ListenerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -219,9 +221,9 @@ func (r *Listener) Read(
 	return r.read(ctx, client, prior.Arn)
 }
 
-func (r *Listener) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Listener, *ListenerOutput],
-) (*ListenerOutput, error) {
+func (r *ListenerResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ListenerResource, *ListenerResourceOutput],
+) (*ListenerResourceOutput, error) {
 	if err := validateDefaultActions(r.DefaultAction); err != nil {
 		return nil, err
 	}
@@ -249,7 +251,11 @@ func (r *Listener) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Listener) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerOutput) error {
+func (r *ListenerResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ListenerResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -271,14 +277,14 @@ func (r *Listener) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerOutpu
 // exception, an empty result, or a describe that returns a different ARN while
 // the create is still settling, and read turns each into runtime.ErrNotFound so
 // the runtime recreates it.
-func (r *Listener) read(
+func (r *ListenerResource) read(
 	ctx context.Context, client *elbv2.Client, arn string,
-) (*ListenerOutput, error) {
+) (*ListenerResourceOutput, error) {
 	listener, err := r.find(ctx, client, arn)
 	if err != nil {
 		return nil, err
 	}
-	return &ListenerOutput{
+	return &ListenerResourceOutput{
 		Arn:       aws.ToString(listener.ListenerArn),
 		Protocol:  string(listener.Protocol),
 		SslPolicy: aws.ToString(listener.SslPolicy),
@@ -289,7 +295,7 @@ func (r *Listener) read(
 // listener. ELBv2 reports a gone listener as a typed not-found exception or an
 // empty result, and right after a create a describe can briefly return a
 // different listener, so each of those reads as not-found.
-func (r *Listener) find(
+func (r *ListenerResource) find(
 	ctx context.Context, client *elbv2.Client, arn string,
 ) (*elbv2types.Listener, error) {
 	resp, err := client.DescribeListeners(ctx, &elbv2.DescribeListenersInput{
@@ -315,7 +321,7 @@ func (r *Listener) find(
 // default certificate rides as a one-element Certificates list, the ALPN policy
 // as a one-element list, and protocol is sent only when set so an Application
 // Load Balancer can default it from the certificate.
-func (r *Listener) createInput() *elbv2.CreateListenerInput {
+func (r *ListenerResource) createInput() *elbv2.CreateListenerInput {
 	in := &elbv2.CreateListenerInput{
 		LoadBalancerArn: aws.String(r.LoadBalancerArn),
 		Port:            ptr.Int32(r.Port),
@@ -338,7 +344,7 @@ func (r *Listener) createInput() *elbv2.CreateListenerInput {
 // modifyInput builds the ModifyListener request from the listener's inputs. It
 // mirrors createInput: the default certificate and ALPN policy ride as
 // one-element lists, and protocol is sent only when set.
-func (r *Listener) modifyInput(arn string) *elbv2.ModifyListenerInput {
+func (r *ListenerResource) modifyInput(arn string) *elbv2.ModifyListenerInput {
 	in := &elbv2.ModifyListenerInput{
 		ListenerArn:    aws.String(arn),
 		Port:           ptr.Int32(r.Port),
@@ -361,7 +367,7 @@ func (r *Listener) modifyInput(arn string) *elbv2.ModifyListenerInput {
 // from the prior inputs. The load balancer is the listener's identity and
 // forces a replace, and tags reconcile through the tag API, so neither is
 // tested here.
-func (r *Listener) modifyChanged(prior Listener) bool {
+func (r *ListenerResource) modifyChanged(prior ListenerResource) bool {
 	return runtime.Changed(prior.Port, r.Port) ||
 		runtime.Changed(prior.Protocol, r.Protocol) ||
 		runtime.Changed(prior.SslPolicy, r.SslPolicy) ||
@@ -374,7 +380,7 @@ func (r *Listener) modifyChanged(prior Listener) bool {
 // because the default certificate was created moments earlier and the
 // certificate control plane has not made it visible. That race clears on its
 // own, so the retry runs over a bounded window.
-func (r *Listener) createListener(
+func (r *ListenerResource) createListener(
 	ctx context.Context, client *elbv2.Client, in *elbv2.CreateListenerInput,
 ) (*elbv2.CreateListenerOutput, error) {
 	var resp *elbv2.CreateListenerOutput
@@ -395,7 +401,11 @@ func (r *Listener) createListener(
 // modifyListener calls ModifyListener and retries it on the same
 // certificate-propagation race CreateListener guards against, over the same
 // bounded window.
-func (r *Listener) modifyListener(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *ListenerResource) modifyListener(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	in := r.modifyInput(arn)
 	err := retry.OnError(ctx, isCertificateNotFound, func(ctx context.Context) error {
 		_, err := client.ModifyListener(ctx, in)
@@ -411,7 +421,11 @@ func (r *Listener) modifyListener(ctx context.Context, client *elbv2.Client, arn
 // at its own ARN, since CreateListener returns before the listener is
 // consistently readable. A not-found read means the create is still
 // propagating, so the wait keeps polling; any other error stops it.
-func (r *Listener) waitVisible(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *ListenerResource) waitVisible(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	what := fmt.Sprintf("listener %s", arn)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := r.find(ctx, client, arn)

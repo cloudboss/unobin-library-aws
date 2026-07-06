@@ -14,36 +14,39 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// RouteTable is an EC2 route table: the set of routes for a VPC, which subnets
+// RouteTableResource is an EC2 route table: the set of routes for a VPC, which subnets
 // and gateways then associate with. CreateRouteTable takes only the VPC id and
 // the create-time tags; the VPC is fixed once the table exists, so a change to
 // it replaces the table. The routes in the table and the associations to it are
 // each their own resource, so this resource manages only the table itself and
 // its tags.
-type RouteTable struct {
+type RouteTableResource struct {
 	VpcId string             `ub:"vpc-id"`
 	Tags  *map[string]string `ub:"tags"`
 }
 
-// RouteTableOutput holds the values EC2 computes for a route table. The id is
+// RouteTableResourceOutput holds the values EC2 computes for a route table. The id is
 // the table's handle. The owner id is the account that owns it; it settles in
 // the post-create describe, so Create returns that describe rather than the
 // create response. There is no ARN: the describe has no ARN field, and an
 // account ARN is not composed client-side.
-type RouteTableOutput struct {
+type RouteTableResourceOutput struct {
 	RouteTableId string `ub:"route-table-id"`
 	OwnerId      string `ub:"owner-id"`
 }
 
-func (r *RouteTable) SchemaVersion() int { return 1 }
+func (r *RouteTableResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when a route table is created. The
 // VPC cannot change on an existing table, so a change to it requires a new one.
-func (r *RouteTable) ReplaceFields() []string {
+func (r *RouteTableResource) ReplaceFields() []string {
 	return []string{"vpc-id"}
 }
 
-func (r *RouteTable) Create(ctx context.Context, cfg *awsCfg) (*RouteTableOutput, error) {
+func (r *RouteTableResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*RouteTableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -66,9 +69,11 @@ func (r *RouteTable) Create(ctx context.Context, cfg *awsCfg) (*RouteTableOutput
 	return r.read(ctx, client, id, true)
 }
 
-func (r *RouteTable) Read(
-	ctx context.Context, cfg *awsCfg, prior *RouteTableOutput,
-) (*RouteTableOutput, error) {
+func (r *RouteTableResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RouteTableResourceOutput,
+) (*RouteTableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -80,9 +85,11 @@ func (r *RouteTable) Read(
 // The VPC is replace-only, so a change to it never reaches Update. Tags are
 // reconciled as a set whenever they changed, the same as the other EC2
 // resources.
-func (r *RouteTable) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteTable, *RouteTableOutput],
-) (*RouteTableOutput, error) {
+func (r *RouteTableResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[RouteTableResource, *RouteTableResourceOutput],
+) (*RouteTableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -103,7 +110,11 @@ func (r *RouteTable) Update(
 // their own resource torn down by their own Delete first; this drain is a
 // best-effort backstop so an association the table still holds does not block
 // the delete.
-func (r *RouteTable) Delete(ctx context.Context, cfg *awsCfg, prior *RouteTableOutput) error {
+func (r *RouteTableResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RouteTableResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -141,9 +152,9 @@ func (r *RouteTable) Delete(ctx context.Context, cfg *awsCfg, prior *RouteTableO
 // created is true the table was just made, so a not-found means the create has
 // not propagated yet and read waits for it to appear; otherwise a not-found is
 // drift and maps to runtime.ErrNotFound at once.
-func (r *RouteTable) read(
+func (r *RouteTableResource) read(
 	ctx context.Context, client *ec2.Client, id string, created bool,
-) (*RouteTableOutput, error) {
+) (*RouteTableResourceOutput, error) {
 	var table *ec2types.RouteTable
 	err := wait.Until(ctx, fmt.Sprintf("route table %s", id),
 		func(ctx context.Context) (bool, error) {
@@ -163,7 +174,7 @@ func (r *RouteTable) read(
 	if err != nil {
 		return nil, err
 	}
-	return &RouteTableOutput{
+	return &RouteTableResourceOutput{
 		RouteTableId: aws.ToString(table.RouteTableId),
 		OwnerId:      aws.ToString(table.OwnerId),
 	}, nil
@@ -174,7 +185,7 @@ func (r *RouteTable) read(
 // can read not-found for many polls before it appears; a not-found resets the
 // run rather than ending the wait, so the wait tolerates that window up to its
 // timeout.
-func (r *RouteTable) waitVisible(ctx context.Context, client *ec2.Client, id string) error {
+func (r *RouteTableResource) waitVisible(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("route table %s to become visible", id)
 	return wait.UntilStable(ctx, what, 2, func(ctx context.Context) (bool, error) {
 		_, err := describeRouteTable(ctx, client, id)
@@ -191,7 +202,7 @@ func (r *RouteTable) waitVisible(ctx context.Context, client *ec2.Client, id str
 // waitDeleted polls until the route table reads not-found on two consecutive
 // reads, confirming the delete settled. A read that still finds the table
 // resets the run.
-func (r *RouteTable) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
+func (r *RouteTableResource) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("route table %s deletion", id)
 	return wait.UntilStable(ctx, what, 2, func(ctx context.Context) (bool, error) {
 		_, err := describeRouteTable(ctx, client, id)
@@ -209,7 +220,7 @@ func (r *RouteTable) waitDeleted(ctx context.Context, client *ec2.Client, id str
 // and waits for it to clear. An association that is already gone is tolerated:
 // EC2 reports that as InvalidAssociationID.NotFound, which means the drain has
 // nothing to do for it.
-func (r *RouteTable) disassociate(
+func (r *RouteTableResource) disassociate(
 	ctx context.Context, client *ec2.Client, id, assocID string,
 ) error {
 	_, err := client.DisassociateRouteTable(ctx, &ec2.DisassociateRouteTableInput{
@@ -227,7 +238,7 @@ func (r *RouteTable) disassociate(
 // can still read associated when the disassociate is first issued. It is gone
 // once it no longer appears or reads disassociated, or once the table itself is
 // gone. A terminal failed state stops the wait with the reported status message.
-func (r *RouteTable) waitDisassociated(
+func (r *RouteTableResource) waitDisassociated(
 	ctx context.Context, client *ec2.Client, id, assocID string,
 ) error {
 	what := fmt.Sprintf("route table %s association %s disassociation", id, assocID)

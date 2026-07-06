@@ -26,7 +26,7 @@ import (
 // ECS limits.
 var taskDefinitionFamilyRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 
-// TaskDefinition manages one revision of an ECS task definition. A revision
+// TaskDefinitionResource manages one revision of an ECS task definition. A revision
 // is registered whole by a single RegisterTaskDefinition call and is
 // immutable afterward: every input except tags is fixed at registration, so
 // any other change replaces the resource by registering a new revision of
@@ -41,7 +41,7 @@ var taskDefinitionFamilyRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 // as CPU units or vCPUs (for example "256", "0.5 vCPU") and MiB or GB (for
 // example "1024", "1GB"); both are required for Fargate. The execution-role
 // and task-role inputs take role ARNs.
-type TaskDefinition struct {
+type TaskDefinitionResource struct {
 	Family                  string                               `ub:"family"`
 	ContainerDefinitions    []TaskDefinitionContainerDefinition  `ub:"container-definitions"`
 	Cpu                     *string                              `ub:"cpu"`
@@ -61,23 +61,23 @@ type TaskDefinition struct {
 	Tags                    *map[string]string                   `ub:"tags"`
 }
 
-// TaskDefinitionOutput holds the values ECS computes at registration. The
+// TaskDefinitionResourceOutput holds the values ECS computes at registration. The
 // revision-pinned ARN is the identity handle: Read describes it and Delete
 // deregisters it, both from the prior outputs, because resolving by family
 // finds the latest ACTIVE revision, which on a replace is the new one.
 // ArnWithoutRevision is the family-level form of the ARN, derived
 // client-side for downstream references such as IAM policies.
-type TaskDefinitionOutput struct {
+type TaskDefinitionResourceOutput struct {
 	Arn                string `ub:"arn"`
 	Revision           int64  `ub:"revision"`
 	ArnWithoutRevision string `ub:"arn-without-revision"`
 }
 
-func (r *TaskDefinition) SchemaVersion() int { return 1 }
+func (r *TaskDefinitionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists every input except tags: a registered revision is
 // immutable, so any change other than tags registers a replacement revision.
-func (r *TaskDefinition) ReplaceFields() []string {
+func (r *TaskDefinitionResource) ReplaceFields() []string {
 	return []string{
 		"family",
 		"container-definitions",
@@ -107,7 +107,7 @@ func (r *TaskDefinition) ReplaceFields() []string {
 // a regular-expression check in Create, and the enums nested inside a
 // container's optional lists, such as a port mapping protocol or a
 // dependency condition, are enforced by the API.
-func (r TaskDefinition) Constraints() []constraint.Constraint {
+func (r TaskDefinitionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.NetworkMode)).
 			Require(constraint.OneOf(r.NetworkMode, "bridge", "host", "awsvpc", "none")).
@@ -217,7 +217,10 @@ func (r TaskDefinition) Constraints() []constraint.Constraint {
 // partitions, cannot tag a task definition as it is registered; when the
 // tagged register fails for that reason, the revision is registered without
 // tags and tagged right after.
-func (r *TaskDefinition) Create(ctx context.Context, cfg *awsCfg) (*TaskDefinitionOutput, error) {
+func (r *TaskDefinitionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*TaskDefinitionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -249,7 +252,7 @@ func (r *TaskDefinition) Create(ctx context.Context, cfg *awsCfg) (*TaskDefiniti
 			return nil, fmt.Errorf("tag task definition: %w", err)
 		}
 	}
-	return &TaskDefinitionOutput{
+	return &TaskDefinitionResourceOutput{
 		Arn:                pinned,
 		Revision:           int64(resp.TaskDefinition.Revision),
 		ArnWithoutRevision: taskDefinitionARNWithoutRevision(pinned),
@@ -260,9 +263,11 @@ func (r *TaskDefinition) Create(ctx context.Context, cfg *awsCfg) (*TaskDefiniti
 // deregistered out of band still describes successfully, just with an
 // INACTIVE or DELETE_IN_PROGRESS status, so the status check is the second
 // half of not-found detection.
-func (r *TaskDefinition) Read(
-	ctx context.Context, cfg *awsCfg, prior *TaskDefinitionOutput,
-) (*TaskDefinitionOutput, error) {
+func (r *TaskDefinitionResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TaskDefinitionResourceOutput,
+) (*TaskDefinitionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -285,7 +290,7 @@ func (r *TaskDefinition) Read(
 		return nil, runtime.ErrNotFound
 	}
 	pinned := aws.ToString(td.TaskDefinitionArn)
-	return &TaskDefinitionOutput{
+	return &TaskDefinitionResourceOutput{
 		Arn:                pinned,
 		Revision:           int64(td.Revision),
 		ArnWithoutRevision: taskDefinitionARNWithoutRevision(pinned),
@@ -295,9 +300,11 @@ func (r *TaskDefinition) Read(
 // Update reconciles tags, the only mutable aspect of a registered revision.
 // The outputs cannot change while the revision lives, so the prior outputs
 // are returned as is.
-func (r *TaskDefinition) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TaskDefinition, *TaskDefinitionOutput],
-) (*TaskDefinitionOutput, error) {
+func (r *TaskDefinitionResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[TaskDefinitionResource, *TaskDefinitionResourceOutput],
+) (*TaskDefinitionResourceOutput, error) {
 	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		client, err := newClient(ctx, cfg)
 		if err != nil {
@@ -315,11 +322,10 @@ func (r *TaskDefinition) Update(
 // is the replacement just registered. Deregistration leaves the revision
 // describable as INACTIVE; tasks and services already running it keep
 // working.
-func (r *TaskDefinition) Delete(
+func (r *TaskDefinitionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TaskDefinitionOutput,
-) error {
+	prior *TaskDefinitionResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -343,7 +349,7 @@ func (r *TaskDefinition) Delete(
 
 // registerInput assembles the RegisterTaskDefinition request from every
 // input; one call registers the whole revision, tags included.
-func (r *TaskDefinition) registerInput() *ecs.RegisterTaskDefinitionInput {
+func (r *TaskDefinitionResource) registerInput() *ecs.RegisterTaskDefinitionInput {
 	in := &ecs.RegisterTaskDefinitionInput{
 		Family:               aws.String(r.Family),
 		ContainerDefinitions: taskDefinitionContainersSDK(r.ContainerDefinitions),

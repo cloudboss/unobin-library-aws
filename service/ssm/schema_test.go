@@ -19,7 +19,7 @@ import (
 func TestLibraryRegistersSsm(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"parameter": reflect.TypeFor[*svc.ParameterOutput](),
+		"parameter": reflect.TypeFor[*svc.ParameterResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run("resource/"+key, func(t *testing.T) {
@@ -28,7 +28,7 @@ func TestLibraryRegistersSsm(t *testing.T) {
 		})
 	}
 	dataSources := map[string]reflect.Type{
-		"parameter": reflect.TypeFor[*svc.ParameterDataOutput](),
+		"parameter": reflect.TypeFor[*svc.ParameterDataSourceOutput](),
 	}
 	for key, outputType := range dataSources {
 		t.Run("data-source/"+key, func(t *testing.T) {

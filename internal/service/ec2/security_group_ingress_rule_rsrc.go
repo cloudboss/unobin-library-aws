@@ -8,12 +8,12 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// SecurityGroupIngressRule is one inbound rule on a VPC security group. It
+// SecurityGroupIngressRuleResource is one inbound rule on a VPC security group. It
 // authorizes traffic from a single source -- an IPv4 or IPv6 CIDR, a prefix
 // list, or another security group -- for a protocol and optional port range.
 // Each property maps to the AWS SDK field that holds it; the description
 // rides inside the chosen source rather than as a standalone field.
-type SecurityGroupIngressRule struct {
+type SecurityGroupIngressRuleResource struct {
 	SecurityGroupId           string             `ub:"security-group-id"`
 	IpProtocol                string             `ub:"ip-protocol"`
 	FromPort                  *int64             `ub:"from-port"`
@@ -26,17 +26,17 @@ type SecurityGroupIngressRule struct {
 	Tags                      *map[string]string `ub:"tags"`
 }
 
-// SecurityGroupIngressRuleOutput holds the values EC2 computes for the rule:
+// SecurityGroupIngressRuleResourceOutput holds the values EC2 computes for the rule:
 // its server-assigned id and the ARN composed from that id, the region, the
 // partition, and the owner account id.
-type SecurityGroupIngressRuleOutput struct {
+type SecurityGroupIngressRuleResourceOutput struct {
 	SecurityGroupRuleId string `ub:"security-group-rule-id"`
 	Arn                 string `ub:"arn"`
 }
 
 // rule views the resource as the direction-independent sgRule the shared
 // lifecycle functions act on.
-func (r *SecurityGroupIngressRule) rule() sgRule {
+func (r *SecurityGroupIngressRuleResource) rule() sgRule {
 	return sgRule{
 		SecurityGroupId:           r.SecurityGroupId,
 		IpProtocol:                r.IpProtocol,
@@ -51,13 +51,13 @@ func (r *SecurityGroupIngressRule) rule() sgRule {
 	}
 }
 
-func (r *SecurityGroupIngressRule) SchemaVersion() int { return 1 }
+func (r *SecurityGroupIngressRuleResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the properties EC2 cannot change in place. The security
 // group a rule belongs to and the source it allows are fixed at create; a
 // change to any of them recreates the rule. The protocol, ports, and
 // description update in place.
-func (r *SecurityGroupIngressRule) ReplaceFields() []string {
+func (r *SecurityGroupIngressRuleResource) ReplaceFields() []string {
 	return []string{
 		"security-group-id",
 		"cidr-ipv4",
@@ -70,7 +70,7 @@ func (r *SecurityGroupIngressRule) ReplaceFields() []string {
 // Constraints declares the rules EC2 enforces on an ingress rule's inputs. A
 // rule allows exactly one source, and a port number, when given, is within the
 // range EC2 accepts, where -1 means all ports or all ICMP types and codes.
-func (r SecurityGroupIngressRule) Constraints() []constraint.Constraint {
+func (r SecurityGroupIngressRuleResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.CidrIpv4, r.CidrIpv6, r.PrefixListId,
 			r.ReferencedSecurityGroupId),
@@ -83,29 +83,31 @@ func (r SecurityGroupIngressRule) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *SecurityGroupIngressRule) Create(
+func (r *SecurityGroupIngressRuleResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*SecurityGroupIngressRuleOutput, error) {
+) (*SecurityGroupIngressRuleResourceOutput, error) {
 	ruleID, arn, err := sgRuleCreate(ctx, cfg, r.rule(), false)
 	if err != nil {
 		return nil, err
 	}
-	return &SecurityGroupIngressRuleOutput{SecurityGroupRuleId: ruleID, Arn: arn}, nil
+	return &SecurityGroupIngressRuleResourceOutput{SecurityGroupRuleId: ruleID, Arn: arn}, nil
 }
 
-func (r *SecurityGroupIngressRule) Read(
-	ctx context.Context, cfg *awsCfg, prior *SecurityGroupIngressRuleOutput,
-) (*SecurityGroupIngressRuleOutput, error) {
+func (r *SecurityGroupIngressRuleResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecurityGroupIngressRuleResourceOutput,
+) (*SecurityGroupIngressRuleResourceOutput, error) {
 	if err := sgRuleRead(ctx, cfg, prior.SecurityGroupRuleId, false); err != nil {
 		return nil, err
 	}
 	return prior, nil
 }
 
-func (r *SecurityGroupIngressRule) Update(
+func (r *SecurityGroupIngressRuleResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[SecurityGroupIngressRule, *SecurityGroupIngressRuleOutput],
-) (*SecurityGroupIngressRuleOutput, error) {
+	prior runtime.Prior[SecurityGroupIngressRuleResource, *SecurityGroupIngressRuleResourceOutput],
+) (*SecurityGroupIngressRuleResourceOutput, error) {
 	err := sgRuleUpdate(ctx, cfg, r.rule(), prior.Inputs.rule(),
 		prior.Outputs.SecurityGroupRuleId)
 	if err != nil {
@@ -114,8 +116,7 @@ func (r *SecurityGroupIngressRule) Update(
 	return prior.Outputs, nil
 }
 
-func (r *SecurityGroupIngressRule) Delete(
-	ctx context.Context, cfg *awsCfg, prior *SecurityGroupIngressRuleOutput,
-) error {
+func (r *SecurityGroupIngressRuleResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *SecurityGroupIngressRuleResourceOutput) error {
 	return sgRuleDelete(ctx, cfg, prior.SecurityGroupRuleId, false)
 }

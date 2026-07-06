@@ -13,7 +13,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// FunctionUrl gives a Lambda function, or one of its aliases, a dedicated
+// FunctionUrlResource gives a Lambda function, or one of its aliases, a dedicated
 // HTTPS endpoint, the way CloudFormation models AWS::Lambda::Url. The function
 // and the alias qualifier identify the endpoint and are fixed at creation; the
 // authentication type, the CORS settings, and the invoke mode reconcile in
@@ -22,7 +22,7 @@ import (
 // lambda:InvokeFunctionUrl statement with function-url-auth-type NONE and
 // principal "*" on the function's resource policy, which belongs to the
 // lambda-permission resource, so pair the two.
-type FunctionUrl struct {
+type FunctionUrlResource struct {
 	// FunctionName names the function the endpoint fronts, as a function
 	// name, a partial ARN, or a full ARN.
 	FunctionName string `ub:"function-name"`
@@ -44,26 +44,26 @@ type FunctionUrl struct {
 	Cors *FunctionUrlCors `ub:"cors"`
 }
 
-// FunctionUrlOutput holds what Lambda computes for a function URL.
+// FunctionUrlResourceOutput holds what Lambda computes for a function URL.
 // FunctionUrl is the endpoint itself. FunctionArn is the canonical function
 // ARN, alias-qualified when the endpoint is on an alias; together with the
 // qualifier echo it keys every later read, update, and delete, because both
 // identity inputs are replace fields and a replacement's delete must find the
 // old endpoint through the prior outputs. UrlId is the endpoint's subdomain
 // label, parsed from the URL because the API has no field for it.
-type FunctionUrlOutput struct {
+type FunctionUrlResourceOutput struct {
 	FunctionUrl string `ub:"function-url"`
 	FunctionArn string `ub:"function-arn"`
 	UrlId       string `ub:"url-id"`
 	Qualifier   string `ub:"qualifier"`
 }
 
-func (r *FunctionUrl) SchemaVersion() int { return 1 }
+func (r *FunctionUrlResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the two identity inputs. A function URL belongs to one
 // function and one alias; Lambda has no call to move it, so a change to either
 // replaces the endpoint, and the replacement is assigned a new URL.
-func (r *FunctionUrl) ReplaceFields() []string {
+func (r *FunctionUrlResource) ReplaceFields() []string {
 	return []string{
 		"function-name",
 		"qualifier",
@@ -73,7 +73,7 @@ func (r *FunctionUrl) ReplaceFields() []string {
 // Constraints declares the two enum rules and the CORS max-age bound. The
 // remaining CORS rules, such as allow-methods taking HTTP method names or "*",
 // are enforced by the API.
-func (r FunctionUrl) Constraints() []constraint.Constraint {
+func (r FunctionUrlResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.AuthType, "AWS_IAM", "NONE")).
 			Message("auth-type must be AWS_IAM or NONE"),
@@ -87,7 +87,10 @@ func (r FunctionUrl) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *FunctionUrl) Create(ctx context.Context, cfg *awsCfg) (*FunctionUrlOutput, error) {
+func (r *FunctionUrlResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*FunctionUrlResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -119,9 +122,11 @@ func (r *FunctionUrl) Create(ctx context.Context, cfg *awsCfg) (*FunctionUrlOutp
 // prior qualifier when both are set, so the lookup still finds the old
 // endpoint while a replacement is pending. A not-found, whether the config or
 // the whole function is gone, maps to runtime.ErrNotFound.
-func (r *FunctionUrl) Read(
-	ctx context.Context, cfg *awsCfg, prior *FunctionUrlOutput,
-) (*FunctionUrlOutput, error) {
+func (r *FunctionUrlResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *FunctionUrlResourceOutput,
+) (*FunctionUrlResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -153,9 +158,11 @@ func (r *FunctionUrl) Read(
 // documented clear, where a nil member would silently leave the old settings
 // in place. A removed invoke-mode is not sent at all, per the scalar-removal
 // rule. The identity comes from the prior outputs, like Read and Delete.
-func (r *FunctionUrl) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionUrl, *FunctionUrlOutput],
-) (*FunctionUrlOutput, error) {
+func (r *FunctionUrlResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[FunctionUrlResource, *FunctionUrlResourceOutput],
+) (*FunctionUrlResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -206,7 +213,11 @@ func (r *FunctionUrl) Update(
 // identity inputs are replace fields and on a replacement the receiver already
 // holds the new ones. A not-found is success: the config is already gone,
 // which deleting the function itself also brings about.
-func (r *FunctionUrl) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionUrlOutput) error {
+func (r *FunctionUrlResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *FunctionUrlResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -227,12 +238,12 @@ func (r *FunctionUrl) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionUr
 // function ARN a response reports, plus the qualifier the config is addressed
 // by. The url-id has no API field; it is the first label of the endpoint host
 // (https://<url-id>.lambda-url.<region>.on.aws/), so it is parsed out here.
-func functionUrlOutput(endpoint, arn, qualifier string) (*FunctionUrlOutput, error) {
+func functionUrlOutput(endpoint, arn, qualifier string) (*FunctionUrlResourceOutput, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("parse function url %q: %w", endpoint, err)
 	}
-	return &FunctionUrlOutput{
+	return &FunctionUrlResourceOutput{
 		FunctionUrl: endpoint,
 		FunctionArn: arn,
 		UrlId:       strings.Split(u.Host, ".")[0],

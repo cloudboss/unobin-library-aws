@@ -23,13 +23,13 @@ import (
 // populated repository removes every image first, so the bound is generous.
 const deleteTimeout = 20 * time.Minute
 
-// Repository manages an ECR private repository: the registry entry container
+// RepositoryResource manages an ECR private repository: the registry entry container
 // images are pushed to, plus the settings ECR writes through their own calls,
 // folded in as fields. The name and the encryption configuration are fixed at
 // create, so a change to either replaces the repository; the tag mutability
 // setting and its exclusion filters, the scan-on-push toggle, the two policy
 // texts, and the tags all reconcile in place.
-type Repository struct {
+type RepositoryResource struct {
 	// Name is the repository name, on its own or prefixed with a namespace,
 	// such as project-a/nginx-web-app. ECR requires 2 to 256 characters of
 	// lowercase letters, digits, and ._-/ separators, which the API enforces.
@@ -71,21 +71,21 @@ type Repository struct {
 	ForceDelete *bool `ub:"force-delete"`
 }
 
-// RepositoryOutput holds the values ECR computes for a repository. The ARN is
+// RepositoryResourceOutput holds the values ECR computes for a repository. The ARN is
 // the repository's identity in IAM policies and tag calls; the registry id is
 // the account that owns it; the repository URI is the registry hostname plus
 // the name, the value image push and pull operations address. Name repeats
 // the input because it is the handle every describe and delete keys off: on a
 // replace, Delete receives the new inputs and must remove the repository
 // recorded in the prior outputs.
-type RepositoryOutput struct {
+type RepositoryResourceOutput struct {
 	Arn           string `ub:"arn"`
 	Name          string `ub:"name"`
 	RegistryId    string `ub:"registry-id"`
 	RepositoryUri string `ub:"repository-uri"`
 }
 
-func (r *Repository) SchemaVersion() int { return 1 }
+func (r *RepositoryResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ECR fixes when a repository is created. The
 // name is the repository's identity, and the encryption configuration is
@@ -93,7 +93,7 @@ func (r *Repository) SchemaVersion() int { return 1 }
 // new repository. Every other input is reconciled in place by Update; in
 // particular the two policy texts update in place, since their put calls are
 // upserts.
-func (r *Repository) ReplaceFields() []string {
+func (r *RepositoryResource) ReplaceFields() []string {
 	return []string{"name", "encryption-configuration"}
 }
 
@@ -103,7 +103,7 @@ func (r *Repository) ReplaceFields() []string {
 // rules, at most two wildcards in 1 to 128 characters of a fixed charset,
 // need string predicates the constraint vocabulary does not have, so the API
 // enforces them.
-func (r Repository) Constraints() []constraint.Constraint {
+func (r RepositoryResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.ImageTagMutability)).
 			Require(constraint.OneOf(r.ImageTagMutability,
@@ -129,7 +129,10 @@ func (r Repository) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Repository) Create(ctx context.Context, cfg *awsCfg) (*RepositoryOutput, error) {
+func (r *RepositoryResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*RepositoryResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -190,9 +193,11 @@ func (r *Repository) Create(ctx context.Context, cfg *awsCfg) (*RepositoryOutput
 	return out, nil
 }
 
-func (r *Repository) Read(
-	ctx context.Context, cfg *awsCfg, prior *RepositoryOutput,
-) (*RepositoryOutput, error) {
+func (r *RepositoryResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RepositoryResourceOutput,
+) (*RepositoryResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -207,9 +212,9 @@ func (r *Repository) Read(
 // not-found, an empty result, or a single result whose name does not match
 // the request, the last a defensive check against an eventually-consistent
 // describe. More than one result for one name is an error.
-func (r *Repository) read(
+func (r *RepositoryResource) read(
 	ctx context.Context, client *ecr.Client, name string, created bool,
-) (*RepositoryOutput, error) {
+) (*RepositoryResourceOutput, error) {
 	var repo ecrtypes.Repository
 	err := wait.Until(ctx, fmt.Sprintf("repository %s", name),
 		func(ctx context.Context) (bool, error) {
@@ -243,7 +248,7 @@ func (r *Repository) read(
 	if err != nil {
 		return nil, err
 	}
-	return &RepositoryOutput{
+	return &RepositoryResourceOutput{
 		Arn:           aws.ToString(repo.RepositoryArn),
 		Name:          aws.ToString(repo.RepositoryName),
 		RegistryId:    aws.ToString(repo.RegistryId),
@@ -251,9 +256,11 @@ func (r *Repository) read(
 	}, nil
 }
 
-func (r *Repository) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Repository, *RepositoryOutput],
-) (*RepositoryOutput, error) {
+func (r *RepositoryResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[RepositoryResource, *RepositoryResourceOutput],
+) (*RepositoryResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -299,7 +306,11 @@ func (r *Repository) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Repository) Delete(ctx context.Context, cfg *awsCfg, prior *RepositoryOutput) error {
+func (r *RepositoryResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RepositoryResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -351,7 +362,7 @@ func (r *Repository) Delete(ctx context.Context, cfg *awsCfg, prior *RepositoryO
 // exclusion-filter list changed since the last apply. The two ride one
 // PutImageTagMutability call that always sends both, so either change
 // triggers the same put.
-func (r *Repository) mutabilityChanged(prior Repository) bool {
+func (r *RepositoryResource) mutabilityChanged(prior RepositoryResource) bool {
 	return runtime.Changed(prior.ImageTagMutability, r.ImageTagMutability) ||
 		runtime.Changed(prior.ImageTagMutabilityExclusionFilters,
 			r.ImageTagMutabilityExclusionFilters)
@@ -361,7 +372,7 @@ func (r *Repository) mutabilityChanged(prior Repository) bool {
 // filters in one call, always sending both. ECR requires a mutability value
 // on every put, so an unset input sends MUTABLE, the service default; an
 // empty filter list is sent as no filters, which clears any set previously.
-func (r *Repository) putImageTagMutability(
+func (r *RepositoryResource) putImageTagMutability(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	mutability := ecrtypes.ImageTagMutabilityMutable
@@ -382,7 +393,7 @@ func (r *Repository) putImageTagMutability(
 // putImageScanningConfiguration applies the scan-on-push setting. A removed
 // input sends false, the service default, which is how the setting is turned
 // back off.
-func (r *Repository) putImageScanningConfiguration(
+func (r *RepositoryResource) putImageScanningConfiguration(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	_, err := client.PutImageScanningConfiguration(ctx, &ecr.PutImageScanningConfigurationInput{
@@ -400,7 +411,7 @@ func (r *Repository) putImageScanningConfiguration(
 // putLifecyclePolicy writes the lifecycle policy text. The call is an upsert,
 // creating the policy or overwriting the previous one, so create and update
 // take the same path.
-func (r *Repository) putLifecyclePolicy(
+func (r *RepositoryResource) putLifecyclePolicy(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	_, err := client.PutLifecyclePolicy(ctx, &ecr.PutLifecyclePolicyInput{
@@ -418,7 +429,7 @@ func (r *Repository) putLifecyclePolicy(
 // flavor of not-found, which means the field is already absent, and a
 // repository already gone has nothing to keep a policy on; both count as
 // success.
-func (r *Repository) deleteLifecyclePolicy(
+func (r *RepositoryResource) deleteLifecyclePolicy(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	_, err := client.DeleteLifecyclePolicy(ctx, &ecr.DeleteLifecyclePolicyInput{
@@ -434,7 +445,7 @@ func (r *Repository) deleteLifecyclePolicy(
 // IAM principal created moments earlier that ECR cannot resolve yet, which it
 // rejects as an invalid parameter; that window clears on its own, so the put
 // retries through it.
-func (r *Repository) setRepositoryPolicy(
+func (r *RepositoryResource) setRepositoryPolicy(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	in := &ecr.SetRepositoryPolicyInput{
@@ -454,7 +465,7 @@ func (r *Repository) setRepositoryPolicy(
 // deleteRepositoryPolicy removes the repository policy after the field is
 // removed from the source, tolerating the same pair of not-founds as its
 // lifecycle counterpart: no policy set, or no repository at all.
-func (r *Repository) deleteRepositoryPolicy(
+func (r *RepositoryResource) deleteRepositoryPolicy(
 	ctx context.Context, client *ecr.Client, name string,
 ) error {
 	_, err := client.DeleteRepositoryPolicy(ctx, &ecr.DeleteRepositoryPolicyInput{
@@ -470,7 +481,7 @@ func (r *Repository) deleteRepositoryPolicy(
 // live tags with ListTagsForResource and writing changes with TagResource and
 // UntagResource. ECR addresses repository tags by ARN, and the describe a
 // Read makes does not return them, so the tag list is its own call.
-func (r *Repository) syncTags(ctx context.Context, client *ecr.Client, arn string) error {
+func (r *RepositoryResource) syncTags(ctx context.Context, client *ecr.Client, arn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ecr.ListTagsForResourceInput{

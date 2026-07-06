@@ -67,11 +67,11 @@ func TestLibraryRegistersLambdaLocalKinds(t *testing.T) {
 	}, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"function":             reflect.TypeFor[*svc.FunctionOutput](),
-		"alias":                reflect.TypeFor[*svc.AliasOutput](),
-		"permission":           reflect.TypeFor[*svc.PermissionOutput](),
-		"event-source-mapping": reflect.TypeFor[*svc.EventSourceMappingOutput](),
-		"function-url":         reflect.TypeFor[*svc.FunctionUrlOutput](),
+		"function":             reflect.TypeFor[*svc.FunctionResourceOutput](),
+		"alias":                reflect.TypeFor[*svc.AliasResourceOutput](),
+		"permission":           reflect.TypeFor[*svc.PermissionResourceOutput](),
+		"event-source-mapping": reflect.TypeFor[*svc.EventSourceMappingResourceOutput](),
+		"function-url":         reflect.TypeFor[*svc.FunctionUrlResourceOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestLibraryRegistersLambdaLocalKinds(t *testing.T) {
 	}
 
 	actionsOutputs := map[string]reflect.Type{
-		"invoke": reflect.TypeFor[*svc.InvokeOutput](),
+		"invoke": reflect.TypeFor[*svc.InvokeActionOutput](),
 	}
 	for name, outputType := range actionsOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -18,19 +18,19 @@ import (
 func TestLibraryRegistersIamResources(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"role":                    reflect.TypeFor[*svc.RoleOutput](),
-		"group":                   reflect.TypeFor[*svc.GroupOutput](),
-		"user":                    reflect.TypeFor[*svc.UserOutput](),
-		"access-key":              reflect.TypeFor[*svc.AccessKeyOutput](),
-		"policy":                  reflect.TypeFor[*svc.PolicyOutput](),
-		"instance-profile":        reflect.TypeFor[*svc.InstanceProfileOutput](),
-		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderOutput](),
-		"role-policy-attachment":  reflect.TypeFor[*svc.RolePolicyAttachmentOutput](),
-		"group-policy-attachment": reflect.TypeFor[*svc.GroupPolicyAttachmentOutput](),
-		"user-policy-attachment":  reflect.TypeFor[*svc.UserPolicyAttachmentOutput](),
-		"role-policy":             reflect.TypeFor[*svc.RolePolicyOutput](),
-		"group-policy":            reflect.TypeFor[*svc.GroupPolicyOutput](),
-		"user-policy":             reflect.TypeFor[*svc.UserPolicyOutput](),
+		"role":                    reflect.TypeFor[*svc.RoleResourceOutput](),
+		"group":                   reflect.TypeFor[*svc.GroupResourceOutput](),
+		"user":                    reflect.TypeFor[*svc.UserResourceOutput](),
+		"access-key":              reflect.TypeFor[*svc.AccessKeyResourceOutput](),
+		"policy":                  reflect.TypeFor[*svc.PolicyResourceOutput](),
+		"instance-profile":        reflect.TypeFor[*svc.InstanceProfileResourceOutput](),
+		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderResourceOutput](),
+		"role-policy-attachment":  reflect.TypeFor[*svc.RolePolicyAttachmentResourceOutput](),
+		"group-policy-attachment": reflect.TypeFor[*svc.GroupPolicyAttachmentResourceOutput](),
+		"user-policy-attachment":  reflect.TypeFor[*svc.UserPolicyAttachmentResourceOutput](),
+		"role-policy":             reflect.TypeFor[*svc.RolePolicyResourceOutput](),
+		"group-policy":            reflect.TypeFor[*svc.GroupPolicyResourceOutput](),
+		"user-policy":             reflect.TypeFor[*svc.UserPolicyResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -278,20 +278,20 @@ func TestIamSchemas(t *testing.T) {
 	}
 }
 
-// TestLibraryRegistersIamOpenIDConnectProviderData checks the runtime
+// TestLibraryRegistersIamOpenIDConnectProviderDataSource checks the runtime
 // registration of the OIDC provider data source under DataSources (the resource
 // of the same key is registered separately under Resources).
-func TestLibraryRegistersIamOpenIDConnectProviderData(t *testing.T) {
+func TestLibraryRegistersIamOpenIDConnectProviderDataSource(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "openid-connect-provider")
-	assert.Equal(t, reflect.TypeFor[*svc.OpenIDConnectProviderDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.OpenIDConnectProviderDataSourceOutput](),
 		lib.DataSources["openid-connect-provider"].OutputType())
 }
 
-// TestIamOpenIDConnectProviderDataSchema asserts the whole derived TypeSchema for
+// TestIamOpenIDConnectProviderDataSourceSchema asserts the whole derived TypeSchema for
 // the OIDC provider data source: the arn/url lookup keys (exactly one of them),
 // and the resolved provider outputs.
-func TestIamOpenIDConnectProviderDataSchema(t *testing.T) {
+func TestIamOpenIDConnectProviderDataSourceSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "openid-connect-provider")
 	want := &runtime.TypeSchema{

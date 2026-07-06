@@ -13,33 +13,36 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// BucketPolicy manages the resource policy attached to an S3 bucket. The
+// BucketPolicyResource manages the resource policy attached to an S3 bucket. The
 // bucket name is the policy's identity; S3 holds one policy per bucket, so the
 // bucket cannot change without replacing the policy, while the policy document
 // is reconciled in place. The document is sent to S3 verbatim: unobin compares
 // inputs as written, so the policy never needs canonicalizing to avoid a
 // phantom diff against the form S3 echoes back.
-type BucketPolicy struct {
+type BucketPolicyResource struct {
 	Bucket string `ub:"bucket"`
 	Policy string `ub:"policy"`
 }
 
-// BucketPolicyOutput is empty: a bucket policy computes nothing of its own,
+// BucketPolicyResourceOutput is empty: a bucket policy computes nothing of its own,
 // and its identity is the input bucket name. Downstream references point at the
 // bucket, not the policy text, so there is no value to expose.
-type BucketPolicyOutput struct{}
+type BucketPolicyResourceOutput struct{}
 
-func (r *BucketPolicy) SchemaVersion() int { return 1 }
+func (r *BucketPolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs S3 fixes for the life of the policy. A bucket
 // holds a single policy keyed by its name, so re-pointing the policy at a
 // different bucket means deleting it here and creating it there. The policy
 // document itself is reconciled in place by Update.
-func (r *BucketPolicy) ReplaceFields() []string {
+func (r *BucketPolicyResource) ReplaceFields() []string {
 	return []string{"bucket"}
 }
 
-func (r *BucketPolicy) Create(ctx context.Context, cfg *awsCfg) (*BucketPolicyOutput, error) {
+func (r *BucketPolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*BucketPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -64,12 +67,14 @@ func (r *BucketPolicy) Create(ctx context.Context, cfg *awsCfg) (*BucketPolicyOu
 	if err != nil {
 		return nil, err
 	}
-	return &BucketPolicyOutput{}, nil
+	return &BucketPolicyResourceOutput{}, nil
 }
 
-func (r *BucketPolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *BucketPolicyOutput,
-) (*BucketPolicyOutput, error) {
+func (r *BucketPolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *BucketPolicyResourceOutput,
+) (*BucketPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -91,12 +96,14 @@ func (r *BucketPolicy) Read(
 	if resp == nil || resp.Policy == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &BucketPolicyOutput{}, nil
+	return &BucketPolicyResourceOutput{}, nil
 }
 
-func (r *BucketPolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[BucketPolicy, *BucketPolicyOutput],
-) (*BucketPolicyOutput, error) {
+func (r *BucketPolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[BucketPolicyResource, *BucketPolicyResourceOutput],
+) (*BucketPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -104,10 +111,14 @@ func (r *BucketPolicy) Update(
 	if err := r.put(ctx, client); err != nil {
 		return nil, err
 	}
-	return &BucketPolicyOutput{}, nil
+	return &BucketPolicyResourceOutput{}, nil
 }
 
-func (r *BucketPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *BucketPolicyOutput) error {
+func (r *BucketPolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *BucketPolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -148,7 +159,7 @@ func (r *BucketPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *BucketPol
 // rejected as MalformedPolicy until that principal propagates, and a bucket
 // created moments earlier reports NoSuchBucket until it is globally visible;
 // both settle within the propagation window.
-func (r *BucketPolicy) put(ctx context.Context, client *s3.Client) error {
+func (r *BucketPolicyResource) put(ctx context.Context, client *s3.Client) error {
 	in := &s3.PutBucketPolicyInput{
 		Bucket: aws.String(r.Bucket),
 		Policy: aws.String(r.Policy),
@@ -166,7 +177,7 @@ func (r *BucketPolicy) put(ctx context.Context, client *s3.Client) error {
 // exists reports whether the bucket currently has a policy. The two not-found
 // codes mean no policy is present; an empty body means the same. Any other
 // error is real and stops the wait.
-func (r *BucketPolicy) exists(ctx context.Context, client *s3.Client) (bool, error) {
+func (r *BucketPolicyResource) exists(ctx context.Context, client *s3.Client) (bool, error) {
 	resp, err := client.GetBucketPolicy(ctx, &s3.GetBucketPolicyInput{
 		Bucket: aws.String(r.Bucket),
 	})

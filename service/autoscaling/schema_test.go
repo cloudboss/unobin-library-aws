@@ -18,7 +18,7 @@ import (
 func TestLibraryRegistersAutoscalingGroup(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "group")
-	assert.Equal(t, reflect.TypeFor[*svc.GroupOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.GroupResourceOutput](),
 		lib.Resources["group"].OutputType())
 }
 
@@ -150,8 +150,8 @@ func TestAutoscalingGroupSchema(t *testing.T) {
 func TestLibraryRegistersAutoscalingScaling(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"policy":         reflect.TypeFor[*svc.PolicyOutput](),
-		"lifecycle-hook": reflect.TypeFor[*svc.LifecycleHookOutput](),
+		"policy":         reflect.TypeFor[*svc.PolicyResourceOutput](),
+		"lifecycle-hook": reflect.TypeFor[*svc.LifecycleHookResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

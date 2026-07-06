@@ -55,7 +55,7 @@ func TestVpcCreateSucceedsThroughPostCreatePropagation(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &Vpc{CidrBlock: aws.String("10.0.0.0/16")}
+	r := &VpcResource{CidrBlock: aws.String("10.0.0.0/16")}
 	out, err := r.Create(context.Background(), cfg)
 	require.NoError(t, err,
 		"a transient post-create InvalidVpcID.NotFound must not fail Create")
@@ -76,7 +76,7 @@ func TestVpcDeleteSucceedsWhenVpcAlreadyGone(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &Vpc{}
-	err := r.Delete(context.Background(), cfg, &VpcOutput{VpcId: "vpc-0123456789abcdef0"})
+	r := &VpcResource{}
+	err := r.Delete(context.Background(), cfg, &VpcResourceOutput{VpcId: "vpc-0123456789abcdef0"})
 	assert.NoError(t, err, "deleting an already-deleted VPC must succeed")
 }

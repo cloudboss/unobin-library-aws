@@ -9,18 +9,21 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-type MicrovmImageData struct {
+type MicrovmImageDataSource struct {
 	ImageIdentifier *string `ub:"image-identifier"`
 	Name            *string `ub:"name"`
 }
 
-func (r MicrovmImageData) Constraints() []constraint.Constraint {
+func (r MicrovmImageDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.ImageIdentifier, r.Name),
 	}
 }
 
-func (r *MicrovmImageData) Read(ctx context.Context, cfg *awsCfg) (*MicrovmImageDataOutput, error) {
+func (r *MicrovmImageDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*MicrovmImageDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -31,11 +34,11 @@ func (r *MicrovmImageData) Read(ctx context.Context, cfg *awsCfg) (*MicrovmImage
 	return r.readByName(ctx, client, *r.Name)
 }
 
-func (r *MicrovmImageData) readByName(
+func (r *MicrovmImageDataSource) readByName(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	name string,
-) (*MicrovmImageDataOutput, error) {
+) (*MicrovmImageDataSourceOutput, error) {
 	paginator := awslambdamicrovms.NewListMicrovmImagesPaginator(client,
 		&awslambdamicrovms.ListMicrovmImagesInput{NameFilter: aws.String(name)})
 	for paginator.HasMorePages() {
@@ -53,11 +56,11 @@ func (r *MicrovmImageData) readByName(
 	return nil, fmt.Errorf("Microvm image named %s not found", name)
 }
 
-func (r *MicrovmImageData) readByIdentifier(
+func (r *MicrovmImageDataSource) readByIdentifier(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	identifier string,
-) (*MicrovmImageDataOutput, error) {
+) (*MicrovmImageDataSourceOutput, error) {
 	out, err := client.GetMicrovmImage(ctx, &awslambdamicrovms.GetMicrovmImageInput{
 		ImageIdentifier: aws.String(identifier),
 	})

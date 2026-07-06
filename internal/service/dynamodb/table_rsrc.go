@@ -22,7 +22,7 @@ import (
 // provisioned capacity.
 const billingModeProvisioned = "PROVISIONED"
 
-// Table manages a DynamoDB table and the settings DynamoDB reconciles through
+// TableResource manages a DynamoDB table and the settings DynamoDB reconciles through
 // follow-on calls, the way CloudFormation models AWS::DynamoDB::Table. The
 // name, the table key (hash and range), and the local secondary indexes are
 // fixed at creation, so a change to any of them replaces the table; everything
@@ -34,7 +34,7 @@ const billingModeProvisioned = "PROVISIONED"
 // are blocks reconciled after the table exists. An unset billing-mode is
 // treated by DynamoDB as PROVISIONED, which then requires capacity; it is sent
 // only when set so an omitted value does not read as drift.
-type Table struct {
+type TableResource struct {
 	Name                      string                       `ub:"name"`
 	BillingMode               *string                      `ub:"billing-mode"`
 	HashKey                   string                       `ub:"hash-key"`
@@ -56,16 +56,16 @@ type Table struct {
 	Tags                      *map[string]string           `ub:"tags"`
 }
 
-// TableOutput holds the values DynamoDB computes for a table. Arn identifies the
+// TableResourceOutput holds the values DynamoDB computes for a table. Arn identifies the
 // table in policies and tag calls. StreamArn and StreamLabel identify the
 // table's stream and are empty when no stream is enabled.
-type TableOutput struct {
+type TableResourceOutput struct {
 	Arn         string `ub:"arn"`
 	StreamArn   string `ub:"stream-arn"`
 	StreamLabel string `ub:"stream-label"`
 }
 
-func (r *Table) SchemaVersion() int { return 1 }
+func (r *TableResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs DynamoDB fixes when a table is created. The
 // name is the table's identity, the hash and range keys make up the primary key,
@@ -73,7 +73,7 @@ func (r *Table) SchemaVersion() int { return 1 }
 // of them requires a new table. The warm-throughput decrease rule is not here:
 // a decrease is rejected by the API rather than replacing the table, and an
 // increase is applied in place, so it stays API-enforced.
-func (r *Table) ReplaceFields() []string {
+func (r *TableResource) ReplaceFields() []string {
 	return []string{"name", "hash-key", "range-key", "local-secondary-index"}
 }
 
@@ -85,7 +85,7 @@ func (r *Table) ReplaceFields() []string {
 // fix the value sets, and the recovery period is bounded. The all-attributes-
 // indexed rule spans the table key and every index and cannot be expressed
 // here, so it is checked in Create and Update.
-func (r Table) Constraints() []constraint.Constraint {
+func (r TableResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.ReadCapacity, r.OnDemandThroughput),
 		constraint.AtMostOneOf(r.WriteCapacity, r.OnDemandThroughput),
@@ -163,7 +163,7 @@ func (r Table) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Table) Create(ctx context.Context, cfg *awsCfg) (*TableOutput, error) {
+func (r *TableResource) Create(ctx context.Context, cfg *awsCfg) (*TableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (r *Table) Create(ctx context.Context, cfg *awsCfg) (*TableOutput, error) {
 // createTable issues CreateTable with the create-time settings, retrying the
 // throttling and simultaneity-limit errors DynamoDB returns while too many
 // table or index operations run at once.
-func (r *Table) createTable(ctx context.Context, client *dynamodb.Client) error {
+func (r *TableResource) createTable(ctx context.Context, client *dynamodb.Client) error {
 	in := &dynamodb.CreateTableInput{
 		TableName:                 aws.String(r.Name),
 		AttributeDefinitions:      attributeDefinitions(ptr.Value(r.Attribute)),
@@ -241,7 +241,11 @@ func (r *Table) createTable(ctx context.Context, client *dynamodb.Client) error 
 	return nil
 }
 
-func (r *Table) Read(ctx context.Context, cfg *awsCfg, prior *TableOutput) (*TableOutput, error) {
+func (r *TableResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TableResourceOutput,
+) (*TableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -256,9 +260,9 @@ func (r *Table) Read(ctx context.Context, cfg *awsCfg, prior *TableOutput) (*Tab
 	return tableOutput(desc), nil
 }
 
-func (r *Table) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Table, *TableOutput],
-) (*TableOutput, error) {
+func (r *TableResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TableResource, *TableResourceOutput],
+) (*TableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -284,7 +288,7 @@ func (r *Table) Update(
 	return tableOutput(desc), nil
 }
 
-func (r *Table) Delete(ctx context.Context, cfg *awsCfg, prior *TableOutput) error {
+func (r *TableResource) Delete(ctx context.Context, cfg *awsCfg, prior *TableResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -318,7 +322,7 @@ func (r *Table) Delete(ctx context.Context, cfg *awsCfg, prior *TableOutput) err
 // validate checks the cross-collection rule the constraint vocabulary cannot
 // express: every attribute definition must be used by a key, and every key must
 // reference a defined attribute.
-func (r *Table) validate() error {
+func (r *TableResource) validate() error {
 	return validateAttributesIndexed(
 		ptr.Value(r.Attribute), r.HashKey, r.RangeKey, ptr.Value(r.LocalSecondaryIndex),
 		ptr.Value(r.GlobalSecondaryIndex))
@@ -339,8 +343,8 @@ func streamSpecification(enabled *bool, viewType *string) *dynamodbtypes.StreamS
 }
 
 // tableOutput builds the computed outputs from a table description.
-func tableOutput(desc *dynamodbtypes.TableDescription) *TableOutput {
-	return &TableOutput{
+func tableOutput(desc *dynamodbtypes.TableDescription) *TableResourceOutput {
+	return &TableResourceOutput{
 		Arn:         aws.ToString(desc.TableArn),
 		StreamArn:   aws.ToString(desc.LatestStreamArn),
 		StreamLabel: aws.ToString(desc.LatestStreamLabel),
@@ -349,7 +353,7 @@ func tableOutput(desc *dynamodbtypes.TableDescription) *TableOutput {
 
 // syncTags reconciles the table's tags with the desired set. DynamoDB addresses
 // table tags by ARN and lists them through a token-paged ListTagsOfResource.
-func (r *Table) syncTags(ctx context.Context, client *dynamodb.Client, arn string) error {
+func (r *TableResource) syncTags(ctx context.Context, client *dynamodb.Client, arn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}

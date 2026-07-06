@@ -19,14 +19,14 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// SecurityGroup is an EC2 security group: a named, stateful firewall attached
+// SecurityGroupResource is an EC2 security group: a named, stateful firewall attached
 // to a VPC. The fields mirror the EC2 CreateSecurityGroup API. The name,
 // description, and VPC fix the group's identity, so a change to any of them
 // replaces the group; only the tags change in place. This resource manages the
 // group itself, not its rules: it removes the allow-all egress rule EC2 attaches
 // to a new group, so the group's egress is only what the separate egress rule
 // resources declare; ingress and egress rules are managed by those resources.
-type SecurityGroup struct {
+type SecurityGroupResource struct {
 	Name        *string            `ub:"name"`
 	NamePrefix  *string            `ub:"name-prefix"`
 	Description string             `ub:"description"`
@@ -39,23 +39,23 @@ type SecurityGroup struct {
 	RevokeRulesOnDelete *bool `ub:"revoke-rules-on-delete"`
 }
 
-// SecurityGroupOutput holds the values EC2 computes for a security group. The
+// SecurityGroupResourceOutput holds the values EC2 computes for a security group. The
 // id is the stable sg- handle. The ARN is composed from the partition, region,
 // owner, and id rather than read back, so it has the same form everywhere. The
 // owner id is the account that owns the group.
-type SecurityGroupOutput struct {
+type SecurityGroupResourceOutput struct {
 	Id      string `ub:"id"`
 	Arn     string `ub:"arn"`
 	OwnerId string `ub:"owner-id"`
 }
 
-func (r *SecurityGroup) SchemaVersion() int { return 1 }
+func (r *SecurityGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 bakes into a group at creation and cannot
 // change afterward. The name, name prefix, description, and VPC are all fixed
 // once the group exists, so changing any of them requires a new group. Only the
 // tags are reconciled in place by Update.
-func (r *SecurityGroup) ReplaceFields() []string {
+func (r *SecurityGroupResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"name-prefix",
@@ -67,13 +67,16 @@ func (r *SecurityGroup) ReplaceFields() []string {
 // Constraints declares the one cross-field rule on a security group's inputs: a
 // caller fixes the group name with an exact name or a name prefix, not both. A
 // caller that gives neither gets a generated name.
-func (r SecurityGroup) Constraints() []constraint.Constraint {
+func (r SecurityGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.Name, r.NamePrefix),
 	}
 }
 
-func (r *SecurityGroup) Create(ctx context.Context, cfg *awsCfg) (*SecurityGroupOutput, error) {
+func (r *SecurityGroupResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*SecurityGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -137,9 +140,11 @@ func (r *SecurityGroup) Create(ctx context.Context, cfg *awsCfg) (*SecurityGroup
 	return r.read(ctx, client, id)
 }
 
-func (r *SecurityGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *SecurityGroupOutput,
-) (*SecurityGroupOutput, error) {
+func (r *SecurityGroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecurityGroupResourceOutput,
+) (*SecurityGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -151,9 +156,9 @@ func (r *SecurityGroup) Read(
 // ARN from the client's region, the region's partition, the owner id, and the
 // id. A group that has vanished maps to runtime.ErrNotFound so the runtime sees
 // it as drift.
-func (r *SecurityGroup) read(
+func (r *SecurityGroupResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*SecurityGroupOutput, error) {
+) (*SecurityGroupResourceOutput, error) {
 	group, err := r.describe(ctx, client, id)
 	if err != nil {
 		return nil, err
@@ -162,7 +167,7 @@ func (r *SecurityGroup) read(
 	ownerID := aws.ToString(group.OwnerId)
 	arn := fmt.Sprintf("arn:%s:ec2:%s:%s:security-group/%s",
 		partition.Of(region), region, ownerID, aws.ToString(group.GroupId))
-	return &SecurityGroupOutput{
+	return &SecurityGroupResourceOutput{
 		Id:      aws.ToString(group.GroupId),
 		Arn:     arn,
 		OwnerId: ownerID,
@@ -172,7 +177,7 @@ func (r *SecurityGroup) read(
 // describe returns the security group with the given id. EC2 reports a missing
 // group by service code on an HTTP 400, never a 404, so the not-found codes map
 // to runtime.ErrNotFound; an empty result slice means the same.
-func (r *SecurityGroup) describe(
+func (r *SecurityGroupResource) describe(
 	ctx context.Context, client *ec2.Client, id string,
 ) (*ec2types.SecurityGroup, error) {
 	resp, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
@@ -190,9 +195,11 @@ func (r *SecurityGroup) describe(
 	return &resp.SecurityGroups[0], nil
 }
 
-func (r *SecurityGroup) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SecurityGroup, *SecurityGroupOutput],
-) (*SecurityGroupOutput, error) {
+func (r *SecurityGroupResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[SecurityGroupResource, *SecurityGroupResourceOutput],
+) (*SecurityGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -208,7 +215,11 @@ func (r *SecurityGroup) Update(
 	return prior.Outputs, nil
 }
 
-func (r *SecurityGroup) Delete(ctx context.Context, cfg *awsCfg, prior *SecurityGroupOutput) error {
+func (r *SecurityGroupResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecurityGroupResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -255,7 +266,7 @@ func (r *SecurityGroup) Delete(ctx context.Context, cfg *awsCfg, prior *Security
 // resources declare. At create the only egress rules on the group are AWS's
 // defaults, since the egress rule resources depend on the group and run
 // afterward, so every egress rule found here is a default to remove.
-func (r *SecurityGroup) revokeDefaultEgress(
+func (r *SecurityGroupResource) revokeDefaultEgress(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	_, egress, err := securityGroupRuleIDs(ctx, client, id)
@@ -270,7 +281,7 @@ func (r *SecurityGroup) revokeDefaultEgress(
 // that reference this one, the way the Terraform provider does; the
 // dependency-conflict retry on the delete covers the ordinary case where such a
 // reference is removed around the same time.
-func (r *SecurityGroup) revokeOwnRules(
+func (r *SecurityGroupResource) revokeOwnRules(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	ingress, egress, err := securityGroupRuleIDs(ctx, client, id)
@@ -346,7 +357,7 @@ func revokeEgressRules(ctx context.Context, client *ec2.Client, id string, ids [
 // given. A name prefix gets a random suffix appended. With neither, the name is
 // a short neutral prefix plus a random suffix, so concurrent creates do not
 // collide on a name.
-func (r *SecurityGroup) resolveName() (string, error) {
+func (r *SecurityGroupResource) resolveName() (string, error) {
 	if r.Name != nil {
 		return *r.Name, nil
 	}

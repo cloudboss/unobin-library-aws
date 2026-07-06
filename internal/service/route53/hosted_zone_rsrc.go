@@ -22,7 +22,7 @@ import (
 // records into batches no larger than this.
 const zoneRecordDeleteBatch = 100
 
-// HostedZone manages a Route 53 hosted zone: a DNS namespace, either public or
+// HostedZoneResource manages a Route 53 hosted zone: a DNS namespace, either public or
 // private. The name and the reusable delegation set are fixed at creation, so a
 // change to either replaces the zone; the comment, the tags, and the VPC
 // associations reconcile in place. Associating any VPC makes the zone private,
@@ -30,7 +30,7 @@ const zoneRecordDeleteBatch = 100
 // VPCs is what decides the kind. ForceDestroy is a delete-time switch: when it
 // is set, the zone's own records are purged before the zone is deleted, since
 // Route 53 refuses to delete a zone that still holds records.
-type HostedZone struct {
+type HostedZoneResource struct {
 	Name            string             `ub:"name"`
 	Comment         *string            `ub:"comment"`
 	DelegationSetId *string            `ub:"delegation-set-id"`
@@ -47,7 +47,7 @@ type HostedZoneVpc struct {
 	VpcRegion *string `ub:"vpc-region"`
 }
 
-// HostedZoneOutput holds the values Route 53 computes for a hosted zone. ZoneId
+// HostedZoneResourceOutput holds the values Route 53 computes for a hosted zone. ZoneId
 // is the stable handle used to read, update, and delete the zone and to attach
 // records to it. Arn names the zone in policies; a hosted zone ARN is global,
 // naming neither region nor account. Name is the zone's name with the trailing
@@ -55,7 +55,7 @@ type HostedZoneVpc struct {
 // NameServers is the zone's authoritative name server set, sorted.
 // PrimaryNameServer is the lead server: the first of a public zone's delegation
 // set as Route 53 returns it, or the first of a private zone's sorted set.
-type HostedZoneOutput struct {
+type HostedZoneResourceOutput struct {
 	ZoneId            string   `ub:"zone-id"`
 	Arn               string   `ub:"arn"`
 	Name              string   `ub:"name"`
@@ -63,14 +63,14 @@ type HostedZoneOutput struct {
 	PrimaryNameServer string   `ub:"primary-name-server"`
 }
 
-func (r *HostedZone) SchemaVersion() int { return 1 }
+func (r *HostedZoneResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs Route 53 fixes when a zone is created. The name
 // is the zone's identity and Route 53 offers no rename, and a reusable
 // delegation set can only be chosen at creation, so a change to either requires
 // a new zone. The comment, the tags, and the VPC associations reconcile in
 // place. ForceDestroy never reaches create, so it is not a replace trigger.
-func (r *HostedZone) ReplaceFields() []string {
+func (r *HostedZoneResource) ReplaceFields() []string {
 	return []string{"name", "delegation-set-id"}
 }
 
@@ -80,7 +80,7 @@ func (r *HostedZone) ReplaceFields() []string {
 // name a VPC. The name, comment, and delegation-set-id length bounds are
 // counted in characters, which the constraint layer measures in bytes, so they
 // are checked in validate rather than declared here.
-func (r HostedZone) Constraints() []constraint.Constraint {
+func (r HostedZoneResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
 			constraint.Absent(r.DelegationSetId),
@@ -99,7 +99,7 @@ func (r HostedZone) Constraints() []constraint.Constraint {
 // cannot express, since it counts string length in bytes rather than in the
 // characters Route 53 limits: the name is 1 to 1024 characters, the comment at
 // most 256, and the delegation-set-id at most 32.
-func (r *HostedZone) validate() error {
+func (r *HostedZoneResource) validate() error {
 	n := len(r.Name)
 	if n < 1 || n > 1024 {
 		return errors.New("name must be between 1 and 1024 characters")
@@ -113,7 +113,10 @@ func (r *HostedZone) validate() error {
 	return nil
 }
 
-func (r *HostedZone) Create(ctx context.Context, cfg *awsCfg) (*HostedZoneOutput, error) {
+func (r *HostedZoneResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*HostedZoneResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -173,9 +176,11 @@ func (r *HostedZone) Create(ctx context.Context, cfg *awsCfg) (*HostedZoneOutput
 	return r.read(ctx, client, zoneID)
 }
 
-func (r *HostedZone) Read(
-	ctx context.Context, cfg *awsCfg, prior *HostedZoneOutput,
-) (*HostedZoneOutput, error) {
+func (r *HostedZoneResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *HostedZoneResourceOutput,
+) (*HostedZoneResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -189,9 +194,9 @@ func (r *HostedZone) Read(
 // list, so its servers are read from the zone's own apex NS record. The primary
 // name server is the first server as Route 53 returns it, taken before the list
 // is sorted, since a registrar expects that order.
-func (r *HostedZone) read(
+func (r *HostedZoneResource) read(
 	ctx context.Context, client *route53.Client, zoneID string,
-) (*HostedZoneOutput, error) {
+) (*HostedZoneResourceOutput, error) {
 	resp, err := client.GetHostedZone(ctx, &route53.GetHostedZoneInput{
 		Id: aws.String(zoneID),
 	})
@@ -223,7 +228,7 @@ func (r *HostedZone) read(
 	}
 	sorted := slices.Clone(nameServers)
 	slices.Sort(sorted)
-	return &HostedZoneOutput{
+	return &HostedZoneResourceOutput{
 		ZoneId:            zoneID,
 		Arn:               zoneARN(zoneRegion(client), zoneID),
 		Name:              normalizeName(name),
@@ -232,9 +237,11 @@ func (r *HostedZone) read(
 	}, nil
 }
 
-func (r *HostedZone) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[HostedZone, *HostedZoneOutput],
-) (*HostedZoneOutput, error) {
+func (r *HostedZoneResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[HostedZoneResource, *HostedZoneResourceOutput],
+) (*HostedZoneResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -270,7 +277,11 @@ func (r *HostedZone) Update(
 	return r.read(ctx, client, zoneID)
 }
 
-func (r *HostedZone) Delete(ctx context.Context, cfg *awsCfg, prior *HostedZoneOutput) error {
+func (r *HostedZoneResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *HostedZoneResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -317,7 +328,7 @@ func (r *HostedZone) Delete(ctx context.Context, cfg *awsCfg, prior *HostedZoneO
 // associations are added before any old one is removed, because Route 53
 // rejects a private zone left with no VPC. Each association and disassociation
 // returns a change that is waited to INSYNC.
-func (r *HostedZone) reconcileVPCs(
+func (r *HostedZoneResource) reconcileVPCs(
 	ctx context.Context, client *route53.Client, zoneID, region string, prior []HostedZoneVpc,
 ) error {
 	priorByID := zoneVPCsByID(prior)
@@ -343,7 +354,7 @@ func (r *HostedZone) reconcileVPCs(
 
 // associateVPC adds one VPC to the zone and waits for the association to reach
 // INSYNC.
-func (r *HostedZone) associateVPC(
+func (r *HostedZoneResource) associateVPC(
 	ctx context.Context, client *route53.Client, zoneID string, vpc *route53types.VPC,
 ) error {
 	resp, err := client.AssociateVPCWithHostedZone(ctx, &route53.AssociateVPCWithHostedZoneInput{
@@ -361,7 +372,7 @@ func (r *HostedZone) associateVPC(
 
 // disassociateVPC removes one VPC from the zone and waits for the change to
 // reach INSYNC.
-func (r *HostedZone) disassociateVPC(
+func (r *HostedZoneResource) disassociateVPC(
 	ctx context.Context, client *route53.Client, zoneID string, vpc *route53types.VPC,
 ) error {
 	resp, err := client.DisassociateVPCFromHostedZone(
@@ -382,7 +393,7 @@ func (r *HostedZone) disassociateVPC(
 // apex NS record, the way a private zone reports them, since its delegation set
 // has no servers. The listing starts at the zone's own name and NS type and
 // returns the values of the matching record.
-func (r *HostedZone) findNameServers(
+func (r *HostedZoneResource) findNameServers(
 	ctx context.Context, client *route53.Client, zoneID, name string,
 ) ([]string, error) {
 	resp, err := client.ListResourceRecordSets(ctx, &route53.ListResourceRecordSetsInput{
@@ -417,7 +428,7 @@ func (r *HostedZone) findNameServers(
 // deleted in batches no larger than the Route 53 per-request limit, each batch
 // waited to INSYNC. A zone that vanishes mid-purge, from a concurrent delete,
 // is treated as already gone.
-func (r *HostedZone) purgeRecords(
+func (r *HostedZoneResource) purgeRecords(
 	ctx context.Context, client *route53.Client, zoneID string,
 ) error {
 	apex, err := r.zoneApexName(ctx, client, zoneID)
@@ -462,7 +473,7 @@ func (r *HostedZone) purgeRecords(
 // reach INSYNC. A zone gone underneath is treated as already purged. An
 // InvalidChangeBatch holds its own per-change messages, which are unpacked
 // into the returned error so the operator sees which records Route 53 refused.
-func (r *HostedZone) deleteRecordBatch(
+func (r *HostedZoneResource) deleteRecordBatch(
 	ctx context.Context, client *route53.Client, zoneID string, batch []route53types.Change,
 ) error {
 	resp, err := client.ChangeResourceRecordSets(ctx, &route53.ChangeResourceRecordSetsInput{
@@ -488,7 +499,7 @@ func (r *HostedZone) deleteRecordBatch(
 
 // zoneApexName returns the zone's own name, used to recognize the apex NS and
 // SOA records a purge must leave for the delete to clear.
-func (r *HostedZone) zoneApexName(
+func (r *HostedZoneResource) zoneApexName(
 	ctx context.Context, client *route53.Client, zoneID string,
 ) (string, error) {
 	resp, err := client.GetHostedZone(ctx, &route53.GetHostedZoneInput{Id: aws.String(zoneID)})
@@ -502,7 +513,7 @@ func (r *HostedZone) zoneApexName(
 // for one resource at a time and writes adds and removes in a single
 // ChangeTagsForResource, so the live set is read, diffed, and the call made only
 // when something differs.
-func (r *HostedZone) syncTags(
+func (r *HostedZoneResource) syncTags(
 	ctx context.Context, client *route53.Client, zoneID string,
 ) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),

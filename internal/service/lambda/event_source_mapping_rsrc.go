@@ -49,7 +49,7 @@ const (
 	esmStateDeleting  = "Deleting"
 )
 
-// EventSourceMapping connects an event source -- a Kinesis or DynamoDB stream,
+// EventSourceMappingResource connects an event source -- a Kinesis or DynamoDB stream,
 // an SQS queue, an Amazon MSK or self-managed Apache Kafka cluster, an Amazon MQ
 // broker, or a DocumentDB change stream -- to a Lambda function, the way
 // CloudFormation models AWS::Lambda::EventSourceMapping. Lambda assigns the
@@ -63,7 +63,7 @@ const (
 //
 // Logging configuration is not modeled, matching the CloudFormation resource the
 // investigation covered.
-type EventSourceMapping struct {
+type EventSourceMappingResource struct {
 	FunctionName                        string                                         `ub:"function-name"`
 	Enabled                             *bool                                          `ub:"enabled"`
 	EventSourceArn                      *string                                        `ub:"event-source-arn"`
@@ -94,13 +94,13 @@ type EventSourceMapping struct {
 	Tags                                *map[string]string                             `ub:"tags"`
 }
 
-// EventSourceMappingOutput holds the values Lambda computes for a mapping. Uuid
+// EventSourceMappingResourceOutput holds the values Lambda computes for a mapping. Uuid
 // is the identity handle that keys every later get, update, and delete. Arn is
 // the mapping's own ARN; FunctionArn is the fully resolved function ARN, which
 // may differ from the function-name input. State is the settled state-machine
 // value the enabled input derives from on a read, and StateTransitionReason,
 // LastProcessingResult, and LastModified report the mapping's recent activity.
-type EventSourceMappingOutput struct {
+type EventSourceMappingResourceOutput struct {
 	Uuid                  string `ub:"uuid"`
 	Arn                   string `ub:"arn"`
 	FunctionArn           string `ub:"function-arn"`
@@ -110,7 +110,7 @@ type EventSourceMappingOutput struct {
 	LastModified          string `ub:"last-modified"`
 }
 
-func (r *EventSourceMapping) SchemaVersion() int { return 1 }
+func (r *EventSourceMappingResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs Lambda fixes when a mapping is created. The
 // event source and the self-managed source endpoints identify what the mapping
@@ -118,7 +118,7 @@ func (r *EventSourceMapping) SchemaVersion() int { return 1 }
 // consumer group id that cannot be changed, and the queue and topic lists name
 // the destination once. A change to any of them requires a new mapping; every
 // other input reconciles in place by Update.
-func (r *EventSourceMapping) ReplaceFields() []string {
+func (r *EventSourceMappingResource) ReplaceFields() []string {
 	return []string{
 		"event-source-arn",
 		"self-managed-event-source",
@@ -145,7 +145,7 @@ func (r *EventSourceMapping) ReplaceFields() []string {
 // pointer. The filter pattern's byte length, the queue and topic element
 // lengths, and the URI and consumer-group charsets are left to the Lambda API,
 // since a byte-length or regex rule does not derive.
-func (r EventSourceMapping) Constraints() []constraint.Constraint {
+func (r EventSourceMappingResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.EventSourceArn, r.SelfManagedEventSource),
 		constraint.ForbiddenWith(r.AmazonManagedKafkaEventSourceConfig,
@@ -276,9 +276,9 @@ func (r EventSourceMapping) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *EventSourceMapping) Create(
+func (r *EventSourceMappingResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*EventSourceMappingOutput, error) {
+) (*EventSourceMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -292,7 +292,9 @@ func (r *EventSourceMapping) Create(
 	// created. When the tagged create fails for that reason, create the mapping
 	// without tags; there is no separate tag call here, matching how the mapping
 	// sends tags only on its create.
-	if err != nil && len(ptr.Value(r.Tags)) > 0 && partition.UnsupportedOperation(region(client), err) {
+	if err != nil &&
+		len(ptr.Value(r.Tags)) > 0 &&
+		partition.UnsupportedOperation(region(client), err) {
 		in.Tags = nil
 		uuid, err = r.create(ctx, client, in)
 	}
@@ -309,9 +311,11 @@ func (r *EventSourceMapping) Create(
 	return r.read(ctx, client, uuid)
 }
 
-func (r *EventSourceMapping) Read(
-	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingOutput,
-) (*EventSourceMappingOutput, error) {
+func (r *EventSourceMappingResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *EventSourceMappingResourceOutput,
+) (*EventSourceMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -319,11 +323,11 @@ func (r *EventSourceMapping) Read(
 	return r.read(ctx, client, prior.Uuid)
 }
 
-func (r *EventSourceMapping) Update(
+func (r *EventSourceMappingResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[EventSourceMapping, *EventSourceMappingOutput],
-) (*EventSourceMappingOutput, error) {
+	prior runtime.Prior[EventSourceMappingResource, *EventSourceMappingResourceOutput],
+) (*EventSourceMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -351,9 +355,8 @@ func (r *EventSourceMapping) Update(
 	return r.read(ctx, client, uuid)
 }
 
-func (r *EventSourceMapping) Delete(
-	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingOutput,
-) error {
+func (r *EventSourceMappingResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -379,7 +382,7 @@ func (r *EventSourceMapping) Delete(
 
 // create issues a single CreateEventSourceMapping, retrying through the
 // execution-role propagation window. It returns the assigned uuid.
-func (r *EventSourceMapping) create(
+func (r *EventSourceMappingResource) create(
 	ctx context.Context, client *lambda.Client, in *lambda.CreateEventSourceMappingInput,
 ) (string, error) {
 	var uuid string
@@ -398,7 +401,7 @@ func (r *EventSourceMapping) create(
 // assembling every nested block and converting the typed enum and timestamp
 // fields. A malformed starting-position timestamp is returned as an error before
 // any call is made.
-func (r *EventSourceMapping) createInput() (*lambda.CreateEventSourceMappingInput, error) {
+func (r *EventSourceMappingResource) createInput() (*lambda.CreateEventSourceMappingInput, error) {
 	amk := amazonManagedKafkaConfig(r.AmazonManagedKafkaEventSourceConfig)
 	smk := selfManagedKafkaConfig(r.SelfManagedKafkaEventSourceConfig)
 	in := &lambda.CreateEventSourceMappingInput{
@@ -447,9 +450,8 @@ func (r *EventSourceMapping) createInput() (*lambda.CreateEventSourceMappingInpu
 // member would leave the live value unchanged. The source-access configurations
 // are sent only when non-empty, since Lambda does not clear them with a
 // sentinel.
-func (r *EventSourceMapping) updateInput(
-	uuid string, prior EventSourceMapping,
-) *lambda.UpdateEventSourceMappingInput {
+func (r *EventSourceMappingResource) updateInput(
+	uuid string, prior EventSourceMappingResource) *lambda.UpdateEventSourceMappingInput {
 	in := &lambda.UpdateEventSourceMappingInput{UUID: aws.String(uuid)}
 	if runtime.Changed(prior.FunctionName, r.FunctionName) {
 		in.FunctionName = aws.String(r.FunctionName)
@@ -527,7 +529,7 @@ func (r *EventSourceMapping) updateInput(
 // from the prior inputs. Comparing the inputs directly, rather than the built
 // request, catches a list or block emptied to nil, which an update still needs
 // to reconcile.
-func (r *EventSourceMapping) updateChanged(prior EventSourceMapping) bool {
+func (r *EventSourceMappingResource) updateChanged(prior EventSourceMappingResource) bool {
 	return runtime.Changed(prior.FunctionName, r.FunctionName) ||
 		runtime.Changed(prior.Enabled, r.Enabled) ||
 		runtime.Changed(prior.BatchSize, r.BatchSize) ||
@@ -553,9 +555,9 @@ func (r *EventSourceMapping) updateChanged(prior EventSourceMapping) bool {
 // Lambda reports as gone maps to runtime.ErrNotFound so a plan recreates it. The
 // enabled input is not echoed; it is reconciled into the state on write and
 // derived from the state on a read, so it does not appear in the output.
-func (r *EventSourceMapping) read(
+func (r *EventSourceMappingResource) read(
 	ctx context.Context, client *lambda.Client, uuid string,
-) (*EventSourceMappingOutput, error) {
+) (*EventSourceMappingResourceOutput, error) {
 	resp, err := client.GetEventSourceMapping(ctx, &lambda.GetEventSourceMappingInput{
 		UUID: aws.String(uuid),
 	})
@@ -568,7 +570,7 @@ func (r *EventSourceMapping) read(
 	if resp == nil || resp.UUID == nil {
 		return nil, runtime.ErrNotFound
 	}
-	out := &EventSourceMappingOutput{
+	out := &EventSourceMappingResourceOutput{
 		Uuid:                  aws.ToString(resp.UUID),
 		Arn:                   aws.ToString(resp.EventSourceMappingArn),
 		FunctionArn:           aws.ToString(resp.FunctionArn),
@@ -585,7 +587,7 @@ func (r *EventSourceMapping) read(
 // waitCreated polls until the mapping leaves the transitional create states and
 // reaches a settled enabled or disabled state. A mapping that disappears while
 // settling is unexpected and stops the wait with a not-found error.
-func (r *EventSourceMapping) waitCreated(
+func (r *EventSourceMappingResource) waitCreated(
 	ctx context.Context, client *lambda.Client, uuid string,
 ) error {
 	return wait.Until(ctx, fmt.Sprintf("event source mapping %s to settle", uuid),
@@ -597,7 +599,7 @@ func (r *EventSourceMapping) waitCreated(
 
 // waitUpdated polls until the mapping leaves the transitional update states and
 // reaches a settled enabled or disabled state.
-func (r *EventSourceMapping) waitUpdated(
+func (r *EventSourceMappingResource) waitUpdated(
 	ctx context.Context, client *lambda.Client, uuid string,
 ) error {
 	return wait.Until(ctx, fmt.Sprintf("event source mapping %s update", uuid),
@@ -611,7 +613,7 @@ func (r *EventSourceMapping) waitUpdated(
 // the settled Enabled or Disabled state and not ready while it is in one of the
 // given transitional states. A get that reports the mapping gone aborts the
 // wait, since a mapping being created or updated should not vanish.
-func (r *EventSourceMapping) settledProbe(
+func (r *EventSourceMappingResource) settledProbe(
 	client *lambda.Client, uuid string, pending ...string,
 ) func(context.Context) (bool, error) {
 	return func(ctx context.Context) (bool, error) {
@@ -640,7 +642,7 @@ func (r *EventSourceMapping) settledProbe(
 
 // waitDeleted polls until a get reports the mapping gone. While it is still in
 // the Deleting state the get succeeds, so that is treated as not-yet-gone.
-func (r *EventSourceMapping) waitDeleted(
+func (r *EventSourceMappingResource) waitDeleted(
 	ctx context.Context, client *lambda.Client, uuid string,
 ) error {
 	return wait.Until(ctx, fmt.Sprintf("event source mapping %s to be gone", uuid),

@@ -23,13 +23,15 @@ func Library() *runtime.Library {
 		Description:   "AWS metadata library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"arn":               makeDataSource[svc.ARN, *svc.ARNOutput](),
-			"ip-ranges":         makeDataSource[svc.IPRanges, *svc.IPRangesOutput](),
-			"partition":         makeDataSource[svc.Partition, *svc.PartitionOutput](),
-			"region":            makeDataSource[svc.Region, *svc.RegionOutput](),
-			"regions":           makeDataSource[svc.Regions, *svc.RegionsOutput](),
-			"service":           makeDataSource[svc.Service, *svc.ServiceOutput](),
-			"service-principal": makeDataSource[svc.ServicePrincipal, *svc.ServicePrincipalOutput](),
+			"arn":       makeDataSource[svc.ARNDataSource, *svc.ARNDataSourceOutput](),
+			"ip-ranges": makeDataSource[svc.IPRangesDataSource, *svc.IPRangesDataSourceOutput](),
+			"partition": makeDataSource[svc.PartitionDataSource, *svc.PartitionDataSourceOutput](),
+			"region":    makeDataSource[svc.RegionDataSource, *svc.RegionDataSourceOutput](),
+			"regions":   makeDataSource[svc.RegionsDataSource, *svc.RegionsDataSourceOutput](),
+			"service":   makeDataSource[svc.ServiceDataSource, *svc.ServiceDataSourceOutput](),
+			"service-principal": makeDataSource[
+				svc.ServicePrincipalDataSource,
+				*svc.ServicePrincipalDataSourceOutput](),
 		},
 	}
 }

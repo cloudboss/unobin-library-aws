@@ -19,39 +19,39 @@ import (
 // cannot express regular expressions, so Create and Update check it in code.
 var groupNameRe = regexp.MustCompile(`^[0-9A-Za-z=,.@_+-]+$`)
 
-// Group is an IAM group. The group name and path are reconciled with
+// GroupResource is an IAM group. The group name and path are reconciled with
 // CreateGroup and UpdateGroup; both can change in place. Path defaults to "/",
 // matching IAM's API default, and is always sent on create and update.
-type Group struct {
+type GroupResource struct {
 	// Name is the IAM group name. It must contain only letters, digits,
 	// equals, comma, period, at sign, underscore, plus, or hyphen.
 	Name string `ub:"name"`
 	Path string `ub:"path"`
 }
 
-// GroupOutput holds the values IAM reports for a group. Name is the current
+// GroupResourceOutput holds the values IAM reports for a group. Name is the current
 // cloud handle, so reads and deletes keep addressing a renamed group by its
 // current name instead of the desired name from a later plan.
-type GroupOutput struct {
+type GroupResourceOutput struct {
 	Arn      string `ub:"arn"`
 	UniqueId string `ub:"unique-id"`
 	Name     string `ub:"name"`
 }
 
-func (r *Group) SchemaVersion() int { return 1 }
+func (r *GroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields is empty because IAM can change both name and path in place
 // through UpdateGroup.
-func (r *Group) ReplaceFields() []string { return nil }
+func (r *GroupResource) ReplaceFields() []string { return nil }
 
 // Defaults gives path the IAM default value.
-func (r Group) Defaults() []defaults.Default {
+func (r GroupResource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.Path, "/"),
 	}
 }
 
-func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
+func (r *GroupResource) Create(ctx context.Context, cfg *awsCfg) (*GroupResourceOutput, error) {
 	if err := validateGroupName(r.Name); err != nil {
 		return nil, err
 	}
@@ -72,9 +72,8 @@ func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
 	return readGroup(ctx, client, aws.ToString(resp.Group.GroupName), true)
 }
 
-func (r *Group) Read(
-	ctx context.Context, cfg *awsCfg, prior *GroupOutput,
-) (*GroupOutput, error) {
+func (r *GroupResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -82,9 +81,9 @@ func (r *Group) Read(
 	return readGroup(ctx, client, r.handle(prior), false)
 }
 
-func (r *Group) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Group, *GroupOutput],
-) (*GroupOutput, error) {
+func (r *GroupResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput],
+) (*GroupResourceOutput, error) {
 	if err := validateGroupName(r.Name); err != nil {
 		return nil, err
 	}
@@ -109,7 +108,7 @@ func (r *Group) Update(
 	return readGroup(ctx, client, r.Name, false)
 }
 
-func (r *Group) Delete(ctx context.Context, cfg *awsCfg, prior *GroupOutput) error {
+func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -128,7 +127,7 @@ func (r *Group) Delete(ctx context.Context, cfg *awsCfg, prior *GroupOutput) err
 
 func readGroup(
 	ctx context.Context, client *iam.Client, name string, created bool,
-) (*GroupOutput, error) {
+) (*GroupResourceOutput, error) {
 	var group *iamtypes.Group
 	if created {
 		err := wait.Until(ctx, fmt.Sprintf("group %s", name),
@@ -172,7 +171,10 @@ func findGroupByName(
 	return resp.Group, nil
 }
 
-func groupNeedsUpdate(prior runtime.Prior[Group, *GroupOutput], current Group) bool {
+func groupNeedsUpdate(
+	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	current GroupResource,
+) bool {
 	if runtime.Changed(prior.Inputs.Name, current.Name) ||
 		runtime.Changed(prior.Inputs.Path, current.Path) {
 		return true
@@ -184,7 +186,10 @@ func groupNeedsUpdate(prior runtime.Prior[Group, *GroupOutput], current Group) b
 		runtime.Changed(prior.Outputs.Arn, prior.Observed.Arn)
 }
 
-func priorGroupName(prior runtime.Prior[Group, *GroupOutput], fallback string) string {
+func priorGroupName(
+	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	fallback string,
+) string {
 	if prior.Outputs != nil && prior.Outputs.Name != "" {
 		return prior.Outputs.Name
 	}
@@ -197,7 +202,7 @@ func priorGroupName(prior runtime.Prior[Group, *GroupOutput], fallback string) s
 	return fallback
 }
 
-func (r *Group) handle(prior *GroupOutput) string {
+func (r *GroupResource) handle(prior *GroupResourceOutput) string {
 	if prior != nil && prior.Name != "" {
 		return prior.Name
 	}
@@ -213,8 +218,8 @@ func validateGroupName(name string) error {
 	return nil
 }
 
-func groupOutput(group *iamtypes.Group) *GroupOutput {
-	return &GroupOutput{
+func groupOutput(group *iamtypes.Group) *GroupResourceOutput {
+	return &GroupResourceOutput{
 		Arn:      aws.ToString(group.Arn),
 		UniqueId: aws.ToString(group.GroupId),
 		Name:     aws.ToString(group.GroupName),

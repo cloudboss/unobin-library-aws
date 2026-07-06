@@ -19,7 +19,7 @@ func TestLibraryRegistersEc2Vpc(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "vpc")
 	assert.Equal(t,
-		reflect.TypeFor[*svc.VpcOutput](),
+		reflect.TypeFor[*svc.VpcResourceOutput](),
 		lib.Resources["vpc"].OutputType())
 }
 
@@ -99,9 +99,9 @@ func TestEc2VpcSchema(t *testing.T) {
 func TestLibraryRegistersEc2SecurityGroups(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"security-group":              reflect.TypeFor[*svc.SecurityGroupOutput](),
-		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleOutput](),
-		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleOutput](),
+		"security-group":              reflect.TypeFor[*svc.SecurityGroupResourceOutput](),
+		"security-group-ingress-rule": reflect.TypeFor[*svc.SecurityGroupIngressRuleResourceOutput](),
+		"security-group-egress-rule":  reflect.TypeFor[*svc.SecurityGroupEgressRuleResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestEc2SecurityGroupSchemas(t *testing.T) {
 func TestLibraryRegistersEc2Subnet(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "subnet")
-	assert.Equal(t, reflect.TypeFor[*svc.SubnetOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetResourceOutput](),
 		lib.Resources["subnet"].OutputType())
 }
 
@@ -317,7 +317,7 @@ func TestEc2SubnetSchema(t *testing.T) {
 func TestLibraryRegistersEc2Volume(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "volume")
-	assert.Equal(t, reflect.TypeFor[*svc.VolumeOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.VolumeResourceOutput](),
 		lib.Resources["volume"].OutputType())
 }
 
@@ -416,7 +416,7 @@ func TestEc2VolumeSchema(t *testing.T) {
 func TestLibraryRegistersEc2LaunchTemplate(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "launch-template")
-	assert.Equal(t, reflect.TypeFor[*svc.LaunchTemplateOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.LaunchTemplateResourceOutput](),
 		lib.Resources["launch-template"].OutputType())
 }
 
@@ -753,7 +753,7 @@ func TestEc2LaunchTemplateSchema(t *testing.T) {
 func TestLibraryRegistersEc2Ami(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "ami")
-	assert.Equal(t, reflect.TypeFor[*svc.AMIOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.AMIDataSourceOutput](),
 		lib.DataSources["ami"].OutputType())
 }
 
@@ -811,25 +811,25 @@ func TestEc2AmiSchema(t *testing.T) {
 func TestLibraryRegistersEc2Routing(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "internet-gateway")
-	assert.Equal(t, reflect.TypeFor[*svc.InternetGatewayOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.InternetGatewayResourceOutput](),
 		lib.Resources["internet-gateway"].OutputType())
 	require.Contains(t, lib.Resources, "route-table")
-	assert.Equal(t, reflect.TypeFor[*svc.RouteTableOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.RouteTableResourceOutput](),
 		lib.Resources["route-table"].OutputType())
 	require.Contains(t, lib.Resources, "route")
-	assert.Equal(t, reflect.TypeFor[*svc.RouteOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.RouteResourceOutput](),
 		lib.Resources["route"].OutputType())
 	require.Contains(t, lib.Resources, "route-table-association")
-	assert.Equal(t, reflect.TypeFor[*svc.RouteTableAssociationOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.RouteTableAssociationResourceOutput](),
 		lib.Resources["route-table-association"].OutputType())
 	require.Contains(t, lib.Resources, "eip")
-	assert.Equal(t, reflect.TypeFor[*svc.EipOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.EipResourceOutput](),
 		lib.Resources["eip"].OutputType())
 	require.Contains(t, lib.Resources, "nat-gateway")
-	assert.Equal(t, reflect.TypeFor[*svc.NatGatewayOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.NatGatewayResourceOutput](),
 		lib.Resources["nat-gateway"].OutputType())
 	require.Contains(t, lib.Resources, "vpc-endpoint")
-	assert.Equal(t, reflect.TypeFor[*svc.VpcEndpointOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.VpcEndpointResourceOutput](),
 		lib.Resources["vpc-endpoint"].OutputType())
 }
 
@@ -1153,7 +1153,7 @@ func TestEc2RoutingSchemas(t *testing.T) {
 func TestLibraryRegistersEc2KeyPair(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "key-pair")
-	assert.Equal(t, reflect.TypeFor[*svc.KeyPairOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.KeyPairResourceOutput](),
 		lib.Resources["key-pair"].OutputType())
 }
 
@@ -1182,7 +1182,7 @@ func TestEc2KeyPairSchema(t *testing.T) {
 func TestLibraryRegistersEc2Instance(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "instance")
-	assert.Equal(t, reflect.TypeFor[*svc.InstanceOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.InstanceResourceOutput](),
 		lib.Resources["instance"].OutputType())
 }
 
@@ -1461,7 +1461,7 @@ func TestEc2InstanceSchema(t *testing.T) {
 func TestLibraryRegistersEc2AvailabilityZones(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "availability-zones")
-	assert.Equal(t, reflect.TypeFor[*svc.AvailabilityZonesOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.AvailabilityZonesDataSourceOutput](),
 		lib.DataSources["availability-zones"].OutputType())
 }
 
@@ -1508,7 +1508,7 @@ func TestEc2AvailabilityZonesSchema(t *testing.T) {
 func TestLibraryRegistersEc2Subnets(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "subnets")
-	assert.Equal(t, reflect.TypeFor[*svc.SubnetsOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetsDataSourceOutput](),
 		lib.DataSources["subnets"].OutputType())
 }
 
@@ -1533,19 +1533,19 @@ func TestEc2SubnetsSchema(t *testing.T) {
 	assertTypeSchemaEqual(t, want, schema.DataSources["subnets"])
 }
 
-// TestLibraryRegistersEc2SubnetData checks the runtime registration:
-// ec2-subnet is present under DataSources and dispatches to SubnetDataOutput.
-func TestLibraryRegistersEc2SubnetData(t *testing.T) {
+// TestLibraryRegistersEc2SubnetDataSource checks the runtime registration:
+// ec2-subnet is present under DataSources and dispatches to SubnetDataSourceOutput.
+func TestLibraryRegistersEc2SubnetDataSource(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "subnet")
-	assert.Equal(t, reflect.TypeFor[*svc.SubnetDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetDataSourceOutput](),
 		lib.DataSources["subnet"].OutputType())
 }
 
-// TestEc2SubnetDataSchema asserts the whole derived TypeSchema for the
+// TestEc2SubnetDataSourceSchema asserts the whole derived TypeSchema for the
 // ec2-subnet data source: its query inputs, subnet outputs, and declared
 // optional defaults.
-func TestEc2SubnetDataSchema(t *testing.T) {
+func TestEc2SubnetDataSourceSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "subnet")
 	want := &runtime.TypeSchema{
@@ -1597,20 +1597,20 @@ func TestEc2SubnetDataSchema(t *testing.T) {
 	assertTypeSchemaEqual(t, want, schema.DataSources["subnet"])
 }
 
-// TestLibraryRegistersEc2SecurityGroupData checks the runtime registration:
+// TestLibraryRegistersEc2SecurityGroupDataSource checks the runtime registration:
 // ec2-security-group is present under DataSources and dispatches to
-// SecurityGroupDataOutput.
-func TestLibraryRegistersEc2SecurityGroupData(t *testing.T) {
+// SecurityGroupDataSourceOutput.
+func TestLibraryRegistersEc2SecurityGroupDataSource(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "security-group")
-	assert.Equal(t, reflect.TypeFor[*svc.SecurityGroupDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.SecurityGroupDataSourceOutput](),
 		lib.DataSources["security-group"].OutputType())
 }
 
-// TestEc2SecurityGroupDataSchema asserts the whole derived TypeSchema for the
+// TestEc2SecurityGroupDataSourceSchema asserts the whole derived TypeSchema for the
 // ec2-security-group data source: its query inputs, security group outputs,
 // and declared optional defaults.
-func TestEc2SecurityGroupDataSchema(t *testing.T) {
+func TestEc2SecurityGroupDataSourceSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "security-group")
 	want := &runtime.TypeSchema{
@@ -1636,19 +1636,19 @@ func TestEc2SecurityGroupDataSchema(t *testing.T) {
 	assertTypeSchemaEqual(t, want, schema.DataSources["security-group"])
 }
 
-// TestLibraryRegistersEc2VpcData checks the runtime registration:
-// ec2-vpc is present under DataSources and dispatches to VpcDataOutput.
-func TestLibraryRegistersEc2VpcData(t *testing.T) {
+// TestLibraryRegistersEc2VpcDataSource checks the runtime registration:
+// ec2-vpc is present under DataSources and dispatches to VpcDataSourceOutput.
+func TestLibraryRegistersEc2VpcDataSource(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "vpc")
-	assert.Equal(t, reflect.TypeFor[*svc.VpcDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.VpcDataSourceOutput](),
 		lib.DataSources["vpc"].OutputType())
 }
 
-// TestEc2VpcDataSchema asserts the whole derived TypeSchema for the
+// TestEc2VpcDataSourceSchema asserts the whole derived TypeSchema for the
 // ec2-vpc data source: its query inputs, enriched VPC outputs, and the
 // declared optional defaults.
-func TestEc2VpcDataSchema(t *testing.T) {
+func TestEc2VpcDataSourceSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
 	require.Contains(t, schema.DataSources, "vpc")
 	want := &runtime.TypeSchema{

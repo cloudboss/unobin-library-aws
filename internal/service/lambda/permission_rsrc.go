@@ -49,14 +49,14 @@ func functionLock(functionName string) *sync.Mutex {
 	return lock
 }
 
-// Permission grants a principal permission to invoke a Lambda function by
+// PermissionResource grants a principal permission to invoke a Lambda function by
 // adding a statement to the function's resource-based policy. Every field is
 // fixed at create time: AWS exposes no call to edit a statement in place, so a
 // change to any field replaces the statement. The statement has no tags and no
 // server-assigned handle beyond its statement id, which is the identity. When
 // statement-id is omitted a unique one is generated so the statement can still
 // be addressed for read and delete.
-type Permission struct {
+type PermissionResource struct {
 	Action                string  `ub:"action"`
 	FunctionName          string  `ub:"function-name"`
 	Principal             string  `ub:"principal"`
@@ -70,19 +70,19 @@ type Permission struct {
 	SourceArn             *string `ub:"source-arn"`
 }
 
-// PermissionOutput holds the resolved statement id. When statement-id is set on
+// PermissionResourceOutput holds the resolved statement id. When statement-id is set on
 // the input the two match; when it is omitted this is the generated id, which a
 // downstream reader needs to reference the statement.
-type PermissionOutput struct {
+type PermissionResourceOutput struct {
 	StatementId string `ub:"statement-id"`
 }
 
-func (r *Permission) SchemaVersion() int { return 1 }
+func (r *PermissionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists every input, because a permission statement is immutable:
 // Lambda has no operation to edit a statement, only AddPermission and
 // RemovePermission, so any change is a remove-and-add, which is a replacement.
-func (r *Permission) ReplaceFields() []string {
+func (r *PermissionResource) ReplaceFields() []string {
 	return []string{
 		"action",
 		"function-name",
@@ -102,7 +102,7 @@ func (r *Permission) ReplaceFields() []string {
 // function URL auth type, when given, is one of the two values AddPermission
 // accepts. The API enforces the remaining cross-field guidance server-side, so
 // it is not duplicated here.
-func (r Permission) Constraints() []constraint.Constraint {
+func (r PermissionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.FunctionUrlAuthType)).
 			Require(constraint.OneOf(r.FunctionUrlAuthType, "AWS_IAM", "NONE")).
@@ -110,7 +110,10 @@ func (r Permission) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Permission) Create(ctx context.Context, cfg *awsCfg) (*PermissionOutput, error) {
+func (r *PermissionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*PermissionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -162,9 +165,11 @@ func (r *Permission) Create(ctx context.Context, cfg *awsCfg) (*PermissionOutput
 	return r.read(ctx, client, statementID, true)
 }
 
-func (r *Permission) Read(
-	ctx context.Context, cfg *awsCfg, prior *PermissionOutput,
-) (*PermissionOutput, error) {
+func (r *PermissionResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *PermissionResourceOutput,
+) (*PermissionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -175,13 +180,19 @@ func (r *Permission) Read(
 // Update never changes anything: every field is immutable, so a change is a
 // replacement the runtime drives through Delete and Create. Update only returns
 // the prior outputs so the identity stays referenceable.
-func (r *Permission) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Permission, *PermissionOutput],
-) (*PermissionOutput, error) {
+func (r *PermissionResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[PermissionResource, *PermissionResourceOutput],
+) (*PermissionResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *Permission) Delete(ctx context.Context, cfg *awsCfg, prior *PermissionOutput) error {
+func (r *PermissionResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *PermissionResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -217,9 +228,9 @@ func (r *Permission) Delete(ctx context.Context, cfg *awsCfg, prior *PermissionO
 // When created is true the statement was just added, so a not-found means it
 // has not propagated yet and the read waits for it; otherwise a not-found is
 // drift and maps to runtime.ErrNotFound at once.
-func (r *Permission) read(
+func (r *PermissionResource) read(
 	ctx context.Context, client *lambda.Client, statementID string, created bool,
-) (*PermissionOutput, error) {
+) (*PermissionResourceOutput, error) {
 	timeout := time.Duration(0)
 	if created {
 		timeout = permissionReconcileTimeout
@@ -231,7 +242,7 @@ func (r *Permission) read(
 			return nil, err
 		}
 		if found {
-			return &PermissionOutput{StatementId: statementID}, nil
+			return &PermissionResourceOutput{StatementId: statementID}, nil
 		}
 		if !created || time.Now().After(deadline) {
 			return nil, runtime.ErrNotFound
@@ -247,7 +258,7 @@ func (r *Permission) read(
 // findStatement reports whether the policy holds a statement with the given id.
 // A missing policy and an absent statement both mean the statement is not
 // there, so each returns false rather than an error.
-func (r *Permission) findStatement(
+func (r *PermissionResource) findStatement(
 	ctx context.Context, client *lambda.Client, statementID string,
 ) (bool, error) {
 	resp, err := client.GetPolicy(ctx, &lambda.GetPolicyInput{
@@ -279,7 +290,7 @@ func (r *Permission) findStatement(
 // resolveStatementID returns the statement id to use: the input value verbatim
 // when set, otherwise a generated unique id. The generated id becomes the
 // resource identity, so it is returned in the output to stay referenceable.
-func (r *Permission) resolveStatementID() (string, error) {
+func (r *PermissionResource) resolveStatementID() (string, error) {
 	if r.StatementId != nil {
 		return *r.StatementId, nil
 	}

@@ -22,7 +22,7 @@ import (
 // cover the propagation of freshly created validation records.
 const validationTimeout = 75 * time.Minute
 
-// CertificateValidation is a barrier that completes only once an Amazon-issued
+// CertificateValidationResource is a barrier that completes only once an Amazon-issued
 // certificate has reached the ISSUED status. It performs no AWS create call:
 // the certificate is owned by the acm-certificate resource, and this resource
 // exists so a downstream resource (a load balancer listener, an API domain)
@@ -33,7 +33,7 @@ const validationTimeout = 75 * time.Minute
 // certificate issues. Read reports the barrier satisfied only while the
 // certificate exists and is still ISSUED. Update and Delete do nothing, since
 // there is no separate object to reconcile or remove.
-type CertificateValidation struct {
+type CertificateValidationResource struct {
 	// CertificateArn identifies the certificate to wait on. It is the
 	// DescribeCertificate key and the resource's identity handle. ACM fixes a
 	// certificate's identity, so a change replaces this resource.
@@ -47,26 +47,26 @@ type CertificateValidation struct {
 	ValidationRecordFqdns *[]string `ub:"validation-record-fqdns"`
 }
 
-// CertificateValidationOutput holds the certificate ARN, the barrier's identity
+// CertificateValidationResourceOutput holds the certificate ARN, the barrier's identity
 // handle. It is populated only once the certificate has been observed ISSUED,
 // so a resource that reads it can rely on the certificate being validated.
-type CertificateValidationOutput struct {
+type CertificateValidationResourceOutput struct {
 	CertificateArn string `ub:"certificate-arn"`
 }
 
-func (r *CertificateValidation) SchemaVersion() int { return 1 }
+func (r *CertificateValidationResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that force a new resource. Both the certificate
 // ARN (the certificate's fixed identity) and the validation record FQDNs (which
 // only make sense for the certificate they were checked against) are immutable,
 // so a change to either replaces this barrier.
-func (r *CertificateValidation) ReplaceFields() []string {
+func (r *CertificateValidationResource) ReplaceFields() []string {
 	return []string{"certificate-arn", "validation-record-fqdns"}
 }
 
-func (r *CertificateValidation) Create(
+func (r *CertificateValidationResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*CertificateValidationOutput, error) {
+) (*CertificateValidationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -91,16 +91,18 @@ func (r *CertificateValidation) Create(
 	if err := r.waitIssued(ctx, client); err != nil {
 		return nil, err
 	}
-	return &CertificateValidationOutput{CertificateArn: r.CertificateArn}, nil
+	return &CertificateValidationResourceOutput{CertificateArn: r.CertificateArn}, nil
 }
 
 // Read reports the barrier satisfied only while the certificate exists and is
 // still ISSUED. A gone certificate, or one that has fallen out of ISSUED (it
 // failed, was revoked, or its validation timed out), reads as not-found so a
 // plan re-runs the wait.
-func (r *CertificateValidation) Read(
-	ctx context.Context, cfg *awsCfg, prior *CertificateValidationOutput,
-) (*CertificateValidationOutput, error) {
+func (r *CertificateValidationResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *CertificateValidationResourceOutput,
+) (*CertificateValidationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -118,30 +120,29 @@ func (r *CertificateValidation) Read(
 		resp.Certificate.Status != acmtypes.CertificateStatusIssued {
 		return nil, runtime.ErrNotFound
 	}
-	return &CertificateValidationOutput{CertificateArn: prior.CertificateArn}, nil
+	return &CertificateValidationResourceOutput{CertificateArn: prior.CertificateArn}, nil
 }
 
 // Update is a no-op. Both inputs are replace-only, so an Update reaches this
 // method only when nothing it manages has changed; it returns the prior
 // outputs unchanged.
-func (r *CertificateValidation) Update(
+func (r *CertificateValidationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[CertificateValidation, *CertificateValidationOutput],
-) (*CertificateValidationOutput, error) {
+	prior runtime.Prior[CertificateValidationResource, *CertificateValidationResourceOutput],
+) (*CertificateValidationResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
 // Delete is a no-op. The certificate belongs to the acm-certificate resource;
 // this barrier has nothing of its own to remove.
-func (r *CertificateValidation) Delete(
-	ctx context.Context, cfg *awsCfg, prior *CertificateValidationOutput,
-) error {
+func (r *CertificateValidationResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *CertificateValidationResourceOutput) error {
 	return nil
 }
 
 // describe reads the certificate detail by ARN, mapping ACM's not-found
 // exception to runtime.ErrNotFound.
-func (r *CertificateValidation) describe(
+func (r *CertificateValidationResource) describe(
 	ctx context.Context, client *acm.Client,
 ) (*acmtypes.CertificateDetail, error) {
 	resp, err := client.DescribeCertificate(ctx, &acm.DescribeCertificateInput{
@@ -164,7 +165,7 @@ func (r *CertificateValidation) describe(
 // the full 75 minutes: FAILED gives the failure reason, REVOKED the
 // revocation reason, and a timed-out validation reports as such. A certificate
 // that has briefly gone not-found while still settling keeps the wait going.
-func (r *CertificateValidation) waitIssued(ctx context.Context, client *acm.Client) error {
+func (r *CertificateValidationResource) waitIssued(ctx context.Context, client *acm.Client) error {
 	what := fmt.Sprintf("certificate %s to be issued", r.CertificateArn)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		detail, err := r.describe(ctx, client)

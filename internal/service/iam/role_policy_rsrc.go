@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// RolePolicy manages an inline policy embedded in an IAM role. The role
+// RolePolicyResource manages an inline policy embedded in an IAM role. The role
 // name and policy name form the identity, so a change to either makes a
 // different policy and recreates this one; the policy document is the
 // permission set and is updated in place. A single PutRolePolicy both
@@ -25,36 +25,39 @@ import (
 // constraint vocabulary cannot express, the length bound counts bytes
 // where IAM counts characters, and the "name not ARN" rule has no field to
 // branch on.
-type RolePolicy struct {
+type RolePolicyResource struct {
 	RoleName       string `ub:"role-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-// RolePolicyOutput holds the resource's identity and the policy document
+// RolePolicyResourceOutput holds the resource's identity and the policy document
 // IAM stores. The role name and policy name are echoed so Delete can key
 // off the prior outputs when a replace recreates the policy. The document
 // is the value IAM returns, URL-decoded, so a downstream reader sees real
 // JSON rather than the percent-encoded form IAM hands back.
-type RolePolicyOutput struct {
+type RolePolicyResourceOutput struct {
 	RoleName       string `ub:"role-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-func (r *RolePolicy) SchemaVersion() int { return 1 }
+func (r *RolePolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that form the policy's identity. The role
 // name and policy name name the inline policy, so a change to either is a
 // different policy and recreates this one. The document is updated in place.
-func (r *RolePolicy) ReplaceFields() []string {
+func (r *RolePolicyResource) ReplaceFields() []string {
 	return []string{
 		"role-name",
 		"policy-name",
 	}
 }
 
-func (r *RolePolicy) Create(ctx context.Context, cfg *awsCfg) (*RolePolicyOutput, error) {
+func (r *RolePolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*RolePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -74,14 +77,16 @@ func (r *RolePolicy) Create(ctx context.Context, cfg *awsCfg) (*RolePolicyOutput
 	return r.read(ctx, client, true)
 }
 
-func (r *RolePolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *RolePolicyOutput,
-) (*RolePolicyOutput, error) {
+func (r *RolePolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RolePolicyResourceOutput,
+) (*RolePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return (&RolePolicy{
+	return (&RolePolicyResource{
 		RoleName:   prior.RoleName,
 		PolicyName: prior.PolicyName,
 	}).read(ctx, client, false)
@@ -93,9 +98,9 @@ func (r *RolePolicy) Read(
 // and maps to runtime.ErrNotFound at once. IAM returns NoSuchEntity for a
 // missing role as well as a missing policy, so the one code covers both. The
 // returned document is URL-percent-encoded and is decoded before output.
-func (r *RolePolicy) read(
+func (r *RolePolicyResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*RolePolicyOutput, error) {
+) (*RolePolicyResourceOutput, error) {
 	var document string
 	what := fmt.Sprintf("role policy %s on role %s", r.PolicyName, r.RoleName)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
@@ -128,16 +133,18 @@ func (r *RolePolicy) read(
 	if err != nil {
 		return nil, err
 	}
-	return &RolePolicyOutput{
+	return &RolePolicyResourceOutput{
 		RoleName:       r.RoleName,
 		PolicyName:     r.PolicyName,
 		PolicyDocument: document,
 	}, nil
 }
 
-func (r *RolePolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RolePolicy, *RolePolicyOutput],
-) (*RolePolicyOutput, error) {
+func (r *RolePolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[RolePolicyResource, *RolePolicyResourceOutput],
+) (*RolePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -162,7 +169,11 @@ func (r *RolePolicy) Update(
 // is already gone returns NoSuchEntity, which is treated as success so the
 // delete is idempotent. It keys off the prior outputs so a replace deletes
 // the original policy rather than the new one.
-func (r *RolePolicy) Delete(ctx context.Context, cfg *awsCfg, prior *RolePolicyOutput) error {
+func (r *RolePolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RolePolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

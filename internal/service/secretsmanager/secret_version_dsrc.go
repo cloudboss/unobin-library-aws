@@ -15,21 +15,21 @@ import (
 
 const secretVersionDataPropagationTimeout = 2 * time.Minute
 
-var errSecretVersionDataNotFound = errors.New("secret version not found")
+var errSecretVersionDataSourceNotFound = errors.New("secret version not found")
 
-// SecretVersionData reads one Secrets Manager value version with GetSecretValue.
+// SecretVersionDataSource reads one Secrets Manager value version with GetSecretValue.
 // When version-id is set, Read uses it alone and does not send version-stage.
 // Without version-id, version-stage defaults to AWSCURRENT.
-type SecretVersionData struct {
+type SecretVersionDataSource struct {
 	SecretId     string  `ub:"secret-id"`
 	VersionId    *string `ub:"version-id"`
 	VersionStage *string `ub:"version-stage"`
 }
 
-// SecretVersionDataOutput holds the value and metadata returned by GetSecretValue.
+// SecretVersionDataSourceOutput holds the value and metadata returned by GetSecretValue.
 // SecretBinary is the raw bytes converted to a string; it is not base64 encoded.
 // CreatedDate is formatted as RFC3339 when Secrets Manager returns it.
-type SecretVersionDataOutput struct {
+type SecretVersionDataSourceOutput struct {
 	Arn           string   `ub:"arn"`
 	CreatedDate   string   `ub:"created-date"`
 	Name          string   `ub:"name"`
@@ -41,16 +41,16 @@ type SecretVersionDataOutput struct {
 
 // Defaults gives version-stage its AWSCURRENT default. Read also treats a nil
 // VersionStage as AWSCURRENT so direct calls match runtime-defaulted calls.
-func (d SecretVersionData) Defaults() []defaults.Default {
+func (d SecretVersionDataSource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.NullableValue(d.VersionStage, "AWSCURRENT"),
 	}
 }
 
-func (d *SecretVersionData) Read(
+func (d *SecretVersionDataSource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*SecretVersionDataOutput, error) {
+) (*SecretVersionDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -66,24 +66,24 @@ func (d *SecretVersionData) Read(
 	return out, nil
 }
 
-func (d *SecretVersionData) getSecretValue(
+func (d *SecretVersionDataSource) getSecretValue(
 	ctx context.Context,
 	client *secretsmanager.Client,
 ) (*secretsmanager.GetSecretValueOutput, error) {
 	var resp *secretsmanager.GetSecretValueOutput
-	err := retry.OnError(ctx, isSecretVersionDataNotFound, func(ctx context.Context) error {
+	err := retry.OnError(ctx, isSecretVersionDataSourceNotFound, func(ctx context.Context) error {
 		out, err := client.GetSecretValue(ctx, d.getInput())
 		if err != nil {
 			return err
 		}
 		if secretVersionDataEmpty(out) {
-			return errSecretVersionDataNotFound
+			return errSecretVersionDataSourceNotFound
 		}
 		resp = out
 		return nil
 	}, retry.WithTimeout(secretVersionDataPropagationTimeout))
 	if err != nil {
-		if isSecretVersionDataNotFound(err) {
+		if isSecretVersionDataSourceNotFound(err) {
 			return nil, d.notFoundError()
 		}
 		return nil, fmt.Errorf("get secret value: %w", err)
@@ -91,7 +91,7 @@ func (d *SecretVersionData) getSecretValue(
 	return resp, nil
 }
 
-func (d *SecretVersionData) getInput() *secretsmanager.GetSecretValueInput {
+func (d *SecretVersionDataSource) getInput() *secretsmanager.GetSecretValueInput {
 	in := &secretsmanager.GetSecretValueInput{SecretId: aws.String(d.SecretId)}
 	if versionID, ok := d.versionID(); ok {
 		in.VersionId = aws.String(versionID)
@@ -101,21 +101,21 @@ func (d *SecretVersionData) getInput() *secretsmanager.GetSecretValueInput {
 	return in
 }
 
-func (d *SecretVersionData) versionID() (string, bool) {
+func (d *SecretVersionDataSource) versionID() (string, bool) {
 	if d.VersionId == nil || *d.VersionId == "" {
 		return "", false
 	}
 	return *d.VersionId, true
 }
 
-func (d *SecretVersionData) versionStage() string {
+func (d *SecretVersionDataSource) versionStage() string {
 	if d.VersionStage == nil || *d.VersionStage == "" {
 		return currentStage
 	}
 	return *d.VersionStage
 }
 
-func (d *SecretVersionData) notFoundError() error {
+func (d *SecretVersionDataSource) notFoundError() error {
 	if versionID, ok := d.versionID(); ok {
 		return fmt.Errorf("secretsmanager secret version %q for secret %q not found",
 			versionID, d.SecretId)
@@ -126,15 +126,15 @@ func (d *SecretVersionData) notFoundError() error {
 
 func secretVersionDataOutput(
 	resp *secretsmanager.GetSecretValueOutput,
-) (*SecretVersionDataOutput, error) {
+) (*SecretVersionDataSourceOutput, error) {
 	if secretVersionDataEmpty(resp) {
-		return nil, errSecretVersionDataNotFound
+		return nil, errSecretVersionDataSourceNotFound
 	}
 	createdDate := ""
 	if resp.CreatedDate != nil {
 		createdDate = resp.CreatedDate.Format(time.RFC3339)
 	}
-	return &SecretVersionDataOutput{
+	return &SecretVersionDataSourceOutput{
 		Arn:           aws.ToString(resp.ARN),
 		CreatedDate:   createdDate,
 		Name:          aws.ToString(resp.Name),
@@ -158,6 +158,6 @@ func secretVersionDataEmpty(resp *secretsmanager.GetSecretValueOutput) bool {
 		len(resp.VersionStages) == 0
 }
 
-func isSecretVersionDataNotFound(err error) bool {
-	return errors.Is(err, errSecretVersionDataNotFound) || isValueGone(err)
+func isSecretVersionDataSourceNotFound(err error) bool {
+	return errors.Is(err, errSecretVersionDataSourceNotFound) || isValueGone(err)
 }

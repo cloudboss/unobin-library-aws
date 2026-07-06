@@ -23,13 +23,17 @@ func Library() *runtime.Library {
 		Description:   "AWS ELBv2 library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"load-balancer": makeResource[svc.LoadBalancer, *svc.LoadBalancerOutput](),
-			"target-group":  makeResource[svc.TargetGroup, *svc.TargetGroupOutput](),
+			"load-balancer": makeResource[svc.LoadBalancerResource, *svc.LoadBalancerResourceOutput](),
+			"target-group":  makeResource[svc.TargetGroupResource, *svc.TargetGroupResourceOutput](),
 			"target-group-attachment": makeResource[
-				svc.TargetGroupAttachment, *svc.TargetGroupAttachmentOutput](),
-			"listener":             makeResource[svc.Listener, *svc.ListenerOutput](),
-			"listener-rule":        makeResource[svc.ListenerRule, *svc.ListenerRuleOutput](),
-			"listener-certificate": makeResource[svc.ListenerCertificate, *svc.ListenerCertificateOutput](),
+				svc.TargetGroupAttachmentResource, *svc.TargetGroupAttachmentResourceOutput](),
+			"listener": makeResource[svc.ListenerResource, *svc.ListenerResourceOutput](),
+			"listener-rule": makeResource[
+				svc.ListenerRuleResource,
+				*svc.ListenerRuleResourceOutput](),
+			"listener-certificate": makeResource[
+				svc.ListenerCertificateResource,
+				*svc.ListenerCertificateResourceOutput](),
 		},
 	}
 }

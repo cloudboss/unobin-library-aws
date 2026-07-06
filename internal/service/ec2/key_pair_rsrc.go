@@ -11,39 +11,39 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// KeyPair is an EC2 key pair imported from an existing public key. Create runs
+// KeyPairResource is an EC2 key pair imported from an existing public key. Create runs
 // ImportKeyPair: EC2 stores the public key under a name and returns the key
 // pair's computed id, fingerprint, and type. There is no in-place change to the
 // key material or name, so the name and the public key are fixed once the key
 // pair exists and a change to either replaces it. The only update is the tag
 // set, reconciled through the EC2 tag calls keyed on the key pair id. The key
 // name is at most 255 bytes, which EC2 enforces; no other constraint applies.
-type KeyPair struct {
+type KeyPairResource struct {
 	KeyName   string             `ub:"key-name"`
 	PublicKey string             `ub:"public-key"`
 	Tags      *map[string]string `ub:"tags"`
 }
 
-// KeyPairOutput holds the values EC2 computes for a key pair. The id is the
+// KeyPairResourceOutput holds the values EC2 computes for a key pair. The id is the
 // stable handle the tag calls address. The fingerprint is the MD5 digest of the
 // imported key's DER encoding, which EC2 returns and the read stores. The type
 // is the key algorithm EC2 inferred from the imported material.
-type KeyPairOutput struct {
+type KeyPairResourceOutput struct {
 	KeyPairId   string `ub:"key-pair-id"`
 	Fingerprint string `ub:"fingerprint"`
 	KeyType     string `ub:"key-type"`
 }
 
-func (r *KeyPair) SchemaVersion() int { return 1 }
+func (r *KeyPairResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when a key pair is imported. The name
 // identifies the key pair and the public key is the stored material; neither can
 // change on an existing key pair, so a change to either requires a new one.
-func (r *KeyPair) ReplaceFields() []string {
+func (r *KeyPairResource) ReplaceFields() []string {
 	return []string{"key-name", "public-key"}
 }
 
-func (r *KeyPair) Create(ctx context.Context, cfg *awsCfg) (*KeyPairOutput, error) {
+func (r *KeyPairResource) Create(ctx context.Context, cfg *awsCfg) (*KeyPairResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -61,11 +61,10 @@ func (r *KeyPair) Create(ctx context.Context, cfg *awsCfg) (*KeyPairOutput, erro
 	return r.read(ctx, client)
 }
 
-func (r *KeyPair) Read(
+func (r *KeyPairResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *KeyPairOutput) (*KeyPairOutput,
-	error,
+	prior *KeyPairResourceOutput) (*KeyPairResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -81,7 +80,10 @@ func (r *KeyPair) Read(
 // runtime.ErrNotFound; an empty result means the same. A describe that returns a
 // record under a different name is a stale read of a just-replaced key pair, so
 // it too maps to ErrNotFound rather than satisfying the read with the wrong key.
-func (r *KeyPair) read(ctx context.Context, client *ec2.Client) (*KeyPairOutput, error) {
+func (r *KeyPairResource) read(
+	ctx context.Context,
+	client *ec2.Client,
+) (*KeyPairResourceOutput, error) {
 	resp, err := client.DescribeKeyPairs(ctx, &ec2.DescribeKeyPairsInput{
 		KeyNames: []string{r.KeyName},
 	})
@@ -102,16 +104,16 @@ func (r *KeyPair) read(ctx context.Context, client *ec2.Client) (*KeyPairOutput,
 	if aws.ToString(kp.KeyName) != r.KeyName {
 		return nil, runtime.ErrNotFound
 	}
-	return &KeyPairOutput{
+	return &KeyPairResourceOutput{
 		KeyPairId:   aws.ToString(kp.KeyPairId),
 		Fingerprint: aws.ToString(kp.KeyFingerprint),
 		KeyType:     string(kp.KeyType),
 	}, nil
 }
 
-func (r *KeyPair) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyPair, *KeyPairOutput],
-) (*KeyPairOutput, error) {
+func (r *KeyPairResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyPairResource, *KeyPairResourceOutput],
+) (*KeyPairResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -128,7 +130,11 @@ func (r *KeyPair) Update(
 	return prior.Outputs, nil
 }
 
-func (r *KeyPair) Delete(ctx context.Context, cfg *awsCfg, prior *KeyPairOutput) error {
+func (r *KeyPairResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *KeyPairResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

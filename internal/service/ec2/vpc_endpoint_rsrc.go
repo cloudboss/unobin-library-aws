@@ -17,7 +17,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// VpcEndpoint is a private connection from a VPC to an AWS service or an
+// VpcEndpointResource is a private connection from a VPC to an AWS service or an
 // endpoint service. The VPC, the service it targets, and the endpoint type are
 // fixed when the endpoint is created, so a change to any of them replaces it;
 // everything else is reconciled in place by a single ModifyVpcEndpoint call.
@@ -35,7 +35,7 @@ import (
 // later apply resets the endpoint to the default full-access policy.
 // private-dns-enabled associates a private hosted zone for an interface
 // endpoint and is reconciled in place rather than forcing a replacement.
-type VpcEndpoint struct {
+type VpcEndpointResource struct {
 	VpcId             string                 `ub:"vpc-id"`
 	ServiceName       string                 `ub:"service-name"`
 	VpcEndpointType   *string                `ub:"vpc-endpoint-type"`
@@ -49,7 +49,7 @@ type VpcEndpoint struct {
 	Tags              *map[string]string     `ub:"tags"`
 }
 
-// VpcEndpointOutput holds the values EC2 computes for an endpoint. The id is the
+// VpcEndpointResourceOutput holds the values EC2 computes for an endpoint. The id is the
 // endpoint's handle and the not-found subject. state is its lifecycle state and
 // owner-id the account that owns it. dns-entries are the names an interface
 // endpoint publishes, and network-interface-ids the interfaces it owns; both
@@ -59,7 +59,7 @@ type VpcEndpoint struct {
 // policy the API returns, which includes the default full-access policy when no
 // policy was set, so a reader sees the cloud's value under the same name the
 // input uses.
-type VpcEndpointOutput struct {
+type VpcEndpointResourceOutput struct {
 	VpcEndpointId       string                `ub:"vpc-endpoint-id"`
 	State               string                `ub:"state"`
 	OwnerId             string                `ub:"owner-id"`
@@ -70,7 +70,7 @@ type VpcEndpointOutput struct {
 	Policy              string                `ub:"policy"`
 }
 
-func (r *VpcEndpoint) SchemaVersion() int { return 1 }
+func (r *VpcEndpointResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when an endpoint is created. The VPC,
 // the service it targets, and the endpoint type cannot change on an existing
@@ -79,7 +79,7 @@ func (r *VpcEndpoint) SchemaVersion() int { return 1 }
 // through ModifyVpcEndpoint, and a gateway or Gateway Load Balancer endpoint
 // cannot enable it at all, so reconciling it in Update is correct for every
 // type.
-func (r *VpcEndpoint) ReplaceFields() []string {
+func (r *VpcEndpointResource) ReplaceFields() []string {
 	return []string{"vpc-id", "service-name", "vpc-endpoint-type"}
 }
 
@@ -90,7 +90,7 @@ func (r *VpcEndpoint) ReplaceFields() []string {
 // field is set. The structural exclusivity among service-name and the
 // VPC Lattice arn fields does not apply here: this resource targets only a named
 // service, so service-name is required and the arn fields are out of scope.
-func (r VpcEndpoint) Constraints() []constraint.Constraint {
+func (r VpcEndpointResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.VpcEndpointType)).
 			Require(constraint.OneOf(r.VpcEndpointType,
@@ -107,7 +107,10 @@ func (r VpcEndpoint) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *VpcEndpoint) Create(ctx context.Context, cfg *awsCfg) (*VpcEndpointOutput, error) {
+func (r *VpcEndpointResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*VpcEndpointResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -165,9 +168,11 @@ func (r *VpcEndpoint) Create(ctx context.Context, cfg *awsCfg) (*VpcEndpointOutp
 	return r.read(ctx, client, id)
 }
 
-func (r *VpcEndpoint) Read(
-	ctx context.Context, cfg *awsCfg, prior *VpcEndpointOutput,
-) (*VpcEndpointOutput, error) {
+func (r *VpcEndpointResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *VpcEndpointResourceOutput,
+) (*VpcEndpointResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -175,9 +180,11 @@ func (r *VpcEndpoint) Read(
 	return r.read(ctx, client, prior.VpcEndpointId)
 }
 
-func (r *VpcEndpoint) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VpcEndpoint, *VpcEndpointOutput],
-) (*VpcEndpointOutput, error) {
+func (r *VpcEndpointResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput],
+) (*VpcEndpointResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -202,7 +209,11 @@ func (r *VpcEndpoint) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *VpcEndpoint) Delete(ctx context.Context, cfg *awsCfg, prior *VpcEndpointOutput) error {
+func (r *VpcEndpointResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *VpcEndpointResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -244,12 +255,13 @@ func (r *VpcEndpoint) Delete(ctx context.Context, cfg *awsCfg, prior *VpcEndpoin
 // default policy; a policy that changed to a value sends that document. Enabling
 // private DNS re-sends the DNS options alongside the toggle, the pairing EC2
 // expects.
-func (r *VpcEndpoint) buildModify(
-	id string, prior runtime.Prior[VpcEndpoint, *VpcEndpointOutput],
+func (r *VpcEndpointResource) buildModify(
+	id string, prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput],
 ) *ec2.ModifyVpcEndpointInput {
 	in := &ec2.ModifyVpcEndpointInput{VpcEndpointId: aws.String(id)}
 	changed := false
-	if ptr.Value(r.RouteTableIds) != nil && runtime.Changed(ptr.Value(prior.Inputs.RouteTableIds), ptr.Value(r.RouteTableIds)) {
+	if ptr.Value(r.RouteTableIds) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.RouteTableIds), ptr.Value(r.RouteTableIds)) {
 		add, remove := stringSetDelta(ptr.Value(prior.Inputs.RouteTableIds),
 			ptr.Value(r.RouteTableIds))
 		in.AddRouteTableIds = add
@@ -264,7 +276,8 @@ func (r *VpcEndpoint) buildModify(
 		in.RemoveSecurityGroupIds = remove
 		changed = changed || len(add) > 0 || len(remove) > 0
 	}
-	if ptr.Value(r.SubnetIds) != nil && runtime.Changed(ptr.Value(prior.Inputs.SubnetIds), ptr.Value(r.SubnetIds)) {
+	if ptr.Value(r.SubnetIds) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.SubnetIds), ptr.Value(r.SubnetIds)) {
 		add, remove := stringSetDelta(ptr.Value(prior.Inputs.SubnetIds), ptr.Value(r.SubnetIds))
 		in.AddSubnetIds = add
 		in.RemoveSubnetIds = remove
@@ -308,14 +321,14 @@ func (r *VpcEndpoint) buildModify(
 // endpoint's prefix list is read by a second describe keyed on the service name;
 // that lookup swallows its own not-found, since an interface endpoint has no
 // prefix list, but any other error fails the read.
-func (r *VpcEndpoint) read(
+func (r *VpcEndpointResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*VpcEndpointOutput, error) {
+) (*VpcEndpointResourceOutput, error) {
 	endpoint, err := describeVpcEndpoint(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	out := &VpcEndpointOutput{
+	out := &VpcEndpointResourceOutput{
 		VpcEndpointId:       aws.ToString(endpoint.VpcEndpointId),
 		State:               string(endpoint.State),
 		OwnerId:             aws.ToString(endpoint.OwnerId),
@@ -347,7 +360,11 @@ func (r *VpcEndpoint) read(
 // not-found, which keeps the poll going rather than aborting it. An endpoint
 // that enters the failed state stops the wait with the reason EC2 records, so
 // the caller sees why instead of a bare timeout.
-func (r *VpcEndpoint) waitAvailable(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VpcEndpointResource) waitAvailable(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	what := fmt.Sprintf("vpc endpoint %s to become available", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		endpoint, err := describeVpcEndpoint(ctx, client, id)
@@ -372,7 +389,11 @@ func (r *VpcEndpoint) waitAvailable(ctx context.Context, client *ec2.Client, id 
 // not-found and a deleted-state body to runtime.ErrNotFound, so that error is
 // the gone signal; EC2 reads are eventually consistent, so the gone
 // observation must hold twice in a row before the wait succeeds.
-func (r *VpcEndpoint) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VpcEndpointResource) waitDeleted(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	what := fmt.Sprintf("vpc endpoint %s to be deleted", id)
 	return wait.UntilStable(ctx, what, 2, func(ctx context.Context) (bool, error) {
 		_, err := describeVpcEndpoint(ctx, client, id)

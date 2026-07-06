@@ -14,62 +14,64 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// VpcData resolves exactly one existing EC2 VPC with DescribeVpcs. The lookup
+// VpcDataSource resolves exactly one existing EC2 VPC with DescribeVpcs. The lookup
 // combines the optional vpc-id selector, scalar filters, generic filters, and
 // tag filters as one conjunctive query. After selecting one VPC it reads the
 // three VPC attributes EC2 exposes through DescribeVpcAttribute, looks up the
 // main route table on a best-effort basis, and projects CIDR associations and
 // tags from the selected VPC.
-type VpcData struct {
-	VpcId         *string            `ub:"vpc-id"`
-	CidrBlock     *string            `ub:"cidr-block"`
-	DhcpOptionsId *string            `ub:"dhcp-options-id"`
-	Default       *bool              `ub:"default"`
-	State         *string            `ub:"state"`
-	Filter        *[]VpcDataFilter   `ub:"filter"`
-	Tags          *map[string]string `ub:"tags"`
+type VpcDataSource struct {
+	VpcId         *string                `ub:"vpc-id"`
+	CidrBlock     *string                `ub:"cidr-block"`
+	DhcpOptionsId *string                `ub:"dhcp-options-id"`
+	Default       *bool                  `ub:"default"`
+	State         *string                `ub:"state"`
+	Filter        *[]VpcDataSourceFilter `ub:"filter"`
+	Tags          *map[string]string     `ub:"tags"`
 }
 
-// VpcDataFilter is one DescribeVpcs filter. The name and values pass to EC2
+// VpcDataSourceFilter is one DescribeVpcs filter. The name and values pass to EC2
 // unchanged; empty-string values and empty value lists are preserved.
-type VpcDataFilter struct {
+type VpcDataSourceFilter struct {
 	Name   string   `ub:"name"`
 	Values []string `ub:"values"`
 }
 
-// VpcDataCidrBlockAssociation is one IPv4 CIDR association from the selected
+// VpcDataSourceCidrBlockAssociation is one IPv4 CIDR association from the selected
 // VPC, kept in the order EC2 returns it.
-type VpcDataCidrBlockAssociation struct {
+type VpcDataSourceCidrBlockAssociation struct {
 	AssociationId string `ub:"association-id"`
 	CidrBlock     string `ub:"cidr-block"`
 	State         string `ub:"state"`
 }
 
-// VpcDataOutput holds the attributes of the selected VPC. Arn is composed from
+// VpcDataSourceOutput holds the attributes of the selected VPC. Arn is composed from
 // the selected VPC's owner id, the client region, and the region's partition.
 // MainRouteTableId and the IPv6 fields are optional because the lookup omits
 // them when EC2 has no singular value to report.
-type VpcDataOutput struct {
-	VpcId                            string                        `ub:"vpc-id"`
-	Arn                              string                        `ub:"arn"`
-	CidrBlock                        string                        `ub:"cidr-block"`
-	CidrBlockAssociations            []VpcDataCidrBlockAssociation `ub:"cidr-block-associations"`
-	Default                          bool                          `ub:"default"`
-	DhcpOptionsId                    string                        `ub:"dhcp-options-id"`
-	EnableDnsHostnames               bool                          `ub:"enable-dns-hostnames"`
-	EnableDnsSupport                 bool                          `ub:"enable-dns-support"`
-	EnableNetworkAddressUsageMetrics bool                          `ub:"enable-network-address-usage-metrics"`
-	InstanceTenancy                  string                        `ub:"instance-tenancy"`
-	Ipv6AssociationId                *string                       `ub:"ipv6-association-id"`
-	Ipv6CidrBlock                    *string                       `ub:"ipv6-cidr-block"`
-	MainRouteTableId                 *string                       `ub:"main-route-table-id"`
-	OwnerId                          string                        `ub:"owner-id"`
-	Tags                             map[string]string             `ub:"tags"`
+type VpcDataSourceOutput struct {
+	VpcId                 string                              `ub:"vpc-id"`
+	Arn                   string                              `ub:"arn"`
+	CidrBlock             string                              `ub:"cidr-block"`
+	CidrBlockAssociations []VpcDataSourceCidrBlockAssociation `ub:"cidr-block-associations"`
+
+	Default                          bool `ub:"default"`
+	EnableDnsHostnames               bool `ub:"enable-dns-hostnames"`
+	EnableDnsSupport                 bool `ub:"enable-dns-support"`
+	EnableNetworkAddressUsageMetrics bool `ub:"enable-network-address-usage-metrics"`
+
+	DhcpOptionsId     string            `ub:"dhcp-options-id"`
+	InstanceTenancy   string            `ub:"instance-tenancy"`
+	Ipv6AssociationId *string           `ub:"ipv6-association-id"`
+	Ipv6CidrBlock     *string           `ub:"ipv6-cidr-block"`
+	MainRouteTableId  *string           `ub:"main-route-table-id"`
+	OwnerId           string            `ub:"owner-id"`
+	Tags              map[string]string `ub:"tags"`
 }
 
 // Read resolves the VPC data source. A missing or ambiguous lookup is a normal
 // data-source error rather than runtime.ErrNotFound.
-func (r *VpcData) Read(ctx context.Context, cfg *awsCfg) (*VpcDataOutput, error) {
+func (r *VpcDataSource) Read(ctx context.Context, cfg *awsCfg) (*VpcDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -81,7 +83,7 @@ func (r *VpcData) Read(ctx context.Context, cfg *awsCfg) (*VpcDataOutput, error)
 	return r.output(ctx, client, vpc)
 }
 
-func (r *VpcData) findVpc(ctx context.Context, client *ec2.Client) (ec2types.Vpc, error) {
+func (r *VpcDataSource) findVpc(ctx context.Context, client *ec2.Client) (ec2types.Vpc, error) {
 	vpcs, err := r.findVpcs(ctx, client)
 	if err != nil {
 		return ec2types.Vpc{}, err
@@ -97,7 +99,7 @@ func (r *VpcData) findVpc(ctx context.Context, client *ec2.Client) (ec2types.Vpc
 	}
 }
 
-func (r *VpcData) findVpcs(
+func (r *VpcDataSource) findVpcs(
 	ctx context.Context,
 	client *ec2.Client,
 ) ([]ec2types.Vpc, error) {
@@ -116,7 +118,7 @@ func (r *VpcData) findVpcs(
 	return vpcs, nil
 }
 
-func (r *VpcData) describeInput() *ec2.DescribeVpcsInput {
+func (r *VpcDataSource) describeInput() *ec2.DescribeVpcsInput {
 	in := &ec2.DescribeVpcsInput{}
 	if r.VpcId != nil && *r.VpcId != "" {
 		in.VpcIds = []string{*r.VpcId}
@@ -128,7 +130,7 @@ func (r *VpcData) describeInput() *ec2.DescribeVpcsInput {
 	return in
 }
 
-func (r *VpcData) describeFilters() []ec2types.Filter {
+func (r *VpcDataSource) describeFilters() []ec2types.Filter {
 	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Filter))+len(ptr.Value(r.Tags))+4)
 	filters = appendStringFilter(filters, "cidr", r.CidrBlock)
 	filters = appendStringFilter(filters, "dhcp-options-id", r.DhcpOptionsId)
@@ -168,14 +170,14 @@ func appendStringFilter(
 	})
 }
 
-func (r *VpcData) output(
+func (r *VpcDataSource) output(
 	ctx context.Context,
 	client *ec2.Client,
 	vpc ec2types.Vpc,
-) (*VpcDataOutput, error) {
+) (*VpcDataSourceOutput, error) {
 	vpcID := aws.ToString(vpc.VpcId)
 	ownerID := aws.ToString(vpc.OwnerId)
-	out := &VpcDataOutput{
+	out := &VpcDataSourceOutput{
 		VpcId:                 vpcID,
 		Arn:                   vpcDataARN(region(client), ownerID, vpcID),
 		CidrBlock:             aws.ToString(vpc.CidrBlock),
@@ -186,7 +188,7 @@ func (r *VpcData) output(
 		OwnerId:               ownerID,
 		Tags:                  vpcDataTags(vpc.Tags),
 	}
-	setVpcDataIpv6(out, vpc.Ipv6CidrBlockAssociationSet)
+	setVpcDataSourceIpv6(out, vpc.Ipv6CidrBlockAssociationSet)
 
 	value, err := readVpcAttribute(ctx, client, vpcID,
 		ec2types.VpcAttributeNameEnableDnsHostnames)
@@ -206,7 +208,7 @@ func (r *VpcData) output(
 		return nil, err
 	}
 	out.EnableNetworkAddressUsageMetrics = value
-	out.MainRouteTableId = findVpcDataMainRouteTableID(ctx, client, vpcID)
+	out.MainRouteTableId = findVpcDataSourceMainRouteTableID(ctx, client, vpcID)
 	return out, nil
 }
 
@@ -252,12 +254,12 @@ func vpcAttributeValue(
 	return *value.Value, true
 }
 
-func findVpcDataMainRouteTableID(
+func findVpcDataSourceMainRouteTableID(
 	ctx context.Context,
 	client *ec2.Client,
 	vpcID string,
 ) *string {
-	routeTables, err := findVpcDataMainRouteTables(ctx, client, vpcID)
+	routeTables, err := findVpcDataSourceMainRouteTables(ctx, client, vpcID)
 	if err != nil || len(routeTables) != 1 {
 		return nil
 	}
@@ -268,7 +270,7 @@ func findVpcDataMainRouteTableID(
 	return aws.String(id)
 }
 
-func findVpcDataMainRouteTables(
+func findVpcDataSourceMainRouteTables(
 	ctx context.Context,
 	client *ec2.Client,
 	vpcID string,
@@ -298,10 +300,10 @@ func vpcDataARN(regionName, ownerID, vpcID string) string {
 
 func vpcDataCidrBlockAssociations(
 	associations []ec2types.VpcCidrBlockAssociation,
-) []VpcDataCidrBlockAssociation {
-	out := make([]VpcDataCidrBlockAssociation, 0, len(associations))
+) []VpcDataSourceCidrBlockAssociation {
+	out := make([]VpcDataSourceCidrBlockAssociation, 0, len(associations))
 	for _, association := range associations {
-		out = append(out, VpcDataCidrBlockAssociation{
+		out = append(out, VpcDataSourceCidrBlockAssociation{
 			AssociationId: aws.ToString(association.AssociationId),
 			CidrBlock:     aws.ToString(association.CidrBlock),
 			State:         vpcCidrBlockAssociationState(association),
@@ -317,9 +319,8 @@ func vpcCidrBlockAssociationState(association ec2types.VpcCidrBlockAssociation) 
 	return string(association.CidrBlockState.State)
 }
 
-func setVpcDataIpv6(
-	out *VpcDataOutput,
-	associations []ec2types.VpcIpv6CidrBlockAssociation,
+func setVpcDataSourceIpv6(
+	out *VpcDataSourceOutput, associations []ec2types.VpcIpv6CidrBlockAssociation,
 ) {
 	if len(associations) == 0 {
 		return

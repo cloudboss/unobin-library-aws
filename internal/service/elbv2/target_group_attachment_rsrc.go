@@ -24,13 +24,13 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// TargetGroupAttachment registers one target in an ELBv2 target group. The
+// TargetGroupAttachmentResource registers one target in an ELBv2 target group. The
 // target group ARN and target id name the required target tuple, and the
 // optional availability-zone, port, and QUIC server id participate in that
 // tuple only when non-empty or non-zero. ELBv2 exposes this as RegisterTargets
 // and DeregisterTargets, with DescribeTargetHealth confirming presence; every
 // input is replace-only.
-type TargetGroupAttachment struct {
+type TargetGroupAttachmentResource struct {
 	TargetGroupArn   string  `ub:"target-group-arn"`
 	TargetId         string  `ub:"target-id"`
 	AvailabilityZone *string `ub:"availability-zone"`
@@ -38,10 +38,10 @@ type TargetGroupAttachment struct {
 	QuicServerId     *string `ub:"quic-server-id"`
 }
 
-// TargetGroupAttachmentOutput stores the registered target tuple. Read and
+// TargetGroupAttachmentResourceOutput stores the registered target tuple. Read and
 // Delete use it as the old handle during replacement, so optional fields remain
 // absent unless the original registration sent a non-empty or non-zero value.
-type TargetGroupAttachmentOutput struct {
+type TargetGroupAttachmentResourceOutput struct {
 	TargetGroupArn   string  `ub:"target-group-arn"`
 	TargetId         string  `ub:"target-id"`
 	AvailabilityZone *string `ub:"availability-zone"`
@@ -49,12 +49,12 @@ type TargetGroupAttachmentOutput struct {
 	QuicServerId     *string `ub:"quic-server-id"`
 }
 
-func (r *TargetGroupAttachment) SchemaVersion() int { return 1 }
+func (r *TargetGroupAttachmentResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the full target tuple. ELBv2 cannot update any member of
 // a target registration in place; changing one member deregisters the old tuple
 // and registers a new one.
-func (r *TargetGroupAttachment) ReplaceFields() []string {
+func (r *TargetGroupAttachmentResource) ReplaceFields() []string {
 	return []string{
 		"target-group-arn",
 		"target-id",
@@ -64,9 +64,9 @@ func (r *TargetGroupAttachment) ReplaceFields() []string {
 	}
 }
 
-func (r *TargetGroupAttachment) Create(
+func (r *TargetGroupAttachmentResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*TargetGroupAttachmentOutput, error) {
+) (*TargetGroupAttachmentResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -85,9 +85,11 @@ func (r *TargetGroupAttachment) Create(
 	return &tuple, nil
 }
 
-func (r *TargetGroupAttachment) Read(
-	ctx context.Context, cfg *awsCfg, prior *TargetGroupAttachmentOutput,
-) (*TargetGroupAttachmentOutput, error) {
+func (r *TargetGroupAttachmentResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TargetGroupAttachmentResourceOutput,
+) (*TargetGroupAttachmentResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -108,18 +110,17 @@ func (r *TargetGroupAttachment) Read(
 
 // Update has no work to do. Every field is replace-only, so a real input change
 // bypasses Update and recreates the registration.
-func (r *TargetGroupAttachment) Update(
+func (r *TargetGroupAttachmentResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TargetGroupAttachment, *TargetGroupAttachmentOutput],
-) (*TargetGroupAttachmentOutput, error) {
+	prior runtime.Prior[TargetGroupAttachmentResource, *TargetGroupAttachmentResourceOutput],
+) (*TargetGroupAttachmentResourceOutput, error) {
 	tuple := r.tupleWithFallback(prior.Outputs)
 	return &tuple, nil
 }
 
-func (r *TargetGroupAttachment) Delete(
-	ctx context.Context, cfg *awsCfg, prior *TargetGroupAttachmentOutput,
-) error {
+func (r *TargetGroupAttachmentResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *TargetGroupAttachmentResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -135,8 +136,8 @@ func (r *TargetGroupAttachment) Delete(
 	return nil
 }
 
-func (r *TargetGroupAttachment) effectiveTuple() TargetGroupAttachmentOutput {
-	return TargetGroupAttachmentOutput{
+func (r *TargetGroupAttachmentResource) effectiveTuple() TargetGroupAttachmentResourceOutput {
+	return TargetGroupAttachmentResourceOutput{
 		TargetGroupArn:   r.TargetGroupArn,
 		TargetId:         r.TargetId,
 		AvailabilityZone: effectiveString(r.AvailabilityZone),
@@ -145,21 +146,20 @@ func (r *TargetGroupAttachment) effectiveTuple() TargetGroupAttachmentOutput {
 	}
 }
 
-func (r *TargetGroupAttachment) tupleWithFallback(
-	prior *TargetGroupAttachmentOutput,
-) TargetGroupAttachmentOutput {
+func (r *TargetGroupAttachmentResource) tupleWithFallback(
+	prior *TargetGroupAttachmentResourceOutput) TargetGroupAttachmentResourceOutput {
 	if prior != nil && prior.usable() {
 		return prior.effectiveTuple()
 	}
 	return r.effectiveTuple()
 }
 
-func (o TargetGroupAttachmentOutput) usable() bool {
+func (o TargetGroupAttachmentResourceOutput) usable() bool {
 	return o.TargetGroupArn != "" && o.TargetId != ""
 }
 
-func (o TargetGroupAttachmentOutput) effectiveTuple() TargetGroupAttachmentOutput {
-	return TargetGroupAttachmentOutput{
+func (o TargetGroupAttachmentResourceOutput) effectiveTuple() TargetGroupAttachmentResourceOutput {
+	return TargetGroupAttachmentResourceOutput{
 		TargetGroupArn:   o.TargetGroupArn,
 		TargetId:         o.TargetId,
 		AvailabilityZone: effectiveString(o.AvailabilityZone),
@@ -168,28 +168,28 @@ func (o TargetGroupAttachmentOutput) effectiveTuple() TargetGroupAttachmentOutpu
 	}
 }
 
-func (o TargetGroupAttachmentOutput) registerInput() *elbv2.RegisterTargetsInput {
+func (o TargetGroupAttachmentResourceOutput) registerInput() *elbv2.RegisterTargetsInput {
 	return &elbv2.RegisterTargetsInput{
 		TargetGroupArn: aws.String(o.TargetGroupArn),
 		Targets:        []elbv2types.TargetDescription{o.targetDescription()},
 	}
 }
 
-func (o TargetGroupAttachmentOutput) describeInput() *elbv2.DescribeTargetHealthInput {
+func (o TargetGroupAttachmentResourceOutput) describeInput() *elbv2.DescribeTargetHealthInput {
 	return &elbv2.DescribeTargetHealthInput{
 		TargetGroupArn: aws.String(o.TargetGroupArn),
 		Targets:        []elbv2types.TargetDescription{o.targetDescription()},
 	}
 }
 
-func (o TargetGroupAttachmentOutput) deregisterInput() *elbv2.DeregisterTargetsInput {
+func (o TargetGroupAttachmentResourceOutput) deregisterInput() *elbv2.DeregisterTargetsInput {
 	return &elbv2.DeregisterTargetsInput{
 		TargetGroupArn: aws.String(o.TargetGroupArn),
 		Targets:        []elbv2types.TargetDescription{o.targetDescription()},
 	}
 }
 
-func (o TargetGroupAttachmentOutput) targetDescription() elbv2types.TargetDescription {
+func (o TargetGroupAttachmentResourceOutput) targetDescription() elbv2types.TargetDescription {
 	tuple := o.effectiveTuple()
 	return elbv2types.TargetDescription{
 		Id:               aws.String(tuple.TargetId),
@@ -213,7 +213,7 @@ func effectiveInt64(v *int64) *int64 {
 	return aws.Int64(*v)
 }
 
-func (r *TargetGroupAttachment) validate() error {
+func (r *TargetGroupAttachmentResource) validate() error {
 	if !validARN(r.TargetGroupArn) {
 		return fmt.Errorf("target-group-arn must be a valid ARN")
 	}

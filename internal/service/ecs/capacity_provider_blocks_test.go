@@ -85,7 +85,11 @@ func TestCapacityProviderOutputIncludesArnAndLegacyHandle(t *testing.T) {
 	assert.Equal(t, arn, got.Arn)
 	assert.Equal(t, arn, got.CapacityProviderArn)
 	assert.Equal(t, arn, got.capacityProviderArn())
-	assert.Equal(t, arn, (&CapacityProviderOutput{CapacityProviderArn: arn}).capacityProviderArn())
+	assert.Equal(
+		t,
+		arn,
+		(&CapacityProviderResourceOutput{CapacityProviderArn: arn}).capacityProviderArn(),
+	)
 }
 
 func TestCapacityProviderOutputIncludesObservedTags(t *testing.T) {
@@ -185,10 +189,10 @@ func TestCapacityProviderTagsNeedSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &CapacityProvider{Tags: &tt.desired}
-			prior := runtime.Prior[CapacityProvider, *CapacityProviderOutput]{
-				Inputs:   CapacityProvider{Tags: &tt.previous},
-				Observed: &CapacityProviderOutput{Tags: tt.observed},
+			r := &CapacityProviderResource{Tags: &tt.desired}
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+				Inputs:   CapacityProviderResource{Tags: &tt.previous},
+				Observed: &CapacityProviderResourceOutput{Tags: tt.observed},
 			}
 
 			assert.Equal(t, tt.want, r.tagsNeedSync(prior))
@@ -259,12 +263,12 @@ func TestCapacityProviderConfiguredASGDrift(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &CapacityProvider{AutoScalingGroupProvider: tt.desired}
-			prior := runtime.Prior[CapacityProvider, *CapacityProviderOutput]{
-				Inputs: CapacityProvider{
+			r := &CapacityProviderResource{AutoScalingGroupProvider: tt.desired}
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+				Inputs: CapacityProviderResource{
 					AutoScalingGroupProvider: tt.desired,
 				},
-				Observed: &CapacityProviderOutput{
+				Observed: &CapacityProviderResourceOutput{
 					AutoScalingGroupProvider: tt.observed,
 				},
 			}
@@ -522,15 +526,15 @@ func TestCapacityProviderConfiguredManagedInstancesDrift(t *testing.T) {
 			if tt.outputs != nil {
 				outputs = tt.outputs()
 			}
-			r := &CapacityProvider{ManagedInstancesProvider: desired}
-			prior := runtime.Prior[CapacityProvider, *CapacityProviderOutput]{
-				Inputs: CapacityProvider{
+			r := &CapacityProviderResource{ManagedInstancesProvider: desired}
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+				Inputs: CapacityProviderResource{
 					ManagedInstancesProvider: desired,
 				},
-				Outputs: &CapacityProviderOutput{
+				Outputs: &CapacityProviderResourceOutput{
 					ManagedInstancesProvider: outputs,
 				},
-				Observed: &CapacityProviderOutput{
+				Observed: &CapacityProviderResourceOutput{
 					ManagedInstancesProvider: observed,
 				},
 			}

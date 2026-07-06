@@ -43,14 +43,14 @@ var clusterParameterDependencyGroups = [][]string{
 	{"aurora_enhanced_binlog", "binlog_backup", "binlog_replication_globaldb"},
 }
 
-// ClusterParameterGroup manages an RDS DB cluster parameter group: a named set
+// ClusterParameterGroupResource manages an RDS DB cluster parameter group: a named set
 // of engine settings a DB cluster references. The name, family, and description
 // are fixed when the group is created, so a change to any of them replaces the
 // group; the parameter set and the tags reconcile in place. The parameter set
 // is a declared set: a parameter listed here is applied, and a parameter
 // removed from the list is reset to its engine default, so the group holds only
 // the parameters the configuration names.
-type ClusterParameterGroup struct {
+type ClusterParameterGroupResource struct {
 	Name        string                            `ub:"name"`
 	Family      string                            `ub:"family"`
 	Description string                            `ub:"description"`
@@ -69,20 +69,20 @@ type ClusterParameterGroupParameter struct {
 	ApplyMethod *string `ub:"apply-method"`
 }
 
-// ClusterParameterGroupOutput holds the value RDS computes for the group. The
+// ClusterParameterGroupResourceOutput holds the value RDS computes for the group. The
 // ARN is the group's identity in tag operations and the handle downstream
 // resources reference.
-type ClusterParameterGroupOutput struct {
+type ClusterParameterGroupResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *ClusterParameterGroup) SchemaVersion() int { return 1 }
+func (r *ClusterParameterGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when a cluster parameter group is
 // created. The name, family, and description cannot be changed on an existing
 // group, so a change to any of them requires a new group. The parameter set and
 // the tags reconcile in place by Update.
-func (r *ClusterParameterGroup) ReplaceFields() []string {
+func (r *ClusterParameterGroupResource) ReplaceFields() []string {
 	return []string{"name", "family", "description"}
 }
 
@@ -92,7 +92,7 @@ func (r *ClusterParameterGroup) ReplaceFields() []string {
 // doubled hyphen, no trailing hyphen, at most 255 characters) are a pattern the
 // constraint layer cannot derive, so they are checked in Create against the
 // requested name.
-func (r ClusterParameterGroup) Constraints() []constraint.Constraint {
+func (r ClusterParameterGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ForEach(r.Parameters, func(p ClusterParameterGroupParameter) []constraint.Constraint {
 			return []constraint.Constraint{
@@ -104,9 +104,9 @@ func (r ClusterParameterGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ClusterParameterGroup) Create(
+func (r *ClusterParameterGroupResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*ClusterParameterGroupOutput, error) {
+) (*ClusterParameterGroupResourceOutput, error) {
 	if err := validateClusterParameterGroupName(r.Name); err != nil {
 		return nil, err
 	}
@@ -132,12 +132,14 @@ func (r *ClusterParameterGroup) Create(
 	if err := r.reconcileParameters(ctx, client, nil); err != nil {
 		return nil, err
 	}
-	return &ClusterParameterGroupOutput{Arn: arn}, nil
+	return &ClusterParameterGroupResourceOutput{Arn: arn}, nil
 }
 
-func (r *ClusterParameterGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupOutput,
-) (*ClusterParameterGroupOutput, error) {
+func (r *ClusterParameterGroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ClusterParameterGroupResourceOutput,
+) (*ClusterParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -152,9 +154,9 @@ func (r *ClusterParameterGroup) Read(
 // runtime.ErrNotFound. The name check guards a stale describe right after
 // create, when RDS may answer with a different group before the new one is
 // visible.
-func (r *ClusterParameterGroup) read(
+func (r *ClusterParameterGroupResource) read(
 	ctx context.Context, client *rds.Client,
-) (*ClusterParameterGroupOutput, error) {
+) (*ClusterParameterGroupResourceOutput, error) {
 	in := &rds.DescribeDBClusterParameterGroupsInput{
 		DBClusterParameterGroupName: aws.String(r.Name),
 	}
@@ -177,15 +179,15 @@ func (r *ClusterParameterGroup) read(
 	if aws.ToString(group.DBClusterParameterGroupName) != r.Name {
 		return nil, runtime.ErrNotFound
 	}
-	return &ClusterParameterGroupOutput{
+	return &ClusterParameterGroupResourceOutput{
 		Arn: aws.ToString(group.DBClusterParameterGroupArn),
 	}, nil
 }
 
-func (r *ClusterParameterGroup) Update(
+func (r *ClusterParameterGroupResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[ClusterParameterGroup, *ClusterParameterGroupOutput],
-) (*ClusterParameterGroupOutput, error) {
+	prior runtime.Prior[ClusterParameterGroupResource, *ClusterParameterGroupResourceOutput],
+) (*ClusterParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -208,9 +210,8 @@ func (r *ClusterParameterGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *ClusterParameterGroup) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupOutput,
-) error {
+func (r *ClusterParameterGroupResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -241,7 +242,7 @@ func (r *ClusterParameterGroup) Delete(
 // whose names were declared before and are no longer declared are reset to
 // their engine defaults with ResetDBClusterParameterGroup. On create prior is
 // nil, so every declared parameter is applied and nothing is reset.
-func (r *ClusterParameterGroup) reconcileParameters(
+func (r *ClusterParameterGroupResource) reconcileParameters(
 	ctx context.Context, client *rds.Client, prior []ClusterParameterGroupParameter,
 ) error {
 	desired := expandClusterParameters(ptr.Value(r.Parameters))
@@ -261,7 +262,7 @@ func (r *ClusterParameterGroup) reconcileParameters(
 // co-dependent sets are sent first, each as a single chunk, then the remaining
 // immediate parameters, then the remaining pending-reboot parameters, with each
 // bin split into chunks of at most twenty.
-func (r *ClusterParameterGroup) modifyParameters(
+func (r *ClusterParameterGroupResource) modifyParameters(
 	ctx context.Context, client *rds.Client, params []rdstypes.Parameter,
 ) error {
 	for _, chunk := range clusterParameterModifyChunks(params) {
@@ -282,7 +283,7 @@ func (r *ClusterParameterGroup) modifyParameters(
 // state over a bounded window. The state fault is retried only when its message
 // reports pending changes; a state fault for any other reason is returned at
 // once.
-func (r *ClusterParameterGroup) resetParameters(
+func (r *ClusterParameterGroupResource) resetParameters(
 	ctx context.Context, client *rds.Client, names []string,
 ) error {
 	for chunk := range slices.Chunk(names, clusterParameterChunkSize) {

@@ -19,7 +19,7 @@ func TestLibraryRegistersLambdaMicrovms(t *testing.T) {
 	resources := []constructRegistration{
 		{
 			key:        "microvm-image",
-			outputType: reflect.TypeFor[*svc.MicrovmImageOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageResourceOutput](),
 		},
 	}
 	for _, resource := range resources {
@@ -32,43 +32,43 @@ func TestLibraryRegistersLambdaMicrovms(t *testing.T) {
 	dataSources := []constructRegistration{
 		{
 			key:        "microvm-image",
-			outputType: reflect.TypeFor[*svc.MicrovmImageDataOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageDataSourceOutput](),
 		},
 		{
 			key:        "microvm-images",
-			outputType: reflect.TypeFor[*svc.MicrovmImagesOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImagesDataSourceOutput](),
 		},
 		{
 			key:        "microvm-image-version",
-			outputType: reflect.TypeFor[*svc.MicrovmImageVersionDataOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageVersionDataSourceOutput](),
 		},
 		{
 			key:        "microvm-image-versions",
-			outputType: reflect.TypeFor[*svc.MicrovmImageVersionsOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageVersionsDataSourceOutput](),
 		},
 		{
 			key:        "microvm-image-build",
-			outputType: reflect.TypeFor[*svc.MicrovmImageBuildDataOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageBuildDataSourceOutput](),
 		},
 		{
 			key:        "microvm-image-builds",
-			outputType: reflect.TypeFor[*svc.MicrovmImageBuildsOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmImageBuildsDataSourceOutput](),
 		},
 		{
 			key:        "managed-microvm-images",
-			outputType: reflect.TypeFor[*svc.ManagedMicrovmImagesOutput](),
+			outputType: reflect.TypeFor[*svc.ManagedMicrovmImagesDataSourceOutput](),
 		},
 		{
 			key:        "managed-microvm-image-versions",
-			outputType: reflect.TypeFor[*svc.ManagedMicrovmImageVersionsOutput](),
+			outputType: reflect.TypeFor[*svc.ManagedMicrovmImageVersionsDataSourceOutput](),
 		},
 		{
 			key:        "microvm",
-			outputType: reflect.TypeFor[*svc.MicrovmDataOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmDataSourceOutput](),
 		},
 		{
 			key:        "microvms",
-			outputType: reflect.TypeFor[*svc.MicrovmsOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmsDataSourceOutput](),
 		},
 	}
 	for _, dataSource := range dataSources {
@@ -81,31 +81,31 @@ func TestLibraryRegistersLambdaMicrovms(t *testing.T) {
 	actions := []constructRegistration{
 		{
 			key:        "run-microvm",
-			outputType: reflect.TypeFor[*svc.MicrovmDataOutput](),
+			outputType: reflect.TypeFor[*svc.RunMicrovmActionOutput](),
 		},
 		{
 			key:        "create-microvm-auth-token",
-			outputType: reflect.TypeFor[*svc.MicrovmAuthTokenOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmAuthTokenActionOutput](),
 		},
 		{
 			key:        "create-microvm-shell-auth-token",
-			outputType: reflect.TypeFor[*svc.MicrovmShellAuthTokenOutput](),
+			outputType: reflect.TypeFor[*svc.MicrovmShellAuthTokenActionOutput](),
 		},
 		{
 			key:        "suspend-microvm",
-			outputType: reflect.TypeFor[*svc.SuspendMicrovmOutput](),
+			outputType: reflect.TypeFor[*svc.SuspendMicrovmActionOutput](),
 		},
 		{
 			key:        "resume-microvm",
-			outputType: reflect.TypeFor[*svc.ResumeMicrovmOutput](),
+			outputType: reflect.TypeFor[*svc.ResumeMicrovmActionOutput](),
 		},
 		{
 			key:        "terminate-microvm",
-			outputType: reflect.TypeFor[*svc.TerminateMicrovmOutput](),
+			outputType: reflect.TypeFor[*svc.TerminateMicrovmActionOutput](),
 		},
 		{
 			key:        "update-microvm-image-version-status",
-			outputType: reflect.TypeFor[*svc.MicrovmImageVersionDataOutput](),
+			outputType: reflect.TypeFor[*svc.UpdateMicrovmImageVersionStatusActionOutput](),
 		},
 	}
 	for _, action := range actions {
@@ -145,7 +145,7 @@ func TestLambdaMicrovmSchemas(t *testing.T) {
 		Outputs: microvmImageOutputTypes(),
 	}, schema.Resources["microvm-image"])
 
-	assert.Equal(t, []string{"name"}, (&svc.MicrovmImage{}).ReplaceFields())
+	assert.Equal(t, []string{"name"}, (&svc.MicrovmImageResource{}).ReplaceFields())
 
 	assertSchemaFieldsEqual(t, &runtime.TypeSchema{
 		Inputs: map[string]typecheck.Type{

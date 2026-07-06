@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-// AvailabilityZones looks up the Availability Zones, Local Zones, and Wavelength
+// AvailabilityZonesDataSource looks up the Availability Zones, Local Zones, and Wavelength
 // Zones for the configured Region with DescribeAvailabilityZones. Three inputs
 // reach AWS: all-availability-zones widens the result to every zone regardless
 // of opt-in status, state becomes a state filter, and filters passes generic
@@ -28,7 +28,7 @@ import (
 // zone name, and zone-ids holds each zone's id at the same index as its name, so
 // the same index in either list refers to the same zone. group-names is a
 // separate, deduplicated, sorted list and is not index-aligned with the others.
-type AvailabilityZones struct {
+type AvailabilityZonesDataSource struct {
 	AllAvailabilityZones *bool                      `ub:"all-availability-zones"`
 	State                *string                    `ub:"state"`
 	Filters              *[]AvailabilityZonesFilter `ub:"filters"`
@@ -46,12 +46,12 @@ type AvailabilityZonesFilter struct {
 	Values []string `ub:"values"`
 }
 
-// AvailabilityZonesOutput holds the matched zones as three lists. names is the
+// AvailabilityZonesDataSourceOutput holds the matched zones as three lists. names is the
 // zone names sorted ascending. zone-ids is the matching zone ids, each at the
 // same index as its zone name in names. group-names is the distinct zone-group
 // names, deduplicated and sorted ascending for reproducible output; Terraform
 // models the same value as an unordered set.
-type AvailabilityZonesOutput struct {
+type AvailabilityZonesDataSourceOutput struct {
 	Names      []string `ub:"names"`
 	ZoneIds    []string `ub:"zone-ids"`
 	GroupNames []string `ub:"group-names"`
@@ -59,7 +59,7 @@ type AvailabilityZonesOutput struct {
 
 // Constraints declares the input rules expressible as a derived schema. The
 // state input, when given, must be one of the AWS zone-state filter values.
-func (r AvailabilityZones) Constraints() []constraint.Constraint {
+func (r AvailabilityZonesDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.State)).
 			Require(constraint.OneOf(r.State,
@@ -73,10 +73,9 @@ func (r AvailabilityZones) Constraints() []constraint.Constraint {
 // projects the matched zones into the three output lists, and errors when no
 // zone survives the excludes. The call adds no retry or waiter:
 // DescribeAvailabilityZones is consistent enough for a one-shot lookup.
-func (r *AvailabilityZones) Read(
+func (r *AvailabilityZonesDataSource) Read(
 	ctx context.Context,
-	cfg *awsCfg) (*AvailabilityZonesOutput,
-	error,
+	cfg *awsCfg) (*AvailabilityZonesDataSourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -94,7 +93,7 @@ func (r *AvailabilityZones) Read(
 // default of opt-in zones. The state input becomes a state filter joined with
 // any user filters. The filter list is left nil when there is nothing to filter
 // on, since EC2 rejects an empty filter list.
-func (r *AvailabilityZones) describeInput() *ec2.DescribeAvailabilityZonesInput {
+func (r *AvailabilityZonesDataSource) describeInput() *ec2.DescribeAvailabilityZonesInput {
 	in := &ec2.DescribeAvailabilityZonesInput{}
 	if r.AllAvailabilityZones != nil {
 		in.AllAvailabilityZones = aws.Bool(*r.AllAvailabilityZones)
@@ -118,14 +117,14 @@ func (r *AvailabilityZones) describeInput() *ec2.DescribeAvailabilityZonesInput 
 // the sort, skipping any zone whose name or id is listed. group-names is
 // collected, deduplicated, and sorted separately. No zone surviving the excludes
 // is an error rather than three empty lists.
-func (r *AvailabilityZones) output(
+func (r *AvailabilityZonesDataSource) output(
 	zones []ec2types.AvailabilityZone,
-) (*AvailabilityZonesOutput, error) {
+) (*AvailabilityZonesDataSourceOutput, error) {
 	sorted := slices.Clone(zones)
 	slices.SortFunc(sorted, func(a, b ec2types.AvailabilityZone) int {
 		return strings.Compare(aws.ToString(a.ZoneName), aws.ToString(b.ZoneName))
 	})
-	out := &AvailabilityZonesOutput{}
+	out := &AvailabilityZonesDataSourceOutput{}
 	groups := map[string]struct{}{}
 	for _, zone := range sorted {
 		name := aws.ToString(zone.ZoneName)

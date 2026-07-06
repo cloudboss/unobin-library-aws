@@ -18,7 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Eip is an Elastic IP allocation: a public IPv4 address that EC2 reserves for
+// EipResource is an Elastic IP allocation: a public IPv4 address that EC2 reserves for
 // an account through AllocateAddress and releases through ReleaseAddress. This
 // construct covers allocation only; associating the address with an instance or
 // network interface is a separate concern. Every allocation input is fixed when
@@ -27,7 +27,7 @@ import (
 // from -- so a change to any of them allocates a new address. Tags are the one
 // input reconciled in place. The network border group is also threaded into the
 // release call, since EC2 needs it to release an address scoped to a location.
-type Eip struct {
+type EipResource struct {
 	Address               *string            `ub:"address"`
 	Domain                *string            `ub:"domain"`
 	IpamPoolId            *string            `ub:"ipam-pool-id"`
@@ -37,20 +37,20 @@ type Eip struct {
 	Tags                  *map[string]string `ub:"tags"`
 }
 
-// EipOutput holds the values EC2 computes for an allocation. The allocation id
+// EipResourceOutput holds the values EC2 computes for an allocation. The allocation id
 // is the address's handle, the value a NAT gateway or other consumer
 // references. The public IP is the actual IPv4 address. The association id and
 // private IP are filled only when something associates the address out of band
 // (a NAT gateway, another actor); the association id is what Delete needs to
 // disassociate before it releases.
-type EipOutput struct {
+type EipResourceOutput struct {
 	AllocationId  string `ub:"allocation-id"`
 	PublicIp      string `ub:"public-ip"`
 	AssociationId string `ub:"association-id"`
 	PrivateIp     string `ub:"private-ip"`
 }
 
-func (r *Eip) SchemaVersion() int { return 1 }
+func (r *EipResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when the address is allocated. None
 // of the allocation arguments can change on an existing address: the address to
@@ -58,7 +58,7 @@ func (r *Eip) SchemaVersion() int { return 1 }
 // or customer-owned pool are all settled at allocation time, so a change to any
 // of them requires a new allocation. Only tags reconcile in place, so they are
 // not listed here.
-func (r *Eip) ReplaceFields() []string {
+func (r *EipResource) ReplaceFields() []string {
 	return []string{
 		"address",
 		"domain",
@@ -73,7 +73,7 @@ func (r *Eip) ReplaceFields() []string {
 // one of the two values AllocateAddress accepts. AWS rejects standard
 // post-Classic, but the enum still admits it, so the value is validated against
 // the enum and only when domain is given.
-func (r Eip) Constraints() []constraint.Constraint {
+func (r EipResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Domain)).
 			Require(constraint.OneOf(r.Domain, "vpc", "standard")).
@@ -81,7 +81,7 @@ func (r Eip) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Eip) Create(ctx context.Context, cfg *awsCfg) (*EipOutput, error) {
+func (r *EipResource) Create(ctx context.Context, cfg *awsCfg) (*EipResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,11 @@ func (r *Eip) Create(ctx context.Context, cfg *awsCfg) (*EipOutput, error) {
 	return r.read(ctx, client, id)
 }
 
-func (r *Eip) Read(ctx context.Context, cfg *awsCfg, prior *EipOutput) (*EipOutput, error) {
+func (r *EipResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *EipResourceOutput,
+) (*EipResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -123,12 +127,16 @@ func (r *Eip) Read(ctx context.Context, cfg *awsCfg, prior *EipOutput) (*EipOutp
 // read fetches the address by allocation id and returns its computed outputs. A
 // genuinely missing address maps to runtime.ErrNotFound, which drives the
 // recreate fork.
-func (r *Eip) read(ctx context.Context, client *ec2.Client, id string) (*EipOutput, error) {
+func (r *EipResource) read(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) (*EipResourceOutput, error) {
 	addr, err := r.describe(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	return &EipOutput{
+	return &EipResourceOutput{
 		AllocationId:  aws.ToString(addr.AllocationId),
 		PublicIp:      aws.ToString(addr.PublicIp),
 		AssociationId: aws.ToString(addr.AssociationId),
@@ -136,9 +144,9 @@ func (r *Eip) read(ctx context.Context, client *ec2.Client, id string) (*EipOutp
 	}, nil
 }
 
-func (r *Eip) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Eip, *EipOutput],
-) (*EipOutput, error) {
+func (r *EipResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EipResource, *EipResourceOutput],
+) (*EipResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -153,7 +161,7 @@ func (r *Eip) Update(
 	return r.read(ctx, client, prior.Outputs.AllocationId)
 }
 
-func (r *Eip) Delete(ctx context.Context, cfg *awsCfg, prior *EipOutput) error {
+func (r *EipResource) Delete(ctx context.Context, cfg *awsCfg, prior *EipResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -210,7 +218,7 @@ func (r *Eip) Delete(ctx context.Context, cfg *awsCfg, prior *EipOutput) error {
 // allocation id. The post-allocate window where the address reads as not-found,
 // or where a stale replica answers with a different allocation id, counts as not
 // ready rather than an error, so the wait rides the window out.
-func (r *Eip) waitExists(ctx context.Context, client *ec2.Client, id string) error {
+func (r *EipResource) waitExists(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("elastic ip %s to become visible", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := r.describe(ctx, client, id)
@@ -228,7 +236,7 @@ func (r *Eip) waitExists(ctx context.Context, client *ec2.Client, id string) err
 // for the released address. The pool's own not-found codes -- for a missing
 // allocation or a missing pool -- are the success signal, so they end the wait
 // rather than stop it.
-func (r *Eip) waitIpamReleased(
+func (r *EipResource) waitIpamReleased(
 	ctx context.Context, client *ec2.Client, poolID, allocationID string,
 ) error {
 	what := fmt.Sprintf("ipam pool %s to release allocation for %s", poolID, allocationID)
@@ -252,7 +260,7 @@ func (r *Eip) waitIpamReleased(
 // when the message says the address does not belong to the account. An empty
 // result, or a stale replica answering with a different allocation id, means the
 // same as not-found.
-func (r *Eip) describe(
+func (r *EipResource) describe(
 	ctx context.Context, client *ec2.Client, id string,
 ) (*ec2types.Address, error) {
 	resp, err := client.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{

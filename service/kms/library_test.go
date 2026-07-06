@@ -62,8 +62,8 @@ func TestLibraryRegistersKMSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"key":   reflect.TypeFor[*svc.KeyOutput](),
-		"alias": reflect.TypeFor[*svc.AliasOutput](),
+		"key":   reflect.TypeFor[*svc.KeyResourceOutput](),
+		"alias": reflect.TypeFor[*svc.AliasResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

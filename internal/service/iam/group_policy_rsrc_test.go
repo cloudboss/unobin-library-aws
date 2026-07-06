@@ -47,13 +47,13 @@ func TestGroupPolicyCreateNormalizesAndReturnsSettledPolicy(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", storedDocument)
 	})
 
-	out, err := (&GroupPolicy{
+	out, err := (&GroupPolicyResource{
 		GroupName:      "test-group",
 		PolicyName:     "test-inline",
 		PolicyDocument: inputDocument,
 	}).Create(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &GroupPolicyOutput{
+	assert.Equal(t, &GroupPolicyResourceOutput{
 		GroupName:      "test-group",
 		PolicyName:     "test-inline",
 		PolicyDocument: wantDocument,
@@ -69,24 +69,24 @@ func TestGroupPolicyUpdateOnlyPutsWhenDocumentChanged(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", document)
 	})
 
-	prior := runtime.Prior[GroupPolicy, *GroupPolicyOutput]{
-		Inputs: GroupPolicy{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
-		Outputs: &GroupPolicyOutput{
+		Outputs: &GroupPolicyResourceOutput{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
-		Observed: &GroupPolicyOutput{
+		Observed: &GroupPolicyResourceOutput{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
 	}
-	out, err := (&GroupPolicy{
+	out, err := (&GroupPolicyResource{
 		GroupName:      "test-group",
 		PolicyName:     "test-inline",
 		PolicyDocument: document,
@@ -108,15 +108,15 @@ func TestGroupPolicyUpdateNormalizesChangedDocument(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", newDocument)
 	})
 
-	prior := runtime.Prior[GroupPolicy, *GroupPolicyOutput]{
-		Inputs: GroupPolicy{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: `{"Version":"2012-10-17","Statement":[]}`,
 		},
-		Outputs: &GroupPolicyOutput{GroupName: "test-group", PolicyName: "test-inline"},
+		Outputs: &GroupPolicyResourceOutput{GroupName: "test-group", PolicyName: "test-inline"},
 	}
-	out, err := (&GroupPolicy{
+	out, err := (&GroupPolicyResource{
 		GroupName:      "test-group",
 		PolicyName:     "test-inline",
 		PolicyDocument: newDocument,
@@ -141,24 +141,24 @@ func TestGroupPolicyUpdateReconcilesDocumentDrift(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", desiredDocument)
 	})
 
-	prior := runtime.Prior[GroupPolicy, *GroupPolicyOutput]{
-		Inputs: GroupPolicy{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: desiredDocument,
 		},
-		Outputs: &GroupPolicyOutput{
+		Outputs: &GroupPolicyResourceOutput{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: desiredDocument,
 		},
-		Observed: &GroupPolicyOutput{
+		Observed: &GroupPolicyResourceOutput{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
 			PolicyDocument: driftedDocument,
 		},
 	}
-	out, err := (&GroupPolicy{
+	out, err := (&GroupPolicyResource{
 		GroupName:      "test-group",
 		PolicyName:     "test-inline",
 		PolicyDocument: desiredDocument,
@@ -173,10 +173,14 @@ func TestGroupPolicyReadMapsMissingPolicyToNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	_, err := (&GroupPolicy{}).Read(context.Background(), fake.configuration(), &GroupPolicyOutput{
-		GroupName:  "test-group",
-		PolicyName: "test-inline",
-	})
+	_, err := (&GroupPolicyResource{}).Read(
+		context.Background(),
+		fake.configuration(),
+		&GroupPolicyResourceOutput{
+			GroupName:  "test-group",
+			PolicyName: "test-inline",
+		},
+	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -186,10 +190,14 @@ func TestGroupPolicyReadMapsNilPolicyDocumentToNotFound(t *testing.T) {
 		return 200, emptyGetGroupPolicyResponseXML
 	})
 
-	_, err := (&GroupPolicy{}).Read(context.Background(), fake.configuration(), &GroupPolicyOutput{
-		GroupName:  "test-group",
-		PolicyName: "test-inline",
-	})
+	_, err := (&GroupPolicyResource{}).Read(
+		context.Background(),
+		fake.configuration(),
+		&GroupPolicyResourceOutput{
+			GroupName:  "test-group",
+			PolicyName: "test-inline",
+		},
+	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -201,9 +209,9 @@ func TestGroupPolicyDeleteUsesPriorIdentityAndIgnoresNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	err := (&GroupPolicy{GroupName: "new-group", PolicyName: "new-inline"}).Delete(
+	err := (&GroupPolicyResource{GroupName: "new-group", PolicyName: "new-inline"}).Delete(
 		context.Background(), fake.configuration(),
-		&GroupPolicyOutput{GroupName: "old-group", PolicyName: "old-inline"})
+		&GroupPolicyResourceOutput{GroupName: "old-group", PolicyName: "old-inline"})
 	require.NoError(t, err)
 }
 

@@ -17,33 +17,36 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// QueuePolicy manages the policy attached to an SQS queue. The queue URL is the
+// QueuePolicyResource manages the policy attached to an SQS queue. The queue URL is the
 // policy's identity; a queue holds one policy keyed by its URL, so the queue
 // cannot change without replacing the policy, while the policy document is
 // reconciled in place. The document is sent to SQS verbatim: unobin compares
 // inputs as written, so the policy never needs canonicalizing to avoid a
 // phantom diff against the form SQS echoes back.
-type QueuePolicy struct {
+type QueuePolicyResource struct {
 	QueueUrl string `ub:"queue-url"`
 	Policy   string `ub:"policy"`
 }
 
-// QueuePolicyOutput is empty: a queue policy computes nothing of its own, and
+// QueuePolicyResourceOutput is empty: a queue policy computes nothing of its own, and
 // its identity is the input queue URL. Downstream references point at the
 // queue, not the policy text, so there is no value to expose.
-type QueuePolicyOutput struct{}
+type QueuePolicyResourceOutput struct{}
 
-func (r *QueuePolicy) SchemaVersion() int { return 1 }
+func (r *QueuePolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SQS fixes for the life of the policy. A queue
 // holds a single policy keyed by its URL, so re-pointing the policy at a
 // different queue means deleting it here and creating it there. The policy
 // document itself is reconciled in place by Update.
-func (r *QueuePolicy) ReplaceFields() []string {
+func (r *QueuePolicyResource) ReplaceFields() []string {
 	return []string{"queue-url"}
 }
 
-func (r *QueuePolicy) Create(ctx context.Context, cfg *awsCfg) (*QueuePolicyOutput, error) {
+func (r *QueuePolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*QueuePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -68,12 +71,14 @@ func (r *QueuePolicy) Create(ctx context.Context, cfg *awsCfg) (*QueuePolicyOutp
 	if err != nil {
 		return nil, err
 	}
-	return &QueuePolicyOutput{}, nil
+	return &QueuePolicyResourceOutput{}, nil
 }
 
-func (r *QueuePolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *QueuePolicyOutput,
-) (*QueuePolicyOutput, error) {
+func (r *QueuePolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *QueuePolicyResourceOutput,
+) (*QueuePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -88,12 +93,14 @@ func (r *QueuePolicy) Read(
 	if !found {
 		return nil, runtime.ErrNotFound
 	}
-	return &QueuePolicyOutput{}, nil
+	return &QueuePolicyResourceOutput{}, nil
 }
 
-func (r *QueuePolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[QueuePolicy, *QueuePolicyOutput],
-) (*QueuePolicyOutput, error) {
+func (r *QueuePolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[QueuePolicyResource, *QueuePolicyResourceOutput],
+) (*QueuePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -105,10 +112,14 @@ func (r *QueuePolicy) Update(
 			return nil, err
 		}
 	}
-	return &QueuePolicyOutput{}, nil
+	return &QueuePolicyResourceOutput{}, nil
 }
 
-func (r *QueuePolicy) Delete(ctx context.Context, cfg *awsCfg, prior *QueuePolicyOutput) error {
+func (r *QueuePolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *QueuePolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -146,7 +157,7 @@ func (r *QueuePolicy) Delete(ctx context.Context, cfg *awsCfg, prior *QueuePolic
 // own. A policy naming an IAM principal created moments earlier is rejected as
 // InvalidAttributeValue until that principal propagates; the principal settles
 // within the propagation window.
-func (r *QueuePolicy) put(ctx context.Context, client *sqs.Client) error {
+func (r *QueuePolicyResource) put(ctx context.Context, client *sqs.Client) error {
 	in := &sqs.SetQueueAttributesInput{
 		QueueUrl:   aws.String(r.QueueUrl),
 		Attributes: map[string]string{string(sqstypes.QueueAttributeNamePolicy): r.Policy},
@@ -164,7 +175,7 @@ func (r *QueuePolicy) put(ctx context.Context, client *sqs.Client) error {
 // exists reports whether the queue currently has a policy. A gone queue
 // (NonExistentQueue) and a live queue whose Policy attribute is absent or empty
 // both mean no policy is present. Any other error is real and stops the caller.
-func (r *QueuePolicy) exists(ctx context.Context, client *sqs.Client) (bool, error) {
+func (r *QueuePolicyResource) exists(ctx context.Context, client *sqs.Client) (bool, error) {
 	resp, err := client.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
 		QueueUrl:       aws.String(r.QueueUrl),
 		AttributeNames: []sqstypes.QueueAttributeName{sqstypes.QueueAttributeNamePolicy},

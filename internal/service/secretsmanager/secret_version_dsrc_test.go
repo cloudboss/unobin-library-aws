@@ -12,24 +12,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSecretVersionDataGetInput(t *testing.T) {
+func TestSecretVersionDataSourceGetInput(t *testing.T) {
 	versionID := "version-1"
 	customStage := "AWSPREVIOUS"
 	empty := ""
 	tests := []struct {
 		name             string
-		data             SecretVersionData
+		data             SecretVersionDataSource
 		wantVersionID    *string
 		wantVersionStage *string
 	}{
 		{
 			name:             "default stage",
-			data:             SecretVersionData{SecretId: "secret"},
+			data:             SecretVersionDataSource{SecretId: "secret"},
 			wantVersionStage: aws.String(currentStage),
 		},
 		{
 			name: "custom stage",
-			data: SecretVersionData{
+			data: SecretVersionDataSource{
 				SecretId:     "secret",
 				VersionStage: &customStage,
 			},
@@ -37,7 +37,7 @@ func TestSecretVersionDataGetInput(t *testing.T) {
 		},
 		{
 			name: "version id wins",
-			data: SecretVersionData{
+			data: SecretVersionDataSource{
 				SecretId:     "secret",
 				VersionId:    &versionID,
 				VersionStage: &customStage,
@@ -46,7 +46,7 @@ func TestSecretVersionDataGetInput(t *testing.T) {
 		},
 		{
 			name: "empty version id uses stage",
-			data: SecretVersionData{
+			data: SecretVersionDataSource{
 				SecretId:     "secret",
 				VersionId:    &empty,
 				VersionStage: &customStage,
@@ -55,7 +55,7 @@ func TestSecretVersionDataGetInput(t *testing.T) {
 		},
 		{
 			name: "empty stage defaults current",
-			data: SecretVersionData{
+			data: SecretVersionDataSource{
 				SecretId:     "secret",
 				VersionStage: &empty,
 			},
@@ -75,7 +75,7 @@ func TestSecretVersionDataGetInput(t *testing.T) {
 	}
 }
 
-func TestSecretVersionDataOutput(t *testing.T) {
+func TestSecretVersionDataSourceOutput(t *testing.T) {
 	created := time.Date(2026, 7, 5, 12, 13, 14, 0, time.UTC)
 	out, err := secretVersionDataOutput(&secretsmanager.GetSecretValueOutput{
 		ARN:           aws.String("arn:aws:secretsmanager:us-east-1:123456789012:secret:s"),
@@ -87,7 +87,7 @@ func TestSecretVersionDataOutput(t *testing.T) {
 		VersionStages: []string{"beta", "", "alpha", "beta"},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, &SecretVersionDataOutput{
+	assert.Equal(t, &SecretVersionDataSourceOutput{
 		Arn:           "arn:aws:secretsmanager:us-east-1:123456789012:secret:s",
 		CreatedDate:   "2026-07-05T12:13:14Z",
 		Name:          "s",
@@ -98,13 +98,13 @@ func TestSecretVersionDataOutput(t *testing.T) {
 	}, out)
 }
 
-func TestSecretVersionDataOutputEmpty(t *testing.T) {
+func TestSecretVersionDataSourceOutputEmpty(t *testing.T) {
 	out, err := secretVersionDataOutput(&secretsmanager.GetSecretValueOutput{})
 	assert.Nil(t, out)
-	assert.ErrorIs(t, err, errSecretVersionDataNotFound)
+	assert.ErrorIs(t, err, errSecretVersionDataSourceNotFound)
 }
 
-func TestIsSecretVersionDataNotFound(t *testing.T) {
+func TestIsSecretVersionDataSourceNotFound(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
@@ -112,7 +112,7 @@ func TestIsSecretVersionDataNotFound(t *testing.T) {
 	}{
 		{
 			name: "empty output sentinel",
-			err:  errSecretVersionDataNotFound,
+			err:  errSecretVersionDataSourceNotFound,
 			want: true,
 		},
 		{
@@ -141,7 +141,7 @@ func TestIsSecretVersionDataNotFound(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isSecretVersionDataNotFound(tt.err))
+			assert.Equal(t, tt.want, isSecretVersionDataSourceNotFound(tt.err))
 		})
 	}
 }

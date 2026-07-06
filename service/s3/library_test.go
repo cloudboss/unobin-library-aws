@@ -67,10 +67,10 @@ func TestLibraryRegistersS3LocalResources(t *testing.T) {
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
-		"bucket":              reflect.TypeFor[*svc.BucketOutput](),
-		"bucket-notification": reflect.TypeFor[*svc.BucketNotificationOutput](),
-		"bucket-policy":       reflect.TypeFor[*svc.BucketPolicyOutput](),
-		"object":              reflect.TypeFor[*svc.ObjectOutput](),
+		"bucket":              reflect.TypeFor[*svc.BucketResourceOutput](),
+		"bucket-notification": reflect.TypeFor[*svc.BucketNotificationResourceOutput](),
+		"bucket-policy":       reflect.TypeFor[*svc.BucketPolicyResourceOutput](),
+		"object":              reflect.TypeFor[*svc.ObjectResourceOutput](),
 	}
 	for name, outputType := range outputs {
 		t.Run(name, func(t *testing.T) {

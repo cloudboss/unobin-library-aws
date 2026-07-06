@@ -42,7 +42,7 @@ const retentionRetryTimeout = 2 * time.Minute
 // minute is ample for that to clear.
 const deleteRetryTimeout = time.Minute
 
-// LogGroup is a CloudWatch Logs log group: the container that holds log streams
+// LogGroupResource is a CloudWatch Logs log group: the container that holds log streams
 // and sets their retention and encryption. The name and the log group class are
 // fixed when the group is created, so a change to either replaces the group.
 // The retention period, the KMS key, deletion protection, and the tags are
@@ -50,7 +50,7 @@ const deleteRetryTimeout = time.Minute
 // call: retention is applied afterward by PutRetentionPolicy (or cleared by
 // DeleteRetentionPolicy), and the KMS key, while it does ride the create call,
 // is changed afterward by AssociateKmsKey or DisassociateKmsKey.
-type LogGroup struct {
+type LogGroupResource struct {
 	// Name is the log group name. It must hold only letters, digits, underscore,
 	// hyphen, forward slash, period, or the hash sign, and be no longer than 512
 	// characters. The name is the group's identity, fixed at create time.
@@ -62,22 +62,22 @@ type LogGroup struct {
 	Tags                      *map[string]string `ub:"tags"`
 }
 
-// LogGroupOutput holds the value CloudWatch Logs computes for a log group. The
+// LogGroupResourceOutput holds the value CloudWatch Logs computes for a log group. The
 // ARN is the group's handle, against which its tags and deletion protection are
 // managed. The describe call may return the ARN with a trailing ":*" wildcard;
 // it is trimmed here, because the trimmed form is the ARN downstream resources
 // reference.
-type LogGroupOutput struct {
+type LogGroupResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *LogGroup) SchemaVersion() int { return 1 }
+func (r *LogGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs CloudWatch Logs fixes when a log group is
 // created. The name is the group's identity, and the log group class cannot be
 // changed on an existing group, so a change to either requires a new group.
 // Every other input is reconciled in place by Update.
-func (r *LogGroup) ReplaceFields() []string {
+func (r *LogGroupResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"log-group-class",
@@ -88,7 +88,7 @@ func (r *LogGroup) ReplaceFields() []string {
 // inputs. The retention period accepts only a fixed set of day counts, where 0
 // means the log events never expire. The log group class accepts only its three
 // known values.
-func (r LogGroup) Constraints() []constraint.Constraint {
+func (r LogGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.RetentionInDays)).
 			Require(constraint.OneOf(r.RetentionInDays,
@@ -102,7 +102,10 @@ func (r LogGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LogGroup) Create(ctx context.Context, cfg *awsCfg) (*LogGroupOutput, error) {
+func (r *LogGroupResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*LogGroupResourceOutput, error) {
 	if err := r.validateName(); err != nil {
 		return nil, err
 	}
@@ -136,9 +139,8 @@ func (r *LogGroup) Create(ctx context.Context, cfg *awsCfg) (*LogGroupOutput, er
 	return r.read(ctx, client)
 }
 
-func (r *LogGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *LogGroupOutput,
-) (*LogGroupOutput, error) {
+func (r *LogGroupResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *LogGroupResourceOutput) (*LogGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -152,9 +154,9 @@ func (r *LogGroup) Read(
 // name matches exactly. Zero matches means the group is gone, which maps to
 // runtime.ErrNotFound so a plan recreates it; a deleted group simply yields no
 // matching rows rather than a typed not-found error.
-func (r *LogGroup) read(
+func (r *LogGroupResource) read(
 	ctx context.Context, client *cloudwatchlogs.Client,
-) (*LogGroupOutput, error) {
+) (*LogGroupResourceOutput, error) {
 	var match *cloudwatchlogstypes.LogGroup
 	pager := cloudwatchlogs.NewDescribeLogGroupsPaginator(client,
 		&cloudwatchlogs.DescribeLogGroupsInput{
@@ -178,12 +180,12 @@ func (r *LogGroup) read(
 	if match == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &LogGroupOutput{Arn: trimARNWildcardSuffix(aws.ToString(match.Arn))}, nil
+	return &LogGroupResourceOutput{Arn: trimARNWildcardSuffix(aws.ToString(match.Arn))}, nil
 }
 
-func (r *LogGroup) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LogGroup, *LogGroupOutput],
-) (*LogGroupOutput, error) {
+func (r *LogGroupResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LogGroupResource, *LogGroupResourceOutput],
+) (*LogGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -249,7 +251,11 @@ func (r *LogGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *LogGroup) Delete(ctx context.Context, cfg *awsCfg, prior *LogGroupOutput) error {
+func (r *LogGroupResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LogGroupResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -277,7 +283,7 @@ func (r *LogGroup) Delete(ctx context.Context, cfg *awsCfg, prior *LogGroupOutpu
 // is created can fail while the caller's logs:PutRetentionPolicy permission is
 // still propagating; that grant takes effect within a couple of minutes, so the
 // call retries through that window.
-func (r *LogGroup) putRetention(ctx context.Context, client *cloudwatchlogs.Client) error {
+func (r *LogGroupResource) putRetention(ctx context.Context, client *cloudwatchlogs.Client) error {
 	in := &cloudwatchlogs.PutRetentionPolicyInput{
 		LogGroupName:    aws.String(r.Name),
 		RetentionInDays: ptr.Int32(r.RetentionInDays),
@@ -295,7 +301,11 @@ func (r *LogGroup) putRetention(ctx context.Context, client *cloudwatchlogs.Clie
 // syncTags reconciles the log group's tags with the desired set, addressing the
 // group by ARN. CloudWatch Logs reads tags with ListTagsForResource and writes
 // changes with TagResource and UntagResource.
-func (r *LogGroup) syncTags(ctx context.Context, client *cloudwatchlogs.Client, arn string) error {
+func (r *LogGroupResource) syncTags(
+	ctx context.Context,
+	client *cloudwatchlogs.Client,
+	arn string,
+) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,
@@ -330,7 +340,7 @@ func (r *LogGroup) syncTags(ctx context.Context, client *cloudwatchlogs.Client, 
 // group. The Delivery class keeps log events for a fixed single day and does
 // not accept a retention policy, so retention is settable for every other
 // class.
-func (r *LogGroup) retentionSettable() bool {
+func (r *LogGroupResource) retentionSettable() bool {
 	return r.LogGroupClass == nil ||
 		*r.LogGroupClass != string(cloudwatchlogstypes.LogGroupClassDelivery)
 }
@@ -338,7 +348,7 @@ func (r *LogGroup) retentionSettable() bool {
 // validateName checks the name against the rules CloudWatch Logs enforces but
 // the constraint layer cannot express: the permitted character set and the
 // 512-byte length bound.
-func (r *LogGroup) validateName() error {
+func (r *LogGroupResource) validateName() error {
 	if len(r.Name) > logGroupNameMaxLen {
 		return fmt.Errorf("name must be at most %d characters", logGroupNameMaxLen)
 	}

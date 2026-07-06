@@ -23,33 +23,33 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// GroupPolicyAttachment attaches a managed policy to an IAM group. The group
+// GroupPolicyAttachmentResource attaches a managed policy to an IAM group. The group
 // name and policy ARN are the full identity, and IAM has no in-place update for
 // an attachment, so both inputs are replace-only.
-type GroupPolicyAttachment struct {
+type GroupPolicyAttachmentResource struct {
 	GroupName string `ub:"group-name"`
 	PolicyArn string `ub:"policy-arn"`
 }
 
-// GroupPolicyAttachmentOutput preserves the attachment identity so replacement
+// GroupPolicyAttachmentResourceOutput preserves the attachment identity so replacement
 // deletes the prior group/policy pair instead of the current desired pair.
-type GroupPolicyAttachmentOutput struct {
+type GroupPolicyAttachmentResourceOutput struct {
 	GroupName string `ub:"group-name"`
 	PolicyArn string `ub:"policy-arn"`
 }
 
-func (r *GroupPolicyAttachment) SchemaVersion() int { return 1 }
+func (r *GroupPolicyAttachmentResource) SchemaVersion() int { return 1 }
 
-func (r *GroupPolicyAttachment) ReplaceFields() []string {
+func (r *GroupPolicyAttachmentResource) ReplaceFields() []string {
 	return []string{
 		"group-name",
 		"policy-arn",
 	}
 }
 
-func (r *GroupPolicyAttachment) Create(
+func (r *GroupPolicyAttachmentResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*GroupPolicyAttachmentOutput, error) {
+) (*GroupPolicyAttachmentResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -72,9 +72,11 @@ func (r *GroupPolicyAttachment) Create(
 	return r.read(ctx, client, true)
 }
 
-func (r *GroupPolicyAttachment) Read(
-	ctx context.Context, cfg *awsCfg, prior *GroupPolicyAttachmentOutput,
-) (*GroupPolicyAttachmentOutput, error) {
+func (r *GroupPolicyAttachmentResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *GroupPolicyAttachmentResourceOutput,
+) (*GroupPolicyAttachmentResourceOutput, error) {
 	key := r.key(prior)
 	if err := validateGroupPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return nil, err
@@ -86,16 +88,15 @@ func (r *GroupPolicyAttachment) Read(
 	return key.read(ctx, client, false)
 }
 
-func (r *GroupPolicyAttachment) Update(
+func (r *GroupPolicyAttachmentResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[GroupPolicyAttachment, *GroupPolicyAttachmentOutput],
-) (*GroupPolicyAttachmentOutput, error) {
+	prior runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput],
+) (*GroupPolicyAttachmentResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *GroupPolicyAttachment) Delete(
-	ctx context.Context, cfg *awsCfg, prior *GroupPolicyAttachmentOutput,
-) error {
+func (r *GroupPolicyAttachmentResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *GroupPolicyAttachmentResourceOutput) error {
 	key := r.key(prior)
 	if err := validateGroupPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return err
@@ -122,9 +123,9 @@ func (r *GroupPolicyAttachment) Delete(
 	return nil
 }
 
-func (r *GroupPolicyAttachment) read(
+func (r *GroupPolicyAttachmentResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*GroupPolicyAttachmentOutput, error) {
+) (*GroupPolicyAttachmentResourceOutput, error) {
 	what := fmt.Sprintf("policy %s attached to group %s", r.PolicyArn, r.GroupName)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		found, err := r.find(ctx, client)
@@ -139,10 +140,13 @@ func (r *GroupPolicyAttachment) read(
 	if err != nil {
 		return nil, err
 	}
-	return &GroupPolicyAttachmentOutput{GroupName: r.GroupName, PolicyArn: r.PolicyArn}, nil
+	return &GroupPolicyAttachmentResourceOutput{GroupName: r.GroupName, PolicyArn: r.PolicyArn}, nil
 }
 
-func (r *GroupPolicyAttachment) find(ctx context.Context, client *iam.Client) (bool, error) {
+func (r *GroupPolicyAttachmentResource) find(
+	ctx context.Context,
+	client *iam.Client,
+) (bool, error) {
 	paginator := iam.NewListAttachedGroupPoliciesPaginator(client,
 		&iam.ListAttachedGroupPoliciesInput{
 			GroupName: aws.String(r.GroupName),
@@ -168,15 +172,14 @@ func (r *GroupPolicyAttachment) find(ctx context.Context, client *iam.Client) (b
 	return false, runtime.ErrNotFound
 }
 
-func (r *GroupPolicyAttachment) validate() error {
+func (r *GroupPolicyAttachmentResource) validate() error {
 	return validateGroupPolicyAttachmentARN(r.PolicyArn)
 }
 
-func (r *GroupPolicyAttachment) key(
-	prior *GroupPolicyAttachmentOutput,
-) *GroupPolicyAttachment {
+func (r *GroupPolicyAttachmentResource) key(
+	prior *GroupPolicyAttachmentResourceOutput) *GroupPolicyAttachmentResource {
 	if prior != nil && prior.GroupName != "" && prior.PolicyArn != "" {
-		return &GroupPolicyAttachment{GroupName: prior.GroupName, PolicyArn: prior.PolicyArn}
+		return &GroupPolicyAttachmentResource{GroupName: prior.GroupName, PolicyArn: prior.PolicyArn}
 	}
 	return r
 }

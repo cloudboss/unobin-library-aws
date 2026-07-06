@@ -32,14 +32,16 @@ func Library() *runtime.Library {
 		Description:   "AWS Lambda library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"function":             makeResource[svc.Function, *svc.FunctionOutput](),
-			"alias":                makeResource[svc.Alias, *svc.AliasOutput](),
-			"permission":           makeResource[svc.Permission, *svc.PermissionOutput](),
-			"event-source-mapping": makeResource[svc.EventSourceMapping, *svc.EventSourceMappingOutput](),
-			"function-url":         makeResource[svc.FunctionUrl, *svc.FunctionUrlOutput](),
+			"function":   makeResource[svc.FunctionResource, *svc.FunctionResourceOutput](),
+			"alias":      makeResource[svc.AliasResource, *svc.AliasResourceOutput](),
+			"permission": makeResource[svc.PermissionResource, *svc.PermissionResourceOutput](),
+			"event-source-mapping": makeResource[
+				svc.EventSourceMappingResource,
+				*svc.EventSourceMappingResourceOutput](),
+			"function-url": makeResource[svc.FunctionUrlResource, *svc.FunctionUrlResourceOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
-			"invoke": makeAction[svc.Invoke, *svc.InvokeOutput](),
+			"invoke": makeAction[svc.InvokeAction, *svc.InvokeActionOutput](),
 		},
 	}
 }

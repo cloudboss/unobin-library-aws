@@ -23,7 +23,7 @@ func Library() *runtime.Library {
 		Description:   "AWS CloudWatch library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"metric-alarm": makeResource[svc.MetricAlarm, *svc.MetricAlarmOutput](),
+			"metric-alarm": makeResource[svc.MetricAlarmResource, *svc.MetricAlarmResourceOutput](),
 		},
 	}
 }

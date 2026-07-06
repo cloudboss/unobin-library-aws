@@ -19,7 +19,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Instance is an EC2 instance: a virtual machine launched from an AMI or a
+// InstanceResource is an EC2 instance: a virtual machine launched from an AMI or a
 // launch template into a subnet. One RunInstances call provisions it with every
 // field that call accepts; the only create-time field RunInstances does not take
 // is source-dest-check, which a follow-on ModifyInstanceAttribute disables when
@@ -42,7 +42,7 @@ import (
 // A terminated instance still describes for a while, so Read maps a terminated
 // state to a gone resource, the same as a not-found error code; a shutting-down
 // instance is still live.
-type Instance struct {
+type InstanceResource struct {
 	Ami                               *string                         `ub:"ami"`
 	InstanceType                      *string                         `ub:"instance-type"`
 	SubnetId                          *string                         `ub:"subnet-id"`
@@ -78,7 +78,7 @@ type Instance struct {
 	ForceDestroy *bool `ub:"force-destroy"`
 }
 
-// InstanceOutput holds the values EC2 computes for an instance. The id is the
+// InstanceResourceOutput holds the values EC2 computes for an instance. The id is the
 // instance's handle. The state, the resolved Availability Zone and subnet, the
 // private and public addresses and DNS names, and the primary network interface
 // id come from the settled instance after the create wait. The Availability Zone
@@ -86,7 +86,7 @@ type Instance struct {
 // provides them, so they are reported here even though they share input names.
 // The root volume id and root device name come from the instance's block device
 // mappings, the device name being the AMI-assigned root that is not an input.
-type InstanceOutput struct {
+type InstanceResourceOutput struct {
 	InstanceId                string `ub:"instance-id"`
 	InstanceState             string `ub:"instance-state"`
 	AvailabilityZone          string `ub:"availability-zone"`
@@ -100,7 +100,7 @@ type InstanceOutput struct {
 	RootDeviceName            string `ub:"root-device-name"`
 }
 
-func (r *Instance) SchemaVersion() int { return 1 }
+func (r *InstanceResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when an instance is created. The
 // image, the public-address association, the Availability Zone, the
@@ -111,7 +111,7 @@ func (r *Instance) SchemaVersion() int { return 1 }
 // is fixed at launch. The security group set, IAM profile, source-dest-check,
 // monitoring, protection flags, shutdown behavior, metadata options, root volume,
 // and tags are reconciled in place and are not listed.
-func (r *Instance) ReplaceFields() []string {
+func (r *InstanceResource) ReplaceFields() []string {
 	return []string{
 		"ami",
 		"associate-public-ip-address",
@@ -135,7 +135,7 @@ func (r *Instance) ReplaceFields() []string {
 // the launch-template id-or-name choice, the metadata-options enums and hop
 // limit, and the root volume's type family -- and the per-element rules on the
 // additional EBS and instance-store volume lists derive through ForEach.
-func (r Instance) Constraints() []constraint.Constraint {
+func (r InstanceResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtLeastOneOf(r.Ami, r.LaunchTemplate),
 		constraint.AtLeastOneOf(r.InstanceType, r.LaunchTemplate),
@@ -214,7 +214,10 @@ func (r Instance) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Instance) Create(ctx context.Context, cfg *awsCfg) (*InstanceOutput, error) {
+func (r *InstanceResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*InstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -236,9 +239,11 @@ func (r *Instance) Create(ctx context.Context, cfg *awsCfg) (*InstanceOutput, er
 	return r.read(ctx, client, id)
 }
 
-func (r *Instance) Read(
-	ctx context.Context, cfg *awsCfg, prior *InstanceOutput,
-) (*InstanceOutput, error) {
+func (r *InstanceResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *InstanceResourceOutput,
+) (*InstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -246,9 +251,11 @@ func (r *Instance) Read(
 	return r.read(ctx, client, prior.InstanceId)
 }
 
-func (r *Instance) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Instance, *InstanceOutput],
-) (*InstanceOutput, error) {
+func (r *InstanceResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+) (*InstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -260,7 +267,11 @@ func (r *Instance) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *Instance) Delete(ctx context.Context, cfg *awsCfg, prior *InstanceOutput) error {
+func (r *InstanceResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *InstanceResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -295,7 +306,7 @@ func (r *Instance) Delete(ctx context.Context, cfg *awsCfg, prior *InstanceOutpu
 // requested, the subnet, security groups, and primary private address move into
 // the primary network interface specification, since RunInstances rejects the
 // top-level forms alongside a network interface.
-func (r *Instance) runInput(
+func (r *InstanceResource) runInput(
 	ctx context.Context, client *ec2.Client,
 ) (*ec2.RunInstancesInput, error) {
 	userData, err := r.encodedUserData()
@@ -342,7 +353,7 @@ func (r *Instance) runInput(
 
 // placement builds the Placement member from the Availability Zone and tenancy,
 // returning nil when neither is set so RunInstances picks a zone itself.
-func (r *Instance) placement() *ec2types.Placement {
+func (r *InstanceResource) placement() *ec2types.Placement {
 	if r.AvailabilityZone == nil && r.Tenancy == nil {
 		return nil
 	}
@@ -357,7 +368,7 @@ func (r *Instance) placement() *ec2types.Placement {
 // request, the subnet, security groups, and primary private address are
 // top-level fields. With one, they move into the primary network interface at
 // device index 0, the only form RunInstances accepts a public-address toggle in.
-func (r *Instance) applyAddressing(in *ec2.RunInstancesInput) error {
+func (r *InstanceResource) applyAddressing(in *ec2.RunInstancesInput) error {
 	if r.AssociatePublicIpAddress == nil {
 		in.SubnetId = r.SubnetId
 		in.SecurityGroupIds = ptr.Value(r.VpcSecurityGroupIds)
@@ -378,7 +389,7 @@ func (r *Instance) applyAddressing(in *ec2.RunInstancesInput) error {
 // to the request. The root mapping targets the AMI's root device name; with no
 // ami input, the image comes from the launch template the instance launches
 // from, so a root-block-device works on either path.
-func (r *Instance) applyBlockDevices(
+func (r *InstanceResource) applyBlockDevices(
 	ctx context.Context, client *ec2.Client, in *ec2.RunInstancesInput,
 ) error {
 	var mappings []ec2types.BlockDeviceMapping
@@ -407,7 +418,7 @@ func (r *Instance) applyBlockDevices(
 
 // tagSpecifications builds the create-time tag specifications for the instance
 // and its volumes, each from its own tag map.
-func (r *Instance) tagSpecifications() []ec2types.TagSpecification {
+func (r *InstanceResource) tagSpecifications() []ec2types.TagSpecification {
 	var specs []ec2types.TagSpecification
 	specs = append(specs, tagSpecifications(ec2types.ResourceTypeInstance, ptr.Value(r.Tags))...)
 	specs = append(specs, tagSpecifications(ec2types.ResourceTypeVolume, ptr.Value(r.VolumeTags))...)
@@ -421,7 +432,7 @@ func (r *Instance) tagSpecifications() []ec2types.TagSpecification {
 // partitions cannot tag a resource at create, so a tagged run that fails for that
 // reason is retried without the tag specifications and the tags are reconciled
 // per resource afterward.
-func (r *Instance) run(
+func (r *InstanceResource) run(
 	ctx context.Context, client *ec2.Client, in *ec2.RunInstancesInput,
 ) (string, error) {
 	var resp *ec2.RunInstancesOutput
@@ -459,7 +470,7 @@ func (r *Instance) run(
 // tagAfterCreate reconciles the instance and volume tags with separate calls,
 // for the partition path where the tagged run was not accepted. The volume ids
 // come from the run response's block device mappings.
-func (r *Instance) tagAfterCreate(
+func (r *InstanceResource) tagAfterCreate(
 	ctx context.Context, client *ec2.Client, id string, instance ec2types.Instance,
 ) error {
 	if len(ptr.Value(r.Tags)) > 0 {
@@ -481,7 +492,7 @@ func (r *Instance) tagAfterCreate(
 // does not accept. Source-dest-check defaults to enabled, so it is disabled only
 // when the input explicitly asks for false; every other create-time field rides
 // the run call itself.
-func (r *Instance) applyCreateFollowOns(
+func (r *InstanceResource) applyCreateFollowOns(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	if r.SourceDestCheck != nil && !*r.SourceDestCheck {
@@ -510,9 +521,9 @@ func (r *Instance) applyCreateFollowOns(
 // updateInPlace reconciles, in order, every field that changes without replacing
 // the instance. Each block is gated on a real change to the input it reconciles,
 // so a re-apply with no change makes no write.
-func (r *Instance) updateInPlace(
+func (r *InstanceResource) updateInPlace(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[Instance, *InstanceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) error {
 	if runtime.Changed(ptr.Value(prior.Inputs.VolumeTags), ptr.Value(r.VolumeTags)) {
 		if err := r.reconcileVolumeTags(ctx, client, id); err != nil {
@@ -569,14 +580,14 @@ func (r *Instance) updateInPlace(
 // secondary describe of the root volume is best-effort: a transient failure
 // reading it must not turn a live instance into a gone one, since only the
 // primary describe decides that.
-func (r *Instance) read(
+func (r *InstanceResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*InstanceOutput, error) {
+) (*InstanceResourceOutput, error) {
 	instance, err := describeInstance(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	out := &InstanceOutput{
+	out := &InstanceResourceOutput{
 		InstanceId:                aws.ToString(instance.InstanceId),
 		AvailabilityZone:          placementZone(instance.Placement),
 		SubnetId:                  aws.ToString(instance.SubnetId),
@@ -598,7 +609,7 @@ func (r *Instance) read(
 // user-data field is plain text the SDK base64-encodes here; the
 // user-data-base64 field is already encoded and passes through. Exactly one is
 // set, enforced by a constraint, so the first non-nil wins.
-func (r *Instance) encodedUserData() (*string, error) {
+func (r *InstanceResource) encodedUserData() (*string, error) {
 	if r.UserData != nil {
 		return aws.String(base64.StdEncoding.EncodeToString([]byte(*r.UserData))), nil
 	}
@@ -637,7 +648,7 @@ func rootDeviceNameFromImage(
 // template, for a root-block-device on an instance whose configuration names no
 // ami of its own. With no version set, the template's default version applies,
 // matching what RunInstances launches.
-func (r *Instance) launchTemplateImageId(
+func (r *InstanceResource) launchTemplateImageId(
 	ctx context.Context, client *ec2.Client,
 ) (string, error) {
 	lt := r.LaunchTemplate
@@ -674,7 +685,7 @@ func (r *Instance) launchTemplateImageId(
 
 // reconcileVolumeTags brings the tags on each of the instance's EBS volumes to
 // the desired set. The volume ids come from a fresh describe of the instance.
-func (r *Instance) reconcileVolumeTags(
+func (r *InstanceResource) reconcileVolumeTags(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	instance, err := describeInstance(ctx, client, id)
@@ -697,7 +708,7 @@ func (r *Instance) reconcileVolumeTags(
 // replaced, so the association is removed and re-added. Either change is retried
 // while a just-created profile is still propagating, and waited until the
 // association reports associated.
-func (r *Instance) reconcileIamProfile(
+func (r *InstanceResource) reconcileIamProfile(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	assoc, err := instanceProfileAssociation(ctx, client, id)
@@ -736,7 +747,7 @@ func (r *Instance) reconcileIamProfile(
 
 // associateIamProfile attaches the desired profile by name, retrying while it is
 // still propagating, then waits for the association to report associated.
-func (r *Instance) associateIamProfile(
+func (r *InstanceResource) associateIamProfile(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	err := retry.OnError(ctx, isInstanceProfileNotReady, func(ctx context.Context) error {
@@ -756,7 +767,7 @@ func (r *Instance) associateIamProfile(
 // replaceIamProfile swaps a running instance's profile association for the
 // desired profile, retrying while it is still propagating, then waits for the new
 // association to report associated.
-func (r *Instance) replaceIamProfile(
+func (r *InstanceResource) replaceIamProfile(
 	ctx context.Context, client *ec2.Client, id, associationID string,
 ) error {
 	err := retry.OnError(ctx, isInstanceProfileNotReady, func(ctx context.Context) error {
@@ -775,7 +786,7 @@ func (r *Instance) replaceIamProfile(
 
 // setSourceDestCheck sets the instance's source-dest-check flag with its own
 // single-attribute call.
-func (r *Instance) setSourceDestCheck(
+func (r *InstanceResource) setSourceDestCheck(
 	ctx context.Context, client *ec2.Client, id string, value bool,
 ) error {
 	_, err := client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
@@ -791,7 +802,7 @@ func (r *Instance) setSourceDestCheck(
 // setSecurityGroups replaces the instance's security group set in one call. EC2
 // requires at least one group, so an empty desired set is rejected by the API
 // rather than silently cleared.
-func (r *Instance) setSecurityGroups(
+func (r *InstanceResource) setSecurityGroups(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	_, err := client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
@@ -810,9 +821,9 @@ func (r *Instance) setSecurityGroups(
 // each, and the instance is started again. User data is modified only on its own
 // change and the instance type on its own, so an unchanged one is left alone even
 // when the other moves.
-func (r *Instance) reconcileStoppedAttributes(
+func (r *InstanceResource) reconcileStoppedAttributes(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[Instance, *InstanceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) error {
 	typeChanged := runtime.Changed(prior.Inputs.InstanceType, r.InstanceType)
 	userDataChanged := runtime.Changed(prior.Inputs.UserData, r.UserData) ||
@@ -838,7 +849,7 @@ func (r *Instance) reconcileStoppedAttributes(
 
 // setInstanceType modifies the stopped instance's type with its own
 // single-attribute call.
-func (r *Instance) setInstanceType(
+func (r *InstanceResource) setInstanceType(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	_, err := client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
@@ -855,7 +866,7 @@ func (r *Instance) setInstanceType(
 // single-attribute call. The user data is base64-decoded to raw bytes before the
 // call, because ModifyInstanceAttribute base64-encodes the blob value itself and
 // passing the already-encoded form would double-encode it.
-func (r *Instance) setUserData(
+func (r *InstanceResource) setUserData(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	encoded, err := r.encodedUserData()
@@ -881,9 +892,9 @@ func (r *Instance) setUserData(
 
 // reconcileProtections reconciles the stop- and termination-protection flags,
 // each on its own change and each through its own single-attribute call.
-func (r *Instance) reconcileProtections(
+func (r *InstanceResource) reconcileProtections(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[Instance, *InstanceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) error {
 	if runtime.Changed(prior.Inputs.DisableApiStop, r.DisableApiStop) {
 		if err := r.setProtection(ctx, client, id,
@@ -905,7 +916,7 @@ func (r *Instance) reconcileProtections(
 // single-attribute call. Either attribute is rejected as unsupported for a spot
 // instance, which is treated as nothing to do rather than a failure, since the
 // protection does not apply there.
-func (r *Instance) setProtection(
+func (r *InstanceResource) setProtection(
 	ctx context.Context, client *ec2.Client, id string,
 	attribute ec2types.InstanceAttributeName, value bool,
 ) error {
@@ -928,7 +939,7 @@ func (r *Instance) setProtection(
 
 // setShutdownBehavior sets the instance-initiated shutdown behavior with its own
 // single-attribute call, which uses the generic string value member.
-func (r *Instance) setShutdownBehavior(
+func (r *InstanceResource) setShutdownBehavior(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	value := &ec2types.AttributeValue{Value: r.InstanceInitiatedShutdownBehavior}
@@ -944,7 +955,7 @@ func (r *Instance) setShutdownBehavior(
 
 // setMonitoring turns detailed monitoring on or off to match the desired flag,
 // using the enable or disable call as appropriate.
-func (r *Instance) setMonitoring(
+func (r *InstanceResource) setMonitoring(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	if aws.ToBool(r.Monitoring) {
@@ -970,7 +981,7 @@ func (r *Instance) setMonitoring(
 // state rather than clearing them, since there is no empty form to send. The
 // modify is retried once without the tags member when the partition reports
 // instance-metadata-tags unsupported, the one parameter some partitions reject.
-func (r *Instance) reconcileMetadataOptions(
+func (r *InstanceResource) reconcileMetadataOptions(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	if r.MetadataOptions == nil {
@@ -992,7 +1003,7 @@ func (r *Instance) reconcileMetadataOptions(
 // When the endpoint is being disabled, only the endpoint state and the token
 // requirement travel; the hop limit, protocol, and metadata-tags settings apply
 // only to an enabled endpoint.
-func (r *Instance) metadataModifyInput(id string) *ec2.ModifyInstanceMetadataOptionsInput {
+func (r *InstanceResource) metadataModifyInput(id string) *ec2.ModifyInstanceMetadataOptionsInput {
 	b := r.MetadataOptions
 	in := &ec2.ModifyInstanceMetadataOptionsInput{InstanceId: aws.String(id)}
 	if b.HttpEndpoint != nil {
@@ -1021,9 +1032,9 @@ func (r *Instance) metadataModifyInput(id string) *ec2.ModifyInstanceMetadataOpt
 // and waited until the modification settles; the delete-on-termination flag is
 // reconciled through the instance's block device mapping and waited until it
 // reads back; the tags are reconciled as a set.
-func (r *Instance) reconcileRootBlockDevice(
+func (r *InstanceResource) reconcileRootBlockDevice(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[Instance, *InstanceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) error {
 	desired := r.RootBlockDevice
 	if desired == nil {
@@ -1072,7 +1083,7 @@ func rootBlockDeviceTags(b *InstanceRootBlockDevice) map[string]string {
 
 // modifyRootVolume applies the root volume's size, type, IOPS, and throughput in
 // one ModifyVolume call and waits for the volume to settle.
-func (r *Instance) modifyRootVolume(
+func (r *InstanceResource) modifyRootVolume(
 	ctx context.Context, client *ec2.Client, volumeID string,
 ) error {
 	b := r.RootBlockDevice
@@ -1094,7 +1105,7 @@ func (r *Instance) modifyRootVolume(
 // setRootDeleteOnTermination reconciles the root volume's delete-on-termination
 // flag through the instance's block device mapping, then waits for the new value
 // to read back. The root device is identified by the instance's root device name.
-func (r *Instance) setRootDeleteOnTermination(
+func (r *InstanceResource) setRootDeleteOnTermination(
 	ctx context.Context, client *ec2.Client, id string, instance *ec2types.Instance,
 ) error {
 	want := aws.ToBool(rootDeleteOnTermination(r.RootBlockDevice))
@@ -1117,7 +1128,7 @@ func (r *Instance) setRootDeleteOnTermination(
 // stop stops the instance and waits for it to reach the stopped state. A stop is
 // idempotent on an already-stopped instance, which the wait then completes on its
 // first poll.
-func (r *Instance) stop(ctx context.Context, client *ec2.Client, id string) error {
+func (r *InstanceResource) stop(ctx context.Context, client *ec2.Client, id string) error {
 	_, err := client.StopInstances(ctx, &ec2.StopInstancesInput{InstanceIds: []string{id}})
 	if err != nil {
 		return fmt.Errorf("stop instances: %w", err)
@@ -1129,7 +1140,7 @@ func (r *Instance) stop(ctx context.Context, client *ec2.Client, id string) erro
 // after a type change, StartInstances can briefly report that the launch plan's
 // instance type does not match the attribute value while the change propagates;
 // the call is retried over a few minutes for that.
-func (r *Instance) start(ctx context.Context, client *ec2.Client, id string) error {
+func (r *InstanceResource) start(ctx context.Context, client *ec2.Client, id string) error {
 	err := retry.OnError(ctx, isLaunchPlanTypeMismatch, func(ctx context.Context) error {
 		_, err := client.StartInstances(ctx, &ec2.StartInstancesInput{InstanceIds: []string{id}})
 		return err
@@ -1146,7 +1157,7 @@ func (r *Instance) start(ctx context.Context, client *ec2.Client, id string) err
 // a clear error rather than polling to the timeout. A describe that cannot yet
 // find the just-launched instance is tolerated for a bounded run of consecutive
 // polls.
-func (r *Instance) waitRunning(ctx context.Context, client *ec2.Client, id string) error {
+func (r *InstanceResource) waitRunning(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("instance %s to be running", id)
 	notFound := 0
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
@@ -1176,7 +1187,7 @@ func (r *Instance) waitRunning(ctx context.Context, client *ec2.Client, id strin
 // waitStopped polls the instance until it reaches the stopped state. An instance
 // that terminates instead stops the wait with a clear error. A not-found is
 // tolerated as a transient describe lag.
-func (r *Instance) waitStopped(ctx context.Context, client *ec2.Client, id string) error {
+func (r *InstanceResource) waitStopped(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("instance %s to stop", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		state, err := observeInstanceState(ctx, client, id)
@@ -1200,7 +1211,11 @@ func (r *Instance) waitStopped(ctx context.Context, client *ec2.Client, id strin
 // waitTerminated polls the instance until it reaches the terminated state. A
 // not-found means the instance is fully gone, which is the same outcome as
 // terminated. Every transitional state -- including shutting-down -- is pending.
-func (r *Instance) waitTerminated(ctx context.Context, client *ec2.Client, id string) error {
+func (r *InstanceResource) waitTerminated(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	what := fmt.Sprintf("instance %s to terminate", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		state, err := observeInstanceState(ctx, client, id)
@@ -1220,7 +1235,7 @@ func (r *Instance) waitTerminated(ctx context.Context, client *ec2.Client, id st
 // waitIamProfileAssociated polls the instance's IAM profile association until it
 // reports the associated state. A missing association is tolerated as still
 // associating.
-func (r *Instance) waitIamProfileAssociated(
+func (r *InstanceResource) waitIamProfileAssociated(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	what := fmt.Sprintf("instance %s iam profile association", id)
@@ -1238,7 +1253,7 @@ func (r *Instance) waitIamProfileAssociated(
 
 // waitMetadataOptionsApplied polls the instance until its metadata options report
 // the applied state, leaving the pending state.
-func (r *Instance) waitMetadataOptionsApplied(
+func (r *InstanceResource) waitMetadataOptionsApplied(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	what := fmt.Sprintf("instance %s metadata options", id)
@@ -1256,7 +1271,7 @@ func (r *Instance) waitMetadataOptionsApplied(
 
 // waitRootVolumeModified polls the root volume until its ModifyVolume settles,
 // reusing the volume-modification states the volume resource waits on.
-func (r *Instance) waitRootVolumeModified(
+func (r *InstanceResource) waitRootVolumeModified(
 	ctx context.Context, client *ec2.Client, volumeID string,
 ) error {
 	what := fmt.Sprintf("root volume %s modification", volumeID)
@@ -1279,7 +1294,7 @@ func (r *Instance) waitRootVolumeModified(
 // waitRootDeleteOnTermination polls the instance until its root device reports the
 // wanted delete-on-termination flag, confirming the block-device modify took
 // effect.
-func (r *Instance) waitRootDeleteOnTermination(
+func (r *InstanceResource) waitRootDeleteOnTermination(
 	ctx context.Context, client *ec2.Client, id, rootName string, want bool,
 ) error {
 	what := fmt.Sprintf("instance %s root delete-on-termination", id)

@@ -15,11 +15,11 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-// ZoneData resolves one existing Route 53 hosted zone. A zone-id reads that
+// ZoneDataSource resolves one existing Route 53 hosted zone. A zone-id reads that
 // zone directly. Otherwise the lookup scans hosted zones and filters by the
 // normalized name, public/private kind, optional VPC id, and optional tag subset
 // until exactly one zone remains.
-type ZoneData struct {
+type ZoneDataSource struct {
 	ZoneId      *string            `ub:"zone-id"`
 	Name        *string            `ub:"name"`
 	PrivateZone *bool              `ub:"private-zone"`
@@ -27,8 +27,8 @@ type ZoneData struct {
 	Tags        *map[string]string `ub:"tags"`
 }
 
-// ZoneDataOutput holds the hosted zone attributes returned by the lookup.
-type ZoneDataOutput struct {
+// ZoneDataSourceOutput holds the hosted zone attributes returned by the lookup.
+type ZoneDataSourceOutput struct {
 	ZoneId                    string            `ub:"zone-id"`
 	Arn                       string            `ub:"arn"`
 	Name                      string            `ub:"name"`
@@ -47,7 +47,7 @@ type ZoneDataOutput struct {
 // Constraints declares the mutually exclusive hosted zone selectors. Name and
 // zone-id are both optional because tag-only and VPC-only scans can select one
 // zone.
-func (r ZoneData) Constraints() []constraint.Constraint {
+func (r ZoneDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.ZoneId, r.Name),
 	}
@@ -56,7 +56,7 @@ func (r ZoneData) Constraints() []constraint.Constraint {
 // Read resolves the hosted zone and returns its current attributes. A data
 // source lookup that finds no zone, or more than one zone, returns an ordinary
 // descriptive error rather than runtime.ErrNotFound.
-func (r *ZoneData) Read(ctx context.Context, cfg *awsCfg) (*ZoneDataOutput, error) {
+func (r *ZoneDataSource) Read(ctx context.Context, cfg *awsCfg) (*ZoneDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (r *ZoneData) Read(ctx context.Context, cfg *awsCfg) (*ZoneDataOutput, erro
 	return r.output(ctx, client, zone)
 }
 
-func (r *ZoneData) findZone(
+func (r *ZoneDataSource) findZone(
 	ctx context.Context, client *route53.Client,
 ) (route53types.HostedZone, error) {
 	if r.ZoneId != nil {
@@ -77,7 +77,7 @@ func (r *ZoneData) findZone(
 	return r.findZoneByFilters(ctx, client)
 }
 
-func (r *ZoneData) findZoneByID(
+func (r *ZoneDataSource) findZoneByID(
 	ctx context.Context, client *route53.Client, zoneID string,
 ) (route53types.HostedZone, error) {
 	resp, err := client.GetHostedZone(ctx, &route53.GetHostedZoneInput{Id: aws.String(zoneID)})
@@ -94,7 +94,7 @@ func (r *ZoneData) findZoneByID(
 	return *resp.HostedZone, nil
 }
 
-func (r *ZoneData) findZoneByFilters(
+func (r *ZoneDataSource) findZoneByFilters(
 	ctx context.Context, client *route53.Client,
 ) (route53types.HostedZone, error) {
 	wantPrivate := aws.ToBool(r.PrivateZone) || r.VpcId != nil
@@ -129,7 +129,7 @@ func (r *ZoneData) findZoneByFilters(
 	}
 }
 
-func (r *ZoneData) zoneMatches(
+func (r *ZoneDataSource) zoneMatches(
 	ctx context.Context,
 	client *route53.Client,
 	zone route53types.HostedZone,
@@ -180,9 +180,9 @@ func zoneHasVPC(ctx context.Context, client *route53.Client, zoneID, vpcID strin
 	return false, nil
 }
 
-func (r *ZoneData) output(
+func (r *ZoneDataSource) output(
 	ctx context.Context, client *route53.Client, zone route53types.HostedZone,
-) (*ZoneDataOutput, error) {
+) (*ZoneDataSourceOutput, error) {
 	zoneID := cleanZoneID(aws.ToString(zone.Id))
 	if zoneID == "" {
 		return nil, errors.New("route53 hosted zone has an empty id")
@@ -196,7 +196,7 @@ func (r *ZoneData) output(
 	if err != nil {
 		return nil, err
 	}
-	out := &ZoneDataOutput{
+	out := &ZoneDataSourceOutput{
 		ZoneId:                    zoneID,
 		Arn:                       zoneARN(zoneRegion(client), zoneID),
 		Name:                      normalizeDomainName(aws.ToString(zone.Name)),
@@ -216,7 +216,7 @@ func (r *ZoneData) output(
 	return out, nil
 }
 
-func (r *ZoneData) findNameServers(
+func (r *ZoneDataSource) findNameServers(
 	ctx context.Context, client *route53.Client, zoneID string, private bool,
 ) ([]string, error) {
 	resp, err := client.GetHostedZone(ctx, &route53.GetHostedZoneInput{Id: aws.String(zoneID)})

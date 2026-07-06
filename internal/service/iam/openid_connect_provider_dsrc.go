@@ -13,22 +13,22 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-// OpenIDConnectProviderData resolves an existing IAM OpenID Connect (OIDC)
+// OpenIDConnectProviderDataSource resolves an existing IAM OpenID Connect (OIDC)
 // provider by either its arn or its url, exactly one of which must be set. Given
 // an arn it reads that provider directly; given a url it lists every provider in
 // the account and matches by the url that each provider's arn embeds after its
 // slash, then reads the matching arn. Unlike a resource read, a data source must
 // resolve, so a lookup that finds nothing returns a descriptive error rather
 // than runtime.ErrNotFound.
-type OpenIDConnectProviderData struct {
+type OpenIDConnectProviderDataSource struct {
 	Arn *string `ub:"arn"`
 	Url *string `ub:"url"`
 }
 
-// OpenIDConnectProviderDataOutput holds the resolved provider's attributes. Arn
+// OpenIDConnectProviderDataSourceOutput holds the resolved provider's attributes. Arn
 // is the canonical resolved arn and Url is IAM's scheme-less form, so a
 // reference to either reads the value IAM stores rather than the lookup input.
-type OpenIDConnectProviderDataOutput struct {
+type OpenIDConnectProviderDataSourceOutput struct {
 	Arn            string            `ub:"arn"`
 	Url            string            `ub:"url"`
 	ClientIDList   []string          `ub:"client-id-list"`
@@ -40,7 +40,7 @@ type OpenIDConnectProviderDataOutput struct {
 // lookup keys. The url's own format rules (a valid https url with no query) are a
 // string-content check the constraint vocabulary cannot express, so Read
 // enforces them instead.
-func (r OpenIDConnectProviderData) Constraints() []constraint.Constraint {
+func (r OpenIDConnectProviderDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Arn, r.Url),
 	}
@@ -50,9 +50,9 @@ func (r OpenIDConnectProviderData) Constraints() []constraint.Constraint {
 // from the arn input or, failing that, by matching the url input against the
 // providers in the account, then reads that arn. A url input is validated before
 // use, and any lookup that matches nothing is a descriptive error.
-func (r *OpenIDConnectProviderData) Read(
+func (r *OpenIDConnectProviderDataSource) Read(
 	ctx context.Context, cfg *awsCfg,
-) (*OpenIDConnectProviderDataOutput, error) {
+) (*OpenIDConnectProviderDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (r *OpenIDConnectProviderData) Read(
 	if resp == nil {
 		return nil, fmt.Errorf("iam oidc provider not found for arn %q", arn)
 	}
-	return &OpenIDConnectProviderDataOutput{
+	return &OpenIDConnectProviderDataSourceOutput{
 		Arn:            arn,
 		Url:            aws.ToString(resp.Url),
 		ClientIDList:   resp.ClientIDList,
@@ -86,7 +86,7 @@ func (r *OpenIDConnectProviderData) Read(
 // resolveArn returns the arn to read. When the arn input is set it is used
 // directly; otherwise the url input is validated and matched against the
 // account's providers.
-func (r *OpenIDConnectProviderData) resolveArn(
+func (r *OpenIDConnectProviderDataSource) resolveArn(
 	ctx context.Context, client *iam.Client,
 ) (string, error) {
 	if r.Arn != nil {
@@ -103,7 +103,7 @@ func (r *OpenIDConnectProviderData) resolveArn(
 // whose embedded url matches the input url with its leading https scheme
 // stripped. IAM stores the url scheme-less, so the comparison strips https from
 // the input first. No provider matching the url is a descriptive error.
-func (r *OpenIDConnectProviderData) findArnByURL(
+func (r *OpenIDConnectProviderDataSource) findArnByURL(
 	ctx context.Context, client *iam.Client, wanted string,
 ) (string, error) {
 	resp, err := client.ListOpenIDConnectProviders(

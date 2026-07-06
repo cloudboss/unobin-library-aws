@@ -18,9 +18,9 @@ import (
 func TestLibraryRegistersSns(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"topic":              reflect.TypeFor[*svc.TopicOutput](),
-		"topic-subscription": reflect.TypeFor[*svc.TopicSubscriptionOutput](),
-		"topic-policy":       reflect.TypeFor[*svc.TopicPolicyOutput](),
+		"topic":              reflect.TypeFor[*svc.TopicResourceOutput](),
+		"topic-subscription": reflect.TypeFor[*svc.TopicSubscriptionResourceOutput](),
+		"topic-policy":       reflect.TypeFor[*svc.TopicPolicyResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

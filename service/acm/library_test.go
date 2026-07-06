@@ -64,8 +64,8 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"certificate":            reflect.TypeFor[*svc.CertificateOutput](),
-		"certificate-validation": reflect.TypeFor[*svc.CertificateValidationOutput](),
+		"certificate":            reflect.TypeFor[*svc.CertificateResourceOutput](),
+		"certificate-validation": reflect.TypeFor[*svc.CertificateValidationResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLibraryRegistersACMLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"certificate": reflect.TypeFor[*svc.CertificateDataOutput](),
+		"certificate": reflect.TypeFor[*svc.CertificateDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

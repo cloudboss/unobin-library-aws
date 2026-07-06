@@ -15,7 +15,7 @@ import (
 
 const vpcDataID = "vpc-0123456789abcdef0"
 
-func describeVpcDataPageXML(nextToken string, items ...string) string {
+func describeVpcDataSourcePageXML(nextToken string, items ...string) string {
 	next := ""
 	if nextToken != "" {
 		next = fmt.Sprintf("<nextToken>%s</nextToken>", nextToken)
@@ -74,7 +74,7 @@ func describeVpcAttributeXML(attribute string, value bool) string {
 </DescribeVpcAttributeResponse>`, vpcDataID, attribute, value, attribute)
 }
 
-func describeVpcDataRouteTablesXML(nextToken string, ids ...string) string {
+func describeVpcDataSourceRouteTablesXML(nextToken string, ids ...string) string {
 	var items strings.Builder
 	for _, id := range ids {
 		fmt.Fprintf(&items, `<item>
@@ -94,14 +94,14 @@ func describeVpcDataRouteTablesXML(nextToken string, ids ...string) string {
 </DescribeRouteTablesResponse>`, items.String(), next)
 }
 
-func TestVpcDataARNUsesEuscPartition(t *testing.T) {
+func TestVpcDataSourceARNUsesEuscPartition(t *testing.T) {
 	assert.Equal(t,
 		"arn:aws-eusc:ec2:eusc-de-east-1:123456789012:vpc/"+vpcDataID,
 		vpcDataARN("eusc-de-east-1", "123456789012", vpcDataID),
 	)
 }
 
-func registerVpcDataAttributeHandlers(t *testing.T, fake *fakeEC2) {
+func registerVpcDataSourceAttributeHandlers(t *testing.T, fake *fakeEC2) {
 	fake.on("DescribeVpcAttribute", func(_ int, form url.Values) (int, string) {
 		require.Equal(t, vpcDataID, form.Get("VpcId"))
 		switch form.Get("Attribute") {
@@ -118,36 +118,36 @@ func registerVpcDataAttributeHandlers(t *testing.T, fake *fakeEC2) {
 	})
 }
 
-func TestVpcDataReadPaginatesAndEnrichesSelectedVpc(t *testing.T) {
+func TestVpcDataSourceReadPaginatesAndEnrichesSelectedVpc(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeVpcs", func(n int, form url.Values) (int, string) {
 		switch n {
 		case 1:
 			assert.Empty(t, form.Get("NextToken"))
-			return 200, describeVpcDataPageXML("token-2")
+			return 200, describeVpcDataSourcePageXML("token-2")
 		case 2:
 			assert.Equal(t, "token-2", form.Get("NextToken"))
-			return 200, describeVpcDataPageXML("", vpcDataItemXML(vpcDataID))
+			return 200, describeVpcDataSourcePageXML("", vpcDataItemXML(vpcDataID))
 		default:
 			t.Fatalf("unexpected DescribeVpcs call %d", n)
 			return 500, ""
 		}
 	})
-	registerVpcDataAttributeHandlers(t, fake)
+	registerVpcDataSourceAttributeHandlers(t, fake)
 	fake.on("DescribeRouteTables", func(_ int, form url.Values) (int, string) {
 		assertEC2Filter(t, form, "association.main", []string{"true"})
 		assertEC2Filter(t, form, "vpc-id", []string{vpcDataID})
-		return 200, describeVpcDataRouteTablesXML("", "rtb-0123456789abcdef0")
+		return 200, describeVpcDataSourceRouteTablesXML("", "rtb-0123456789abcdef0")
 	})
 	cfg := fake.configuration()
 
-	r := &VpcData{
+	r := &VpcDataSource{
 		VpcId:         aws.String(vpcDataID),
 		CidrBlock:     aws.String("10.42.0.0/16"),
 		DhcpOptionsId: aws.String("dopt-0123456789abcdef0"),
 		Default:       aws.Bool(true),
 		State:         aws.String("available"),
-		Filter: new([]VpcDataFilter{
+		Filter: new([]VpcDataSourceFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
@@ -167,7 +167,7 @@ func TestVpcDataReadPaginatesAndEnrichesSelectedVpc(t *testing.T) {
 	assert.False(t, out.EnableNetworkAddressUsageMetrics)
 	assert.Equal(t, "default", out.InstanceTenancy)
 	assert.Equal(t, "123456789012", out.OwnerId)
-	assert.Equal(t, []VpcDataCidrBlockAssociation{
+	assert.Equal(t, []VpcDataSourceCidrBlockAssociation{
 		{AssociationId: "vpc-cidr-assoc-1", CidrBlock: "10.42.0.0/16", State: "associated"},
 		{AssociationId: "vpc-cidr-assoc-2", CidrBlock: "10.43.0.0/16", State: "associating"},
 	}, out.CidrBlockAssociations)
@@ -195,25 +195,25 @@ func TestVpcDataReadPaginatesAndEnrichesSelectedVpc(t *testing.T) {
 	assertEC2Filter(t, sent[0], "tag:unobin", []string{"ec2-vpc-data"})
 }
 
-func TestVpcDataReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
+func TestVpcDataSourceReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeVpcs", func(_ int, form url.Values) (int, string) {
 		for key := range form {
 			assert.False(t, strings.HasPrefix(key, "Filter."), "unexpected filter %s", key)
 			assert.False(t, strings.HasPrefix(key, "VpcId."), "unexpected vpc id %s", key)
 		}
-		return 200, describeVpcDataPageXML("")
+		return 200, describeVpcDataSourcePageXML("")
 	})
 	cfg := fake.configuration()
 
-	out, err := (&VpcData{}).Read(context.Background(), cfg)
+	out, err := (&VpcDataSource{}).Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
 	assert.NotErrorIs(t, err, runtime.ErrNotFound)
 	assert.EqualError(t, err, "no matching EC2 VPC found")
 }
 
-func TestVpcDataReadTreatsVpcIdNotFoundAsLookupError(t *testing.T) {
+func TestVpcDataSourceReadTreatsVpcIdNotFoundAsLookupError(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeVpcs", func(int, url.Values) (int, string) {
 		return 400, ec2ErrorXML("InvalidVpcID.NotFound",
@@ -221,7 +221,7 @@ func TestVpcDataReadTreatsVpcIdNotFoundAsLookupError(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &VpcData{VpcId: aws.String("vpc-missing")}
+	r := &VpcDataSource{VpcId: aws.String("vpc-missing")}
 	out, err := r.Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
@@ -229,33 +229,33 @@ func TestVpcDataReadTreatsVpcIdNotFoundAsLookupError(t *testing.T) {
 	assert.EqualError(t, err, "no matching EC2 VPC found")
 }
 
-func TestVpcDataReadErrorsOnMultipleMatches(t *testing.T) {
+func TestVpcDataSourceReadErrorsOnMultipleMatches(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeVpcs", func(int, url.Values) (int, string) {
-		return 200, describeVpcDataPageXML("",
+		return 200, describeVpcDataSourcePageXML("",
 			vpcDataItemXML(vpcDataID),
 			vpcDataItemXML("vpc-11111111111111111"))
 	})
 	cfg := fake.configuration()
 
-	out, err := (&VpcData{CidrBlock: aws.String("10.42.0.0/16")}).Read(context.Background(), cfg)
+	out, err := (&VpcDataSource{CidrBlock: aws.String("10.42.0.0/16")}).Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
 	assert.Contains(t, err.Error(), "multiple EC2 VPCs matched")
 }
 
-func TestVpcDataReadSwallowsMainRouteTableErrors(t *testing.T) {
+func TestVpcDataSourceReadSwallowsMainRouteTableErrors(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeVpcs", func(int, url.Values) (int, string) {
-		return 200, describeVpcDataPageXML("", vpcDataItemXML(vpcDataID))
+		return 200, describeVpcDataSourcePageXML("", vpcDataItemXML(vpcDataID))
 	})
-	registerVpcDataAttributeHandlers(t, fake)
+	registerVpcDataSourceAttributeHandlers(t, fake)
 	fake.on("DescribeRouteTables", func(int, url.Values) (int, string) {
 		return 400, ec2ErrorXML("InvalidRouteTableID.NotFound", "missing route table")
 	})
 	cfg := fake.configuration()
 
-	out, err := (&VpcData{VpcId: aws.String(vpcDataID)}).Read(context.Background(), cfg)
+	out, err := (&VpcDataSource{VpcId: aws.String(vpcDataID)}).Read(context.Background(), cfg)
 	require.NoError(t, err)
 	require.NotNil(t, out)
 	assert.Nil(t, out.MainRouteTableId)

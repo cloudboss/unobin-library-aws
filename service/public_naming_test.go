@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -53,6 +54,52 @@ func TestPublicKindNames(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegisteredTypeNames(t *testing.T) {
+	for name, lib := range libraries() {
+		t.Run(name, func(t *testing.T) {
+			for kind, reg := range lib.Resources {
+				checkRegistrationTypeNames(t, "resource", kind,
+					reg.NewReceiver(), reg.OutputType(), "Resource", "ResourceOutput")
+			}
+			for kind, reg := range lib.DataSources {
+				checkRegistrationTypeNames(t, "data source", kind,
+					reg.NewReceiver(), reg.OutputType(), "DataSource", "DataSourceOutput")
+			}
+			for kind, reg := range lib.Actions {
+				checkRegistrationTypeNames(t, "action", kind,
+					reg.NewReceiver(), reg.OutputType(), "Action", "ActionOutput")
+			}
+		})
+	}
+}
+
+func checkRegistrationTypeNames(
+	t *testing.T,
+	category string,
+	kind string,
+	receiver any,
+	output reflect.Type,
+	receiverSuffix string,
+	outputSuffix string,
+) {
+	t.Helper()
+	receiverName := reflect.TypeOf(receiver).Elem().Name()
+	if !strings.HasSuffix(receiverName, receiverSuffix) {
+		t.Errorf("%s kind %q uses receiver type %q", category, kind, receiverName)
+	}
+	outputName := outputName(output)
+	if !strings.HasSuffix(outputName, outputSuffix) {
+		t.Errorf("%s kind %q uses output type %q", category, kind, outputName)
+	}
+}
+
+func outputName(output reflect.Type) string {
+	if output.Kind() == reflect.Pointer {
+		return output.Elem().Name()
+	}
+	return output.Name()
 }
 
 func libraries() map[string]*runtime.Library {

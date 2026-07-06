@@ -19,12 +19,12 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Role is an IAM role: a named identity, governed by a trust policy, that
+// RoleResource is an IAM role: a named identity, governed by a trust policy, that
 // principals assume to receive temporary credentials. The fields mirror the
 // IAM CreateRole API. The role name and path fix the role's identity and ARN,
 // so a change to either replaces the role; the trust policy, description,
 // session limit, permissions boundary, and tags all change in place.
-type Role struct {
+type RoleResource struct {
 	RoleName                 string             `ub:"role-name"`
 	AssumeRolePolicyDocument string             `ub:"assume-role-policy-document"`
 	Path                     *string            `ub:"path"`
@@ -34,21 +34,21 @@ type Role struct {
 	Tags                     *map[string]string `ub:"tags"`
 }
 
-// RoleOutput holds the values IAM computes for a role. The ARN and role id
+// RoleResourceOutput holds the values IAM computes for a role. The ARN and role id
 // identify the role; the role id is the stable, unique handle that survives a
 // rename. The create date is the moment IAM recorded the role, in RFC 3339.
-type RoleOutput struct {
+type RoleResourceOutput struct {
 	Arn        string `ub:"arn"`
 	RoleId     string `ub:"role-id"`
 	CreateDate string `ub:"create-date"`
 }
 
-func (r *Role) SchemaVersion() int { return 1 }
+func (r *RoleResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs IAM cannot change on an existing role. The
 // name and path are baked into the role's ARN at creation, so changing either
 // requires a new role. Every other input is reconciled in place by Update.
-func (r *Role) ReplaceFields() []string {
+func (r *RoleResource) ReplaceFields() []string {
 	return []string{
 		"role-name",
 		"path",
@@ -58,7 +58,7 @@ func (r *Role) ReplaceFields() []string {
 // Constraints declares the bounds IAM places on a role's inputs. The maximum
 // session duration, when set, runs from one hour to twelve hours, expressed in
 // seconds; IAM rejects anything outside that window.
-func (r Role) Constraints() []constraint.Constraint {
+func (r RoleResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.MaxSessionDuration)).
 			Require(constraint.AtLeast(r.MaxSessionDuration, 3600),
@@ -67,7 +67,7 @@ func (r Role) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Role) Create(ctx context.Context, cfg *awsCfg) (*RoleOutput, error) {
+func (r *RoleResource) Create(ctx context.Context, cfg *awsCfg) (*RoleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,11 @@ func (r *Role) Create(ctx context.Context, cfg *awsCfg) (*RoleOutput, error) {
 	return r.read(ctx, client, true)
 }
 
-func (r *Role) Read(ctx context.Context, cfg *awsCfg, prior *RoleOutput) (*RoleOutput, error) {
+func (r *RoleResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RoleResourceOutput,
+) (*RoleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -132,9 +136,9 @@ func (r *Role) Read(ctx context.Context, cfg *awsCfg, prior *RoleOutput) (*RoleO
 // yet and read waits; otherwise a missing role is drift and maps to
 // runtime.ErrNotFound. In both cases read waits for a well-formed ARN before
 // returning, so the unique-id placeholder never reaches the output.
-func (r *Role) read(
+func (r *RoleResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*RoleOutput, error) {
+) (*RoleResourceOutput, error) {
 	var role *iamtypes.Role
 	probe := func(ctx context.Context) (bool, error) {
 		resp, err := client.GetRole(ctx, &iam.GetRoleInput{
@@ -168,9 +172,9 @@ func (r *Role) read(
 	return iamRoleOutput(role), nil
 }
 
-func (r *Role) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Role, *RoleOutput],
-) (*RoleOutput, error) {
+func (r *RoleResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RoleResource, *RoleResourceOutput],
+) (*RoleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -245,7 +249,7 @@ func (r *Role) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Role) Delete(ctx context.Context, cfg *awsCfg, prior *RoleOutput) error {
+func (r *RoleResource) Delete(ctx context.Context, cfg *awsCfg, prior *RoleResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -277,7 +281,7 @@ func (r *Role) Delete(ctx context.Context, cfg *awsCfg, prior *RoleOutput) error
 // syncTags reconciles the role's tags with the desired set, reading the live
 // tags through the paginated ListRoleTags and writing changes with TagRole and
 // UntagRole. IAM addresses role tags by role name.
-func (r *Role) syncTags(ctx context.Context, client *iam.Client) error {
+func (r *RoleResource) syncTags(ctx context.Context, client *iam.Client) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}
@@ -364,8 +368,8 @@ func iamRoleTags(tags map[string]string) []iamtypes.Tag {
 }
 
 // iamRoleOutput maps an IAM role record to the computed output struct.
-func iamRoleOutput(role *iamtypes.Role) *RoleOutput {
-	return &RoleOutput{
+func iamRoleOutput(role *iamtypes.Role) *RoleResourceOutput {
+	return &RoleResourceOutput{
 		Arn:        aws.ToString(role.Arn),
 		RoleId:     aws.ToString(role.RoleId),
 		CreateDate: aws.ToTime(role.CreateDate).Format(time.RFC3339),

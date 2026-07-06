@@ -64,7 +64,11 @@ const cloudFrontHostedZoneIDChina = "Z3RFFRIM2A3IF5"
 const loggingBucketGoneMessage = "The S3 bucket that you specified for CloudFront logs " +
 	"doesn't exist"
 
-func (r *Distribution) Delete(ctx context.Context, cfg *awsCfg, prior *DistributionOutput) error {
+func (r *DistributionResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *DistributionResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

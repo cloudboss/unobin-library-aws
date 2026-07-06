@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOriginRequestPolicyDataARN(t *testing.T) {
+func TestOriginRequestPolicyDataSourceARN(t *testing.T) {
 	tests := []struct {
 		name      string
 		region    string
@@ -112,7 +112,7 @@ func TestFlattenOriginRequestPolicyConfigs(t *testing.T) {
 	assert.Equal(t, []string{"a", "z"}, queryStrings.QueryStrings.Items)
 }
 
-func TestOriginRequestPolicyDataOutputUsesResolvedIDFallback(t *testing.T) {
+func TestOriginRequestPolicyDataSourceOutputUsesResolvedIDFallback(t *testing.T) {
 	out := originRequestPolicyDataOutput("us-east-1", "123456789012", "resolved-id", "etag",
 		&cloudfronttypes.OriginRequestPolicy{
 			OriginRequestPolicyConfig: &cloudfronttypes.OriginRequestPolicyConfig{

@@ -19,11 +19,11 @@ import (
 func TestLibraryRegistersLambda(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"function":             reflect.TypeFor[*svc.FunctionOutput](),
-		"alias":                reflect.TypeFor[*svc.AliasOutput](),
-		"permission":           reflect.TypeFor[*svc.PermissionOutput](),
-		"event-source-mapping": reflect.TypeFor[*svc.EventSourceMappingOutput](),
-		"function-url":         reflect.TypeFor[*svc.FunctionUrlOutput](),
+		"function":             reflect.TypeFor[*svc.FunctionResourceOutput](),
+		"alias":                reflect.TypeFor[*svc.AliasResourceOutput](),
+		"permission":           reflect.TypeFor[*svc.PermissionResourceOutput](),
+		"event-source-mapping": reflect.TypeFor[*svc.EventSourceMappingResourceOutput](),
+		"function-url":         reflect.TypeFor[*svc.FunctionUrlResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -33,7 +33,7 @@ func TestLibraryRegistersLambda(t *testing.T) {
 	}
 	t.Run("invoke", func(t *testing.T) {
 		require.Contains(t, lib.Actions, "invoke")
-		assert.Equal(t, reflect.TypeFor[*svc.InvokeOutput](),
+		assert.Equal(t, reflect.TypeFor[*svc.InvokeActionOutput](),
 			lib.Actions["invoke"].OutputType())
 	})
 }

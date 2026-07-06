@@ -155,7 +155,7 @@ type DistributionCustomErrorResponse struct {
 // always present; the optional ones expand only when set. The comment defaults
 // to the empty string and aliases and logging to their disabled forms, since
 // the API requires those members.
-func (r *Distribution) expandConfig(
+func (r *DistributionResource) expandConfig(
 	callerReference string,
 ) *cloudfronttypes.DistributionConfig {
 	return &cloudfronttypes.DistributionConfig{

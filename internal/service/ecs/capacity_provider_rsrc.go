@@ -39,7 +39,7 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// CapacityProvider manages an ECS capacity provider. Exactly one provider
+// CapacityProviderResource manages an ECS capacity provider. Exactly one provider
 // block is required: an Auto Scaling group provider is account-scoped and
 // must not set cluster, while a Managed Instances provider is cluster-scoped
 // and requires cluster. Tags are reconciled separately from provider settings.
@@ -48,7 +48,7 @@ var (
 // get generic ARN validation, and allowed/excluded instance types are checked
 // for length and ^[a-zA-Z0-9\.\*\-]+$ in validate because those checks are not
 // derivable constraints.
-type CapacityProvider struct {
+type CapacityProviderResource struct {
 	Name                     string                                    `ub:"name"`
 	Cluster                  *string                                   `ub:"cluster"`
 	AutoScalingGroupProvider *CapacityProviderAutoScalingGroupProvider `ub:"auto-scaling-group-provider"`
@@ -56,11 +56,11 @@ type CapacityProvider struct {
 	Tags                     *map[string]string                        `ub:"tags"`
 }
 
-// CapacityProviderOutput holds the ECS-computed identity and status fields,
+// CapacityProviderResourceOutput holds the ECS-computed identity and status fields,
 // observed user tags, plus the complete observed selected provider block.
 // Unobin merges output references shallowly, so a provider block output must
 // not be partial and tags must be cloud-observed rather than echoed inputs.
-type CapacityProviderOutput struct {
+type CapacityProviderResourceOutput struct {
 	Arn                      string                                    `ub:"arn"`
 	CapacityProviderArn      string                                    `ub:"capacity-provider-arn"`
 	Status                   string                                    `ub:"status"`
@@ -71,7 +71,7 @@ type CapacityProviderOutput struct {
 	ManagedInstancesProvider *CapacityProviderManagedInstancesProvider `ub:"managed-instances-provider"`
 }
 
-func (o *CapacityProviderOutput) capacityProviderArn() string {
+func (o *CapacityProviderResourceOutput) capacityProviderArn() string {
 	if o == nil {
 		return ""
 	}
@@ -81,20 +81,20 @@ func (o *CapacityProviderOutput) capacityProviderArn() string {
 	return o.CapacityProviderArn
 }
 
-func (r *CapacityProvider) SchemaVersion() int { return 1 }
+func (r *CapacityProviderResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the top-level fields ECS fixes at create time. The ASG
 // ARN, Managed Instances capacity option type, and provider-kind switches are
 // also create-only, but the current runtime only evaluates top-level replace
 // triggers, so those nested leaves cannot be represented safely here.
-func (r *CapacityProvider) ReplaceFields() []string {
+func (r *CapacityProviderResource) ReplaceFields() []string {
 	return []string{"name", "cluster"}
 }
 
 // Constraints declares the provider selection rules, mutable enum sets, and
 // numeric bounds that can be derived from fields. Regex checks for names,
 // ARNs, and instance type patterns run in validate instead.
-func (r CapacityProvider) Constraints() []constraint.Constraint {
+func (r CapacityProviderResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.AutoScalingGroupProvider, r.ManagedInstancesProvider),
 		constraint.When(constraint.Present(r.ManagedInstancesProvider)).
@@ -337,9 +337,9 @@ func (r CapacityProvider) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *CapacityProvider) Create(
+func (r *CapacityProviderResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*CapacityProviderOutput, error) {
+) (*CapacityProviderResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -382,9 +382,11 @@ func (r *CapacityProvider) Create(
 	return r.read(ctx, client, capacityProviderArn, true)
 }
 
-func (r *CapacityProvider) Read(
-	ctx context.Context, cfg *awsCfg, prior *CapacityProviderOutput,
-) (*CapacityProviderOutput, error) {
+func (r *CapacityProviderResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *CapacityProviderResourceOutput,
+) (*CapacityProviderResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -392,11 +394,11 @@ func (r *CapacityProvider) Read(
 	return r.read(ctx, client, prior.capacityProviderArn(), true)
 }
 
-func (r *CapacityProvider) Update(
+func (r *CapacityProviderResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[CapacityProvider, *CapacityProviderOutput],
-) (*CapacityProviderOutput, error) {
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
+) (*CapacityProviderResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -432,9 +434,8 @@ func (r *CapacityProvider) Update(
 	return r.read(ctx, client, capacityProviderArn, true)
 }
 
-func (r *CapacityProvider) Delete(
-	ctx context.Context, cfg *awsCfg, prior *CapacityProviderOutput,
-) error {
+func (r *CapacityProviderResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *CapacityProviderResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -452,8 +453,8 @@ func (r *CapacityProvider) Delete(
 	return waitCapacityProviderDeleted(ctx, client, capacityProviderArn)
 }
 
-func (r *CapacityProvider) tagsNeedSync(
-	prior runtime.Prior[CapacityProvider, *CapacityProviderOutput],
+func (r *CapacityProviderResource) tagsNeedSync(
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
 ) bool {
 	desired := capacityProviderUserTags(ptr.Value(r.Tags))
 	if !maps.Equal(capacityProviderUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
@@ -463,8 +464,8 @@ func (r *CapacityProvider) tagsNeedSync(
 		!maps.Equal(capacityProviderUserTags(prior.Observed.Tags), desired)
 }
 
-func (r *CapacityProvider) providerChanged(
-	prior runtime.Prior[CapacityProvider, *CapacityProviderOutput],
+func (r *CapacityProviderResource) providerChanged(
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
 ) bool {
 	if runtime.Changed(prior.Inputs.AutoScalingGroupProvider, r.AutoScalingGroupProvider) ||
 		runtime.Changed(prior.Inputs.ManagedInstancesProvider, r.ManagedInstancesProvider) {
@@ -474,7 +475,9 @@ func (r *CapacityProvider) providerChanged(
 		r.configuredManagedInstancesDrifted(prior.Observed)
 }
 
-func (r *CapacityProvider) configuredASGDrifted(observed *CapacityProviderOutput) bool {
+func (r *CapacityProviderResource) configuredASGDrifted(
+	observed *CapacityProviderResourceOutput,
+) bool {
 	desired := r.AutoScalingGroupProvider
 	if desired == nil || observed == nil || observed.AutoScalingGroupProvider == nil {
 		return false
@@ -525,9 +528,8 @@ func configuredManagedScalingDrifted(
 	return false
 }
 
-func (r *CapacityProvider) configuredManagedInstancesDrifted(
-	observed *CapacityProviderOutput,
-) bool {
+func (r *CapacityProviderResource) configuredManagedInstancesDrifted(
+	observed *CapacityProviderResourceOutput) bool {
 	desired := r.ManagedInstancesProvider
 	if desired == nil || observed == nil || observed.ManagedInstancesProvider == nil {
 		return false
@@ -915,9 +917,9 @@ func positiveFloatRangeMax[R interface{ positiveFloatRange() }](r R) *float64 {
 	}
 }
 
-func (r *CapacityProvider) read(
+func (r *CapacityProviderResource) read(
 	ctx context.Context, client *ecs.Client, capacityProviderArn string, includeTags bool,
-) (*CapacityProviderOutput, error) {
+) (*CapacityProviderResourceOutput, error) {
 	cp, err := findCapacityProvider(ctx, client, capacityProviderArn, includeTags)
 	if err != nil {
 		return nil, err
@@ -925,9 +927,9 @@ func (r *CapacityProvider) read(
 	return capacityProviderOutput(cp), nil
 }
 
-func capacityProviderOutput(cp *ecstypes.CapacityProvider) *CapacityProviderOutput {
+func capacityProviderOutput(cp *ecstypes.CapacityProvider) *CapacityProviderResourceOutput {
 	arn := aws.ToString(cp.CapacityProviderArn)
-	return &CapacityProviderOutput{
+	return &CapacityProviderResourceOutput{
 		Arn:                      arn,
 		CapacityProviderArn:      arn,
 		Status:                   string(cp.Status),
@@ -1108,7 +1110,7 @@ func capacityProviderAlreadyDeleted(err error) bool {
 		strings.Contains(clientErr.ErrorMessage(), "capacity provider does not exist")
 }
 
-func (r *CapacityProvider) validate() error {
+func (r *CapacityProviderResource) validate() error {
 	if !capacityProviderNameRegexp.MatchString(r.Name) {
 		return fmt.Errorf("name %q must match %s", r.Name, capacityProviderNameRegexp.String())
 	}

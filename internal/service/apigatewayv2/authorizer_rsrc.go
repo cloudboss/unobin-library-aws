@@ -32,7 +32,7 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// Authorizer manages an API Gateway v2 authorizer. The authorizer belongs to
+// AuthorizerResource manages an API Gateway v2 authorizer. The authorizer belongs to
 // one API for life, so changing api-id replaces it; the name, type, identity
 // sources, URI, credentials, payload format, TTL, simple-response flag, and JWT
 // configuration update in place with one UpdateAuthorizer patch. Identity
@@ -40,7 +40,7 @@ var (
 // order are ignored before calls reach AWS. Create first reads the parent API so
 // an HTTP REQUEST authorizer with identity sources gets API Gateway's 300-second
 // cache TTL default when the input omits it.
-type Authorizer struct {
+type AuthorizerResource struct {
 	ApiId                          string                      `ub:"api-id"`
 	AuthorizerType                 string                      `ub:"authorizer-type"`
 	IdentitySources                *[]string                   `ub:"identity-sources"`
@@ -61,26 +61,26 @@ type AuthorizerJwtConfiguration struct {
 	Issuer   *string   `ub:"issuer"`
 }
 
-// AuthorizerOutput holds the authorizer identity and the cloud-filled TTL. The
+// AuthorizerResourceOutput holds the authorizer identity and the cloud-filled TTL. The
 // API id is recorded with the authorizer id because every read and delete needs
 // both values, including a delete after api-id has changed in configuration.
-type AuthorizerOutput struct {
+type AuthorizerResourceOutput struct {
 	ApiId                        string `ub:"api-id"`
 	AuthorizerId                 string `ub:"authorizer-id"`
 	AuthorizerResultTtlInSeconds int64  `ub:"authorizer-result-ttl-in-seconds"`
 }
 
-func (r *Authorizer) SchemaVersion() int { return 1 }
+func (r *AuthorizerResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the one field API Gateway cannot change in place.
-func (r *Authorizer) ReplaceFields() []string {
+func (r *AuthorizerResource) ReplaceFields() []string {
 	return []string{"api-id"}
 }
 
 // Constraints declares the local authorizer rules. The ARN syntax and
 // character-count bounds are checked in validate because they are not derived
 // constraints.
-func (r Authorizer) Constraints() []constraint.Constraint {
+func (r AuthorizerResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.AuthorizerType, "JWT", "REQUEST")).
 			Message("authorizer-type must be JWT or REQUEST"),
@@ -99,7 +99,7 @@ func (r Authorizer) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Authorizer) validate() error {
+func (r *AuthorizerResource) validate() error {
 	if n := len(r.Name); n < 1 || n > 128 {
 		return errors.New("name must be between 1 and 128 bytes")
 	}
@@ -115,7 +115,10 @@ func (r *Authorizer) validate() error {
 	return nil
 }
 
-func (r *Authorizer) Create(ctx context.Context, cfg *awsCfg) (*AuthorizerOutput, error) {
+func (r *AuthorizerResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*AuthorizerResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -150,9 +153,11 @@ func (r *Authorizer) Create(ctx context.Context, cfg *awsCfg) (*AuthorizerOutput
 	return authorizerOutput(r.ApiId, authorizerID, read), nil
 }
 
-func (r *Authorizer) Read(
-	ctx context.Context, cfg *awsCfg, prior *AuthorizerOutput,
-) (*AuthorizerOutput, error) {
+func (r *AuthorizerResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *AuthorizerResourceOutput,
+) (*AuthorizerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -160,9 +165,9 @@ func (r *Authorizer) Read(
 	return r.read(ctx, client, prior.ApiId, prior.AuthorizerId)
 }
 
-func (r *Authorizer) read(
+func (r *AuthorizerResource) read(
 	ctx context.Context, client *apigatewayv2.Client, apiID, authorizerID string,
-) (*AuthorizerOutput, error) {
+) (*AuthorizerResourceOutput, error) {
 	resp, err := getAuthorizer(ctx, client, apiID, authorizerID)
 	if err != nil {
 		if isNotFound(err) {
@@ -176,9 +181,11 @@ func (r *Authorizer) read(
 	return authorizerOutput(apiID, authorizerID, resp), nil
 }
 
-func (r *Authorizer) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Authorizer, *AuthorizerOutput],
-) (*AuthorizerOutput, error) {
+func (r *AuthorizerResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
+) (*AuthorizerResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -203,7 +210,11 @@ func (r *Authorizer) Update(
 	return r.read(ctx, client, prior.Outputs.ApiId, prior.Outputs.AuthorizerId)
 }
 
-func (r *Authorizer) Delete(ctx context.Context, cfg *awsCfg, prior *AuthorizerOutput) error {
+func (r *AuthorizerResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *AuthorizerResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -226,7 +237,7 @@ func (r *Authorizer) Delete(ctx context.Context, cfg *awsCfg, prior *AuthorizerO
 	return nil
 }
 
-func (r *Authorizer) getParentAPI(
+func (r *AuthorizerResource) getParentAPI(
 	ctx context.Context, client *apigatewayv2.Client,
 ) (*apigatewayv2.GetApiOutput, error) {
 	var resp *apigatewayv2.GetApiOutput
@@ -244,7 +255,7 @@ func (r *Authorizer) getParentAPI(
 	return resp, nil
 }
 
-func (r *Authorizer) createInput(
+func (r *AuthorizerResource) createInput(
 	protocol apigatewayv2types.ProtocolType,
 ) *apigatewayv2.CreateAuthorizerInput {
 	identitySources := authorizerStringSet(ptr.Value(r.IdentitySources))
@@ -279,8 +290,8 @@ func (r *Authorizer) createInput(
 	return in
 }
 
-func (r *Authorizer) updateInput(
-	prior runtime.Prior[Authorizer, *AuthorizerOutput],
+func (r *AuthorizerResource) updateInput(
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
 ) (*apigatewayv2.UpdateAuthorizerInput, bool) {
 	in := &apigatewayv2.UpdateAuthorizerInput{
 		ApiId:        aws.String(prior.Outputs.ApiId),
@@ -334,8 +345,8 @@ func (r *Authorizer) updateInput(
 	return in, changed
 }
 
-func (r *Authorizer) ttlNeedsUpdate(
-	prior runtime.Prior[Authorizer, *AuthorizerOutput],
+func (r *AuthorizerResource) ttlNeedsUpdate(
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
 ) bool {
 	if runtime.Changed(
 		prior.Inputs.AuthorizerResultTtlInSeconds,
@@ -349,7 +360,7 @@ func (r *Authorizer) ttlNeedsUpdate(
 	return prior.Observed.AuthorizerResultTtlInSeconds != *r.AuthorizerResultTtlInSeconds
 }
 
-func (r *Authorizer) jwtConfigurationUpdate() *apigatewayv2types.JWTConfiguration {
+func (r *AuthorizerResource) jwtConfigurationUpdate() *apigatewayv2types.JWTConfiguration {
 	if r.JwtConfiguration == nil {
 		return &apigatewayv2types.JWTConfiguration{}
 	}
@@ -387,12 +398,12 @@ func getAuthorizer(
 
 func authorizerOutput(
 	apiID, requestedID string, resp *apigatewayv2.GetAuthorizerOutput,
-) *AuthorizerOutput {
+) *AuthorizerResourceOutput {
 	authorizerID := aws.ToString(resp.AuthorizerId)
 	if authorizerID == "" {
 		authorizerID = requestedID
 	}
-	return &AuthorizerOutput{
+	return &AuthorizerResourceOutput{
 		ApiId:                        apiID,
 		AuthorizerId:                 authorizerID,
 		AuthorizerResultTtlInSeconds: int64(aws.ToInt32(resp.AuthorizerResultTtlInSeconds)),

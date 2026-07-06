@@ -69,7 +69,7 @@ type SnapshotBuild struct {
 	MemorySnapshotSizeInBytes int64 `ub:"memory-snapshot-size-in-bytes"`
 }
 
-type MicrovmImageOutput struct {
+type MicrovmImageResourceOutput struct {
 	ImageArn                 string `ub:"image-arn"`
 	Name                     string `ub:"name"`
 	State                    string `ub:"state"`
@@ -79,7 +79,7 @@ type MicrovmImageOutput struct {
 	LatestFailedImageVersion string `ub:"latest-failed-image-version"`
 }
 
-type MicrovmImageDataOutput struct {
+type MicrovmImageDataSourceOutput struct {
 	ImageArn                 string            `ub:"image-arn"`
 	Name                     string            `ub:"name"`
 	State                    string            `ub:"state"`
@@ -99,11 +99,34 @@ type MicrovmImageSummary struct {
 	LatestFailedImageVersion string `ub:"latest-failed-image-version"`
 }
 
-type MicrovmImagesOutput struct {
+type MicrovmImagesDataSourceOutput struct {
 	Items []MicrovmImageSummary `ub:"items"`
 }
 
-type MicrovmImageVersionDataOutput struct {
+type MicrovmImageVersionDataSourceOutput struct {
+	ImageArn                 string             `ub:"image-arn"`
+	ImageVersion             string             `ub:"image-version"`
+	State                    string             `ub:"state"`
+	Status                   string             `ub:"status"`
+	BaseImageArn             string             `ub:"base-image-arn"`
+	BaseImageVersion         string             `ub:"base-image-version"`
+	BuildRoleArn             string             `ub:"build-role-arn"`
+	CodeArtifact             CodeArtifact       `ub:"code-artifact"`
+	AdditionalOsCapabilities []string           `ub:"additional-os-capabilities"`
+	CpuConfigurations        []CpuConfiguration `ub:"cpu-configurations"`
+	Description              string             `ub:"description"`
+	EgressNetworkConnectors  []string           `ub:"egress-network-connectors"`
+	EnvironmentVariables     map[string]string  `ub:"environment-variables"`
+	Hooks                    *Hooks             `ub:"hooks"`
+	Logging                  *Logging           `ub:"logging"`
+	Resources                []Resources        `ub:"resources"`
+	StateReason              string             `ub:"state-reason"`
+	Tags                     map[string]string  `ub:"tags"`
+	CreatedAt                string             `ub:"created-at"`
+	UpdatedAt                string             `ub:"updated-at"`
+}
+
+type UpdateMicrovmImageVersionStatusActionOutput struct {
 	ImageArn                 string             `ub:"image-arn"`
 	ImageVersion             string             `ub:"image-version"`
 	State                    string             `ub:"state"`
@@ -149,11 +172,11 @@ type MicrovmImageVersionSummary struct {
 	UpdatedAt                string             `ub:"updated-at"`
 }
 
-type MicrovmImageVersionsOutput struct {
+type MicrovmImageVersionsDataSourceOutput struct {
 	Items []MicrovmImageVersionSummary `ub:"items"`
 }
 
-type MicrovmImageBuildDataOutput struct {
+type MicrovmImageBuildDataSourceOutput struct {
 	ImageArn          string         `ub:"image-arn"`
 	ImageVersion      string         `ub:"image-version"`
 	BuildId           string         `ub:"build-id"`
@@ -179,7 +202,7 @@ type MicrovmImageBuildSummary struct {
 	CreatedAt         string         `ub:"created-at"`
 }
 
-type MicrovmImageBuildsOutput struct {
+type MicrovmImageBuildsDataSourceOutput struct {
 	Items []MicrovmImageBuildSummary `ub:"items"`
 }
 
@@ -189,7 +212,7 @@ type ManagedMicrovmImageSummary struct {
 	UpdatedAt string `ub:"updated-at"`
 }
 
-type ManagedMicrovmImagesOutput struct {
+type ManagedMicrovmImagesDataSourceOutput struct {
 	Items []ManagedMicrovmImageSummary `ub:"items"`
 }
 
@@ -200,11 +223,27 @@ type ManagedMicrovmImageVersion struct {
 	UpdatedAt    string `ub:"updated-at"`
 }
 
-type ManagedMicrovmImageVersionsOutput struct {
+type ManagedMicrovmImageVersionsDataSourceOutput struct {
 	Items []ManagedMicrovmImageVersion `ub:"items"`
 }
 
-type MicrovmDataOutput struct {
+type MicrovmDataSourceOutput struct {
+	MicrovmId                string      `ub:"microvm-id"`
+	Endpoint                 string      `ub:"endpoint"`
+	ImageArn                 string      `ub:"image-arn"`
+	ImageVersion             string      `ub:"image-version"`
+	State                    string      `ub:"state"`
+	StartedAt                string      `ub:"started-at"`
+	TerminatedAt             string      `ub:"terminated-at"`
+	MaximumDurationInSeconds int64       `ub:"maximum-duration-in-seconds"`
+	ExecutionRoleArn         string      `ub:"execution-role-arn"`
+	IngressNetworkConnectors []string    `ub:"ingress-network-connectors"`
+	EgressNetworkConnectors  []string    `ub:"egress-network-connectors"`
+	IdlePolicy               *IdlePolicy `ub:"idle-policy"`
+	StateReason              string      `ub:"state-reason"`
+}
+
+type RunMicrovmActionOutput struct {
 	MicrovmId                string      `ub:"microvm-id"`
 	Endpoint                 string      `ub:"endpoint"`
 	ImageArn                 string      `ub:"image-arn"`
@@ -228,26 +267,26 @@ type MicrovmSummary struct {
 	StartedAt    string `ub:"started-at"`
 }
 
-type MicrovmsOutput struct {
+type MicrovmsDataSourceOutput struct {
 	Items []MicrovmSummary `ub:"items"`
 }
 
-type MicrovmAuthTokenOutput struct {
+type MicrovmAuthTokenActionOutput struct {
 	AuthToken map[string]string `ub:"auth-token,sensitive"`
 }
 
-type MicrovmShellAuthTokenOutput struct {
+type MicrovmShellAuthTokenActionOutput struct {
 	AuthToken map[string]string `ub:"auth-token,sensitive"`
 }
 
-type SuspendMicrovmOutput struct {
+type SuspendMicrovmActionOutput struct {
 	MicrovmIdentifier string `ub:"microvm-identifier"`
 }
 
-type ResumeMicrovmOutput struct {
+type ResumeMicrovmActionOutput struct {
 	MicrovmIdentifier string `ub:"microvm-identifier"`
 }
 
-type TerminateMicrovmOutput struct {
+type TerminateMicrovmActionOutput struct {
 	MicrovmIdentifier string `ub:"microvm-identifier"`
 }

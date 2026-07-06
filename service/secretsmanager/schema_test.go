@@ -18,8 +18,8 @@ import (
 func TestLibraryRegistersSecretsmanager(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"secret":         reflect.TypeFor[*svc.SecretOutput](),
-		"secret-version": reflect.TypeFor[*svc.SecretVersionOutput](),
+		"secret":         reflect.TypeFor[*svc.SecretResourceOutput](),
+		"secret-version": reflect.TypeFor[*svc.SecretVersionResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run("resource/"+key, func(t *testing.T) {
@@ -28,7 +28,7 @@ func TestLibraryRegistersSecretsmanager(t *testing.T) {
 		})
 	}
 	dataSources := map[string]reflect.Type{
-		"secret-version": reflect.TypeFor[*svc.SecretVersionDataOutput](),
+		"secret-version": reflect.TypeFor[*svc.SecretVersionDataSourceOutput](),
 	}
 	for key, outputType := range dataSources {
 		t.Run("data-source/"+key, func(t *testing.T) {

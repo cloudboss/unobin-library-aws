@@ -31,12 +31,12 @@ func TestUserPolicyAttachmentCreateAttachesAndReadsPolicy(t *testing.T) {
 			attachedPolicyXML("test-policy", policyArn))
 	})
 
-	out, err := (&UserPolicyAttachment{
+	out, err := (&UserPolicyAttachmentResource{
 		User:      "test-user",
 		PolicyArn: policyArn,
 	}).Create(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &UserPolicyAttachmentOutput{
+	assert.Equal(t, &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: policyArn,
 	}, out)
@@ -62,15 +62,15 @@ func TestUserPolicyAttachmentReadUsesPriorIdentityAndPaginates(t *testing.T) {
 		}
 	})
 
-	out, err := (&UserPolicyAttachment{
+	out, err := (&UserPolicyAttachmentResource{
 		User:      "desired-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/desired-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: policyArn,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, &UserPolicyAttachmentOutput{
+	assert.Equal(t, &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: policyArn,
 	}, out)
@@ -82,10 +82,10 @@ func TestUserPolicyAttachmentReadMapsMissingUserToNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	_, err := (&UserPolicyAttachment{
+	_, err := (&UserPolicyAttachmentResource{
 		User:      "missing-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
 		User:      "missing-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
 	})
@@ -99,10 +99,10 @@ func TestUserPolicyAttachmentReadMapsAbsentPolicyToNotFound(t *testing.T) {
 			attachedPolicyXML("other", "arn:aws:iam::123456789012:policy/other"))
 	})
 
-	_, err := (&UserPolicyAttachment{
+	_, err := (&UserPolicyAttachmentResource{
 		User:      "test-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
 	})
@@ -118,10 +118,10 @@ func TestUserPolicyAttachmentDeleteUsesPriorIdentityAndTreatsNotFoundAsSuccess(t
 		return 404, noSuchEntityXML
 	})
 
-	err := (&UserPolicyAttachment{
+	err := (&UserPolicyAttachmentResource{
 		User:      "new-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/new-policy",
-	}).Delete(context.Background(), fake.configuration(), &UserPolicyAttachmentOutput{
+	}).Delete(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
 		User:      "old-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/old-policy",
 	})

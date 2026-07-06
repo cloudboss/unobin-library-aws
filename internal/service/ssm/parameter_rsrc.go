@@ -33,7 +33,7 @@ const typeSecureString = "SecureString"
 // the Terraform provider allows for that asynchronous validation.
 const validationWait = 2 * time.Minute
 
-// Parameter manages an SSM parameter: a single PutParameter upsert keyed by
+// ParameterResource manages an SSM parameter: a single PutParameter upsert keyed by
 // name. The name and the data type are fixed at create time -- a parameter
 // cannot be renamed in place, and SSM rejects a data-type change on an existing
 // parameter -- so a change to either replaces the parameter; every other input
@@ -46,7 +46,7 @@ const validationWait = 2 * time.Minute
 // existing parameter -- SSM rejects setting both Tags and Overwrite -- so on an
 // update they are reconciled by separate AddTagsToResource and
 // RemoveTagsFromResource calls.
-type Parameter struct {
+type ParameterResource struct {
 	// Name is the fully qualified parameter name and the resource identity. It
 	// must be 1 to 2048 characters, a length checked in Create and Update.
 	Name string `ub:"name"`
@@ -82,18 +82,18 @@ type Parameter struct {
 	Tags *map[string]string `ub:"tags"`
 }
 
-// ParameterOutput holds the values SSM computes for a parameter. The ARN is the
+// ParameterResourceOutput holds the values SSM computes for a parameter. The ARN is the
 // parameter's reference handle in policies, and version settles after each
 // write. Name is the identity handle: a parameter has no server-assigned id, so
 // a name change is a replace, and Delete keys off the prior name to remove the
 // old parameter rather than the new one.
-type ParameterOutput struct {
+type ParameterResourceOutput struct {
 	Arn     string `ub:"arn"`
 	Version int64  `ub:"version"`
 	Name    string `ub:"name"`
 }
 
-func (r *Parameter) SchemaVersion() int { return 1 }
+func (r *ParameterResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SSM fixes once a parameter exists. The name is
 // the identity and cannot change; the data type cannot be changed on an
@@ -102,7 +102,7 @@ func (r *Parameter) SchemaVersion() int { return 1 }
 // Advanced-to-Standard downgrade, which SSM rejects (an advanced parameter
 // cannot revert to standard without data loss). That value-comparison-branched
 // replace cannot be a clean ReplaceFields entry, so it stays API-enforced.
-func (r *Parameter) ReplaceFields() []string {
+func (r *ParameterResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"data-type",
@@ -117,7 +117,7 @@ func (r *Parameter) ReplaceFields() []string {
 // description are checked in Create and Update rather than here, because the
 // constraint vocabulary has no string-length condition (AtMost compares a
 // numeric value, not a character count).
-func (r Parameter) Constraints() []constraint.Constraint {
+func (r ParameterResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Value, r.InsecureValue),
 		constraint.When(constraint.Equals(r.Type, "SecureString")).
@@ -138,7 +138,7 @@ func (r Parameter) Constraints() []constraint.Constraint {
 // These are checked here because the constraint vocabulary has no string-length
 // condition. The bounds are byte counts, which match SSM's character limits for
 // the ASCII these fields hold.
-func (r *Parameter) validate() error {
+func (r *ParameterResource) validate() error {
 	if n := len(r.Name); n < 1 || n > 2048 {
 		return fmt.Errorf("name must be between 1 and 2048 characters, got %d", n)
 	}
@@ -153,7 +153,10 @@ func (r *Parameter) validate() error {
 	return nil
 }
 
-func (r *Parameter) Create(ctx context.Context, cfg *awsCfg) (*ParameterOutput, error) {
+func (r *ParameterResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ParameterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -177,9 +180,11 @@ func (r *Parameter) Create(ctx context.Context, cfg *awsCfg) (*ParameterOutput, 
 	return r.read(ctx, client, true)
 }
 
-func (r *Parameter) Read(
-	ctx context.Context, cfg *awsCfg, prior *ParameterOutput,
-) (*ParameterOutput, error) {
+func (r *ParameterResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ParameterResourceOutput,
+) (*ParameterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -187,9 +192,9 @@ func (r *Parameter) Read(
 	return r.read(ctx, client, false)
 }
 
-func (r *Parameter) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Parameter, *ParameterOutput],
-) (*ParameterOutput, error) {
+func (r *ParameterResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ParameterResource, *ParameterResourceOutput],
+) (*ParameterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -217,7 +222,11 @@ func (r *Parameter) Update(
 	return r.read(ctx, client, false)
 }
 
-func (r *Parameter) Delete(ctx context.Context, cfg *awsCfg, prior *ParameterOutput) error {
+func (r *ParameterResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ParameterResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -250,7 +259,7 @@ func (r *Parameter) Delete(ctx context.Context, cfg *awsCfg, prior *ParameterOut
 // present; a KMS key id is sent only for a SecureString, since SSM rejects it
 // for other types. Tags are left for the caller to set, because whether they
 // ride the call depends on the Overwrite value.
-func (r *Parameter) putInput(overwrite bool) *ssm.PutParameterInput {
+func (r *ParameterResource) putInput(overwrite bool) *ssm.PutParameterInput {
 	in := &ssm.PutParameterInput{
 		Name:           aws.String(r.Name),
 		Type:           ssmtypes.ParameterType(r.Type),
@@ -272,7 +281,11 @@ func (r *Parameter) putInput(overwrite bool) *ssm.PutParameterInput {
 // put issues PutParameter, retrying once without the tier when SSM reports the
 // requested tier is not supported. Clearing the tier lets SSM apply the account
 // default rather than failing the apply over a tier the Region does not offer.
-func (r *Parameter) put(ctx context.Context, client *ssm.Client, in *ssm.PutParameterInput) error {
+func (r *ParameterResource) put(
+	ctx context.Context,
+	client *ssm.Client,
+	in *ssm.PutParameterInput,
+) error {
 	_, err := client.PutParameter(ctx, in)
 	if err != nil && isTierUnsupported(err) {
 		in.Tier = ""
@@ -285,7 +298,7 @@ func (r *Parameter) put(ctx context.Context, client *ssm.Client, in *ssm.PutPara
 // insecure-value into one argument. A constraint guarantees exactly one is set,
 // so whichever is present is the value; insecure-value exists only so it reads
 // back in plaintext while value stays masked.
-func (r *Parameter) value() *string {
+func (r *ParameterResource) value() *string {
 	if r.Value != nil {
 		return r.Value
 	}
@@ -295,7 +308,7 @@ func (r *Parameter) value() *string {
 // nonTagChanged reports whether any input other than tags changed, the gate for
 // re-issuing PutParameter on an update. Tags are reconciled separately, so a
 // change to only the tag set leaves the parameter value untouched.
-func (r *Parameter) nonTagChanged(prior Parameter) bool {
+func (r *ParameterResource) nonTagChanged(prior ParameterResource) bool {
 	return runtime.Changed(prior.Name, r.Name) ||
 		runtime.Changed(prior.Type, r.Type) ||
 		runtime.Changed(prior.Value, r.Value) ||
@@ -313,14 +326,14 @@ func (r *Parameter) nonTagChanged(prior Parameter) bool {
 // is aws:ec2:image means the asynchronous AMI validation has not finished, so
 // the read waits through that window. Otherwise a not-found is drift and maps to
 // runtime.ErrNotFound at once.
-func (r *Parameter) read(
+func (r *ParameterResource) read(
 	ctx context.Context, client *ssm.Client, created bool,
-) (*ParameterOutput, error) {
+) (*ParameterResourceOutput, error) {
 	param, err := r.getParameter(ctx, client, created)
 	if err != nil {
 		return nil, err
 	}
-	return &ParameterOutput{
+	return &ParameterResourceOutput{
 		Arn:     aws.ToString(param.ARN),
 		Version: param.Version,
 		Name:    aws.ToString(param.Name),
@@ -330,7 +343,7 @@ func (r *Parameter) read(
 // getParameter reads the parameter value with decryption. On a fresh create of
 // an aws:ec2:image parameter it retries a not-found for up to two minutes while
 // SSM validates the AMI id; otherwise a not-found maps to runtime.ErrNotFound.
-func (r *Parameter) getParameter(
+func (r *ParameterResource) getParameter(
 	ctx context.Context, client *ssm.Client, created bool,
 ) (*ssmtypes.Parameter, error) {
 	awaitValidation := created && aws.ToString(r.DataType) == dataTypeImage
@@ -372,7 +385,7 @@ func (r *Parameter) getParameter(
 // parameter tags by name with the Parameter resource type, reading them with
 // ListTagsForResource and writing changes with AddTagsToResource and
 // RemoveTagsFromResource.
-func (r *Parameter) syncTags(ctx context.Context, client *ssm.Client) error {
+func (r *ParameterResource) syncTags(ctx context.Context, client *ssm.Client) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ssm.ListTagsForResourceInput{

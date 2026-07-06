@@ -14,7 +14,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// Function manages a CloudFront function: the JavaScript that runs at the edge
+// FunctionResource manages a CloudFront function: the JavaScript that runs at the edge
 // on a viewer request or response. Its lifecycle is two-staged. Every create
 // and update writes the DEVELOPMENT stage, and when publish is set a
 // PublishFunction promotes that code to LIVE, the stage a distribution attaches.
@@ -24,7 +24,7 @@ import (
 // IfMatch concurrency token. The name fixes the function at create time, so a
 // change to it replaces the function; the code, comment, runtime, and key value
 // store associations reconcile in place.
-type Function struct {
+type FunctionResource struct {
 	// Name identifies the function and fixes it at create time.
 	Name string `ub:"name"`
 	// Runtime is the function's runtime environment, one of cloudfront-js-1.0
@@ -50,7 +50,7 @@ type Function struct {
 	Publish *bool `ub:"publish"`
 }
 
-// FunctionOutput holds the values CloudFront computes for a function. Arn is the
+// FunctionResourceOutput holds the values CloudFront computes for a function. Arn is the
 // function's identity, the value a distribution's cache behavior attaches it by.
 // Status reflects the publish lifecycle and changes across applies without input
 // changes. ETag is the function's current version, the concurrency token
@@ -58,26 +58,26 @@ type Function struct {
 // after every write and is returned only by a read. LiveStageETag is the LIVE
 // stage's own version, which exists only after a publish and is empty before
 // one.
-type FunctionOutput struct {
+type FunctionResourceOutput struct {
 	Arn           string `ub:"arn"`
 	Status        string `ub:"status"`
 	ETag          string `ub:"etag"`
 	LiveStageETag string `ub:"live-stage-etag"`
 }
 
-func (r *Function) SchemaVersion() int { return 1 }
+func (r *FunctionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the input CloudFront fixes when a function is created. The
 // name cannot be changed on an existing function, so a change to it requires a
 // new function. Every other input reconciles in place through UpdateFunction.
-func (r *Function) ReplaceFields() []string {
+func (r *FunctionResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
 // Constraints declares the rules CloudFront places on a function's inputs. The
 // runtime is one of a fixed set and is required, so an unconditional Must holds.
 // The function code comes from exactly one source, given inline or as a file.
-func (r Function) Constraints() []constraint.Constraint {
+func (r FunctionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.Runtime,
 			"cloudfront-js-1.0", "cloudfront-js-2.0")).
@@ -89,14 +89,14 @@ func (r Function) Constraints() []constraint.Constraint {
 // publishWanted reports whether the function should be promoted to the LIVE
 // stage. Publish is an intent flag defaulting to true, so an unset value means
 // publish.
-func (r *Function) publishWanted() bool {
+func (r *FunctionResource) publishWanted() bool {
 	return r.Publish == nil || *r.Publish
 }
 
 // functionCode reads the function's JavaScript from whichever source is set,
 // inline content or a file on disk, and returns it as the bytes CloudFront
 // takes. Constraints guarantees exactly one source.
-func (r *Function) functionCode() ([]byte, error) {
+func (r *FunctionResource) functionCode() ([]byte, error) {
 	switch {
 	case r.CodeContent != nil:
 		return []byte(*r.CodeContent), nil
@@ -114,7 +114,7 @@ func (r *Function) functionCode() ([]byte, error) {
 // config builds the FunctionConfig sent on create and update. The comment is
 // always present, defaulting to the empty string when unset, the value
 // CloudFront expects in the field.
-func (r *Function) config() *cloudfronttypes.FunctionConfig {
+func (r *FunctionResource) config() *cloudfronttypes.FunctionConfig {
 	return &cloudfronttypes.FunctionConfig{
 		Comment:                   aws.String(aws.ToString(r.Comment)),
 		Runtime:                   cloudfronttypes.FunctionRuntime(r.Runtime),
@@ -125,7 +125,7 @@ func (r *Function) config() *cloudfronttypes.FunctionConfig {
 // keyValueStoreAssociations converts the ARN list into the SDK type, which wraps
 // the items in a quantity. An empty list leaves the member nil so the field is
 // omitted rather than sent as an empty set.
-func (r *Function) keyValueStoreAssociations() *cloudfronttypes.KeyValueStoreAssociations {
+func (r *FunctionResource) keyValueStoreAssociations() *cloudfronttypes.KeyValueStoreAssociations {
 	if len(ptr.Value(r.KeyValueStoreAssociations)) == 0 {
 		return nil
 	}
@@ -142,7 +142,10 @@ func (r *Function) keyValueStoreAssociations() *cloudfronttypes.KeyValueStoreAss
 	}
 }
 
-func (r *Function) Create(ctx context.Context, cfg *awsCfg) (*FunctionOutput, error) {
+func (r *FunctionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -177,9 +180,8 @@ func (r *Function) Create(ctx context.Context, cfg *awsCfg) (*FunctionOutput, er
 	return r.read(ctx, client)
 }
 
-func (r *Function) Read(
-	ctx context.Context, cfg *awsCfg, prior *FunctionOutput,
-) (*FunctionOutput, error) {
+func (r *FunctionResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *FunctionResourceOutput) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -194,9 +196,9 @@ func (r *Function) Read(
 // runtime.ErrNotFound so a plan recreates it. Before a publish the LIVE stage
 // does not exist, so a not-found there leaves the live stage etag empty rather
 // than failing the read.
-func (r *Function) read(
+func (r *FunctionResource) read(
 	ctx context.Context, client *cloudfront.Client,
-) (*FunctionOutput, error) {
+) (*FunctionResourceOutput, error) {
 	dev, err := client.DescribeFunction(ctx, &cloudfront.DescribeFunctionInput{
 		Name:  aws.String(r.Name),
 		Stage: cloudfronttypes.FunctionStageDevelopment,
@@ -207,7 +209,7 @@ func (r *Function) read(
 		}
 		return nil, fmt.Errorf("describe function %s: %w", r.Name, err)
 	}
-	out := &FunctionOutput{ETag: aws.ToString(dev.ETag)}
+	out := &FunctionResourceOutput{ETag: aws.ToString(dev.ETag)}
 	if summary := dev.FunctionSummary; summary != nil {
 		out.Status = aws.ToString(summary.Status)
 		if meta := summary.FunctionMetadata; meta != nil {
@@ -229,9 +231,9 @@ func (r *Function) read(
 	return out, nil
 }
 
-func (r *Function) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Function, *FunctionOutput],
-) (*FunctionOutput, error) {
+func (r *FunctionResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -274,21 +276,29 @@ func (r *Function) Update(
 
 // codeChanged reports whether the function's code source changed against the
 // prior inputs.
-func (r *Function) codeChanged(prior runtime.Prior[Function, *FunctionOutput]) bool {
+func (r *FunctionResource) codeChanged(
+	prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+) bool {
 	return runtime.Changed(prior.Inputs.CodeContent, r.CodeContent) ||
 		runtime.Changed(prior.Inputs.CodePath, r.CodePath)
 }
 
 // configChanged reports whether any field that rides FunctionConfig changed
 // against the prior inputs.
-func (r *Function) configChanged(prior runtime.Prior[Function, *FunctionOutput]) bool {
+func (r *FunctionResource) configChanged(
+	prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+) bool {
 	return runtime.Changed(prior.Inputs.Comment, r.Comment) ||
 		runtime.Changed(prior.Inputs.Runtime, r.Runtime) ||
 		runtime.Changed(ptr.Value(prior.Inputs.KeyValueStoreAssociations),
 			ptr.Value(r.KeyValueStoreAssociations))
 }
 
-func (r *Function) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionOutput) error {
+func (r *FunctionResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *FunctionResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

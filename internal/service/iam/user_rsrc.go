@@ -32,11 +32,11 @@ const (
 // cannot express regular expressions, so Create and Update check it in code.
 var userNameRe = regexp.MustCompile(`^[0-9A-Za-z=,.@_+-]+$`)
 
-// User is an IAM user. Name and path change in place through UpdateUser, the
+// UserResource is an IAM user. Name and path change in place through UpdateUser, the
 // permissions boundary changes through its own put and delete calls, tags are
 // reconciled through the IAM tag calls, and force destroy controls delete-time
 // cleanup of dependent IAM credentials and policies.
-type User struct {
+type UserResource struct {
 	Name                string             `ub:"name"`
 	Path                string             `ub:"path"`
 	PermissionsBoundary *string            `ub:"permissions-boundary"`
@@ -44,9 +44,9 @@ type User struct {
 	Tags                *map[string]string `ub:"tags"`
 }
 
-// UserOutput holds the values IAM reports for a user. Name is the current cloud
+// UserResourceOutput holds the values IAM reports for a user. Name is the current cloud
 // handle, so reads and deletes address a renamed user by its current name.
-type UserOutput struct {
+type UserResourceOutput struct {
 	Arn                 string            `ub:"arn"`
 	UniqueId            string            `ub:"unique-id"`
 	Name                string            `ub:"name"`
@@ -55,15 +55,15 @@ type UserOutput struct {
 	Tags                map[string]string `ub:"tags"`
 }
 
-func (r *User) SchemaVersion() int { return 1 }
+func (r *UserResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields is empty because IAM can change the user name, path,
 // permissions boundary, and tags in place.
-func (r *User) ReplaceFields() []string { return nil }
+func (r *UserResource) ReplaceFields() []string { return nil }
 
 // Defaults gives path and force destroy their resource defaults and marks tags
 // optional.
-func (r User) Defaults() []defaults.Default {
+func (r UserResource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.Path, "/"),
 		defaults.Value(r.ForceDestroy, false),
@@ -72,7 +72,7 @@ func (r User) Defaults() []defaults.Default {
 
 // Constraints declares value rules that can be derived. The name pattern is a
 // regular expression, so Create and Update check it in code.
-func (r User) Constraints() []constraint.Constraint {
+func (r UserResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.PermissionsBoundary)).
 			Require(constraint.MaxItems(r.PermissionsBoundary, 2048)).
@@ -80,7 +80,7 @@ func (r User) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *User) Create(ctx context.Context, cfg *awsCfg) (*UserOutput, error) {
+func (r *UserResource) Create(ctx context.Context, cfg *awsCfg) (*UserResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -127,7 +127,11 @@ func (r *User) Create(ctx context.Context, cfg *awsCfg) (*UserOutput, error) {
 	return readUser(ctx, client, name, true)
 }
 
-func (r *User) Read(ctx context.Context, cfg *awsCfg, prior *UserOutput) (*UserOutput, error) {
+func (r *UserResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *UserResourceOutput,
+) (*UserResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -135,9 +139,9 @@ func (r *User) Read(ctx context.Context, cfg *awsCfg, prior *UserOutput) (*UserO
 	return readUser(ctx, client, r.handle(prior), false)
 }
 
-func (r *User) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[User, *UserOutput],
-) (*UserOutput, error) {
+func (r *UserResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[UserResource, *UserResourceOutput],
+) (*UserResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -199,7 +203,7 @@ func (r *User) Update(
 	return readUser(ctx, client, handle, false)
 }
 
-func (r *User) Delete(ctx context.Context, cfg *awsCfg, prior *UserOutput) error {
+func (r *UserResource) Delete(ctx context.Context, cfg *awsCfg, prior *UserResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -230,7 +234,7 @@ func (r *User) Delete(ctx context.Context, cfg *awsCfg, prior *UserOutput) error
 
 func readUser(
 	ctx context.Context, client *iam.Client, name string, created bool,
-) (*UserOutput, error) {
+) (*UserResourceOutput, error) {
 	user, err := readUserRecord(ctx, client, name, created)
 	if err != nil {
 		return nil, err
@@ -333,14 +337,14 @@ func findUserByName(ctx context.Context, client *iam.Client, name string) (*iamt
 	return resp.User, nil
 }
 
-func (r *User) handle(prior *UserOutput) string {
+func (r *UserResource) handle(prior *UserResourceOutput) string {
 	if prior != nil && prior.Name != "" {
 		return prior.Name
 	}
 	return r.Name
 }
 
-func priorUserName(prior runtime.Prior[User, *UserOutput], fallback string) string {
+func priorUserName(prior runtime.Prior[UserResource, *UserResourceOutput], fallback string) string {
 	if prior.Outputs != nil && prior.Outputs.Name != "" {
 		return prior.Outputs.Name
 	}
@@ -353,7 +357,7 @@ func priorUserName(prior runtime.Prior[User, *UserOutput], fallback string) stri
 	return fallback
 }
 
-func (r *User) validate() error {
+func (r *UserResource) validate() error {
 	if !userNameRe.MatchString(r.Name) {
 		return errors.New(
 			"name must contain only letters, digits, equals, comma, period, " +
@@ -369,7 +373,10 @@ func permissionsBoundaryPresent(v *string) bool {
 	return v != nil && *v != ""
 }
 
-func userNameOrPathNeedsUpdate(prior runtime.Prior[User, *UserOutput], current User) bool {
+func userNameOrPathNeedsUpdate(
+	prior runtime.Prior[UserResource, *UserResourceOutput],
+	current UserResource,
+) bool {
 	if prior.Observed != nil {
 		return runtime.Changed(prior.Observed.Name, current.Name) ||
 			runtime.Changed(prior.Observed.Path, current.Path)
@@ -379,7 +386,7 @@ func userNameOrPathNeedsUpdate(prior runtime.Prior[User, *UserOutput], current U
 }
 
 func userPermissionsBoundaryNeedsUpdate(
-	prior runtime.Prior[User, *UserOutput], current *string,
+	prior runtime.Prior[UserResource, *UserResourceOutput], current *string,
 ) bool {
 	desired := desiredUserPermissionsBoundary(current)
 	if prior.Observed != nil {
@@ -404,8 +411,8 @@ func sameOptionalString(a, b *string) bool {
 	return *a == *b
 }
 
-func userOutput(user *iamtypes.User) *UserOutput {
-	return &UserOutput{
+func userOutput(user *iamtypes.User) *UserResourceOutput {
+	return &UserResourceOutput{
 		Arn:                 aws.ToString(user.Arn),
 		UniqueId:            aws.ToString(user.UserId),
 		Name:                aws.ToString(user.UserName),

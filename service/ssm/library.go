@@ -32,10 +32,10 @@ func Library() *runtime.Library {
 		Description:   "AWS SSM library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"parameter": makeResource[svc.Parameter, *svc.ParameterOutput](),
+			"parameter": makeResource[svc.ParameterResource, *svc.ParameterResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"parameter": makeDataSource[svc.ParameterData, *svc.ParameterDataOutput](),
+			"parameter": makeDataSource[svc.ParameterDataSource, *svc.ParameterDataSourceOutput](),
 		},
 	}
 }

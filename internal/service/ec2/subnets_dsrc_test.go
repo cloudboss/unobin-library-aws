@@ -46,7 +46,7 @@ func TestSubnetsReadPaginatesAndSendsFilters(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &Subnets{
+	r := &SubnetsDataSource{
 		Tags: new(map[string]string{"unobin": "subnets-test"}),
 		Filter: new([]SubnetsFilter{
 			{Name: "vpc-id", Values: []string{"vpc-0123456789abcdef0"}},
@@ -80,7 +80,7 @@ func TestSubnetsReadWithNoFiltersAllowsEmptyResult(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	out, err := (&Subnets{}).Read(context.Background(), cfg)
+	out, err := (&SubnetsDataSource{}).Read(context.Background(), cfg)
 	require.NoError(t, err)
 	assert.NotNil(t, out.Ids)
 	assert.Empty(t, out.Ids)
@@ -94,7 +94,10 @@ func TestSubnetsReadTreatsNotFoundAsReadError(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &Subnets{Filter: new([]SubnetsFilter{{Name: "subnet-id", Values: []string{"subnet-missing"}}})}
+	r := &SubnetsDataSource{Filter: new([]SubnetsFilter{{
+		Name:   "subnet-id",
+		Values: []string{"subnet-missing"},
+	}})}
 	out, err := r.Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)

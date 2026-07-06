@@ -35,7 +35,7 @@ func TestManagedMicrovmImagesPagesAllResults(t *testing.T) {
 		}`
 	})
 
-	out, err := (&ManagedMicrovmImages{}).Read(context.Background(), fake.configuration())
+	out, err := (&ManagedMicrovmImagesDataSource{}).Read(context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, []ManagedMicrovmImageSummary{
 		{ImageArn: "managed-1", CreatedAt: "2026-06-29T00:00:00Z", UpdatedAt: "2026-06-29T00:01:00Z"},
@@ -71,7 +71,7 @@ func TestManagedMicrovmImageVersionsPagesAllResults(t *testing.T) {
 		}`
 	})
 
-	out, err := (&ManagedMicrovmImageVersions{ImageIdentifier: "managed-1"}).Read(
+	out, err := (&ManagedMicrovmImageVersionsDataSource{ImageIdentifier: "managed-1"}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, []ManagedMicrovmImageVersion{
@@ -120,7 +120,7 @@ func TestMicrovmImagesPagesWithNameFilter(t *testing.T) {
 		}`
 	})
 
-	out, err := (&MicrovmImages{NameFilter: aws.String("demo")}).Read(
+	out, err := (&MicrovmImagesDataSource{NameFilter: aws.String("demo")}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, []MicrovmImageSummary{
@@ -182,7 +182,7 @@ func TestMicrovmImageVersionsPagesAllResults(t *testing.T) {
 		}`
 	})
 
-	out, err := (&MicrovmImageVersions{ImageIdentifier: "image-1"}).Read(
+	out, err := (&MicrovmImageVersionsDataSource{ImageIdentifier: "image-1"}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, []MicrovmImageVersionSummary{
@@ -231,7 +231,7 @@ func TestMicrovmImageBuildsPagesWithFilters(t *testing.T) {
 		}`
 	})
 
-	out, err := (&MicrovmImageBuilds{
+	out, err := (&MicrovmImageBuildsDataSource{
 		ImageIdentifier:   "image-1",
 		ImageVersion:      "1",
 		Architecture:      aws.String("ARM_64"),
@@ -273,7 +273,7 @@ func TestMicrovmsPagesWithFilters(t *testing.T) {
 		}`
 	})
 
-	out, err := (&Microvms{
+	out, err := (&MicrovmsDataSource{
 		ImageIdentifier: aws.String("image-1"),
 		ImageVersion:    aws.String("1"),
 	}).Read(context.Background(), fake.configuration())
@@ -293,20 +293,20 @@ func TestMicrovmsPagesWithFilters(t *testing.T) {
 	assert.Equal(t, "1", queries[0].Get("imageVersion"))
 }
 
-func TestMicrovmImageDataReadsByIdentifier(t *testing.T) {
+func TestMicrovmImageDataSourceReadsByIdentifier(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	route := "GET /2025-09-09/microvm-images/image-1"
 	fake.on(route, func(n int) (int, string) {
 		return http.StatusOK, microvmImageDataResponse("image-1", "demo")
 	})
 
-	out, err := (&MicrovmImageData{ImageIdentifier: aws.String("image-1")}).Read(
+	out, err := (&MicrovmImageDataSource{ImageIdentifier: aws.String("image-1")}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, microvmImageDataOutput("image-1", "demo"), out)
 }
 
-func TestMicrovmImageDataFindsByExactName(t *testing.T) {
+func TestMicrovmImageDataSourceFindsByExactName(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	listRoute := "GET /2025-09-09/microvm-images"
 	getRoute := "GET /2025-09-09/microvm-images/image-exact"
@@ -322,7 +322,7 @@ func TestMicrovmImageDataFindsByExactName(t *testing.T) {
 		return http.StatusOK, microvmImageDataResponse("image-exact", "demo")
 	})
 
-	out, err := (&MicrovmImageData{Name: aws.String("demo")}).Read(
+	out, err := (&MicrovmImageDataSource{Name: aws.String("demo")}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, microvmImageDataOutput("image-exact", "demo"), out)
@@ -331,26 +331,26 @@ func TestMicrovmImageDataFindsByExactName(t *testing.T) {
 	assert.Equal(t, "demo", queries[0].Get("nameFilter"))
 }
 
-func TestMicrovmImageDataNameNotFoundErrors(t *testing.T) {
+func TestMicrovmImageDataSourceNameNotFoundErrors(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	route := "GET /2025-09-09/microvm-images"
 	fake.on(route, func(n int) (int, string) {
 		return http.StatusOK, `{"items":[{"imageArn":"image-1","name":"demo-old"}]}`
 	})
 
-	_, err := (&MicrovmImageData{Name: aws.String("demo")}).Read(
+	_, err := (&MicrovmImageDataSource{Name: aws.String("demo")}).Read(
 		context.Background(), fake.configuration())
 	require.ErrorContains(t, err, "demo")
 }
 
-func TestMicrovmImageVersionDataReads(t *testing.T) {
+func TestMicrovmImageVersionDataSourceReads(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	route := "GET /2025-09-09/microvm-images/image-1/versions/1"
 	fake.on(route, func(n int) (int, string) {
 		return http.StatusOK, microvmImageVersionResponse()
 	})
 
-	out, err := (&MicrovmImageVersionData{
+	out, err := (&MicrovmImageVersionDataSource{
 		ImageIdentifier: "image-1",
 		ImageVersion:    "1",
 	}).Read(context.Background(), fake.configuration())
@@ -358,7 +358,7 @@ func TestMicrovmImageVersionDataReads(t *testing.T) {
 	assert.Equal(t, microvmImageVersionOutput(), out)
 }
 
-func TestMicrovmImageBuildDataReads(t *testing.T) {
+func TestMicrovmImageBuildDataSourceReads(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	route := "GET /2025-09-09/microvm-images/image-1/versions/1/builds/build-1"
 	fake.on(route, func(n int) (int, string) {
@@ -380,13 +380,13 @@ func TestMicrovmImageBuildDataReads(t *testing.T) {
 		}`
 	})
 
-	out, err := (&MicrovmImageBuildData{
+	out, err := (&MicrovmImageBuildDataSource{
 		ImageIdentifier: "image-1",
 		ImageVersion:    "1",
 		BuildId:         "build-1",
 	}).Read(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &MicrovmImageBuildDataOutput{
+	assert.Equal(t, &MicrovmImageBuildDataSourceOutput{
 		ImageArn:          "image-1",
 		ImageVersion:      "1",
 		BuildId:           "build-1",
@@ -404,14 +404,14 @@ func TestMicrovmImageBuildDataReads(t *testing.T) {
 	}, out)
 }
 
-func TestMicrovmDataReads(t *testing.T) {
+func TestMicrovmDataSourceReads(t *testing.T) {
 	fake := newFakeLambdaMicrovms(t)
 	route := "GET /2025-09-09/microvms/microvm-1"
 	fake.on(route, func(n int) (int, string) {
 		return http.StatusOK, microvmResponse()
 	})
 
-	out, err := (&MicrovmData{MicrovmIdentifier: "microvm-1"}).Read(
+	out, err := (&MicrovmDataSource{MicrovmIdentifier: "microvm-1"}).Read(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
 	assert.Equal(t, microvmOutput(), out)
@@ -424,7 +424,7 @@ func TestDataSourceNotFoundReturnsDescriptiveError(t *testing.T) {
 		return http.StatusNotFound, `{"__type":"ResourceNotFoundException","message":"not found"}`
 	})
 
-	_, err := (&MicrovmData{MicrovmIdentifier: "missing"}).Read(
+	_, err := (&MicrovmDataSource{MicrovmIdentifier: "missing"}).Read(
 		context.Background(), fake.configuration())
 	require.Error(t, err)
 	assert.False(t, errors.Is(err, runtime.ErrNotFound))
@@ -444,8 +444,8 @@ func microvmImageDataResponse(imageArn, name string) string {
 	}`
 }
 
-func microvmImageDataOutput(imageArn, name string) *MicrovmImageDataOutput {
-	return &MicrovmImageDataOutput{
+func microvmImageDataOutput(imageArn, name string) *MicrovmImageDataSourceOutput {
+	return &MicrovmImageDataSourceOutput{
 		ImageArn:                 imageArn,
 		Name:                     name,
 		State:                    "CREATED",
@@ -482,8 +482,8 @@ func microvmImageVersionResponse() string {
 	}`
 }
 
-func microvmImageVersionOutput() *MicrovmImageVersionDataOutput {
-	return &MicrovmImageVersionDataOutput{
+func microvmImageVersionOutput() *MicrovmImageVersionDataSourceOutput {
+	return &MicrovmImageVersionDataSourceOutput{
 		ImageArn:                 "image-1",
 		ImageVersion:             "1",
 		State:                    "SUCCESSFUL",
@@ -529,8 +529,8 @@ func microvmResponse() string {
 	}`
 }
 
-func microvmOutput() *MicrovmDataOutput {
-	return &MicrovmDataOutput{
+func microvmOutput() *MicrovmDataSourceOutput {
+	return &MicrovmDataSourceOutput{
 		MicrovmId:                "microvm-1",
 		Endpoint:                 "https://microvm.example.com",
 		ImageArn:                 "image-1",

@@ -54,7 +54,7 @@ const pendingConfirmationTrue = "true"
 // default of two minutes.
 const httpConfirmTimeoutDefault = time.Minute
 
-// TopicSubscription manages a single subscription of an endpoint to an SNS
+// TopicSubscriptionResource manages a single subscription of an endpoint to an SNS
 // topic. The protocol, endpoint, and topic ARN are fixed at subscribe time, so
 // a change to any of them replaces the subscription; the policy and delivery
 // attributes change in place. On create every set attribute rides the Subscribe
@@ -69,7 +69,7 @@ const httpConfirmTimeoutDefault = time.Minute
 // email-json, and unconfirmed http/https skip the wait and keep the ARN
 // Subscribe returns. endpoint-auto-confirms and confirmation-timeout-in-minutes
 // only steer that wait and are not SNS attributes.
-type TopicSubscription struct {
+type TopicSubscriptionResource struct {
 	Protocol                     string  `ub:"protocol"`
 	TopicArn                     string  `ub:"topic-arn"`
 	Endpoint                     *string `ub:"endpoint"`
@@ -84,26 +84,26 @@ type TopicSubscription struct {
 	ConfirmationTimeoutInMinutes *int64  `ub:"confirmation-timeout-in-minutes"`
 }
 
-// TopicSubscriptionOutput holds the values SNS computes for a subscription. The
+// TopicSubscriptionResourceOutput holds the values SNS computes for a subscription. The
 // ARN is the subscription's identity, used to read, update, and delete it, and
 // is the settled real ARN once confirmation completes for an auto-confirming
 // protocol. The owner is the topic owner's account id and pending-confirmation
 // reports whether the subscription still awaits confirmation; both are
 // read-only status.
-type TopicSubscriptionOutput struct {
+type TopicSubscriptionResourceOutput struct {
 	Arn                 string `ub:"arn"`
 	Owner               string `ub:"owner"`
 	PendingConfirmation bool   `ub:"pending-confirmation"`
 	FilterPolicyScope   string `ub:"filter-policy-scope"`
 }
 
-func (r *TopicSubscription) SchemaVersion() int { return 1 }
+func (r *TopicSubscriptionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SNS fixes when a subscription is created. The
 // protocol, endpoint, and topic ARN identify the subscription and cannot be
 // changed on an existing one, so a change to any of them requires a new
 // subscription. Every other input is reconciled in place by Update.
-func (r *TopicSubscription) ReplaceFields() []string {
+func (r *TopicSubscriptionResource) ReplaceFields() []string {
 	return []string{
 		"protocol",
 		"endpoint",
@@ -115,7 +115,7 @@ func (r *TopicSubscription) ReplaceFields() []string {
 // protocol is one of a fixed set. A filter scope is one of two values and may
 // only be set alongside a filter policy. A firehose subscription requires a
 // subscription role ARN; the API rejects one without it.
-func (r TopicSubscription) Constraints() []constraint.Constraint {
+func (r TopicSubscriptionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.Protocol,
 			"application", "email", "email-json", "firehose",
@@ -131,10 +131,9 @@ func (r TopicSubscription) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *TopicSubscription) Create(
+func (r *TopicSubscriptionResource) Create(
 	ctx context.Context,
-	cfg *awsCfg) (*TopicSubscriptionOutput,
-	error,
+	cfg *awsCfg) (*TopicSubscriptionResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -168,9 +167,11 @@ func (r *TopicSubscription) Create(
 	return r.read(ctx, client, arn, true)
 }
 
-func (r *TopicSubscription) Read(
-	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionOutput,
-) (*TopicSubscriptionOutput, error) {
+func (r *TopicSubscriptionResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TopicSubscriptionResourceOutput,
+) (*TopicSubscriptionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -184,9 +185,9 @@ func (r *TopicSubscription) Read(
 // window; otherwise a not-found is drift and maps to runtime.ErrNotFound at
 // once. An empty attribute map is treated as not-found, since SNS returns one
 // for a subscription that no longer exists.
-func (r *TopicSubscription) read(
+func (r *TopicSubscriptionResource) read(
 	ctx context.Context, client *sns.Client, arn string, created bool,
-) (*TopicSubscriptionOutput, error) {
+) (*TopicSubscriptionResourceOutput, error) {
 	// A just-created subscription can briefly read as absent or return an empty
 	// attribute map while it propagates, so retry through that window on create.
 	// A steady-state read does not retry: a not-found there is real drift.
@@ -233,7 +234,7 @@ func (r *TopicSubscription) read(
 	// a protocol that confirms out of band. A still-pending subscription reports
 	// the "PendingConfirmation" placeholder in the SubscriptionArn attribute, so
 	// the queried handle is used for the identity rather than that attribute.
-	return &TopicSubscriptionOutput{
+	return &TopicSubscriptionResourceOutput{
 		Arn:                 arn,
 		Owner:               attrs[subAttrOwner],
 		PendingConfirmation: attrs[subAttrPendingConfirm] == pendingConfirmationTrue,
@@ -248,7 +249,7 @@ func (r *TopicSubscription) read(
 // an AuthorizationErrorException; that is swallowed and the subscription is
 // reported present, so a missing permission skips the cross-check rather than
 // failing the read.
-func (r *TopicSubscription) subscriptionPresent(
+func (r *TopicSubscriptionResource) subscriptionPresent(
 	ctx context.Context, client *sns.Client, arn string,
 ) (bool, error) {
 	var token *string
@@ -276,9 +277,11 @@ func (r *TopicSubscription) subscriptionPresent(
 	}
 }
 
-func (r *TopicSubscription) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicSubscription, *TopicSubscriptionOutput],
-) (*TopicSubscriptionOutput, error) {
+func (r *TopicSubscriptionResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput],
+) (*TopicSubscriptionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -290,9 +293,8 @@ func (r *TopicSubscription) Update(
 	return r.read(ctx, client, arn, false)
 }
 
-func (r *TopicSubscription) Delete(
-	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionOutput,
-) error {
+func (r *TopicSubscriptionResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -324,7 +326,7 @@ func (r *TopicSubscription) Delete(
 // Every set attribute is included; an unset one is omitted so SNS applies its
 // own default. The protocol, endpoint, and topic ARN are dedicated Subscribe
 // fields and are not attributes.
-func (r *TopicSubscription) attributes() map[string]string {
+func (r *TopicSubscriptionResource) attributes() map[string]string {
 	attrs := map[string]string{}
 	if r.RawMessageDelivery != nil {
 		attrs[subAttrRawMessageDelivery] = subBoolString(*r.RawMessageDelivery)
@@ -360,9 +362,9 @@ func (r *TopicSubscription) attributes() map[string]string {
 // backward compatible. An attribute removed from the config is reconciled to
 // its cleared form rather than left alone, since a changed input that is now
 // absent means the user wants the default back.
-func (r *TopicSubscription) reconcileAttributes(
+func (r *TopicSubscriptionResource) reconcileAttributes(
 	ctx context.Context, client *sns.Client, arn string,
-	prior runtime.Prior[TopicSubscription, *TopicSubscriptionOutput],
+	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput],
 ) error {
 	// SNS reads an omitted scope as MessageAttributes whenever a filter policy is
 	// present, so reconcile to that effective value rather than leave the prior
@@ -427,7 +429,7 @@ func (r *TopicSubscription) reconcileAttributes(
 // resolves to MessageAttributes, the value SNS applies by default, so a later
 // read does not show drift. An omitted scope with no policy has nothing to set
 // and returns nil, which clears the attribute.
-func (r *TopicSubscription) effectiveFilterPolicyScope() *string {
+func (r *TopicSubscriptionResource) effectiveFilterPolicyScope() *string {
 	if r.FilterPolicyScope != nil {
 		return r.FilterPolicyScope
 	}
@@ -441,7 +443,7 @@ func (r *TopicSubscription) effectiveFilterPolicyScope() *string {
 // attribute: SNS accepts the call with no value and resets the attribute to its
 // default, whereas an empty-string value for some attributes is rejected as
 // invalid.
-func (r *TopicSubscription) putAttribute(
+func (r *TopicSubscriptionResource) putAttribute(
 	ctx context.Context, client *sns.Client, arn, name string, value *string,
 ) error {
 	_, err := client.SetSubscriptionAttributes(ctx, &sns.SetSubscriptionAttributesInput{
@@ -461,7 +463,7 @@ func (r *TopicSubscription) putAttribute(
 // endpoint-auto-confirms; an email or email-json subscription always confirms
 // out of band. Every other protocol confirms near-instantly, so the wait is
 // cheap and yields the real ARN.
-func (r *TopicSubscription) waitForConfirmation() bool {
+func (r *TopicSubscriptionResource) waitForConfirmation() bool {
 	if strings.Contains(r.Protocol, "http") {
 		return aws.ToBool(r.EndpointAutoConfirms)
 	}
@@ -476,7 +478,7 @@ func (r *TopicSubscription) waitForConfirmation() bool {
 // subscription reports. An http or https subscription uses
 // confirmation-timeout-in-minutes (one minute by default) since it may take
 // longer to confirm; every other protocol uses the wait default.
-func (r *TopicSubscription) waitConfirmed(
+func (r *TopicSubscriptionResource) waitConfirmed(
 	ctx context.Context, client *sns.Client, arn string,
 ) (string, error) {
 	settled := arn
@@ -514,7 +516,7 @@ func (r *TopicSubscription) waitConfirmed(
 
 // waitDeleted polls until the subscription reports not-found, confirming the
 // unsubscribe completed.
-func (r *TopicSubscription) waitDeleted(
+func (r *TopicSubscriptionResource) waitDeleted(
 	ctx context.Context, client *sns.Client, arn string,
 ) error {
 	return wait.Until(ctx, fmt.Sprintf("subscription %s deletion", arn),
@@ -535,7 +537,7 @@ func (r *TopicSubscription) waitDeleted(
 
 // confirmationTimeout returns the http/https confirmation poll timeout,
 // defaulting to one minute when confirmation-timeout-in-minutes is omitted.
-func (r *TopicSubscription) confirmationTimeout() time.Duration {
+func (r *TopicSubscriptionResource) confirmationTimeout() time.Duration {
 	if r.ConfirmationTimeoutInMinutes == nil {
 		return httpConfirmTimeoutDefault
 	}

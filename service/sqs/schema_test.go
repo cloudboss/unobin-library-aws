@@ -18,8 +18,8 @@ import (
 func TestLibraryRegistersSqs(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"queue":        reflect.TypeFor[*svc.QueueOutput](),
-		"queue-policy": reflect.TypeFor[*svc.QueuePolicyOutput](),
+		"queue":        reflect.TypeFor[*svc.QueueResourceOutput](),
+		"queue-policy": reflect.TypeFor[*svc.QueuePolicyResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

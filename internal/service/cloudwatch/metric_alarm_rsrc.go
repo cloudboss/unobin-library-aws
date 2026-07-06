@@ -58,7 +58,7 @@ var standardStatistics = map[string]bool{
 var ec2AutomatePattern = regexp.MustCompile(
 	`^arn:[\w-]+:(automate|swf):[\w-]+:.*:.+$`)
 
-// MetricAlarm is a CloudWatch metric alarm, modeling AWS::CloudWatch::Alarm. A
+// MetricAlarmResource is a CloudWatch metric alarm, modeling AWS::CloudWatch::Alarm. A
 // single PutMetricAlarm upsert reconciles every writable property for both
 // create and update; the alarm name is fixed at creation and is the identity,
 // so a change to it replaces the alarm, while every other property is rewritten
@@ -74,7 +74,7 @@ var ec2AutomatePattern = regexp.MustCompile(
 // match a percentile or statistic pattern; a period is 10, 20, or 30 seconds
 // or a multiple of 60 (a metric-query period also allows 1 and 5); and an
 // action ARN must be an ordinary ARN or an EC2-automate ARN.
-type MetricAlarm struct {
+type MetricAlarmResource struct {
 	AlarmName                        string                    `ub:"alarm-name"`
 	ActionsEnabled                   *bool                     `ub:"actions-enabled"`
 	AlarmActions                     *[]string                 `ub:"alarm-actions"`
@@ -99,25 +99,25 @@ type MetricAlarm struct {
 	Tags                             *map[string]string        `ub:"tags"`
 }
 
-// MetricAlarmOutput holds the values CloudWatch computes for an alarm. Arn is
+// MetricAlarmResourceOutput holds the values CloudWatch computes for an alarm. Arn is
 // the alarm's stable handle: it is the tag identifier and the value Delete keys
 // off so a replace removes the old alarm rather than orphaning it, and it is
 // settled only after the alarm is stored, so Create reads it back after the
 // put. AlarmName is the identity used to find and delete the alarm.
 // EvaluateLowSampleCountPercentile is server-filled and read back so consumers
 // see the value CloudWatch applied.
-type MetricAlarmOutput struct {
+type MetricAlarmResourceOutput struct {
 	Arn                              string `ub:"arn"`
 	AlarmName                        string `ub:"alarm-name"`
 	EvaluateLowSampleCountPercentile string `ub:"evaluate-low-sample-count-percentile"`
 }
 
-func (r *MetricAlarm) SchemaVersion() int { return 1 }
+func (r *MetricAlarmResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs CloudWatch fixes when an alarm is created. The
 // alarm name is the alarm's identity and cannot be changed in place, so a
 // change to it requires a new alarm; every other input is rewritten by Update.
-func (r *MetricAlarm) ReplaceFields() []string {
+func (r *MetricAlarmResource) ReplaceFields() []string {
 	return []string{"alarm-name"}
 }
 
@@ -132,7 +132,7 @@ func (r *MetricAlarm) ReplaceFields() []string {
 // extended-statistic. The enums fix their value sets, and the counts and bounds
 // are enforced. The pattern-based and divisible-by rules are checked in code
 // (see the type doc) because the constraint vocabulary cannot express them.
-func (r MetricAlarm) Constraints() []constraint.Constraint {
+func (r MetricAlarmResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
 			constraint.All(
@@ -217,7 +217,10 @@ func (r MetricAlarm) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MetricAlarm) Create(ctx context.Context, cfg *awsCfg) (*MetricAlarmOutput, error) {
+func (r *MetricAlarmResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*MetricAlarmResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -256,9 +259,11 @@ func (r *MetricAlarm) Create(ctx context.Context, cfg *awsCfg) (*MetricAlarmOutp
 	return out, nil
 }
 
-func (r *MetricAlarm) Read(
-	ctx context.Context, cfg *awsCfg, prior *MetricAlarmOutput,
-) (*MetricAlarmOutput, error) {
+func (r *MetricAlarmResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *MetricAlarmResourceOutput,
+) (*MetricAlarmResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -269,9 +274,9 @@ func (r *MetricAlarm) Read(
 // read finds the alarm by name and returns its computed outputs. CloudWatch
 // does not error on a missing alarm; DescribeAlarms returns an empty result, so
 // zero alarms maps to runtime.ErrNotFound and a plan recreates it.
-func (r *MetricAlarm) read(
+func (r *MetricAlarmResource) read(
 	ctx context.Context, client *cloudwatch.Client,
-) (*MetricAlarmOutput, error) {
+) (*MetricAlarmResourceOutput, error) {
 	resp, err := client.DescribeAlarms(ctx, &cloudwatch.DescribeAlarmsInput{
 		AlarmNames: []string{r.AlarmName},
 		AlarmTypes: []cloudwatchtypes.AlarmType{cloudwatchtypes.AlarmTypeMetricAlarm},
@@ -283,16 +288,18 @@ func (r *MetricAlarm) read(
 		return nil, runtime.ErrNotFound
 	}
 	alarm := resp.MetricAlarms[0]
-	return &MetricAlarmOutput{
+	return &MetricAlarmResourceOutput{
 		Arn:                              aws.ToString(alarm.AlarmArn),
 		AlarmName:                        aws.ToString(alarm.AlarmName),
 		EvaluateLowSampleCountPercentile: aws.ToString(alarm.EvaluateLowSampleCountPercentile),
 	}, nil
 }
 
-func (r *MetricAlarm) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[MetricAlarm, *MetricAlarmOutput],
-) (*MetricAlarmOutput, error) {
+func (r *MetricAlarmResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[MetricAlarmResource, *MetricAlarmResourceOutput],
+) (*MetricAlarmResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -319,7 +326,11 @@ func (r *MetricAlarm) Update(
 	return r.read(ctx, client)
 }
 
-func (r *MetricAlarm) Delete(ctx context.Context, cfg *awsCfg, prior *MetricAlarmOutput) error {
+func (r *MetricAlarmResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *MetricAlarmResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -352,7 +363,7 @@ func (r *MetricAlarm) Delete(ctx context.Context, cfg *awsCfg, prior *MetricAlar
 // anomaly-detection threshold-metric-id when that is set, otherwise as the
 // static threshold, mirroring how the two are mutually exclusive. Tags are not
 // set here; the caller fills them for a create and leaves them off an update.
-func (r *MetricAlarm) expandPutMetricAlarmInput() *cloudwatch.PutMetricAlarmInput {
+func (r *MetricAlarmResource) expandPutMetricAlarmInput() *cloudwatch.PutMetricAlarmInput {
 	in := &cloudwatch.PutMetricAlarmInput{
 		AlarmName:                        aws.String(r.AlarmName),
 		ActionsEnabled:                   aws.Bool(r.actionsEnabled()),
@@ -392,7 +403,7 @@ func (r *MetricAlarm) expandPutMetricAlarmInput() *cloudwatch.PutMetricAlarmInpu
 
 // actionsEnabled returns whether alarm actions run, defaulting to true when
 // omitted so the always-sent value matches CloudWatch's own default.
-func (r *MetricAlarm) actionsEnabled() bool {
+func (r *MetricAlarmResource) actionsEnabled() bool {
 	if r.ActionsEnabled == nil {
 		return actionsEnabledDefault
 	}
@@ -402,7 +413,7 @@ func (r *MetricAlarm) actionsEnabled() bool {
 // treatMissingData returns how the alarm handles missing data points,
 // defaulting to missing when omitted so the always-sent value matches
 // CloudWatch's own default.
-func (r *MetricAlarm) treatMissingData() string {
+func (r *MetricAlarmResource) treatMissingData() string {
 	if r.TreatMissingData == nil {
 		return treatMissingDataDefault
 	}
@@ -412,7 +423,7 @@ func (r *MetricAlarm) treatMissingData() string {
 // syncTags reconciles the alarm's tags with the desired set, reading the live
 // tags through ListTagsForResource and writing changes with TagResource and
 // UntagResource. CloudWatch addresses an alarm's tags by its ARN.
-func (r *MetricAlarm) syncTags(
+func (r *MetricAlarmResource) syncTags(
 	ctx context.Context, client *cloudwatch.Client, arn string,
 ) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
@@ -454,7 +465,7 @@ func (r *MetricAlarm) syncTags(
 // real change; a tag-only change is reconciled by the separate tag sync. Both
 // sides are compared by value with tags cleared, so the tag map alone never
 // triggers the upsert.
-func (r *MetricAlarm) changedExceptTags(prior MetricAlarm) bool {
+func (r *MetricAlarmResource) changedExceptTags(prior MetricAlarmResource) bool {
 	before := prior
 	before.Tags = nil
 	after := *r
@@ -492,7 +503,7 @@ func metricAlarmTags(tags map[string]string) []cloudwatchtypes.Tag {
 // the colon-free namespace, the percentile and statistic patterns, the
 // divisible-by period values, and the action ARN forms. CloudWatch enforces
 // these as well; checking them here turns a server rejection into a clear error.
-func (r *MetricAlarm) validate() error {
+func (r *MetricAlarmResource) validate() error {
 	if n := len(r.AlarmName); n < 1 || n > 255 {
 		return fmt.Errorf("alarm-name must be 1 to 255 characters, got %d", n)
 	}
@@ -526,7 +537,7 @@ func (r *MetricAlarm) validate() error {
 // cannot be expressed as constraints: each element period and each metric block
 // period, the metric block namespace, and the metric block statistic, which may
 // be a standard statistic or a percentile.
-func (r *MetricAlarm) validateMetricQuery() error {
+func (r *MetricAlarmResource) validateMetricQuery() error {
 	for i, q := range ptr.Value(r.MetricQuery) {
 		if err := validatePeriod(
 			fmt.Sprintf("metric-query[%d].period", i), q.Period, true); err != nil {

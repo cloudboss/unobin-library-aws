@@ -41,7 +41,7 @@ func TestFunctionUpdateLeavesRemovedScalarsToAWS(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	base := Function{
+	base := FunctionResource{
 		FunctionName: "fn",
 		Role:         "arn:aws:iam::123456789012:role/fn-role",
 		Code:         FunctionCode{S3Bucket: aws.String("b"), S3Key: aws.String("k")},
@@ -53,9 +53,9 @@ func TestFunctionUpdateLeavesRemovedScalarsToAWS(t *testing.T) {
 	priorInputs.KMSKeyArn = aws.String("arn:aws:kms:us-east-1:123456789012:key/k-1")
 
 	current := base
-	prior := runtime.Prior[Function, *FunctionOutput]{
+	prior := runtime.Prior[FunctionResource, *FunctionResourceOutput]{
 		Inputs: priorInputs,
-		Outputs: &FunctionOutput{
+		Outputs: &FunctionResourceOutput{
 			Arn: "arn:aws:lambda:us-east-1:123456789012:function:fn",
 		},
 	}
@@ -72,7 +72,7 @@ func TestFunctionUpdateLeavesRemovedScalarsToAWS(t *testing.T) {
 }
 
 func TestFunctionModifyResourcePlanUnknownVersionOutputs(t *testing.T) {
-	priorInputs := Function{
+	priorInputs := FunctionResource{
 		FunctionName: "fn",
 		Role:         "arn:aws:iam::123456789012:role/fn-role",
 		Code:         FunctionCode{S3Bucket: aws.String("b"), S3Key: aws.String("k")},
@@ -85,11 +85,11 @@ func TestFunctionModifyResourcePlanUnknownVersionOutputs(t *testing.T) {
 
 	var resp runtime.ResourcePlanResponse
 	err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		Function, *FunctionOutput, *awsCfg,
+		FunctionResource, *FunctionResourceOutput, *awsCfg,
 	]{
 		PriorInputs:   priorInputs,
 		CurrentInputs: current,
-		PriorOutputs: &FunctionOutput{
+		PriorOutputs: &FunctionResourceOutput{
 			Arn:     "arn:aws:lambda:us-east-1:123456789012:function:fn",
 			Version: "1",
 		},
@@ -104,7 +104,7 @@ func TestFunctionModifyResourcePlanUnknownVersionOutputs(t *testing.T) {
 }
 
 func TestFunctionModifyResourcePlanLeavesStableVersionOutputs(t *testing.T) {
-	priorInputs := Function{
+	priorInputs := FunctionResource{
 		FunctionName: "fn",
 		Role:         "arn:aws:iam::123456789012:role/fn-role",
 		Code:         FunctionCode{S3Bucket: aws.String("b"), S3Key: aws.String("k")},
@@ -116,11 +116,11 @@ func TestFunctionModifyResourcePlanLeavesStableVersionOutputs(t *testing.T) {
 
 	var resp runtime.ResourcePlanResponse
 	err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		Function, *FunctionOutput, *awsCfg,
+		FunctionResource, *FunctionResourceOutput, *awsCfg,
 	]{
 		PriorInputs:   priorInputs,
 		CurrentInputs: current,
-		PriorOutputs: &FunctionOutput{
+		PriorOutputs: &FunctionResourceOutput{
 			Arn:     "arn:aws:lambda:us-east-1:123456789012:function:fn",
 			Version: "1",
 		},

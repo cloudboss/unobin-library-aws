@@ -13,13 +13,13 @@ import (
 )
 
 func TestAuthorizerReplaceFields(t *testing.T) {
-	var r Authorizer
+	var r AuthorizerResource
 
 	assert.Equal(t, []string{"api-id"}, r.ReplaceFields())
 }
 
 func TestAuthorizerCreateInputAppliesHTTPREQUESTTTLDefault(t *testing.T) {
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
 		IdentitySources: new([]string{"$request.header.Auth", "", "$request.header.Auth"}),
@@ -35,12 +35,12 @@ func TestAuthorizerCreateInputAppliesHTTPREQUESTTTLDefault(t *testing.T) {
 func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testing.T) {
 	tests := []struct {
 		name     string
-		resource Authorizer
+		resource AuthorizerResource
 		protocol apigatewayv2types.ProtocolType
 	}{
 		{
 			name: "no identity sources",
-			resource: Authorizer{
+			resource: AuthorizerResource{
 				ApiId:          "api-123",
 				AuthorizerType: "REQUEST",
 				Name:           "auth",
@@ -49,7 +49,7 @@ func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testin
 		},
 		{
 			name: "non HTTP API",
-			resource: Authorizer{
+			resource: AuthorizerResource{
 				ApiId:           "api-123",
 				AuthorizerType:  "REQUEST",
 				IdentitySources: new([]string{"route.request.header.Auth"}),
@@ -59,7 +59,7 @@ func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testin
 		},
 		{
 			name: "non REQUEST authorizer",
-			resource: Authorizer{
+			resource: AuthorizerResource{
 				ApiId:           "api-123",
 				AuthorizerType:  "JWT",
 				IdentitySources: new([]string{"$request.header.Authorization"}),
@@ -79,7 +79,7 @@ func TestAuthorizerCreateInputOmitsTTLDefaultWhenConditionDoesNotMatch(t *testin
 }
 
 func TestAuthorizerCreateInputSendsExplicitZeroTTL(t *testing.T) {
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:                        "api-123",
 		AuthorizerType:               "REQUEST",
 		AuthorizerResultTtlInSeconds: aws.Int64(0),
@@ -94,7 +94,7 @@ func TestAuthorizerCreateInputSendsExplicitZeroTTL(t *testing.T) {
 }
 
 func TestAuthorizerCreateInputOmitsFalseSimpleResponses(t *testing.T) {
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:                 "api-123",
 		AuthorizerType:        "REQUEST",
 		EnableSimpleResponses: aws.Bool(false),
@@ -108,7 +108,7 @@ func TestAuthorizerCreateInputOmitsFalseSimpleResponses(t *testing.T) {
 
 func TestAuthorizerCreateInputExpandsJWTConfiguration(t *testing.T) {
 	audience := []string{"api", "", "api", "admin"}
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:          "api-123",
 		AuthorizerType: "JWT",
 		Name:           "auth",
@@ -126,7 +126,7 @@ func TestAuthorizerCreateInputExpandsJWTConfiguration(t *testing.T) {
 }
 
 func TestAuthorizerUpdateInputUnchanged(t *testing.T) {
-	inputs := Authorizer{
+	inputs := AuthorizerResource{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
 		IdentitySources: new([]string{"b", "a"}),
@@ -136,7 +136,7 @@ func TestAuthorizerUpdateInputUnchanged(t *testing.T) {
 			Issuer:   aws.String("issuer"),
 		},
 	}
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
 		IdentitySources: new([]string{"a", "b", "", "a"}),
@@ -165,7 +165,7 @@ func TestAuthorizerUpdateInputReconcilesExplicitTTLDifference(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inputs := Authorizer{
+			inputs := AuthorizerResource{
 				ApiId:                        "api-123",
 				AuthorizerType:               "REQUEST",
 				AuthorizerResultTtlInSeconds: aws.Int64(tt.configured),
@@ -174,7 +174,7 @@ func TestAuthorizerUpdateInputReconcilesExplicitTTLDifference(t *testing.T) {
 			}
 			r := inputs
 			prior := authorizerPrior(inputs)
-			prior.Observed = &AuthorizerOutput{
+			prior.Observed = &AuthorizerResourceOutput{
 				ApiId:                        "api-123",
 				AuthorizerId:                 "auth-123",
 				AuthorizerResultTtlInSeconds: tt.observed,
@@ -190,14 +190,14 @@ func TestAuthorizerUpdateInputReconcilesExplicitTTLDifference(t *testing.T) {
 }
 
 func TestAuthorizerUpdateInputIgnoresUnconfiguredTTLDifference(t *testing.T) {
-	inputs := Authorizer{
+	inputs := AuthorizerResource{
 		ApiId:           "api-123",
 		AuthorizerType:  "REQUEST",
 		IdentitySources: new([]string{"$request.header.Auth"}),
 		Name:            "auth",
 	}
 	prior := authorizerPrior(inputs)
-	prior.Observed = &AuthorizerOutput{
+	prior.Observed = &AuthorizerResourceOutput{
 		ApiId:                        "api-123",
 		AuthorizerId:                 "auth-123",
 		AuthorizerResultTtlInSeconds: 300,
@@ -210,7 +210,7 @@ func TestAuthorizerUpdateInputIgnoresUnconfiguredTTLDifference(t *testing.T) {
 }
 
 func TestAuthorizerUpdateInputClearsFields(t *testing.T) {
-	prior := Authorizer{
+	prior := AuthorizerResource{
 		ApiId:                          "api-123",
 		AuthorizerType:                 "REQUEST",
 		AuthorizerCredentialsArn:       aws.String("arn:aws:iam::123456789012:role/auth"),
@@ -225,7 +225,7 @@ func TestAuthorizerUpdateInputClearsFields(t *testing.T) {
 			Issuer:   aws.String("issuer"),
 		},
 	}
-	r := Authorizer{
+	r := AuthorizerResource{
 		ApiId:          "api-123",
 		AuthorizerType: "JWT",
 		Name:           "auth-v2",
@@ -252,7 +252,7 @@ func TestAuthorizerUpdateInputClearsFields(t *testing.T) {
 func TestAuthorizerOutputDefaultsNilTTLToZero(t *testing.T) {
 	out := authorizerOutput("api-123", "auth-123", &apigatewayv2.GetAuthorizerOutput{})
 
-	assert.Equal(t, &AuthorizerOutput{
+	assert.Equal(t, &AuthorizerResourceOutput{
 		ApiId:                        "api-123",
 		AuthorizerId:                 "auth-123",
 		AuthorizerResultTtlInSeconds: 0,
@@ -260,7 +260,7 @@ func TestAuthorizerOutputDefaultsNilTTLToZero(t *testing.T) {
 }
 
 func TestAuthorizerValidate(t *testing.T) {
-	base := Authorizer{
+	base := AuthorizerResource{
 		ApiId:                    "api-123",
 		AuthorizerType:           "REQUEST",
 		AuthorizerCredentialsArn: aws.String("arn:aws:iam::123456789012:role/auth"),
@@ -269,61 +269,61 @@ func TestAuthorizerValidate(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		mutate  func(*Authorizer)
+		mutate  func(*AuthorizerResource)
 		wantErr string
 	}{
 		{name: "valid"},
 		{
 			name: "empty credentials arn is accepted",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.AuthorizerCredentialsArn = aws.String("")
 			},
 		},
 		{
 			name: "name is required",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.Name = ""
 			},
 			wantErr: "name must be between 1 and 128 bytes",
 		},
 		{
 			name: "name is at most 128 bytes",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.Name = strings.Repeat("a", 129)
 			},
 			wantErr: "name must be between 1 and 128 bytes",
 		},
 		{
 			name: "name counts bytes",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.Name = strings.Repeat("é", 65)
 			},
 			wantErr: "name must be between 1 and 128 bytes",
 		},
 		{
 			name: "uri is not empty",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.AuthorizerUri = aws.String("")
 			},
 			wantErr: "authorizer-uri must be between 1 and 2048 bytes",
 		},
 		{
 			name: "uri is at most 2048 bytes",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.AuthorizerUri = aws.String(strings.Repeat("a", 2049))
 			},
 			wantErr: "authorizer-uri must be between 1 and 2048 bytes",
 		},
 		{
 			name: "uri counts bytes",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.AuthorizerUri = aws.String(strings.Repeat("é", 1025))
 			},
 			wantErr: "authorizer-uri must be between 1 and 2048 bytes",
 		},
 		{
 			name: "credentials arn is checked",
-			mutate: func(r *Authorizer) {
+			mutate: func(r *AuthorizerResource) {
 				r.AuthorizerCredentialsArn = aws.String("not-an-arn")
 			},
 			wantErr: "authorizer-credentials-arn must be a valid ARN",
@@ -423,10 +423,12 @@ func TestValidAuthorizerARN(t *testing.T) {
 	}
 }
 
-func authorizerPrior(inputs Authorizer) runtime.Prior[Authorizer, *AuthorizerOutput] {
-	return runtime.Prior[Authorizer, *AuthorizerOutput]{
+func authorizerPrior(
+	inputs AuthorizerResource,
+) runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput] {
+	return runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput]{
 		Inputs: inputs,
-		Outputs: &AuthorizerOutput{
+		Outputs: &AuthorizerResourceOutput{
 			ApiId:        "api-123",
 			AuthorizerId: "auth-123",
 		},

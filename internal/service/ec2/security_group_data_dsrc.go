@@ -14,30 +14,30 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// SecurityGroupData resolves exactly one existing EC2 security group with
+// SecurityGroupDataSource resolves exactly one existing EC2 security group with
 // DescribeSecurityGroups. The lookup combines the optional id selector, scalar
 // filters, tag filters, and generic filters as one query. A missing or
 // ambiguous lookup is a normal data-source error, not runtime.ErrNotFound.
-type SecurityGroupData struct {
-	Id     *string                    `ub:"id"`
-	Name   *string                    `ub:"name"`
-	VpcId  *string                    `ub:"vpc-id"`
-	Tags   *map[string]string         `ub:"tags"`
-	Filter *[]SecurityGroupDataFilter `ub:"filter"`
+type SecurityGroupDataSource struct {
+	Id     *string                          `ub:"id"`
+	Name   *string                          `ub:"name"`
+	VpcId  *string                          `ub:"vpc-id"`
+	Tags   *map[string]string               `ub:"tags"`
+	Filter *[]SecurityGroupDataSourceFilter `ub:"filter"`
 }
 
-// SecurityGroupDataFilter is one DescribeSecurityGroups filter. The name and
+// SecurityGroupDataSourceFilter is one DescribeSecurityGroups filter. The name and
 // values pass to EC2 unchanged; empty-string values and empty value lists are
 // preserved.
-type SecurityGroupDataFilter struct {
+type SecurityGroupDataSourceFilter struct {
 	Name   string   `ub:"name"`
 	Values []string `ub:"values"`
 }
 
-// SecurityGroupDataOutput holds the attributes of the selected security group.
+// SecurityGroupDataSourceOutput holds the attributes of the selected security group.
 // Arn is composed from the selected group's owner id, the client region, and
 // the region's partition, even when EC2 also returns a securityGroupArn field.
-type SecurityGroupDataOutput struct {
+type SecurityGroupDataSourceOutput struct {
 	Id          string            `ub:"id"`
 	Arn         string            `ub:"arn"`
 	Description string            `ub:"description"`
@@ -49,10 +49,10 @@ type SecurityGroupDataOutput struct {
 // Read resolves the security group data source. DescribeSecurityGroups is
 // paginated in full before singularity is asserted, so a single page cannot
 // look unique by accident.
-func (r *SecurityGroupData) Read(
+func (r *SecurityGroupDataSource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*SecurityGroupDataOutput, error) {
+) (*SecurityGroupDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (r *SecurityGroupData) Read(
 	return securityGroupDataOutput(group, region(client)), nil
 }
 
-func (r *SecurityGroupData) findSecurityGroup(
+func (r *SecurityGroupDataSource) findSecurityGroup(
 	ctx context.Context,
 	client *ec2.Client,
 ) (ec2types.SecurityGroup, error) {
@@ -83,7 +83,7 @@ func (r *SecurityGroupData) findSecurityGroup(
 	}
 }
 
-func (r *SecurityGroupData) findSecurityGroups(
+func (r *SecurityGroupDataSource) findSecurityGroups(
 	ctx context.Context,
 	client *ec2.Client,
 ) ([]ec2types.SecurityGroup, error) {
@@ -102,7 +102,7 @@ func (r *SecurityGroupData) findSecurityGroups(
 	return groups, nil
 }
 
-func (r *SecurityGroupData) describeInput() *ec2.DescribeSecurityGroupsInput {
+func (r *SecurityGroupDataSource) describeInput() *ec2.DescribeSecurityGroupsInput {
 	in := &ec2.DescribeSecurityGroupsInput{}
 	if r.Id != nil && *r.Id != "" {
 		in.GroupIds = []string{*r.Id}
@@ -114,10 +114,10 @@ func (r *SecurityGroupData) describeInput() *ec2.DescribeSecurityGroupsInput {
 	return in
 }
 
-func (r *SecurityGroupData) describeFilters() []ec2types.Filter {
+func (r *SecurityGroupDataSource) describeFilters() []ec2types.Filter {
 	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter))+2)
-	filters = appendSecurityGroupDataStringFilter(filters, "group-name", r.Name)
-	filters = appendSecurityGroupDataStringFilter(filters, "vpc-id", r.VpcId)
+	filters = appendSecurityGroupDataSourceStringFilter(filters, "group-name", r.Name)
+	filters = appendSecurityGroupDataSourceStringFilter(filters, "vpc-id", r.VpcId)
 	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("tag:" + key),
@@ -133,7 +133,7 @@ func (r *SecurityGroupData) describeFilters() []ec2types.Filter {
 	return filters
 }
 
-func appendSecurityGroupDataStringFilter(
+func appendSecurityGroupDataSourceStringFilter(
 	filters []ec2types.Filter,
 	name string,
 	value *string,
@@ -150,10 +150,10 @@ func appendSecurityGroupDataStringFilter(
 func securityGroupDataOutput(
 	group ec2types.SecurityGroup,
 	regionName string,
-) *SecurityGroupDataOutput {
+) *SecurityGroupDataSourceOutput {
 	id := aws.ToString(group.GroupId)
 	ownerID := aws.ToString(group.OwnerId)
-	return &SecurityGroupDataOutput{
+	return &SecurityGroupDataSourceOutput{
 		Id:          id,
 		Arn:         securityGroupDataARN(regionName, ownerID, id),
 		Description: aws.ToString(group.Description),

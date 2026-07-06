@@ -10,23 +10,23 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-type UpdateMicrovmImageVersionStatus struct {
+type UpdateMicrovmImageVersionStatusAction struct {
 	ImageIdentifier string `ub:"image-identifier"`
 	ImageVersion    string `ub:"image-version"`
 	Status          string `ub:"status"`
 }
 
-func (r UpdateMicrovmImageVersionStatus) Constraints() []constraint.Constraint {
+func (r UpdateMicrovmImageVersionStatusAction) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.Status, "ACTIVE", "INACTIVE")).
 			Message("status must be ACTIVE or INACTIVE"),
 	}
 }
 
-func (r *UpdateMicrovmImageVersionStatus) Run(
+func (r *UpdateMicrovmImageVersionStatusAction) Run(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*MicrovmImageVersionDataOutput, error) {
+) (*UpdateMicrovmImageVersionStatusActionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -40,5 +40,9 @@ func (r *UpdateMicrovmImageVersionStatus) Run(
 	if err != nil {
 		return nil, fmt.Errorf("update Microvm image version %s: %w", r.ImageVersion, err)
 	}
-	return microvmImageVersionOutputFromUpdate(out)
+	version, err := microvmImageVersionOutputFromUpdate(out)
+	if err != nil {
+		return nil, err
+	}
+	return (*UpdateMicrovmImageVersionStatusActionOutput)(version), nil
 }

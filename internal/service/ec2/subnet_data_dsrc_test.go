@@ -15,7 +15,7 @@ import (
 
 const subnetDataID = "subnet-0123456789abcdef0"
 
-func describeSubnetDataPageXML(nextToken string, items ...string) string {
+func describeSubnetDataSourcePageXML(nextToken string, items ...string) string {
 	next := ""
 	if nextToken != "" {
 		next = fmt.Sprintf("<nextToken>%s</nextToken>", nextToken)
@@ -93,16 +93,16 @@ func subnetDataItemWithoutNestedXML(id string) string {
 </item>`, id, id)
 }
 
-func TestSubnetDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
+func TestSubnetDataSourceReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSubnets", func(n int, form url.Values) (int, string) {
 		switch n {
 		case 1:
 			assert.Empty(t, form.Get("NextToken"))
-			return 200, describeSubnetDataPageXML("token-2")
+			return 200, describeSubnetDataSourcePageXML("token-2")
 		case 2:
 			assert.Equal(t, "token-2", form.Get("NextToken"))
-			return 200, describeSubnetDataPageXML("", subnetDataItemXML(subnetDataID))
+			return 200, describeSubnetDataSourcePageXML("", subnetDataItemXML(subnetDataID))
 		default:
 			t.Fatalf("unexpected DescribeSubnets call %d", n)
 			return 500, ""
@@ -110,7 +110,7 @@ func TestSubnetDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &SubnetData{
+	r := &SubnetDataSource{
 		Id:                 aws.String(subnetDataID),
 		AvailabilityZone:   aws.String("us-east-1a"),
 		AvailabilityZoneId: aws.String("use1-az1"),
@@ -120,7 +120,7 @@ func TestSubnetDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 		CidrBlock:          aws.String("10.62.1.0/24"),
 		Ipv6CidrBlock:      aws.String("2600:1f18:abcd:ef00::/64"),
 		Tags:               new(map[string]string{"unobin": "ec2-subnet-data"}),
-		Filter: new([]SubnetDataFilter{
+		Filter: new([]SubnetDataSourceFilter{
 			{Name: "owner-id", Values: []string{"123456789012"}},
 			{Name: "description", Values: []string{""}},
 			{Name: "empty-values", Values: []string{}},
@@ -181,25 +181,25 @@ func TestSubnetDataReadPaginatesSendsFiltersAndFlattens(t *testing.T) {
 	assertEC2Filter(t, sent[0], "empty-values", []string{})
 }
 
-func TestSubnetDataReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
+func TestSubnetDataSourceReadWithNoFiltersQueriesAllAndRequiresOne(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSubnets", func(_ int, form url.Values) (int, string) {
 		for key := range form {
 			assert.False(t, strings.HasPrefix(key, "Filter."), "unexpected filter %s", key)
 			assert.False(t, strings.HasPrefix(key, "SubnetId."), "unexpected subnet id %s", key)
 		}
-		return 200, describeSubnetDataPageXML("")
+		return 200, describeSubnetDataSourcePageXML("")
 	})
 	cfg := fake.configuration()
 
-	out, err := (&SubnetData{}).Read(context.Background(), cfg)
+	out, err := (&SubnetDataSource{}).Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
 	assert.NotErrorIs(t, err, runtime.ErrNotFound)
 	assert.EqualError(t, err, "no matching EC2 Subnet found")
 }
 
-func TestSubnetDataReadTreatsSubnetIdNotFoundAsLookupError(t *testing.T) {
+func TestSubnetDataSourceReadTreatsSubnetIdNotFoundAsLookupError(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSubnets", func(int, url.Values) (int, string) {
 		return 400, ec2ErrorXML("InvalidSubnetID.NotFound",
@@ -207,7 +207,7 @@ func TestSubnetDataReadTreatsSubnetIdNotFoundAsLookupError(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &SubnetData{Id: aws.String("subnet-missing")}
+	r := &SubnetDataSource{Id: aws.String("subnet-missing")}
 	out, err := r.Read(context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
@@ -215,34 +215,34 @@ func TestSubnetDataReadTreatsSubnetIdNotFoundAsLookupError(t *testing.T) {
 	assert.EqualError(t, err, "no matching EC2 Subnet found")
 }
 
-func TestSubnetDataReadErrorsOnMultipleMatches(t *testing.T) {
+func TestSubnetDataSourceReadErrorsOnMultipleMatches(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSubnets", func(int, url.Values) (int, string) {
-		return 200, describeSubnetDataPageXML("",
+		return 200, describeSubnetDataSourcePageXML("",
 			subnetDataItemWithoutNestedXML(subnetDataID),
 			subnetDataItemWithoutNestedXML("subnet-11111111111111111"))
 	})
 	cfg := fake.configuration()
 
-	out, err := (&SubnetData{CidrBlock: aws.String("10.62.1.0/24")}).Read(
+	out, err := (&SubnetDataSource{CidrBlock: aws.String("10.62.1.0/24")}).Read(
 		context.Background(), cfg)
 	require.Error(t, err)
 	assert.Nil(t, out)
 	assert.EqualError(t, err, "multiple EC2 Subnets matched; use additional constraints")
 }
 
-func TestSubnetDataReadOmitsFalseDefaultForAzAndNilNestedOutputs(t *testing.T) {
+func TestSubnetDataSourceReadOmitsFalseDefaultForAzAndNilNestedOutputs(t *testing.T) {
 	fake := newFakeEC2(t)
 	fake.on("DescribeSubnets", func(_ int, form url.Values) (int, string) {
 		for key := range form {
 			assert.False(t, strings.HasPrefix(key, "Filter."), "unexpected filter %s", key)
 		}
-		return 200, describeSubnetDataPageXML("",
+		return 200, describeSubnetDataSourcePageXML("",
 			subnetDataItemWithoutNestedXML(subnetDataID))
 	})
 	cfg := fake.configuration()
 
-	out, err := (&SubnetData{DefaultForAz: aws.Bool(false)}).Read(context.Background(), cfg)
+	out, err := (&SubnetDataSource{DefaultForAz: aws.Bool(false)}).Read(context.Background(), cfg)
 	require.NoError(t, err)
 	require.NotNil(t, out)
 	assert.Nil(t, out.Ipv6CidrBlock)

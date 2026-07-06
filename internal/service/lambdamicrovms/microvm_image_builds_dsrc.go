@@ -10,7 +10,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-type MicrovmImageBuilds struct {
+type MicrovmImageBuildsDataSource struct {
 	ImageIdentifier   string  `ub:"image-identifier"`
 	ImageVersion      string  `ub:"image-version"`
 	Architecture      *string `ub:"architecture"`
@@ -18,7 +18,7 @@ type MicrovmImageBuilds struct {
 	ChipsetGeneration *string `ub:"chipset-generation"`
 }
 
-func (r MicrovmImageBuilds) Constraints() []constraint.Constraint {
+func (r MicrovmImageBuildsDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Architecture)).
 			Require(constraint.Equals(r.Architecture, "ARM_64")).
@@ -29,10 +29,10 @@ func (r MicrovmImageBuilds) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MicrovmImageBuilds) Read(
+func (r *MicrovmImageBuildsDataSource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*MicrovmImageBuildsOutput, error) {
+) (*MicrovmImageBuildsDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -59,5 +59,5 @@ func (r *MicrovmImageBuilds) Read(
 			items = append(items, microvmImageBuildSummaryFromSDK(item))
 		}
 	}
-	return &MicrovmImageBuildsOutput{Items: items}, nil
+	return &MicrovmImageBuildsDataSourceOutput{Items: items}, nil
 }

@@ -29,7 +29,7 @@ const targetTypeLambda = "lambda"
 // window can run several minutes.
 const elbv2PropagationTimeout = 5 * time.Minute
 
-// TargetGroup manages an ELBv2 target group as one resource, the way
+// TargetGroupResource manages an ELBv2 target group as one resource, the way
 // CloudFormation models AWS::ElasticLoadBalancingV2::TargetGroup. The name,
 // port, protocol, protocol version, VPC, target type, IP address type, and
 // target control port are fixed at creation, so a change to any of them
@@ -40,7 +40,7 @@ const elbv2PropagationTimeout = 5 * time.Minute
 // and a change on update goes through ModifyTargetGroup. The remaining
 // attributes are reconciled by a follow-on ModifyTargetGroupAttributes. A nil
 // stickiness block leaves stickiness disabled.
-type TargetGroup struct {
+type TargetGroupResource struct {
 	Name                           string                 `ub:"name"`
 	TargetType                     *string                `ub:"target-type"`
 	Port                           *int64                 `ub:"port"`
@@ -70,18 +70,18 @@ type TargetGroup struct {
 	Tags                           *map[string]string     `ub:"tags"`
 }
 
-// TargetGroupOutput holds the values ELBv2 computes for a target group. The ARN
+// TargetGroupResourceOutput holds the values ELBv2 computes for a target group. The ARN
 // is the group's stable handle and CloudFormation primary identifier. The ARN
 // suffix is the trailing identifier the CloudWatch metrics for the group are
 // keyed by. The load balancer ARNs name the load balancers routing traffic to
 // the group, which ELBv2 fills as listeners attach.
-type TargetGroupOutput struct {
+type TargetGroupResourceOutput struct {
 	Arn              string   `ub:"arn"`
 	ArnSuffix        string   `ub:"arn-suffix"`
 	LoadBalancerArns []string `ub:"load-balancer-arns"`
 }
 
-func (r *TargetGroup) SchemaVersion() int { return 1 }
+func (r *TargetGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ELBv2 fixes when a target group is created.
 // The name is baked into the group's ARN, and the port, protocol, protocol
@@ -89,7 +89,7 @@ func (r *TargetGroup) SchemaVersion() int { return 1 }
 // changed on an existing group, so a change to any of them requires a new
 // group. The health check, stickiness, scalar attributes, and tags reconcile in
 // place.
-func (r *TargetGroup) ReplaceFields() []string {
+func (r *TargetGroupResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"port",
@@ -113,7 +113,7 @@ func (r *TargetGroup) ReplaceFields() []string {
 // ELBv2's accepted bounds. The health-check port, the literal traffic-port or
 // a port number, is validated by the API: a constraint cannot parse a number
 // out of a string.
-func (r TargetGroup) Constraints() []constraint.Constraint {
+func (r TargetGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Equals(r.TargetType, "lambda")).
 			Require(constraint.Absent(r.Port), constraint.Absent(r.Protocol),
@@ -205,7 +205,10 @@ func (r TargetGroup) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *TargetGroup) Create(ctx context.Context, cfg *awsCfg) (*TargetGroupOutput, error) {
+func (r *TargetGroupResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*TargetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -245,9 +248,11 @@ func (r *TargetGroup) Create(ctx context.Context, cfg *awsCfg) (*TargetGroupOutp
 	return r.read(ctx, client, arn)
 }
 
-func (r *TargetGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *TargetGroupOutput,
-) (*TargetGroupOutput, error) {
+func (r *TargetGroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TargetGroupResourceOutput,
+) (*TargetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -259,9 +264,9 @@ func (r *TargetGroup) Read(
 // attributes to compute the output. A group that has gone missing, an empty
 // describe, or a describe that returns a different ARN than requested are all
 // drift, mapped to runtime.ErrNotFound so the runtime recreates the group.
-func (r *TargetGroup) read(
+func (r *TargetGroupResource) read(
 	ctx context.Context, client *elbv2.Client, arn string,
-) (*TargetGroupOutput, error) {
+) (*TargetGroupResourceOutput, error) {
 	group, err := findTargetGroupByARN(ctx, client, arn)
 	if err != nil {
 		return nil, err
@@ -276,16 +281,18 @@ func (r *TargetGroup) read(
 		}
 		return nil, fmt.Errorf("describe target group attributes: %w", err)
 	}
-	return &TargetGroupOutput{
+	return &TargetGroupResourceOutput{
 		Arn:              aws.ToString(group.TargetGroupArn),
 		ArnSuffix:        targetGroupARNSuffix(aws.ToString(group.TargetGroupArn)),
 		LoadBalancerArns: group.LoadBalancerArns,
 	}, nil
 }
 
-func (r *TargetGroup) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TargetGroup, *TargetGroupOutput],
-) (*TargetGroupOutput, error) {
+func (r *TargetGroupResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[TargetGroupResource, *TargetGroupResourceOutput],
+) (*TargetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -317,7 +324,11 @@ func (r *TargetGroup) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *TargetGroup) Delete(ctx context.Context, cfg *awsCfg, prior *TargetGroupOutput) error {
+func (r *TargetGroupResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TargetGroupResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -344,7 +355,7 @@ func (r *TargetGroup) Delete(ctx context.Context, cfg *awsCfg, prior *TargetGrou
 // and the health-check fields. The port, protocol, protocol version, and VPC
 // are left off for a lambda target, which does not accept them, even though
 // the constraints already forbid setting them there.
-func (r *TargetGroup) createInput() *elbv2.CreateTargetGroupInput {
+func (r *TargetGroupResource) createInput() *elbv2.CreateTargetGroupInput {
 	in := &elbv2.CreateTargetGroupInput{
 		Name:              aws.String(r.Name),
 		TargetControlPort: ptr.Int32(r.TargetControlPort),
@@ -383,7 +394,7 @@ func (r *TargetGroup) createInput() *elbv2.CreateTargetGroupInput {
 // create issues CreateTargetGroup and returns the new group's ARN. It is the
 // single create attempt the caller retries without tags on a tag-on-create
 // failure.
-func (r *TargetGroup) create(
+func (r *TargetGroupResource) create(
 	ctx context.Context, client *elbv2.Client, in *elbv2.CreateTargetGroupInput,
 ) (string, error) {
 	resp, err := client.CreateTargetGroup(ctx, in)
@@ -399,7 +410,7 @@ func (r *TargetGroup) create(
 // modifyHealthCheck reconciles the health-check fields on an existing group
 // with ModifyTargetGroup, the only call that updates them. A field that is
 // unset is sent as nil, which ELBv2 reads as leave-unchanged.
-func (r *TargetGroup) modifyHealthCheck(
+func (r *TargetGroupResource) modifyHealthCheck(
 	ctx context.Context, client *elbv2.Client, arn string,
 ) error {
 	in := &elbv2.ModifyTargetGroupInput{TargetGroupArn: aws.String(arn)}
@@ -422,7 +433,7 @@ func (r *TargetGroup) modifyHealthCheck(
 
 // hasHealthCheck reports whether any health-check input is set. With none set
 // there is nothing for ModifyTargetGroup to write.
-func (r *TargetGroup) hasHealthCheck() bool {
+func (r *TargetGroupResource) hasHealthCheck() bool {
 	return r.HealthCheckEnabled != nil || r.HealthCheckProtocol != nil ||
 		r.HealthCheckPort != nil || r.HealthCheckPath != nil ||
 		r.HealthCheckIntervalSeconds != nil || r.HealthCheckTimeoutSeconds != nil ||
@@ -432,7 +443,7 @@ func (r *TargetGroup) hasHealthCheck() bool {
 
 // healthCheckChanged reports whether any health-check input differs from the
 // prior inputs.
-func (r *TargetGroup) healthCheckChanged(prior TargetGroup) bool {
+func (r *TargetGroupResource) healthCheckChanged(prior TargetGroupResource) bool {
 	return runtime.Changed(prior.HealthCheckEnabled, r.HealthCheckEnabled) ||
 		runtime.Changed(prior.HealthCheckProtocol, r.HealthCheckProtocol) ||
 		runtime.Changed(prior.HealthCheckPort, r.HealthCheckPort) ||
@@ -446,7 +457,7 @@ func (r *TargetGroup) healthCheckChanged(prior TargetGroup) bool {
 
 // modifyAttributes applies the given target group attributes with
 // ModifyTargetGroupAttributes.
-func (r *TargetGroup) modifyAttributes(
+func (r *TargetGroupResource) modifyAttributes(
 	ctx context.Context, client *elbv2.Client, arn string,
 	attrs []elbv2types.TargetGroupAttribute,
 ) error {
@@ -466,7 +477,11 @@ func (r *TargetGroup) modifyAttributes(
 // consistently readable. A not-found read means the create is still
 // propagating, so the wait retries; the settled describe is read afterward
 // through the resource's own Read.
-func (r *TargetGroup) waitVisible(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *TargetGroupResource) waitVisible(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	notYetVisible := func(err error) bool { return errors.Is(err, runtime.ErrNotFound) }
 	err := retry.OnError(ctx, notYetVisible, func(ctx context.Context) error {
 		_, err := findTargetGroupByARN(ctx, client, arn)
@@ -482,7 +497,7 @@ func (r *TargetGroup) waitVisible(ctx context.Context, client *elbv2.Client, arn
 // stickiness block. Only attributes valid for the group's target type are
 // emitted, so a lambda group sends only its lambda attribute and an instance or
 // IP group sends the rest.
-func (r *TargetGroup) attributes() []elbv2types.TargetGroupAttribute {
+func (r *TargetGroupResource) attributes() []elbv2types.TargetGroupAttribute {
 	var attrs []elbv2types.TargetGroupAttribute
 	if r.isLambda() {
 		if r.LambdaMultiValueHeadersEnabled != nil {
@@ -533,7 +548,9 @@ func (r *TargetGroup) attributes() []elbv2types.TargetGroupAttribute {
 // attributes whose input changed from the prior. A removed stickiness block is
 // cleared by sending stickiness.enabled=false, the empty sentinel, rather than
 // leaving stickiness untouched.
-func (r *TargetGroup) changedAttributes(prior TargetGroup) []elbv2types.TargetGroupAttribute {
+func (r *TargetGroupResource) changedAttributes(
+	prior TargetGroupResource,
+) []elbv2types.TargetGroupAttribute {
 	var attrs []elbv2types.TargetGroupAttribute
 	if r.isLambda() {
 		if runtime.Changed(prior.LambdaMultiValueHeadersEnabled,
@@ -585,7 +602,9 @@ func (r *TargetGroup) changedAttributes(prior TargetGroup) []elbv2types.TargetGr
 // changedStickiness returns the stickiness attributes to apply when the
 // stickiness block changed. A block that was removed is cleared by disabling
 // stickiness; otherwise the new block's attributes are emitted.
-func (r *TargetGroup) changedStickiness(prior TargetGroup) []elbv2types.TargetGroupAttribute {
+func (r *TargetGroupResource) changedStickiness(
+	prior TargetGroupResource,
+) []elbv2types.TargetGroupAttribute {
 	if !runtime.Changed(prior.Stickiness, r.Stickiness) {
 		return nil
 	}
@@ -597,14 +616,14 @@ func (r *TargetGroup) changedStickiness(prior TargetGroup) []elbv2types.TargetGr
 
 // isLambda reports whether the target type is lambda, which takes no port,
 // protocol, or VPC and only the lambda attribute.
-func (r *TargetGroup) isLambda() bool {
+func (r *TargetGroupResource) isLambda() bool {
 	return r.TargetType != nil && *r.TargetType == targetTypeLambda
 }
 
 // isInstanceOrIp reports whether the target type is instance or IP, the two
 // types that take the deregistration, slow-start, load-balancing, and
 // stickiness attributes. An unset target type defaults to instance.
-func (r *TargetGroup) isInstanceOrIp() bool {
+func (r *TargetGroupResource) isInstanceOrIp() bool {
 	if r.TargetType == nil {
 		return true
 	}
@@ -618,7 +637,7 @@ func (r *TargetGroup) isInstanceOrIp() bool {
 
 // isHTTP reports whether the group's protocol is HTTP or HTTPS, the only
 // protocols for which the cookie-based stickiness attributes apply.
-func (r *TargetGroup) isHTTP() bool {
+func (r *TargetGroupResource) isHTTP() bool {
 	if r.Protocol == nil {
 		return false
 	}

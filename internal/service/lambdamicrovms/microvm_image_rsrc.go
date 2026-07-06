@@ -22,7 +22,7 @@ const (
 	microvmImagePollInterval  = 15 * time.Second
 )
 
-type MicrovmImage struct {
+type MicrovmImageResource struct {
 	Name                     string              `ub:"name"`
 	BaseImageArn             string              `ub:"base-image-arn"`
 	BuildRoleArn             string              `ub:"build-role-arn"`
@@ -40,13 +40,13 @@ type MicrovmImage struct {
 	TerminateOnDestroy       *bool               `ub:"terminate-on-destroy"`
 }
 
-func (r *MicrovmImage) SchemaVersion() int { return 1 }
+func (r *MicrovmImageResource) SchemaVersion() int { return 1 }
 
-func (r *MicrovmImage) ReplaceFields() []string {
+func (r *MicrovmImageResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
-func (r MicrovmImage) Constraints() []constraint.Constraint {
+func (r MicrovmImageResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Logging)).Require(constraint.Any(
 			constraint.All(
@@ -127,7 +127,10 @@ func (r MicrovmImage) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MicrovmImage) Create(ctx context.Context, cfg *awsCfg) (*MicrovmImageOutput, error) {
+func (r *MicrovmImageResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*MicrovmImageResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -150,11 +153,10 @@ func (r *MicrovmImage) Create(ctx context.Context, cfg *awsCfg) (*MicrovmImageOu
 	return r.read(ctx, client, imageArn)
 }
 
-func (r *MicrovmImage) Read(
+func (r *MicrovmImageResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MicrovmImageOutput,
-) (*MicrovmImageOutput, error) {
+	prior *MicrovmImageResourceOutput) (*MicrovmImageResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -169,11 +171,11 @@ func (r *MicrovmImage) Read(
 	return out, nil
 }
 
-func (r *MicrovmImage) Update(
+func (r *MicrovmImageResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[MicrovmImage, *MicrovmImageOutput],
-) (*MicrovmImageOutput, error) {
+	prior runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput],
+) (*MicrovmImageResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -200,11 +202,10 @@ func (r *MicrovmImage) Update(
 	return r.read(ctx, client, imageArn)
 }
 
-func (r *MicrovmImage) Delete(
+func (r *MicrovmImageResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MicrovmImageOutput,
-) error {
+	prior *MicrovmImageResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -245,7 +246,7 @@ func (r *MicrovmImage) Delete(
 	}, wait.WithTimeout(microvmImageDeleteTimeout), wait.WithInterval(microvmImagePollInterval))
 }
 
-func (r *MicrovmImage) terminateMicrovms(
+func (r *MicrovmImageResource) terminateMicrovms(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -287,7 +288,7 @@ func (r *MicrovmImage) terminateMicrovms(
 		wait.WithInterval(microvmImagePollInterval))
 }
 
-func (r *MicrovmImage) activeMicrovms(
+func (r *MicrovmImageResource) activeMicrovms(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -323,7 +324,7 @@ func microvmCanTerminate(state lambdamicrovmstypes.MicrovmState) bool {
 	}
 }
 
-func (r *MicrovmImage) createInput() (*awslambdamicrovms.CreateMicrovmImageInput, error) {
+func (r *MicrovmImageResource) createInput() (*awslambdamicrovms.CreateMicrovmImageInput, error) {
 	hooks, resources, err := r.hooksAndResources()
 	if err != nil {
 		return nil, err
@@ -349,7 +350,7 @@ func (r *MicrovmImage) createInput() (*awslambdamicrovms.CreateMicrovmImageInput
 	return in, nil
 }
 
-func (r *MicrovmImage) updateInput(
+func (r *MicrovmImageResource) updateInput(
 	imageArn string,
 ) (*awslambdamicrovms.UpdateMicrovmImageInput, error) {
 	hooks, resources, err := r.hooksAndResources()
@@ -373,7 +374,7 @@ func (r *MicrovmImage) updateInput(
 	}, nil
 }
 
-func (r *MicrovmImage) hooksAndResources() (
+func (r *MicrovmImageResource) hooksAndResources() (
 	*lambdamicrovmstypes.Hooks,
 	[]lambdamicrovmstypes.Resources,
 	error,
@@ -389,7 +390,7 @@ func (r *MicrovmImage) hooksAndResources() (
 	return hooks, resources, nil
 }
 
-func (r *MicrovmImage) waitReady(
+func (r *MicrovmImageResource) waitReady(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -404,7 +405,7 @@ func (r *MicrovmImage) waitReady(
 		microvmImageReadyTimeout)
 }
 
-func (r *MicrovmImage) waitUpdated(
+func (r *MicrovmImageResource) waitUpdated(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -420,7 +421,7 @@ func (r *MicrovmImage) waitUpdated(
 		microvmImageReadyTimeout)
 }
 
-func (r *MicrovmImage) waitForState(
+func (r *MicrovmImageResource) waitForState(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -449,11 +450,11 @@ func (r *MicrovmImage) waitForState(
 	}, wait.WithTimeout(timeout), wait.WithInterval(microvmImagePollInterval))
 }
 
-func (r *MicrovmImage) read(
+func (r *MicrovmImageResource) read(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
-) (*MicrovmImageOutput, error) {
+) (*MicrovmImageResourceOutput, error) {
 	out, err := client.GetMicrovmImage(ctx, &awslambdamicrovms.GetMicrovmImageInput{
 		ImageIdentifier: aws.String(imageArn),
 	})
@@ -463,7 +464,7 @@ func (r *MicrovmImage) read(
 	return microvmImageOutputFromGet(out), nil
 }
 
-func (r *MicrovmImage) syncTags(
+func (r *MicrovmImageResource) syncTags(
 	ctx context.Context,
 	client *awslambdamicrovms.Client,
 	imageArn string,
@@ -503,7 +504,7 @@ func (r *MicrovmImage) syncTags(
 		})
 }
 
-func (r *MicrovmImage) nonTagInputsChanged(prior MicrovmImage) bool {
+func (r *MicrovmImageResource) nonTagInputsChanged(prior MicrovmImageResource) bool {
 	current := *r
 	current.Tags = nil
 	current.TerminateOnDestroy = nil
@@ -512,7 +513,7 @@ func (r *MicrovmImage) nonTagInputsChanged(prior MicrovmImage) bool {
 	return !reflect.DeepEqual(prior, current)
 }
 
-func (r *MicrovmImage) tagsChanged(prior MicrovmImage) bool {
+func (r *MicrovmImageResource) tagsChanged(prior MicrovmImageResource) bool {
 	return r.Tags != nil && !reflect.DeepEqual(prior.Tags, r.Tags)
 }
 

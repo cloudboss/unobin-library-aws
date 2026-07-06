@@ -61,13 +61,13 @@ func TestUserCreateRetriesWithoutTagsOutsideStandardPartition(t *testing.T) {
 	cfg := fake.configuration()
 	cfg.Region = aws.String("us-iso-east-1")
 
-	out, err := (&User{
+	out, err := (&UserResource{
 		Name: "test-user",
 		Path: "/",
 		Tags: new(map[string]string{"Project": "unobin", "aws:skip": "ignored"}),
 	}).Create(context.Background(), cfg)
 	require.NoError(t, err)
-	assert.Equal(t, &UserOutput{
+	assert.Equal(t, &UserResourceOutput{
 		Arn:      "arn:aws:iam::123456789012:user/test-user",
 		UniqueId: "AIDASETTLED",
 		Name:     "test-user",
@@ -82,8 +82,8 @@ func TestUserReadMapsEmptyResultToNotFound(t *testing.T) {
 		return 200, emptyGetUserResponseXML
 	})
 
-	_, err := (&User{Name: "missing-user"}).Read(
-		context.Background(), fake.configuration(), &UserOutput{Name: "missing-user"})
+	_, err := (&UserResource{Name: "missing-user"}).Read(
+		context.Background(), fake.configuration(), &UserResourceOutput{Name: "missing-user"})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -119,8 +119,8 @@ func TestUserUpdateReconcilesChangedFields(t *testing.T) {
 			"arn:aws:iam::123456789012:user/new/new-user", nil,
 			map[string]string{"Keep": "new"})
 	})
-	prior := runtime.Prior[User, *UserOutput]{
-		Inputs: User{
+	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+		Inputs: UserResource{
 			Name:                "old-user",
 			Path:                "/old/",
 			PermissionsBoundary: aws.String(oldBoundary),
@@ -130,10 +130,10 @@ func TestUserUpdateReconcilesChangedFields(t *testing.T) {
 				"aws:owned": "old",
 			}),
 		},
-		Outputs: &UserOutput{Name: "old-user"},
+		Outputs: &UserResourceOutput{Name: "old-user"},
 	}
 
-	out, err := (&User{
+	out, err := (&UserResource{
 		Name:                "new-user",
 		Path:                "/new/",
 		PermissionsBoundary: aws.String(""),
@@ -181,15 +181,15 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 			"arn:aws:iam::123456789012:user/wanted/same-user", aws.String(desiredBoundary),
 			map[string]string{"Keep": "wanted", "aws:system": "ignored"})
 	})
-	prior := runtime.Prior[User, *UserOutput]{
-		Inputs: User{
+	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+		Inputs: UserResource{
 			Name:                "same-user",
 			Path:                "/wanted/",
 			PermissionsBoundary: aws.String(desiredBoundary),
 			Tags:                new(map[string]string{"Keep": "wanted"}),
 		},
-		Outputs: &UserOutput{Name: "same-user"},
-		Observed: &UserOutput{
+		Outputs: &UserResourceOutput{Name: "same-user"},
+		Observed: &UserResourceOutput{
 			Name:                "same-user",
 			Path:                "/drift/",
 			PermissionsBoundary: aws.String(oldBoundary),
@@ -200,7 +200,7 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 		},
 	}
 
-	out, err := (&User{
+	out, err := (&UserResource{
 		Name:                "same-user",
 		Path:                "/wanted/",
 		PermissionsBoundary: aws.String(desiredBoundary),
@@ -215,16 +215,16 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 
 func TestUserUpdateReturnsObservedWhenOnlyComputedFieldsChanged(t *testing.T) {
 	fake := newFakeIAM(t)
-	observed := &UserOutput{
+	observed := &UserResourceOutput{
 		Arn:      "arn:aws:iam::123456789012:user/same",
 		UniqueId: "AIDANEW",
 		Name:     "same",
 		Path:     "/",
 		Tags:     map[string]string{"Keep": "same"},
 	}
-	prior := runtime.Prior[User, *UserOutput]{
-		Inputs: User{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})},
-		Outputs: &UserOutput{
+	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+		Inputs: UserResource{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})},
+		Outputs: &UserResourceOutput{
 			Arn:      "old",
 			UniqueId: "AIDAOLD",
 			Name:     "same",
@@ -234,7 +234,7 @@ func TestUserUpdateReturnsObservedWhenOnlyComputedFieldsChanged(t *testing.T) {
 		Observed: observed,
 	}
 
-	out, err := (&User{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})}).
+	out, err := (&UserResource{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})}).
 		Update(context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Same(t, observed, out)
@@ -259,8 +259,8 @@ func TestUserDeleteRemovesGroupsBeforeDeletingUser(t *testing.T) {
 		return 200, emptyIAMResultXML("DeleteUser")
 	})
 
-	err := (&User{Name: "delete-user"}).Delete(
-		context.Background(), fake.configuration(), &UserOutput{Name: "delete-user"})
+	err := (&UserResource{Name: "delete-user"}).Delete(
+		context.Background(), fake.configuration(), &UserResourceOutput{Name: "delete-user"})
 	require.NoError(t, err)
 }
 
@@ -336,8 +336,8 @@ func TestUserDeleteForceDestroyCleansDependencies(t *testing.T) {
 		return 200, emptyIAMResultXML("DeleteUser")
 	})
 
-	err := (&User{Name: "force-user", ForceDestroy: true}).Delete(
-		context.Background(), fake.configuration(), &UserOutput{Name: "force-user"})
+	err := (&UserResource{Name: "force-user", ForceDestroy: true}).Delete(
+		context.Background(), fake.configuration(), &UserResourceOutput{Name: "force-user"})
 	require.NoError(t, err)
 }
 
@@ -351,17 +351,17 @@ func TestUserTagDiffSkipsSystemTags(t *testing.T) {
 }
 
 func TestValidateUser(t *testing.T) {
-	assert.NoError(t, (&User{Name: "abcXYZ012=,.@_-+"}).validate())
+	assert.NoError(t, (&UserResource{Name: "abcXYZ012=,.@_-+"}).validate())
 	for _, name := range []string{"", "has space", "has/slash"} {
 		t.Run(name, func(t *testing.T) {
-			assert.Error(t, (&User{Name: name}).validate())
+			assert.Error(t, (&UserResource{Name: name}).validate())
 		})
 	}
 	boundary := make([]byte, 2049)
 	for i := range boundary {
 		boundary[i] = 'a'
 	}
-	assert.Error(t, (&User{
+	assert.Error(t, (&UserResource{
 		Name:                "valid",
 		PermissionsBoundary: aws.String(string(boundary)),
 	}).validate())

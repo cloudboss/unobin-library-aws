@@ -61,7 +61,7 @@ func TestLibraryRegistersCloudWatchLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"metric-alarm": reflect.TypeFor[*svc.MetricAlarmOutput](),
+		"metric-alarm": reflect.TypeFor[*svc.MetricAlarmResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

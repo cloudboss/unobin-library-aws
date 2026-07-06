@@ -64,8 +64,8 @@ func TestLibraryRegistersSecretsManagerLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"secret":         reflect.TypeFor[*svc.SecretOutput](),
-		"secret-version": reflect.TypeFor[*svc.SecretVersionOutput](),
+		"secret":         reflect.TypeFor[*svc.SecretResourceOutput](),
+		"secret-version": reflect.TypeFor[*svc.SecretVersionResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run("resource/"+name, func(t *testing.T) {
@@ -73,7 +73,7 @@ func TestLibraryRegistersSecretsManagerLocalKinds(t *testing.T) {
 		})
 	}
 	dataSourceOutputs := map[string]reflect.Type{
-		"secret-version": reflect.TypeFor[*svc.SecretVersionDataOutput](),
+		"secret-version": reflect.TypeFor[*svc.SecretVersionDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run("data-source/"+name, func(t *testing.T) {

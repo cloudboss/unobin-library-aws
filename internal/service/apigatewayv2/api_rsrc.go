@@ -18,7 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// Api manages an API Gateway v2 API, the root of an HTTP or WebSocket API:
+// ApiResource manages an API Gateway v2 API, the root of an HTTP or WebSocket API:
 // its protocol, name, selection expressions, CORS configuration, and tags,
 // plus the OpenAPI import that can populate it. The protocol is fixed at
 // create time. The quick-create trio (target, route-key, credentials-arn)
@@ -29,7 +29,7 @@ import (
 // and integrations and overwrites API-level properties from the document;
 // the resource then re-asserts the configured name, description, version,
 // CORS, and tags, so a value set in configuration wins over the document.
-type Api struct {
+type ApiResource struct {
 	// Name identifies the API, 1 to 128 characters. The bound is checked in
 	// validate, since AWS counts characters and the constraint layer counts
 	// bytes.
@@ -102,19 +102,19 @@ type Api struct {
 	Tags *map[string]string `ub:"tags"`
 }
 
-// ApiOutput holds the values computed for an API. ApiId is the stable handle
+// ApiResourceOutput holds the values computed for an API. ApiId is the stable handle
 // reads, updates, and deletes key off, and the join key the integration,
 // route, and stage resources reference. ApiEndpoint is the server-assigned
 // URI, https for an HTTP API and wss for a WebSocket API. Arn is the
 // apigateway ARN, composed from the partition and region since GetApi does
 // not return one; it is the identifier the tagging calls take.
-type ApiOutput struct {
+type ApiResourceOutput struct {
 	ApiId       string `ub:"api-id"`
 	ApiEndpoint string `ub:"api-endpoint"`
 	Arn         string `ub:"arn"`
 }
 
-func (r *Api) SchemaVersion() int { return 1 }
+func (r *ApiResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs fixed at create time. The protocol cannot
 // change on an existing API. The quick-create trio (credentials-arn,
@@ -124,7 +124,7 @@ func (r *Api) SchemaVersion() int { return 1 }
 // update the resource could not verify. CloudFormation marks only the
 // protocol create-only; the trio follows the write-only quick-create
 // behavior instead.
-func (r *Api) ReplaceFields() []string {
+func (r *ApiResource) ReplaceFields() []string {
 	return []string{
 		"protocol-type",
 		"credentials-arn",
@@ -140,7 +140,7 @@ func (r *Api) ReplaceFields() []string {
 // version length bounds are counted in characters, which the constraint
 // layer measures in bytes, so they are checked in validate along with the
 // body's JSON-or-YAML syntax.
-func (r Api) Constraints() []constraint.Constraint {
+func (r ApiResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.ProtocolType, "HTTP", "WEBSOCKET")).
 			Message("protocol-type must be HTTP or WEBSOCKET"),
@@ -184,7 +184,7 @@ func (r Api) Constraints() []constraint.Constraint {
 // description, and version length bounds, which AWS counts in characters
 // rather than bytes, and the requirement that the body parse as JSON or
 // YAML, which API Gateway rejects otherwise.
-func (r *Api) validate() error {
+func (r *ApiResource) validate() error {
 	if n := utf8.RuneCountInString(r.Name); n < 1 || n > 128 {
 		return errors.New("name must be between 1 and 128 characters")
 	}
@@ -205,7 +205,7 @@ func (r *Api) validate() error {
 	return nil
 }
 
-func (r *Api) Create(ctx context.Context, cfg *awsCfg) (*ApiOutput, error) {
+func (r *ApiResource) Create(ctx context.Context, cfg *awsCfg) (*ApiResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -263,14 +263,18 @@ func (r *Api) Create(ctx context.Context, cfg *awsCfg) (*ApiOutput, error) {
 		}
 		endpoint = aws.ToString(imported.ApiEndpoint)
 	}
-	return &ApiOutput{
+	return &ApiResourceOutput{
 		ApiId:       apiID,
 		ApiEndpoint: endpoint,
 		Arn:         arn,
 	}, nil
 }
 
-func (r *Api) Read(ctx context.Context, cfg *awsCfg, prior *ApiOutput) (*ApiOutput, error) {
+func (r *ApiResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ApiResourceOutput,
+) (*ApiResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -281,9 +285,9 @@ func (r *Api) Read(ctx context.Context, cfg *awsCfg, prior *ApiOutput) (*ApiOutp
 // read fetches the API by id and returns its computed outputs. The typed
 // NotFoundException maps to runtime.ErrNotFound so a missing API reads as
 // drift; an empty response body is an error, never a not-found.
-func (r *Api) read(
+func (r *ApiResource) read(
 	ctx context.Context, client *apigatewayv2.Client, apiID string,
-) (*ApiOutput, error) {
+) (*ApiResourceOutput, error) {
 	var resp *apigatewayv2.GetApiOutput
 	err := withConflictRetry(ctx, func(ctx context.Context) error {
 		var err error
@@ -299,16 +303,16 @@ func (r *Api) read(
 	if resp == nil {
 		return nil, fmt.Errorf("get api %s: empty response", apiID)
 	}
-	return &ApiOutput{
+	return &ApiResourceOutput{
 		ApiId:       aws.ToString(resp.ApiId),
 		ApiEndpoint: aws.ToString(resp.ApiEndpoint),
 		Arn:         apiARN(client.Options().Region, aws.ToString(resp.ApiId)),
 	}, nil
 }
 
-func (r *Api) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Api, *ApiOutput],
-) (*ApiOutput, error) {
+func (r *ApiResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ApiResource, *ApiResourceOutput],
+) (*ApiResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -354,7 +358,7 @@ func (r *Api) Update(
 	return prior.Outputs, nil
 }
 
-func (r *Api) Delete(ctx context.Context, cfg *awsCfg, prior *ApiOutput) error {
+func (r *ApiResource) Delete(ctx context.Context, cfg *awsCfg, prior *ApiResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -378,7 +382,10 @@ func (r *Api) Delete(ctx context.Context, cfg *awsCfg, prior *ApiOutput) error {
 // default endpoint is re-enabled after a true. The CORS block rides whole,
 // since the API replaces the entire Cors object on update. The quick-create
 // trio is absent by design: those fields are create-only.
-func (r *Api) updateInput(prior Api, apiID string) (*apigatewayv2.UpdateApiInput, bool) {
+func (r *ApiResource) updateInput(
+	prior ApiResource,
+	apiID string,
+) (*apigatewayv2.UpdateApiInput, bool) {
 	in := &apigatewayv2.UpdateApiInput{ApiId: aws.String(apiID)}
 	changed := false
 	if runtime.Changed(prior.Name, r.Name) {
@@ -437,7 +444,7 @@ func (r *Api) updateInput(prior Api, apiID string) (*apigatewayv2.UpdateApiInput
 // value; the CORS block is restored when configured and deleted when the
 // configuration has none but the import produced one; and the tag set is
 // re-synced to the configured map.
-func (r *Api) reimport(
+func (r *ApiResource) reimport(
 	ctx context.Context, client *apigatewayv2.Client, apiID, arn string,
 ) (*apigatewayv2.GetApiOutput, error) {
 	in := &apigatewayv2.ReimportApiInput{
@@ -505,7 +512,11 @@ func (r *Api) reimport(
 
 // deleteCors removes the API's CORS configuration. Clearing CORS is its own
 // call: UpdateApi cannot remove the configuration, only replace it.
-func (r *Api) deleteCors(ctx context.Context, client *apigatewayv2.Client, apiID string) error {
+func (r *ApiResource) deleteCors(
+	ctx context.Context,
+	client *apigatewayv2.Client,
+	apiID string,
+) error {
 	in := &apigatewayv2.DeleteCorsConfigurationInput{ApiId: aws.String(apiID)}
 	err := withConflictRetry(ctx, func(ctx context.Context) error {
 		_, err := client.DeleteCorsConfiguration(ctx, in)

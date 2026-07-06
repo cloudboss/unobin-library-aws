@@ -23,9 +23,11 @@ func Library() *runtime.Library {
 		Description:   "AWS SNS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"topic":              makeResource[svc.Topic, *svc.TopicOutput](),
-			"topic-policy":       makeResource[svc.TopicPolicy, *svc.TopicPolicyOutput](),
-			"topic-subscription": makeResource[svc.TopicSubscription, *svc.TopicSubscriptionOutput](),
+			"topic":        makeResource[svc.TopicResource, *svc.TopicResourceOutput](),
+			"topic-policy": makeResource[svc.TopicPolicyResource, *svc.TopicPolicyResourceOutput](),
+			"topic-subscription": makeResource[
+				svc.TopicSubscriptionResource,
+				*svc.TopicSubscriptionResourceOutput](),
 		},
 	}
 }

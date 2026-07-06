@@ -52,7 +52,7 @@ var (
 	standardNameRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,80}$`)
 )
 
-// Queue manages an SQS queue, standard or FIFO. The queue name and the FIFO
+// QueueResource manages an SQS queue, standard or FIFO. The queue name and the FIFO
 // flag are fixed at create time -- a standard queue cannot become a FIFO queue
 // or be renamed in place -- so a change to either replaces the queue; every
 // other attribute is reconciled in place by Update through a single
@@ -64,7 +64,7 @@ var (
 // queue type: a FIFO name must match ^[0-9A-Za-z_-]{1,75}\.fifo$ and a standard
 // name ^[0-9A-Za-z_-]{1,80}$. That rule is a regular-expression and byte-length
 // check enforced in Create rather than a declarative constraint.
-type Queue struct {
+type QueueResource struct {
 	Name                          string             `ub:"name"`
 	FifoQueue                     *bool              `ub:"fifo-queue"`
 	ContentBasedDeduplication     *bool              `ub:"content-based-deduplication"`
@@ -84,24 +84,24 @@ type Queue struct {
 	Tags                          *map[string]string `ub:"tags"`
 }
 
-// QueueOutput holds the values SQS computes for a queue. The ARN is the queue's
+// QueueResourceOutput holds the values SQS computes for a queue. The ARN is the queue's
 // identity in policies, event source mappings, and subscriptions, and settles
 // only after the post-create read since CreateQueue returns no ARN. The URL is
 // the stable handle every attribute call, the read, and the delete address the
 // queue by, so it is the identity Delete keys off the prior outputs on a
 // replace.
-type QueueOutput struct {
+type QueueResourceOutput struct {
 	Arn string `ub:"arn"`
 	Url string `ub:"url"`
 }
 
-func (r *Queue) SchemaVersion() int { return 1 }
+func (r *QueueResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SQS fixes when a queue is created. The queue
 // name and the FIFO flag cannot be changed on an existing queue, so a change to
 // either requires a new queue. Every other input is reconciled in place by
 // Update.
-func (r *Queue) ReplaceFields() []string {
+func (r *QueueResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"fifo-queue",
@@ -115,7 +115,7 @@ func (r *Queue) ReplaceFields() []string {
 // attributes each accept a fixed set or range of values; the name rules are a
 // regular-expression check in Create rather than a constraint, since they
 // depend on the queue type and count bytes.
-func (r Queue) Constraints() []constraint.Constraint {
+func (r QueueResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.KmsMasterKeyId, r.SqsManagedSseEnabled),
 		constraint.When(constraint.IsTrue(r.ContentBasedDeduplication)).
@@ -153,7 +153,7 @@ func (r Queue) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Queue) Create(ctx context.Context, cfg *awsCfg) (*QueueOutput, error) {
+func (r *QueueResource) Create(ctx context.Context, cfg *awsCfg) (*QueueResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -197,7 +197,11 @@ func (r *Queue) Create(ctx context.Context, cfg *awsCfg) (*QueueOutput, error) {
 	return r.read(ctx, client, url)
 }
 
-func (r *Queue) Read(ctx context.Context, cfg *awsCfg, prior *QueueOutput) (*QueueOutput, error) {
+func (r *QueueResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *QueueResourceOutput,
+) (*QueueResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -210,9 +214,9 @@ func (r *Queue) Read(ctx context.Context, cfg *awsCfg, prior *QueueOutput) (*Que
 // updated queue can briefly read as not-found; the read retries through that
 // window. A queue that stays not-found, or one whose attribute response is
 // empty, is drift and maps to runtime.ErrNotFound so a plan recreates it.
-func (r *Queue) read(
+func (r *QueueResource) read(
 	ctx context.Context, client *sqs.Client, url string,
-) (*QueueOutput, error) {
+) (*QueueResourceOutput, error) {
 	var attributes map[string]string
 	err := retry.OnError(ctx, isQueueNotFound, func(ctx context.Context) error {
 		resp, err := client.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
@@ -237,15 +241,15 @@ func (r *Queue) read(
 		}
 		return nil, fmt.Errorf("get queue attributes: %w", err)
 	}
-	return &QueueOutput{
+	return &QueueResourceOutput{
 		Arn: attributes[string(sqstypes.QueueAttributeNameQueueArn)],
 		Url: url,
 	}, nil
 }
 
-func (r *Queue) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Queue, *QueueOutput],
-) (*QueueOutput, error) {
+func (r *QueueResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[QueueResource, *QueueResourceOutput],
+) (*QueueResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -277,7 +281,7 @@ func (r *Queue) Update(
 	return r.read(ctx, client, url)
 }
 
-func (r *Queue) Delete(ctx context.Context, cfg *awsCfg, prior *QueueOutput) error {
+func (r *QueueResource) Delete(ctx context.Context, cfg *awsCfg, prior *QueueResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -299,7 +303,7 @@ func (r *Queue) Delete(ctx context.Context, cfg *awsCfg, prior *QueueOutput) err
 // createQueue calls CreateQueue and retries it while SQS rejects the name as
 // recently deleted. That sixty-second window clears on its own, so the retry
 // runs over a bounded span of roughly that length.
-func (r *Queue) createQueue(
+func (r *QueueResource) createQueue(
 	ctx context.Context, client *sqs.Client, in *sqs.CreateQueueInput,
 ) (*sqs.CreateQueueOutput, error) {
 	var resp *sqs.CreateQueueOutput
@@ -314,7 +318,7 @@ func (r *Queue) createQueue(
 // queueName validates the queue's name against the SQS name rules for the
 // queue's type, which the regular expressions enforce; the character class is
 // ASCII so the regexp's length bound is the byte length SQS limits.
-func (r *Queue) queueName() (string, error) {
+func (r *QueueResource) queueName() (string, error) {
 	name := r.Name
 	if aws.ToBool(r.FifoQueue) {
 		if !fifoNameRegexp.MatchString(name) {
@@ -338,7 +342,7 @@ func (r *Queue) queueName() (string, error) {
 // only for a FIFO queue, since SQS never echoes them back on a standard queue
 // and the propagation wait would otherwise spin on a value the cloud never
 // reports.
-func (r *Queue) attributes() map[string]string {
+func (r *QueueResource) attributes() map[string]string {
 	attrs := map[string]string{}
 	r.putBool(attrs, sqstypes.QueueAttributeNameFifoQueue, r.FifoQueue)
 	if aws.ToBool(r.FifoQueue) {
@@ -373,7 +377,7 @@ func (r *Queue) attributes() map[string]string {
 // current setting in place, so only a changed present value is sent. The
 // FIFO-only attributes are sent only for a FIFO queue, matching create, since
 // SQS never echoes them back on a standard queue.
-func (r *Queue) changedAttributes(prior Queue) map[string]string {
+func (r *QueueResource) changedAttributes(prior QueueResource) map[string]string {
 	attrs := map[string]string{}
 	if aws.ToBool(r.FifoQueue) {
 		if runtime.Changed(prior.ContentBasedDeduplication, r.ContentBasedDeduplication) {
@@ -426,7 +430,11 @@ func (r *Queue) changedAttributes(prior Queue) map[string]string {
 
 // putString records a string attribute when the pointer is set, leaving it out
 // when nil so SQS keeps its own default or current value.
-func (r *Queue) putString(attrs map[string]string, name sqstypes.QueueAttributeName, v *string) {
+func (r *QueueResource) putString(
+	attrs map[string]string,
+	name sqstypes.QueueAttributeName,
+	v *string,
+) {
 	if v != nil {
 		attrs[string(name)] = *v
 	}
@@ -434,7 +442,11 @@ func (r *Queue) putString(attrs map[string]string, name sqstypes.QueueAttributeN
 
 // putBool records a bool attribute as "true" or "false" when the pointer is
 // set. A set false is sent, since the user chose it; an unset bool is left out.
-func (r *Queue) putBool(attrs map[string]string, name sqstypes.QueueAttributeName, v *bool) {
+func (r *QueueResource) putBool(
+	attrs map[string]string,
+	name sqstypes.QueueAttributeName,
+	v *bool,
+) {
 	if v != nil {
 		attrs[string(name)] = strconv.FormatBool(*v)
 	}
@@ -442,7 +454,11 @@ func (r *Queue) putBool(attrs map[string]string, name sqstypes.QueueAttributeNam
 
 // putInt records an integer attribute as its decimal string when the pointer
 // is set, leaving it out when nil.
-func (r *Queue) putInt(attrs map[string]string, name sqstypes.QueueAttributeName, v *int64) {
+func (r *QueueResource) putInt(
+	attrs map[string]string,
+	name sqstypes.QueueAttributeName,
+	v *int64,
+) {
 	if v != nil {
 		attrs[string(name)] = strconv.FormatInt(*v, 10)
 	}
@@ -452,7 +468,7 @@ func (r *Queue) putInt(attrs map[string]string, name sqstypes.QueueAttributeName
 // Clearing a policy to nil sends the empty string SQS uses to reset it, so a
 // removed policy is reset rather than left in place; a changed present value is
 // sent verbatim.
-func (r *Queue) putChangedPolicy(
+func (r *QueueResource) putChangedPolicy(
 	attrs map[string]string, name sqstypes.QueueAttributeName, prior, current *string,
 ) {
 	if !runtime.Changed(prior, current) {
@@ -473,7 +489,7 @@ func (r *Queue) putChangedPolicy(
 // equivalent JSON so re-ordered keys or whitespace do not look like a mismatch,
 // and the data-key reuse period is treated as matched when the queue is
 // unencrypted or when the expected value is the default the cloud does not echo.
-func (r *Queue) waitAttributesPropagated(
+func (r *QueueResource) waitAttributesPropagated(
 	ctx context.Context, client *sqs.Client, url string, expected map[string]string,
 ) error {
 	if len(expected) == 0 {
@@ -505,7 +521,7 @@ func (r *Queue) waitAttributesPropagated(
 // not-found is confirmed over fifteen consecutive reads, within a three-minute
 // budget, so a lagging replica that still describes the queue does not end the
 // wait early.
-func (r *Queue) waitDeleted(ctx context.Context, client *sqs.Client, url string) error {
+func (r *QueueResource) waitDeleted(ctx context.Context, client *sqs.Client, url string) error {
 	what := fmt.Sprintf("queue %s deletion", url)
 	return wait.UntilStable(ctx, what, 15, func(ctx context.Context) (bool, error) {
 		_, err := client.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
@@ -572,7 +588,7 @@ func jsonEqual(want, got string) bool {
 // queue in the same call. An unsupported-operation error is tolerated only when
 // the user set no explicit tags, the default-tags-only case where there is
 // nothing the user asked for to lose.
-func (r *Queue) createTags(ctx context.Context, client *sqs.Client, url string) error {
+func (r *QueueResource) createTags(ctx context.Context, client *sqs.Client, url string) error {
 	_, err := client.TagQueue(ctx, &sqs.TagQueueInput{
 		QueueUrl: aws.String(url),
 		Tags:     ptr.Value(r.Tags),
@@ -589,7 +605,7 @@ func (r *Queue) createTags(ctx context.Context, client *sqs.Client, url string) 
 // syncTags reconciles the queue's tags with the desired set, reading the live
 // tags through ListQueueTags and writing changes with TagQueue and UntagQueue.
 // SQS addresses a queue's tags by its URL.
-func (r *Queue) syncTags(ctx context.Context, client *sqs.Client, url string) error {
+func (r *QueueResource) syncTags(ctx context.Context, client *sqs.Client, url string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListQueueTags(ctx, &sqs.ListQueueTagsInput{

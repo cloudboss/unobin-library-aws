@@ -23,10 +23,14 @@ func Library() *runtime.Library {
 		Description:   "AWS CloudWatch Logs library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"log-group":           makeResource[svc.LogGroup, *svc.LogGroupOutput](),
-			"subscription-filter": makeResource[svc.SubscriptionFilter, *svc.SubscriptionFilterOutput](),
-			"metric-filter":       makeResource[svc.MetricFilter, *svc.MetricFilterOutput](),
-			"resource-policy":     makeResource[svc.ResourcePolicy, *svc.ResourcePolicyOutput](),
+			"log-group": makeResource[svc.LogGroupResource, *svc.LogGroupResourceOutput](),
+			"subscription-filter": makeResource[
+				svc.SubscriptionFilterResource,
+				*svc.SubscriptionFilterResourceOutput](),
+			"metric-filter": makeResource[svc.MetricFilterResource, *svc.MetricFilterResourceOutput](),
+			"resource-policy": makeResource[
+				svc.ResourcePolicyResource,
+				*svc.ResourcePolicyResourceOutput](),
 		},
 	}
 }

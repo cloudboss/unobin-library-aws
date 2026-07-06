@@ -30,7 +30,7 @@ const functionWriteTimeout = 10 * time.Minute
 // in a VPC, where Lambda provisions network interfaces before it is ready.
 const functionStateTimeout = 10 * time.Minute
 
-// Function manages a Lambda function and the configuration Lambda assembles
+// FunctionResource manages a Lambda function and the configuration Lambda assembles
 // around it, the way CloudFormation models AWS::Lambda::Function. The function
 // name and package type are fixed at creation, so a change to either replaces
 // the function; every other input reconciles in place. The deployment package
@@ -40,7 +40,7 @@ const functionStateTimeout = 10 * time.Minute
 // reconciled after the function exists, and a published version is a further
 // call. SkipDestroy retains the function on delete rather than removing it; it
 // is a delete-time switch, not a property of the live function.
-type Function struct {
+type FunctionResource struct {
 	FunctionName                 string                      `ub:"function-name"`
 	Role                         string                      `ub:"role"`
 	Code                         FunctionCode                `ub:"code"`
@@ -69,14 +69,14 @@ type Function struct {
 	Tags                         *map[string]string          `ub:"tags"`
 }
 
-// FunctionOutput holds the values Lambda computes for a function. Arn is the
+// FunctionResourceOutput holds the values Lambda computes for a function. Arn is the
 // unqualified function ARN; QualifiedArn and Version name the latest published
 // version and settle only after a publish and the version listing. The two
 // invoke ARNs are the API Gateway integration targets, composed client-side.
 // CodeSha256, SourceCodeSize, and LastModified report the deployed package, and
 // the two signing ARNs report a signed package. SnapStartOptimizationStatus
 // reports whether a SnapStart snapshot is ready.
-type FunctionOutput struct {
+type FunctionResourceOutput struct {
 	Arn                         string `ub:"arn"`
 	QualifiedArn                string `ub:"qualified-arn"`
 	Version                     string `ub:"version"`
@@ -90,18 +90,18 @@ type FunctionOutput struct {
 	SnapStartOptimizationStatus string `ub:"snap-start-optimization-status"`
 }
 
-func (r *Function) SchemaVersion() int { return 1 }
+func (r *FunctionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs Lambda fixes when a function is created. The
 // name is the function's identity and the package type cannot be switched
 // between zip and image on an existing function, so a change to either requires
 // a new function. Every other input is reconciled in place by Update.
-func (r *Function) ReplaceFields() []string {
+func (r *FunctionResource) ReplaceFields() []string {
 	return []string{"function-name", "package-type"}
 }
 
-func (r *Function) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[Function, *FunctionOutput, *awsCfg],
+func (r *FunctionResource) ModifyResourcePlan(
+	req runtime.ResourcePlanRequest[FunctionResource, *FunctionResourceOutput, *awsCfg],
 	resp *runtime.ResourcePlanResponse,
 ) error {
 	if !req.HasPriorState {
@@ -127,7 +127,7 @@ func (r *Function) ModifyResourcePlan(
 // accept a fixed set of values, and the memory, timeout, reserved concurrency,
 // and ephemeral storage have bounds. The architectures' values and the
 // runtime's own large value set are left to the Lambda API to validate.
-func (r Function) Constraints() []constraint.Constraint {
+func (r FunctionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Code.ZipFileContent, r.Code.ZipFilePath,
 			r.Code.S3Bucket, r.Code.ImageUri),
@@ -193,7 +193,10 @@ func (r Function) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Function) Create(ctx context.Context, cfg *awsCfg) (*FunctionOutput, error) {
+func (r *FunctionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -233,9 +236,8 @@ func (r *Function) Create(ctx context.Context, cfg *awsCfg) (*FunctionOutput, er
 	return r.read(ctx, client)
 }
 
-func (r *Function) Read(
-	ctx context.Context, cfg *awsCfg, prior *FunctionOutput,
-) (*FunctionOutput, error) {
+func (r *FunctionResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *FunctionResourceOutput) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -249,7 +251,10 @@ func (r *Function) Read(
 // not in the get response; they come from the newest entry of the version
 // listing. The code-signing ARN is read only where Signer backs the function.
 // The invoke ARNs are composed from the function ARN rather than returned.
-func (r *Function) read(ctx context.Context, client *lambda.Client) (*FunctionOutput, error) {
+func (r *FunctionResource) read(
+	ctx context.Context,
+	client *lambda.Client,
+) (*FunctionResourceOutput, error) {
 	resp, err := client.GetFunction(ctx, &lambda.GetFunctionInput{
 		FunctionName: aws.String(r.FunctionName),
 	})
@@ -270,7 +275,7 @@ func (r *Function) read(ctx context.Context, client *lambda.Client) (*FunctionOu
 	if err != nil {
 		return nil, err
 	}
-	out := &FunctionOutput{
+	out := &FunctionResourceOutput{
 		Arn:                      functionArn,
 		QualifiedArn:             qualifiedArn,
 		Version:                  version,
@@ -288,9 +293,9 @@ func (r *Function) read(ctx context.Context, client *lambda.Client) (*FunctionOu
 	return out, nil
 }
 
-func (r *Function) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Function, *FunctionOutput],
-) (*FunctionOutput, error) {
+func (r *FunctionResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -334,7 +339,11 @@ func (r *Function) Update(
 	return r.read(ctx, client)
 }
 
-func (r *Function) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionOutput) error {
+func (r *FunctionResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *FunctionResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -360,7 +369,7 @@ func (r *Function) Delete(ctx context.Context, cfg *awsCfg, prior *FunctionOutpu
 // createInput builds the CreateFunction request from the inputs, assembling the
 // code source and every nested block. Tags ride the create. A read error from
 // an on-disk zip is returned before any call is made.
-func (r *Function) createInput() (*lambda.CreateFunctionInput, error) {
+func (r *FunctionResource) createInput() (*lambda.CreateFunctionInput, error) {
 	code, err := r.functionCode()
 	if err != nil {
 		return nil, err
@@ -402,7 +411,7 @@ func (r *Function) createInput() (*lambda.CreateFunctionInput, error) {
 // code block's source fields is present. The constraints guarantee exactly one
 // source, so at most one branch contributes. An on-disk zip is read into
 // memory here, the one place a source touches the filesystem.
-func (r *Function) functionCode() (*lambdatypes.FunctionCode, error) {
+func (r *FunctionResource) functionCode() (*lambdatypes.FunctionCode, error) {
 	code := &lambdatypes.FunctionCode{
 		S3Bucket:        r.Code.S3Bucket,
 		S3Key:           r.Code.S3Key,
@@ -429,9 +438,8 @@ func (r *Function) functionCode() (*lambdatypes.FunctionCode, error) {
 // Lambda clears it rather than leaving the old value in place; the forUpdate
 // helpers compare the desired inputs against the prior ones to decide. It
 // retries through the same settling dependencies a create does.
-func (r *Function) updateConfiguration(
-	ctx context.Context, client *lambda.Client, prior Function,
-) error {
+func (r *FunctionResource) updateConfiguration(
+	ctx context.Context, client *lambda.Client, prior FunctionResource) error {
 	in := &lambda.UpdateFunctionConfigurationInput{
 		FunctionName:      aws.String(r.FunctionName),
 		Role:              aws.String(r.Role),
@@ -467,7 +475,7 @@ func (r *Function) updateConfiguration(
 // updateCode writes the deployment package and waits for the update to finish.
 // The code source, the architectures, and the source KMS key go through
 // UpdateFunctionCode rather than the configuration update.
-func (r *Function) updateCode(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) updateCode(ctx context.Context, client *lambda.Client) error {
 	code, err := r.functionCode()
 	if err != nil {
 		return err
@@ -492,7 +500,7 @@ func (r *Function) updateCode(ctx context.Context, client *lambda.Client) error 
 // reconcileConcurrency sets the reserved concurrency to the requested value, or
 // removes the reservation when none is given so the function draws from the
 // account's unreserved pool again.
-func (r *Function) reconcileConcurrency(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) reconcileConcurrency(ctx context.Context, client *lambda.Client) error {
 	if r.ReservedConcurrentExecutions == nil {
 		_, err := client.DeleteFunctionConcurrency(ctx, &lambda.DeleteFunctionConcurrencyInput{
 			FunctionName: aws.String(r.FunctionName),
@@ -507,7 +515,7 @@ func (r *Function) reconcileConcurrency(ctx context.Context, client *lambda.Clie
 
 // putConcurrency reserves the requested number of concurrent executions for the
 // function.
-func (r *Function) putConcurrency(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) putConcurrency(ctx context.Context, client *lambda.Client) error {
 	_, err := client.PutFunctionConcurrency(ctx, &lambda.PutFunctionConcurrencyInput{
 		FunctionName:                 aws.String(r.FunctionName),
 		ReservedConcurrentExecutions: ptr.Int32(r.ReservedConcurrentExecutions),
@@ -520,7 +528,7 @@ func (r *Function) putConcurrency(ctx context.Context, client *lambda.Client) er
 
 // reconcileCodeSigning attaches the requested code-signing configuration to the
 // function, or removes it when the input was cleared.
-func (r *Function) reconcileCodeSigning(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) reconcileCodeSigning(ctx context.Context, client *lambda.Client) error {
 	if r.CodeSigningConfigArn == nil {
 		_, err := client.DeleteFunctionCodeSigningConfig(ctx,
 			&lambda.DeleteFunctionCodeSigningConfigInput{
@@ -546,7 +554,7 @@ func (r *Function) reconcileCodeSigning(ctx context.Context, client *lambda.Clie
 // for it to finish updating. A publish that races a just-finished code or
 // configuration update is rejected as an update in progress, which clears once
 // the update settles, so it retries through that.
-func (r *Function) publishVersion(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) publishVersion(ctx context.Context, client *lambda.Client) error {
 	err := retry.OnError(ctx, isPublishInProgress, func(ctx context.Context) error {
 		_, err := client.PublishVersion(ctx, &lambda.PublishVersionInput{
 			FunctionName: aws.String(r.FunctionName),
@@ -562,7 +570,7 @@ func (r *Function) publishVersion(ctx context.Context, client *lambda.Client) er
 // syncTags reconciles the function's tags with the desired set, reading the
 // live tags and writing changes with TagResource and UntagResource. Lambda
 // addresses function tags by the function ARN.
-func (r *Function) syncTags(ctx context.Context, client *lambda.Client, arn string) error {
+func (r *FunctionResource) syncTags(ctx context.Context, client *lambda.Client, arn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTags(ctx, &lambda.ListTagsInput{Resource: aws.String(arn)})
@@ -599,7 +607,7 @@ func (r *Function) syncTags(ctx context.Context, client *lambda.Client, arn stri
 // last entry, which Lambda orders oldest to newest. With no published version
 // the listing holds only $LATEST, whose ARN and version are returned, matching
 // the unqualified function.
-func (r *Function) latestVersion(
+func (r *FunctionResource) latestVersion(
 	ctx context.Context, client *lambda.Client,
 ) (qualifiedArn, version string, err error) {
 	pager := lambda.NewListVersionsByFunctionPaginator(client,
@@ -622,12 +630,12 @@ func (r *Function) latestVersion(
 
 // configChanged reports whether any input that UpdateFunctionConfiguration
 // sends differs from the prior inputs.
-func (r *Function) publishesVersion(prior Function) bool {
+func (r *FunctionResource) publishesVersion(prior FunctionResource) bool {
 	return aws.ToBool(r.Publish) && (r.configChanged(prior) ||
 		r.codeChanged(prior) || runtime.Changed(prior.Publish, r.Publish))
 }
 
-func (r *Function) configChanged(prior Function) bool {
+func (r *FunctionResource) configChanged(prior FunctionResource) bool {
 	return runtime.Changed(prior.Role, r.Role) ||
 		runtime.Changed(prior.Description, r.Description) ||
 		runtime.Changed(prior.Handler, r.Handler) ||
@@ -649,7 +657,7 @@ func (r *Function) configChanged(prior Function) bool {
 
 // codeChanged reports whether any input that UpdateFunctionCode sends differs
 // from the prior inputs: the code block or the architectures.
-func (r *Function) codeChanged(prior Function) bool {
+func (r *FunctionResource) codeChanged(prior FunctionResource) bool {
 	return runtime.Changed(prior.Code, r.Code) ||
 		(ptr.Value(r.Architectures) != nil && runtime.Changed(ptr.Value(prior.Architectures), ptr.Value(r.Architectures)))
 }
@@ -657,7 +665,7 @@ func (r *Function) codeChanged(prior Function) bool {
 // waitDescribable polls GetFunction until it stops reporting the function
 // absent, for the window after a create where the function is not yet
 // consistently readable.
-func (r *Function) waitDescribable(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) waitDescribable(ctx context.Context, client *lambda.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("function %s", r.FunctionName),
 		func(ctx context.Context) (bool, error) {
 			_, err := client.GetFunction(ctx, &lambda.GetFunctionInput{
@@ -679,7 +687,7 @@ func (r *Function) waitDescribable(ctx context.Context, client *lambda.Client) e
 // waitActive polls GetFunction until the function leaves the Pending state for
 // an active one. A function stuck in Failed stops the wait with an error rather
 // than spinning until the timeout.
-func (r *Function) waitActive(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) waitActive(ctx context.Context, client *lambda.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("function %s to become active", r.FunctionName),
 		func(ctx context.Context) (bool, error) {
 			conf, err := r.getConfiguration(ctx, client)
@@ -703,7 +711,7 @@ func (r *Function) waitActive(ctx context.Context, client *lambda.Client) error 
 
 // waitUpdated polls GetFunction until the last update settles. An update that
 // fails stops the wait with an error rather than spinning until the timeout.
-func (r *Function) waitUpdated(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) waitUpdated(ctx context.Context, client *lambda.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("function %s update", r.FunctionName),
 		func(ctx context.Context) (bool, error) {
 			conf, err := r.getConfiguration(ctx, client)
@@ -726,7 +734,7 @@ func (r *Function) waitUpdated(ctx context.Context, client *lambda.Client) error
 }
 
 // waitGone polls GetFunction until it reports the function gone after a delete.
-func (r *Function) waitGone(ctx context.Context, client *lambda.Client) error {
+func (r *FunctionResource) waitGone(ctx context.Context, client *lambda.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("function %s to be gone", r.FunctionName),
 		func(ctx context.Context) (bool, error) {
 			_, err := client.GetFunction(ctx, &lambda.GetFunctionInput{
@@ -748,7 +756,7 @@ func (r *Function) waitGone(ctx context.Context, client *lambda.Client) error {
 // getConfiguration reads the function's configuration for a wait probe, the
 // State and LastUpdateStatus the waits poll. A function-not-found while waiting
 // for it to settle is unexpected and returned as an error.
-func (r *Function) getConfiguration(
+func (r *FunctionResource) getConfiguration(
 	ctx context.Context, client *lambda.Client,
 ) (*lambdatypes.FunctionConfiguration, error) {
 	resp, err := client.GetFunction(ctx, &lambda.GetFunctionInput{

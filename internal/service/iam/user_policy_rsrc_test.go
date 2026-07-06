@@ -47,13 +47,13 @@ func TestUserPolicyCreateNormalizesAndReturnsSettledPolicy(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", storedDocument)
 	})
 
-	out, err := (&UserPolicy{
+	out, err := (&UserPolicyResource{
 		UserName:       "test-user",
 		PolicyName:     "test-inline",
 		PolicyDocument: inputDocument,
 	}).Create(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &UserPolicyOutput{
+	assert.Equal(t, &UserPolicyResourceOutput{
 		UserName:       "test-user",
 		PolicyName:     "test-inline",
 		PolicyDocument: wantDocument,
@@ -69,24 +69,24 @@ func TestUserPolicyUpdateOnlyPutsWhenDocumentUnchanged(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", document)
 	})
 
-	prior := runtime.Prior[UserPolicy, *UserPolicyOutput]{
-		Inputs: UserPolicy{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
-		Outputs: &UserPolicyOutput{
+		Outputs: &UserPolicyResourceOutput{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
-		Observed: &UserPolicyOutput{
+		Observed: &UserPolicyResourceOutput{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: document,
 		},
 	}
-	out, err := (&UserPolicy{
+	out, err := (&UserPolicyResource{
 		UserName:       "test-user",
 		PolicyName:     "test-inline",
 		PolicyDocument: document,
@@ -108,15 +108,15 @@ func TestUserPolicyUpdateNormalizesChangedDocument(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", newDocument)
 	})
 
-	prior := runtime.Prior[UserPolicy, *UserPolicyOutput]{
-		Inputs: UserPolicy{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: `{"Version":"2012-10-17","Statement":[]}`,
 		},
-		Outputs: &UserPolicyOutput{UserName: "test-user", PolicyName: "test-inline"},
+		Outputs: &UserPolicyResourceOutput{UserName: "test-user", PolicyName: "test-inline"},
 	}
-	out, err := (&UserPolicy{
+	out, err := (&UserPolicyResource{
 		UserName:       "test-user",
 		PolicyName:     "test-inline",
 		PolicyDocument: newDocument,
@@ -142,24 +142,24 @@ func TestUserPolicyUpdateReconcilesDocumentDrift(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", desiredDocument)
 	})
 
-	prior := runtime.Prior[UserPolicy, *UserPolicyOutput]{
-		Inputs: UserPolicy{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: desiredDocument,
 		},
-		Outputs: &UserPolicyOutput{
+		Outputs: &UserPolicyResourceOutput{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: desiredDocument,
 		},
-		Observed: &UserPolicyOutput{
+		Observed: &UserPolicyResourceOutput{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
 			PolicyDocument: driftedDocument,
 		},
 	}
-	out, err := (&UserPolicy{
+	out, err := (&UserPolicyResource{
 		UserName:       "test-user",
 		PolicyName:     "test-inline",
 		PolicyDocument: desiredDocument,
@@ -174,10 +174,14 @@ func TestUserPolicyReadMapsMissingPolicyToNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	_, err := (&UserPolicy{}).Read(context.Background(), fake.configuration(), &UserPolicyOutput{
-		UserName:   "test-user",
-		PolicyName: "test-inline",
-	})
+	_, err := (&UserPolicyResource{}).Read(
+		context.Background(),
+		fake.configuration(),
+		&UserPolicyResourceOutput{
+			UserName:   "test-user",
+			PolicyName: "test-inline",
+		},
+	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -187,10 +191,14 @@ func TestUserPolicyReadMapsNilPolicyDocumentToNotFound(t *testing.T) {
 		return 200, emptyGetUserPolicyResponseXML
 	})
 
-	_, err := (&UserPolicy{}).Read(context.Background(), fake.configuration(), &UserPolicyOutput{
-		UserName:   "test-user",
-		PolicyName: "test-inline",
-	})
+	_, err := (&UserPolicyResource{}).Read(
+		context.Background(),
+		fake.configuration(),
+		&UserPolicyResourceOutput{
+			UserName:   "test-user",
+			PolicyName: "test-inline",
+		},
+	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -202,9 +210,9 @@ func TestUserPolicyDeleteUsesPriorIdentityAndIgnoresNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	err := (&UserPolicy{UserName: "new-user", PolicyName: "new-inline"}).Delete(
+	err := (&UserPolicyResource{UserName: "new-user", PolicyName: "new-inline"}).Delete(
 		context.Background(), fake.configuration(),
-		&UserPolicyOutput{UserName: "old-user", PolicyName: "old-inline"})
+		&UserPolicyResourceOutput{UserName: "old-user", PolicyName: "old-inline"})
 	require.NoError(t, err)
 }
 

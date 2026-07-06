@@ -79,7 +79,7 @@ var fifoNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,251}\.fifo$`)
 // of the allowed characters with no .fifo suffix.
 var standardNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,256}$`)
 
-// Topic is an SNS topic: a named publish/subscribe channel plus the attributes
+// TopicResource is an SNS topic: a named publish/subscribe channel plus the attributes
 // that govern delivery, encryption, access, and FIFO behavior. CreateTopic
 // fixes the name and, for a FIFO topic, the FIFO flag; both are baked into the
 // topic's ARN, so a change to either replaces the topic. Every other attribute
@@ -88,7 +88,7 @@ var standardNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,256}$`)
 // The name is validated in code rather than by a constraint, since the allowed
 // pattern depends on whether the topic is FIFO: a FIFO name must match
 // ^[0-9A-Za-z_-]{1,251}\.fifo$ and a standard name ^[0-9A-Za-z_-]{1,256}$.
-type Topic struct {
+type TopicResource struct {
 	Name                                 string             `ub:"name"`
 	FifoTopic                            *bool              `ub:"fifo-topic"`
 	FifoThroughputScope                  *string            `ub:"fifo-throughput-scope"`
@@ -118,23 +118,23 @@ type Topic struct {
 	Tags                                 *map[string]string `ub:"tags"`
 }
 
-// TopicOutput holds the values SNS computes for a topic. The ARN is the topic's
+// TopicResourceOutput holds the values SNS computes for a topic. The ARN is the topic's
 // stable handle and identity: subscriptions, access policies, and IAM
 // statements all reference it, and Delete keys off it so a replace removes the
 // old topic rather than orphaning it. The owner is the account id that holds
 // the topic.
-type TopicOutput struct {
+type TopicResourceOutput struct {
 	Arn   string `ub:"arn"`
 	Owner string `ub:"owner"`
 }
 
-func (r *Topic) SchemaVersion() int { return 1 }
+func (r *TopicResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SNS fixes when a topic is created. The name and
 // the FIFO flag are both encoded in the topic's ARN and cannot be changed
 // afterward, so a change to either requires a new topic. Every other input is
 // reconciled in place by Update.
-func (r *Topic) ReplaceFields() []string {
+func (r *TopicResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"fifo-topic",
@@ -148,7 +148,7 @@ func (r *Topic) ReplaceFields() []string {
 // the five success-feedback sample rates are percentages between 0 and 100. The
 // name pattern is checked in code rather than here because it depends on the
 // FIFO flag.
-func (r Topic) Constraints() []constraint.Constraint {
+func (r TopicResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.ArchivePolicy)).
 			Require(constraint.IsTrue(r.FifoTopic)).
@@ -191,7 +191,7 @@ func (r Topic) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Topic) Create(ctx context.Context, cfg *awsCfg) (*TopicOutput, error) {
+func (r *TopicResource) Create(ctx context.Context, cfg *awsCfg) (*TopicResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -232,7 +232,11 @@ func (r *Topic) Create(ctx context.Context, cfg *awsCfg) (*TopicOutput, error) {
 	return r.read(ctx, client, topicArn)
 }
 
-func (r *Topic) Read(ctx context.Context, cfg *awsCfg, prior *TopicOutput) (*TopicOutput, error) {
+func (r *TopicResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TopicResourceOutput,
+) (*TopicResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -244,9 +248,9 @@ func (r *Topic) Read(ctx context.Context, cfg *awsCfg, prior *TopicOutput) (*Top
 // that has gone missing is drift: GetTopicAttributes reports it as a
 // NotFoundException, and a topic that returns no attributes is likewise gone, so
 // either maps to runtime.ErrNotFound and a plan recreates it.
-func (r *Topic) read(
+func (r *TopicResource) read(
 	ctx context.Context, client *sns.Client, topicArn string,
-) (*TopicOutput, error) {
+) (*TopicResourceOutput, error) {
 	resp, err := client.GetTopicAttributes(ctx, &sns.GetTopicAttributesInput{
 		TopicArn: aws.String(topicArn),
 	})
@@ -262,15 +266,15 @@ func (r *Topic) read(
 	// The ARN queried is the topic's identity, so it is returned as-is rather
 	// than read back from the attribute map; the owner account id comes from the
 	// attributes.
-	return &TopicOutput{
+	return &TopicResourceOutput{
 		Arn:   topicArn,
 		Owner: resp.Attributes[topicAttrOwner],
 	}, nil
 }
 
-func (r *Topic) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Topic, *TopicOutput],
-) (*TopicOutput, error) {
+func (r *TopicResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicResource, *TopicResourceOutput],
+) (*TopicResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -293,7 +297,7 @@ func (r *Topic) Update(
 	return r.read(ctx, client, topicArn)
 }
 
-func (r *Topic) Delete(ctx context.Context, cfg *awsCfg, prior *TopicOutput) error {
+func (r *TopicResource) Delete(ctx context.Context, cfg *awsCfg, prior *TopicResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -318,7 +322,7 @@ func (r *Topic) Delete(ctx context.Context, cfg *awsCfg, prior *TopicOutput) err
 // .fifo suffix and is limited to 251 characters before it; a standard topic's
 // name must not include the suffix and may run to 256 characters. SNS appends
 // nothing itself, so the supplied name must already be in final form.
-func (r *Topic) validateName() error {
+func (r *TopicResource) validateName() error {
 	if aws.ToBool(r.FifoTopic) {
 		if !fifoNamePattern.MatchString(r.Name) {
 			return fmt.Errorf(
@@ -336,7 +340,7 @@ func (r *Topic) validateName() error {
 // the FIFO flag and, for a FIFO topic, its throughput scope. Both are immutable,
 // so they ride the create rather than a follow-on call. A standard topic omits
 // both and lets SNS apply its defaults.
-func (r *Topic) createAttributes() map[string]string {
+func (r *TopicResource) createAttributes() map[string]string {
 	attrs := map[string]string{}
 	if aws.ToBool(r.FifoTopic) {
 		attrs[topicAttrFifoTopic] = topicTrueString
@@ -352,7 +356,7 @@ func (r *Topic) createAttributes() map[string]string {
 // exists. An unset attribute is absent from the map, so SNS keeps its default
 // rather than being reset. The FIFO throughput scope is omitted here because it
 // rides the create; a later change to it is handled by changedAttributes.
-func (r *Topic) followOnAttributes() map[string]string {
+func (r *TopicResource) followOnAttributes() map[string]string {
 	attrs := map[string]string{}
 	putString := func(key string, value *string) {
 		if value != nil {
@@ -400,7 +404,7 @@ func (r *Topic) followOnAttributes() map[string]string {
 // are immutable and force a replace, so they are not tested here, but the FIFO
 // throughput scope can change on an existing FIFO topic and is reconciled when
 // it does.
-func (r *Topic) changedAttributes(prior Topic) map[string]string {
+func (r *TopicResource) changedAttributes(prior TopicResource) map[string]string {
 	attrs := map[string]string{}
 	addString := func(key string, before, after *string) {
 		if after != nil && runtime.Changed(before, after) {
@@ -462,7 +466,7 @@ func (r *Topic) changedAttributes(prior Topic) map[string]string {
 
 // putAttributes applies a set of attributes to a topic, one SetTopicAttributes
 // call per attribute, ordered by key so the calls are deterministic.
-func (r *Topic) putAttributes(
+func (r *TopicResource) putAttributes(
 	ctx context.Context, client *sns.Client, topicArn string, attrs map[string]string,
 ) error {
 	keys := make([]string, 0, len(attrs))
@@ -485,7 +489,7 @@ func (r *Topic) putAttributes(
 // allowed to pass the role) or as an invalid parameter (the referenced ARN is
 // not yet resolvable). Both clear once IAM catches up, so the call retries over
 // the default two-minute window.
-func (r *Topic) putAttribute(
+func (r *TopicResource) putAttribute(
 	ctx context.Context, client *sns.Client, topicArn, name, value string,
 ) error {
 	in := &sns.SetTopicAttributesInput{
@@ -506,7 +510,7 @@ func (r *Topic) putAttribute(
 // syncTags reconciles the topic's tags with the desired set, reading the live
 // tags through ListTagsForResource and writing changes with TagResource and
 // UntagResource. SNS addresses a topic's tags by its ARN.
-func (r *Topic) syncTags(ctx context.Context, client *sns.Client, topicArn string) error {
+func (r *TopicResource) syncTags(ctx context.Context, client *sns.Client, topicArn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,

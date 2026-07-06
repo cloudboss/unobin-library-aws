@@ -18,10 +18,10 @@ import (
 func TestLibraryRegistersCloudfront(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlOutput](),
-		"function":                reflect.TypeFor[*svc.FunctionOutput](),
-		"response-headers-policy": reflect.TypeFor[*svc.ResponseHeadersPolicyOutput](),
-		"distribution":            reflect.TypeFor[*svc.DistributionOutput](),
+		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlResourceOutput](),
+		"function":                reflect.TypeFor[*svc.FunctionResourceOutput](),
+		"response-headers-policy": reflect.TypeFor[*svc.ResponseHeadersPolicyResourceOutput](),
+		"distribution":            reflect.TypeFor[*svc.DistributionResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {
@@ -30,9 +30,9 @@ func TestLibraryRegistersCloudfront(t *testing.T) {
 		})
 	}
 
-	originRequestPolicyDataOutput := reflect.TypeFor[*svc.OriginRequestPolicyDataOutput]()
+	originRequestPolicyDataOutput := reflect.TypeFor[*svc.OriginRequestPolicyDataSourceOutput]()
 	dataSources := map[string]reflect.Type{
-		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
+		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataSourceOutput](),
 		"origin-request-policy": originRequestPolicyDataOutput,
 	}
 	for key, outputType := range dataSources {

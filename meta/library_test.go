@@ -67,13 +67,13 @@ func TestLibraryRegistersMetaKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"arn":               reflect.TypeFor[*svc.ARNOutput](),
-		"ip-ranges":         reflect.TypeFor[*svc.IPRangesOutput](),
-		"partition":         reflect.TypeFor[*svc.PartitionOutput](),
-		"region":            reflect.TypeFor[*svc.RegionOutput](),
-		"regions":           reflect.TypeFor[*svc.RegionsOutput](),
-		"service":           reflect.TypeFor[*svc.ServiceOutput](),
-		"service-principal": reflect.TypeFor[*svc.ServicePrincipalOutput](),
+		"arn":               reflect.TypeFor[*svc.ARNDataSourceOutput](),
+		"ip-ranges":         reflect.TypeFor[*svc.IPRangesDataSourceOutput](),
+		"partition":         reflect.TypeFor[*svc.PartitionDataSourceOutput](),
+		"region":            reflect.TypeFor[*svc.RegionDataSourceOutput](),
+		"regions":           reflect.TypeFor[*svc.RegionsDataSourceOutput](),
+		"service":           reflect.TypeFor[*svc.ServiceDataSourceOutput](),
+		"service-principal": reflect.TypeFor[*svc.ServicePrincipalDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

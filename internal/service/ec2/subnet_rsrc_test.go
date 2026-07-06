@@ -75,7 +75,7 @@ func TestSubnetCreateReturnsExplicitIpv6BlockOnceAssociated(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	r := &Subnet{
+	r := &SubnetResource{
 		VpcId:         "vpc-0123456789abcdef0",
 		CidrBlock:     aws.String("10.0.0.0/24"),
 		Ipv6CidrBlock: aws.String("2600:1f18:1234:5600::/64"),
@@ -108,7 +108,7 @@ func TestSubnetUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	base := Subnet{
+	base := SubnetResource{
 		VpcId:      "vpc-0123456789abcdef0",
 		CidrBlock:  aws.String("10.0.0.0/24"),
 		OutpostArn: aws.String("arn:aws:outposts:us-east-1:123456789012:outpost/op-0"),
@@ -125,9 +125,9 @@ func TestSubnetUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	priorInputs.MapCustomerOwnedIpOnLaunch = aws.Bool(true)
 
 	current := base
-	prior := runtime.Prior[Subnet, *SubnetOutput]{
+	prior := runtime.Prior[SubnetResource, *SubnetResourceOutput]{
 		Inputs: priorInputs,
-		Outputs: &SubnetOutput{
+		Outputs: &SubnetResourceOutput{
 			Id:        "subnet-0123456789abcdef0",
 			CidrBlock: "10.0.0.0/24",
 		},
@@ -144,21 +144,21 @@ func TestSubnetUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 // value is nil, so an update that reacts to their removal with a modify call
 // sends a request that holds only the subnet id, which reconciles nothing.
 func TestSubnetUpdateSendsNoAttributelessModify(t *testing.T) {
-	base := Subnet{
+	base := SubnetResource{
 		VpcId:     "vpc-0123456789abcdef0",
 		CidrBlock: aws.String("10.0.0.0/24"),
 	}
 	tests := []struct {
 		name  string
-		prior func(s *Subnet)
+		prior func(s *SubnetResource)
 	}{
 		{
 			name:  "enable-lni-at-device-index removed",
-			prior: func(s *Subnet) { s.EnableLniAtDeviceIndex = aws.Int64(1) },
+			prior: func(s *SubnetResource) { s.EnableLniAtDeviceIndex = aws.Int64(1) },
 		},
 		{
 			name:  "private-dns-hostname-type-on-launch removed",
-			prior: func(s *Subnet) { s.PrivateDnsHostnameTypeOnLaunch = aws.String("ip-name") },
+			prior: func(s *SubnetResource) { s.PrivateDnsHostnameTypeOnLaunch = aws.String("ip-name") },
 		},
 	}
 	for _, tt := range tests {
@@ -175,9 +175,9 @@ func TestSubnetUpdateSendsNoAttributelessModify(t *testing.T) {
 			priorInputs := base
 			tt.prior(&priorInputs)
 			current := base
-			prior := runtime.Prior[Subnet, *SubnetOutput]{
+			prior := runtime.Prior[SubnetResource, *SubnetResourceOutput]{
 				Inputs: priorInputs,
-				Outputs: &SubnetOutput{
+				Outputs: &SubnetResourceOutput{
 					Id:        "subnet-0123456789abcdef0",
 					CidrBlock: "10.0.0.0/24",
 				},

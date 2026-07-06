@@ -23,7 +23,7 @@ import (
 // AWS clears this race in well under a minute.
 const zonePropagationTimeout = time.Minute
 
-// RecordSet manages one Route 53 record set: a name, a type, and either a set
+// RecordSetResource manages one Route 53 record set: a name, a type, and either a set
 // of plain values or an alias to an AWS resource, optionally governed by a single
 // routing policy. Every write -- create and update alike -- is one
 // ChangeResourceRecordSets UPSERT against the hosted zone, gated by a poll until
@@ -31,7 +31,7 @@ const zonePropagationTimeout = time.Minute
 // set-identifier together identify the record set at the API, so a change to any
 // of them is a different record set and replaces this one; every other field is
 // reconciled in place by the next UPSERT.
-type RecordSet struct {
+type RecordSetResource struct {
 	ZoneId                        string                             `ub:"zone-id"`
 	Name                          string                             `ub:"name"`
 	Type                          string                             `ub:"type"`
@@ -47,14 +47,14 @@ type RecordSet struct {
 	MultivalueAnswerRoutingPolicy *bool                              `ub:"multivalue-answer-routing-policy"`
 }
 
-// RecordSetOutput holds the record set's computed fqdn and the four-part key
+// RecordSetResourceOutput holds the record set's computed fqdn and the four-part key
 // that names it at the API. Fqdn is the record name joined to the zone name, with
 // an octal-escaped wildcard label restored to a leading "*". A record set has no
 // server-assigned id, so its identity -- zone id, name, type, and set-identifier
 // -- is the handle Delete addresses; holding it here lets a replace remove the
 // old record set, since the runtime hands Delete the prior output, not the prior
 // inputs.
-type RecordSetOutput struct {
+type RecordSetResourceOutput struct {
 	Fqdn          string `ub:"fqdn"`
 	ZoneId        string `ub:"zone-id"`
 	Name          string `ub:"name"`
@@ -62,14 +62,14 @@ type RecordSetOutput struct {
 	SetIdentifier string `ub:"set-identifier"`
 }
 
-func (r *RecordSet) SchemaVersion() int { return 1 }
+func (r *RecordSetResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that identify the record set at the API. The
 // hosted zone, the name, the type, and the set-identifier are the four-part key
 // Route 53 addresses a record set by, so changing any of them names a different
 // record set; unobin's replace deletes the old one and creates the new. Every
 // other field updates in place.
-func (r *RecordSet) ReplaceFields() []string {
+func (r *RecordSetResource) ReplaceFields() []string {
 	return []string{
 		"zone-id",
 		"name",
@@ -85,7 +85,7 @@ func (r *RecordSet) ReplaceFields() []string {
 // any routing policy needs a set-identifier to tell the records in its group
 // apart. The failover type, the latency region, and the top-level record type
 // each accept a fixed set of values.
-func (r RecordSet) Constraints() []constraint.Constraint {
+func (r RecordSetResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.NotEmpty(r.ZoneId)),
 		constraint.Must(constraint.Any(
@@ -137,7 +137,10 @@ func (r RecordSet) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *RecordSet) Create(ctx context.Context, cfg *awsCfg) (*RecordSetOutput, error) {
+func (r *RecordSetResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*RecordSetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -161,9 +164,11 @@ func (r *RecordSet) Create(ctx context.Context, cfg *awsCfg) (*RecordSetOutput, 
 	return r.read(ctx, client)
 }
 
-func (r *RecordSet) Read(
-	ctx context.Context, cfg *awsCfg, prior *RecordSetOutput,
-) (*RecordSetOutput, error) {
+func (r *RecordSetResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RecordSetResourceOutput,
+) (*RecordSetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -171,9 +176,9 @@ func (r *RecordSet) Read(
 	return r.read(ctx, client)
 }
 
-func (r *RecordSet) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RecordSet, *RecordSetOutput],
-) (*RecordSetOutput, error) {
+func (r *RecordSetResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RecordSetResource, *RecordSetResourceOutput],
+) (*RecordSetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -196,7 +201,11 @@ func (r *RecordSet) Update(
 	return r.read(ctx, client)
 }
 
-func (r *RecordSet) Delete(ctx context.Context, cfg *awsCfg, prior *RecordSetOutput) error {
+func (r *RecordSetResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RecordSetResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -242,8 +251,8 @@ func (r *RecordSet) Delete(ctx context.Context, cfg *awsCfg, prior *RecordSetOut
 // the record set the prior apply recorded. On a replace the receiver holds the
 // new inputs, but the runtime passes Delete the prior output, which holds the
 // old zone id, name, type, and set-identifier.
-func (r *RecordSet) priorRecordSet(prior *RecordSetOutput) *RecordSet {
-	old := &RecordSet{
+func (r *RecordSetResource) priorRecordSet(prior *RecordSetResourceOutput) *RecordSetResource {
+	old := &RecordSetResource{
 		ZoneId: prior.ZoneId,
 		Name:   prior.Name,
 		Type:   prior.Type,
@@ -257,7 +266,7 @@ func (r *RecordSet) priorRecordSet(prior *RecordSetOutput) *RecordSet {
 // hostedZone resolves the record's hosted zone, returning its cleaned id and
 // canonical name. The name qualifies the record name to an FQDN and the cleaned
 // id addresses the change and list calls.
-func (r *RecordSet) hostedZone(
+func (r *RecordSetResource) hostedZone(
 	ctx context.Context, client *route53.Client,
 ) (zoneInfo, error) {
 	resp, err := client.GetHostedZone(ctx, &route53.GetHostedZoneInput{
@@ -282,9 +291,9 @@ type zoneInfo struct {
 // read resolves the hosted zone and returns the record set's settled output. A
 // zone or record set that is gone reads as runtime.ErrNotFound, which drives a
 // recreate.
-func (r *RecordSet) read(
+func (r *RecordSetResource) read(
 	ctx context.Context, client *route53.Client,
-) (*RecordSetOutput, error) {
+) (*RecordSetResourceOutput, error) {
 	zone, err := r.hostedZone(ctx, client)
 	if err != nil {
 		if isNotFound(err) {
@@ -295,7 +304,7 @@ func (r *RecordSet) read(
 	if _, err := r.findRecordSet(ctx, client, zone); err != nil {
 		return nil, err
 	}
-	return &RecordSetOutput{
+	return &RecordSetResourceOutput{
 		Fqdn:          r.fqdn(zone.name),
 		ZoneId:        r.ZoneId,
 		Name:          r.Name,
@@ -312,7 +321,7 @@ func (r *RecordSet) read(
 // set-identifiers can span more than one page, so the listing pages through its
 // own NextRecord tokens. Zero matches is runtime.ErrNotFound; more than one is a
 // real error, since the four-part key is unique.
-func (r *RecordSet) findRecordSet(
+func (r *RecordSetResource) findRecordSet(
 	ctx context.Context, client *route53.Client, zone zoneInfo,
 ) (*route53types.ResourceRecordSet, error) {
 	name := r.fqdn(zone.name)
@@ -373,7 +382,7 @@ func (r *RecordSet) findRecordSet(
 // their values and TTL, with TXT and SPF values double-quoted as Route 53
 // stores them. At most one routing policy is set, mapping each block onto its
 // flat record-set field.
-func (r *RecordSet) resourceRecordSet(zoneName string) *route53types.ResourceRecordSet {
+func (r *RecordSetResource) resourceRecordSet(zoneName string) *route53types.ResourceRecordSet {
 	rrs := &route53types.ResourceRecordSet{
 		Name: aws.String(r.fqdn(zoneName)),
 		Type: route53types.RRType(r.Type),
@@ -408,7 +417,7 @@ func (r *RecordSet) resourceRecordSet(zoneName string) *route53types.ResourceRec
 // resourceRecords converts the record values into the SDK type. TXT and SPF
 // values are stored quoted by Route 53, so each is wrapped in double quotes on
 // the way out.
-func (r *RecordSet) resourceRecords() []route53types.ResourceRecord {
+func (r *RecordSetResource) resourceRecords() []route53types.ResourceRecord {
 	if len(ptr.Value(r.Records)) == 0 {
 		return nil
 	}
@@ -426,7 +435,7 @@ func (r *RecordSet) resourceRecords() []route53types.ResourceRecord {
 
 // applyChange submits one change to the hosted zone and waits for it to reach
 // INSYNC. A change that returns no change info is already applied.
-func (r *RecordSet) applyChange(
+func (r *RecordSetResource) applyChange(
 	ctx context.Context,
 	client *route53.Client,
 	zoneID string,
@@ -452,7 +461,7 @@ func (r *RecordSet) applyChange(
 // the zone apex. A name that already ends with the zone name is left alone;
 // otherwise the zone name is appended. A leading wildcard label, which Route 53
 // stores octal-escaped, is restored to "*".
-func (r *RecordSet) fqdn(zoneName string) string {
+func (r *RecordSetResource) fqdn(zoneName string) string {
 	zone := normalizeName(zoneName)
 	name := normalizeName(r.Name)
 	if name == "" {
@@ -470,7 +479,7 @@ func (r *RecordSet) fqdn(zoneName string) string {
 // recordChanged reports whether any in-place field of the record set differs
 // from the prior apply. The identity fields are ReplaceFields and never reach
 // Update, so only these can change.
-func (r *RecordSet) recordChanged(old RecordSet) bool {
+func (r *RecordSetResource) recordChanged(old RecordSetResource) bool {
 	return runtime.Changed(ptr.Value(old.Records), ptr.Value(r.Records)) ||
 		runtime.Changed(old.Ttl, r.Ttl) ||
 		runtime.Changed(old.HealthCheckId, r.HealthCheckId) ||

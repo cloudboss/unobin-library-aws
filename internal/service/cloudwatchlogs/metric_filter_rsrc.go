@@ -32,12 +32,12 @@ var (
 	metricFilterLogGroupMutexes sync.Map
 )
 
-// MetricFilter extracts metric observations from matching CloudWatch Logs
+// MetricFilterResource extracts metric observations from matching CloudWatch Logs
 // events. PutMetricFilter is an upsert, so Create and Update use the same call
 // and Read then returns the described server state. The filter name and log
 // group name are the identity and force replacement; the pattern, transformed
 // log flag, and single metric-transformation block update in place.
-type MetricFilter struct {
+type MetricFilterResource struct {
 	FilterName             string                           `ub:"filter-name"`
 	LogGroupName           string                           `ub:"log-group-name"`
 	FilterPattern          string                           `ub:"filter-pattern"`
@@ -70,10 +70,10 @@ type MetricFilterMetricTransformationOutput struct {
 	Unit            string             `ub:"unit"`
 }
 
-// MetricFilterOutput records the two-part handle plus the CloudWatch Logs values
+// MetricFilterResourceOutput records the two-part handle plus the CloudWatch Logs values
 // that may differ from omitted inputs. The handle is stored so a replacement
 // deletes the prior filter even when the desired name or log group changed.
-type MetricFilterOutput struct {
+type MetricFilterResourceOutput struct {
 	FilterName             string                                 `ub:"filter-name"`
 	LogGroupName           string                                 `ub:"log-group-name"`
 	FilterPattern          string                                 `ub:"filter-pattern"`
@@ -81,19 +81,19 @@ type MetricFilterOutput struct {
 	MetricTransformation   MetricFilterMetricTransformationOutput `ub:"metric-transformation"`
 }
 
-func (r *MetricFilter) SchemaVersion() int { return 1 }
+func (r *MetricFilterResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that identify a metric filter at the API.
 // Changing either names a different filter, so the old one is deleted and a new
 // one is created.
-func (r *MetricFilter) ReplaceFields() []string {
+func (r *MetricFilterResource) ReplaceFields() []string {
 	return []string{"filter-name", "log-group-name"}
 }
 
 // Constraints declares the enum rule the schema can express. Length and
 // pattern checks run in validate because they need byte counts, UTF-8 character
 // counts, or regular expressions.
-func (r MetricFilter) Constraints() []constraint.Constraint {
+func (r MetricFilterResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.MetricTransformation.Unit)).
 			Require(constraint.OneOf(r.MetricTransformation.Unit,
@@ -108,9 +108,9 @@ func (r MetricFilter) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *MetricFilter) Create(
+func (r *MetricFilterResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*MetricFilterOutput, error) {
+) (*MetricFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -121,9 +121,11 @@ func (r *MetricFilter) Create(
 	return r.read(ctx, client, r.key(nil))
 }
 
-func (r *MetricFilter) Read(
-	ctx context.Context, cfg *awsCfg, prior *MetricFilterOutput,
-) (*MetricFilterOutput, error) {
+func (r *MetricFilterResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *MetricFilterResourceOutput,
+) (*MetricFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -131,10 +133,10 @@ func (r *MetricFilter) Read(
 	return r.read(ctx, client, r.key(prior))
 }
 
-func (r *MetricFilter) Update(
+func (r *MetricFilterResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[MetricFilter, *MetricFilterOutput],
-) (*MetricFilterOutput, error) {
+	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput],
+) (*MetricFilterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -150,9 +152,8 @@ func (r *MetricFilter) Update(
 	return r.read(ctx, client, r.key(prior.Outputs))
 }
 
-func (r *MetricFilter) Delete(
-	ctx context.Context, cfg *awsCfg, prior *MetricFilterOutput,
-) error {
+func (r *MetricFilterResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *MetricFilterResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -174,7 +175,7 @@ func (r *MetricFilter) Delete(
 	return nil
 }
 
-func (r *MetricFilter) put(
+func (r *MetricFilterResource) put(
 	ctx context.Context, client *cloudwatchlogs.Client,
 ) error {
 	if err := r.validate(); err != nil {
@@ -191,7 +192,7 @@ func (r *MetricFilter) put(
 	return nil
 }
 
-func (r *MetricFilter) putInput() *cloudwatchlogs.PutMetricFilterInput {
+func (r *MetricFilterResource) putInput() *cloudwatchlogs.PutMetricFilterInput {
 	return &cloudwatchlogs.PutMetricFilterInput{
 		FilterName:             aws.String(r.FilterName),
 		LogGroupName:           aws.String(r.LogGroupName),
@@ -223,9 +224,9 @@ func (m MetricFilterMetricTransformation) toSDK() cloudwatchlogstypes.MetricTran
 	return out
 }
 
-func (r *MetricFilter) read(
+func (r *MetricFilterResource) read(
 	ctx context.Context, client *cloudwatchlogs.Client, key metricFilterKey,
-) (*MetricFilterOutput, error) {
+) (*MetricFilterResourceOutput, error) {
 	var match *cloudwatchlogstypes.MetricFilter
 	pager := cloudwatchlogs.NewDescribeMetricFiltersPaginator(client,
 		&cloudwatchlogs.DescribeMetricFiltersInput{
@@ -253,7 +254,7 @@ func (r *MetricFilter) read(
 	if match == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &MetricFilterOutput{
+	return &MetricFilterResourceOutput{
 		FilterName:             key.FilterName,
 		LogGroupName:           key.LogGroupName,
 		FilterPattern:          aws.ToString(match.FilterPattern),
@@ -262,19 +263,19 @@ func (r *MetricFilter) read(
 	}, nil
 }
 
-func (r *MetricFilter) shouldPut(
-	prior runtime.Prior[MetricFilter, *MetricFilterOutput],
+func (r *MetricFilterResource) shouldPut(
+	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput],
 ) bool {
 	return r.mutableInputChanged(prior.Inputs) || r.managedOutputDrifted(prior.Observed)
 }
 
-func (r *MetricFilter) mutableInputChanged(prior MetricFilter) bool {
+func (r *MetricFilterResource) mutableInputChanged(prior MetricFilterResource) bool {
 	return metricFilterPatternChanged(prior.FilterPattern, r.FilterPattern) ||
 		metricFilterBoolChanged(prior.ApplyOnTransformedLogs, r.ApplyOnTransformedLogs) ||
 		r.metricTransformationChanged(prior.MetricTransformation)
 }
 
-func (r *MetricFilter) metricTransformationChanged(
+func (r *MetricFilterResource) metricTransformationChanged(
 	prior MetricFilterMetricTransformation,
 ) bool {
 	current := r.MetricTransformation
@@ -286,7 +287,7 @@ func (r *MetricFilter) metricTransformationChanged(
 		effectiveMetricFilterUnit(prior.Unit) != effectiveMetricFilterUnit(current.Unit)
 }
 
-func (r *MetricFilter) managedOutputDrifted(observed *MetricFilterOutput) bool {
+func (r *MetricFilterResource) managedOutputDrifted(observed *MetricFilterResourceOutput) bool {
 	if observed == nil {
 		return false
 	}
@@ -301,7 +302,7 @@ func (r *MetricFilter) managedOutputDrifted(observed *MetricFilterOutput) bool {
 		observed.MetricTransformation, r.MetricTransformation)
 }
 
-func (r *MetricFilter) key(prior *MetricFilterOutput) metricFilterKey {
+func (r *MetricFilterResource) key(prior *MetricFilterResourceOutput) metricFilterKey {
 	if prior != nil && prior.FilterName != "" && prior.LogGroupName != "" {
 		return metricFilterKey{
 			FilterName:   prior.FilterName,
@@ -314,7 +315,7 @@ func (r *MetricFilter) key(prior *MetricFilterOutput) metricFilterKey {
 	}
 }
 
-func (r *MetricFilter) validate() error {
+func (r *MetricFilterResource) validate() error {
 	if err := validateMetricFilterLogGroupName(r.LogGroupName); err != nil {
 		return err
 	}

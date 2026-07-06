@@ -33,19 +33,19 @@ const (
 	accessKeyMaxPGPKeySize = 1 << 20
 )
 
-// AccessKey manages an IAM user's access key. IAM only returns the secret when
+// AccessKeyResource manages an IAM user's access key. IAM only returns the secret when
 // creating the key, so Read preserves the create-only secret outputs from the
 // prior state while refreshing the key metadata IAM can still report.
-type AccessKey struct {
+type AccessKeyResource struct {
 	UserName string `ub:"user-name"`
 	PgpKey   string `ub:"pgp-key"`
 	Status   string `ub:"status"`
 }
 
-// AccessKeyOutput holds the access-key metadata IAM reports and the secret
+// AccessKeyResourceOutput holds the access-key metadata IAM reports and the secret
 // material captured at create time. Plaintext secret fields are sensitive; when
 // pgp-key is set, only encrypted secret fields are returned.
-type AccessKeyOutput struct {
+type AccessKeyResourceOutput struct {
 	AccessKeyId                string  `ub:"access-key-id"`
 	UserName                   string  `ub:"user-name"`
 	CreateDate                 string  `ub:"create-date"`
@@ -57,17 +57,17 @@ type AccessKeyOutput struct {
 	KeyFingerprint             *string `ub:"key-fingerprint"`
 }
 
-func (r *AccessKey) SchemaVersion() int { return 1 }
+func (r *AccessKeyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that require a new access key. IAM cannot move
 // an access key to another user, and pgp-key controls create-only outputs that
 // cannot be recomputed after the secret is gone.
-func (r *AccessKey) ReplaceFields() []string {
+func (r *AccessKeyResource) ReplaceFields() []string {
 	return []string{"user-name", "pgp-key"}
 }
 
 // Defaults gives status the IAM create default.
-func (r AccessKey) Defaults() []defaults.Default {
+func (r AccessKeyResource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.PgpKey, ""),
 		defaults.Value(r.Status, "Active"),
@@ -76,14 +76,17 @@ func (r AccessKey) Defaults() []defaults.Default {
 
 // Constraints declares the access-key status enum supported by IAM for active
 // keys.
-func (r AccessKey) Constraints() []constraint.Constraint {
+func (r AccessKeyResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.Status, "Active", "Inactive")).
 			Message("status must be Active or Inactive"),
 	}
 }
 
-func (r *AccessKey) Create(ctx context.Context, cfg *awsCfg) (*AccessKeyOutput, error) {
+func (r *AccessKeyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*AccessKeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -118,9 +121,11 @@ func (r *AccessKey) Create(ctx context.Context, cfg *awsCfg) (*AccessKeyOutput, 
 	return out, nil
 }
 
-func (r *AccessKey) Read(
-	ctx context.Context, cfg *awsCfg, prior *AccessKeyOutput,
-) (*AccessKeyOutput, error) {
+func (r *AccessKeyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *AccessKeyResourceOutput,
+) (*AccessKeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -135,9 +140,9 @@ func (r *AccessKey) Read(
 	return out, nil
 }
 
-func (r *AccessKey) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AccessKey, *AccessKeyOutput],
-) (*AccessKeyOutput, error) {
+func (r *AccessKeyResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput],
+) (*AccessKeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -159,7 +164,11 @@ func (r *AccessKey) Update(
 	return nil, errors.New("update access key: missing prior output")
 }
 
-func (r *AccessKey) Delete(ctx context.Context, cfg *awsCfg, prior *AccessKeyOutput) error {
+func (r *AccessKeyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *AccessKeyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -177,10 +186,10 @@ func (r *AccessKey) Delete(ctx context.Context, cfg *awsCfg, prior *AccessKeyOut
 	return nil
 }
 
-func (r *AccessKey) outputFromCreate(
+func (r *AccessKeyResource) outputFromCreate(
 	ctx context.Context, client *iam.Client, key *iamtypes.AccessKey, secret string,
-) (*AccessKeyOutput, error) {
-	out := &AccessKeyOutput{
+) (*AccessKeyResourceOutput, error) {
+	out := &AccessKeyResourceOutput{
 		AccessKeyId: aws.ToString(key.AccessKeyId),
 		UserName:    accessKeyUserName(key, r.UserName),
 		CreateDate:  accessKeyDate(key.CreateDate),
@@ -205,9 +214,11 @@ func (r *AccessKey) outputFromCreate(
 	return out, nil
 }
 
-func (r *AccessKey) readAfterUpdate(
-	ctx context.Context, client *iam.Client, prior runtime.Prior[AccessKey, *AccessKeyOutput],
-) (*AccessKeyOutput, error) {
+func (r *AccessKeyResource) readAfterUpdate(
+	ctx context.Context,
+	client *iam.Client,
+	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput],
+) (*AccessKeyResourceOutput, error) {
 	secretPrior := prior.Outputs
 	if secretPrior == nil {
 		secretPrior = prior.Observed
@@ -222,7 +233,7 @@ func (r *AccessKey) readAfterUpdate(
 	return out, nil
 }
 
-func (r *AccessKey) updateStatus(
+func (r *AccessKeyResource) updateStatus(
 	ctx context.Context, client *iam.Client, userName string, accessKeyID string, status string,
 ) error {
 	_, err := client.UpdateAccessKey(ctx, &iam.UpdateAccessKeyInput{
@@ -236,7 +247,7 @@ func (r *AccessKey) updateStatus(
 	return nil
 }
 
-func (r *AccessKey) desiredStatus() string {
+func (r *AccessKeyResource) desiredStatus() string {
 	if r.Status == "" {
 		return accessKeyDefaultStatus
 	}
@@ -277,8 +288,8 @@ func accessKeyUserName(key *iamtypes.AccessKey, fallback string) string {
 	return fallback
 }
 
-func outputFromAccessKeyMetadata(metadata *iamtypes.AccessKeyMetadata) *AccessKeyOutput {
-	return &AccessKeyOutput{
+func outputFromAccessKeyMetadata(metadata *iamtypes.AccessKeyMetadata) *AccessKeyResourceOutput {
+	return &AccessKeyResourceOutput{
 		AccessKeyId: aws.ToString(metadata.AccessKeyId),
 		UserName:    aws.ToString(metadata.UserName),
 		CreateDate:  accessKeyDate(metadata.CreateDate),
@@ -286,7 +297,7 @@ func outputFromAccessKeyMetadata(metadata *iamtypes.AccessKeyMetadata) *AccessKe
 	}
 }
 
-func preserveAccessKeySecretOutputs(out *AccessKeyOutput, prior *AccessKeyOutput) {
+func preserveAccessKeySecretOutputs(out *AccessKeyResourceOutput, prior *AccessKeyResourceOutput) {
 	if prior == nil {
 		return
 	}
@@ -304,21 +315,21 @@ func copyAccessKeyString(v *string) *string {
 	return aws.String(*v)
 }
 
-func accessKeyOutputID(out *AccessKeyOutput) string {
+func accessKeyOutputID(out *AccessKeyResourceOutput) string {
 	if out == nil {
 		return ""
 	}
 	return out.AccessKeyId
 }
 
-func accessKeyOutputUserName(out *AccessKeyOutput, fallback string) string {
+func accessKeyOutputUserName(out *AccessKeyResourceOutput, fallback string) string {
 	if out != nil && out.UserName != "" {
 		return out.UserName
 	}
 	return fallback
 }
 
-func accessKeyPriorID(prior runtime.Prior[AccessKey, *AccessKeyOutput]) string {
+func accessKeyPriorID(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]) string {
 	if prior.Outputs != nil && prior.Outputs.AccessKeyId != "" {
 		return prior.Outputs.AccessKeyId
 	}
@@ -329,7 +340,7 @@ func accessKeyPriorID(prior runtime.Prior[AccessKey, *AccessKeyOutput]) string {
 }
 
 func accessKeyPriorUserName(
-	prior runtime.Prior[AccessKey, *AccessKeyOutput], fallback string,
+	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput], fallback string,
 ) string {
 	if prior.Outputs != nil && prior.Outputs.UserName != "" {
 		return prior.Outputs.UserName
@@ -343,7 +354,7 @@ func accessKeyPriorUserName(
 	return fallback
 }
 
-func accessKeyPriorStatus(prior runtime.Prior[AccessKey, *AccessKeyOutput]) string {
+func accessKeyPriorStatus(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]) string {
 	if prior.Observed != nil && prior.Observed.Status != "" {
 		return prior.Observed.Status
 	}

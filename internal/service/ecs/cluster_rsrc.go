@@ -47,7 +47,7 @@ const clusterTimeout = 10 * time.Minute
 // the regexp enforces equals the character length ECS limits.
 var clusterNameRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 
-// Cluster manages an ECS cluster. The name is the only input fixed at create
+// ClusterResource manages an ECS cluster. The name is the only input fixed at create
 // time, so changing it replaces the cluster; every other input is reconciled
 // in place. The configuration, service connect defaults, and settings are
 // reconciled by UpdateCluster when they change, and tags by the tag calls.
@@ -61,7 +61,7 @@ var clusterNameRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,255}$`)
 // literally named "default". It must match ^[0-9A-Za-z_-]{1,255}$, a
 // regular-expression and byte-length check enforced in Create rather than a
 // declarative constraint.
-type Cluster struct {
+type ClusterResource struct {
 	Name                            string                                 `ub:"name"`
 	Configuration                   *ClusterConfiguration                  `ub:"configuration"`
 	ServiceConnectDefaults          *ClusterServiceConnectDefaults         `ub:"service-connect-defaults"`
@@ -71,20 +71,20 @@ type Cluster struct {
 	Tags                            *map[string]string                     `ub:"tags"`
 }
 
-// ClusterOutput holds the one value ECS computes for a cluster: the ARN that
+// ClusterResourceOutput holds the one value ECS computes for a cluster: the ARN that
 // identifies it. The ARN is the identity handle, so Read and Delete key off
 // it from the prior outputs; on a replace the receiver already holds the new
 // name while the old cluster still needs to be found and removed.
-type ClusterOutput struct {
+type ClusterResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *Cluster) SchemaVersion() int { return 1 }
+func (r *ClusterResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ECS fixes when a cluster is created. Only
 // the name is immutable; the configuration, service connect defaults,
 // settings, capacity provider fields, and tags all change in place.
-func (r *Cluster) ReplaceFields() []string {
+func (r *ClusterResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
@@ -95,7 +95,7 @@ func (r *Cluster) ReplaceFields() []string {
 // weight each have a fixed range. The cluster name rule is a
 // regular-expression check in Create rather than a constraint, since it
 // needs a character-class match.
-func (r Cluster) Constraints() []constraint.Constraint {
+func (r ClusterResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Configuration.ExecuteCommandConfiguration.Logging)).
 			Require(constraint.OneOf(r.Configuration.ExecuteCommandConfiguration.Logging,
@@ -128,7 +128,7 @@ func (r Cluster) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, error) {
+func (r *ClusterResource) Create(ctx context.Context, cfg *awsCfg) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -187,12 +187,11 @@ func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, erro
 			return nil, err
 		}
 	}
-	return &ClusterOutput{Arn: arn}, nil
+	return &ClusterResourceOutput{Arn: arn}, nil
 }
 
-func (r *Cluster) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterOutput,
-) (*ClusterOutput, error) {
+func (r *ClusterResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *ClusterResourceOutput) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -201,12 +200,12 @@ func (r *Cluster) Read(
 	if err != nil {
 		return nil, err
 	}
-	return &ClusterOutput{Arn: aws.ToString(c.ClusterArn)}, nil
+	return &ClusterResourceOutput{Arn: aws.ToString(c.ClusterArn)}, nil
 }
 
-func (r *Cluster) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Cluster, *ClusterOutput],
-) (*ClusterOutput, error) {
+func (r *ClusterResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -232,10 +231,14 @@ func (r *Cluster) Update(
 			return nil, err
 		}
 	}
-	return &ClusterOutput{Arn: arn}, nil
+	return &ClusterResourceOutput{Arn: arn}, nil
 }
 
-func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput) error {
+func (r *ClusterResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ClusterResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -266,8 +269,8 @@ func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput)
 // the documented empty-string namespace; settings have no clear operation,
 // so removing them sends nothing and leaves the values already on the
 // cluster in place.
-func (r *Cluster) updateClusterInput(
-	prior runtime.Prior[Cluster, *ClusterOutput], arn string,
+func (r *ClusterResource) updateClusterInput(
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput], arn string,
 ) (*ecs.UpdateClusterInput, bool) {
 	in := &ecs.UpdateClusterInput{Cluster: aws.String(arn)}
 	needed := false
@@ -297,7 +300,9 @@ func (r *Cluster) updateClusterInput(
 // capacityProvidersChanged reports whether either of the fields
 // PutClusterCapacityProviders reconciles differs from the prior inputs. The
 // two ride one whole-state call, so a change to either resends both.
-func (r *Cluster) capacityProvidersChanged(prior runtime.Prior[Cluster, *ClusterOutput]) bool {
+func (r *ClusterResource) capacityProvidersChanged(
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+) bool {
 	return runtime.Changed(ptr.Value(prior.Inputs.CapacityProviders), ptr.Value(r.CapacityProviders)) ||
 		runtime.Changed(prior.Inputs.DefaultCapacityProviderStrategy,
 			r.DefaultCapacityProviderStrategy)
@@ -312,7 +317,7 @@ func (r *Cluster) capacityProvidersChanged(prior runtime.Prior[Cluster, *Cluster
 // while another update is in flight, and while an active service still uses
 // a provider being removed; each put is followed by the available wait,
 // since changing providers moves the cluster through PROVISIONING.
-func (r *Cluster) putCapacityProviders(
+func (r *ClusterResource) putCapacityProviders(
 	ctx context.Context, client *ecs.Client, arn string,
 ) error {
 	providers := []string{}
@@ -337,7 +342,7 @@ func (r *Cluster) putCapacityProviders(
 // syncTags reconciles the cluster's tags with the desired set, reading the
 // live tags with ListTagsForResource and writing changes with TagResource
 // and UntagResource against the cluster ARN.
-func (r *Cluster) syncTags(ctx context.Context, client *ecs.Client, arn string) error {
+func (r *ClusterResource) syncTags(ctx context.Context, client *ecs.Client, arn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx, &ecs.ListTagsForResourceInput{

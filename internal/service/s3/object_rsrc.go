@@ -22,14 +22,14 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// Object manages a single object in a bucket: the bytes plus the metadata,
+// ObjectResource manages a single object in a bucket: the bytes plus the metadata,
 // encryption, storage class, ACL, and object-lock settings that PutObject
 // records. Create and Update both PutObject; Read is a HeadObject; the bucket
 // and key form the identity, so a change to either replaces the object while
 // every other field updates in place by re-putting. The body comes from at
 // most one of an inline string, a file path, or base64-encoded bytes; with
 // none set the object is empty.
-type Object struct {
+type ObjectResource struct {
 	Bucket                    string             `ub:"bucket"`
 	Key                       string             `ub:"key"`
 	BodyContent               *string            `ub:"body-content"`
@@ -59,13 +59,13 @@ type Object struct {
 	PurgeOnDestroy *bool `ub:"purge-on-destroy"`
 }
 
-// ObjectOutput holds the values S3 computes for an object. The ARN is built
+// ObjectResourceOutput holds the values S3 computes for an object. The ARN is built
 // locally from the partition, bucket, and cleaned key, since HeadObject does
 // not return it; the cleaned key is the object's real S3 key, which the input
 // key normalizes to. The etag, version id, and checksums identify the stored
 // bytes, and the remaining fields are the server-filled defaults a consumer
 // reads back when the corresponding input was left to S3.
-type ObjectOutput struct {
+type ObjectResourceOutput struct {
 	Arn                  string `ub:"arn"`
 	Key                  string `ub:"key"`
 	Etag                 string `ub:"etag"`
@@ -82,20 +82,20 @@ type ObjectOutput struct {
 	ChecksumSha256       string `ub:"checksum-sha256"`
 }
 
-func (r *Object) SchemaVersion() int { return 1 }
+func (r *ObjectResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that fix the object's identity. The bucket and
 // key name the object, so a change to either is a different object and forces a
 // new one. Every other field, the KMS key included, updates in place by
 // re-putting.
-func (r *Object) ReplaceFields() []string {
+func (r *ObjectResource) ReplaceFields() []string {
 	return []string{"bucket", "key"}
 }
 
 // Constraints declares the rules S3 places on an object's inputs. The body has
 // at most one source. The ACL, checksum algorithm, encryption, storage class,
 // and the two object-lock enums each accept a fixed set of values when set.
-func (r Object) Constraints() []constraint.Constraint {
+func (r ObjectResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.BodyContent, r.BodyPath, r.BodyBase64),
 		constraint.When(constraint.Present(r.ACL)).
@@ -127,7 +127,7 @@ func (r Object) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Object) Create(ctx context.Context, cfg *awsCfg) (*ObjectOutput, error) {
+func (r *ObjectResource) Create(ctx context.Context, cfg *awsCfg) (*ObjectResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -141,9 +141,8 @@ func (r *Object) Create(ctx context.Context, cfg *awsCfg) (*ObjectOutput, error)
 	return r.read(ctx, client)
 }
 
-func (r *Object) Read(
-	ctx context.Context, cfg *awsCfg, prior *ObjectOutput,
-) (*ObjectOutput, error) {
+func (r *ObjectResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *ObjectResourceOutput) (*ObjectResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -151,9 +150,9 @@ func (r *Object) Read(
 	return r.read(ctx, client)
 }
 
-func (r *Object) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Object, *ObjectOutput],
-) (*ObjectOutput, error) {
+func (r *ObjectResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ObjectResource, *ObjectResourceOutput],
+) (*ObjectResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -169,7 +168,11 @@ func (r *Object) Update(
 	return r.read(ctx, client)
 }
 
-func (r *Object) Delete(ctx context.Context, cfg *awsCfg, prior *ObjectOutput) error {
+func (r *ObjectResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ObjectResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -194,7 +197,7 @@ func (r *Object) Delete(ctx context.Context, cfg *awsCfg, prior *ObjectOutput) e
 // is read from whichever single source is set; the key is cleaned to its real
 // S3 form; a KMS key implies aws:kms encryption; and any object-lock setting
 // without an explicit checksum forces CRC32, which S3 requires for a lock put.
-func (r *Object) put(ctx context.Context, client *s3.Client) error {
+func (r *ObjectResource) put(ctx context.Context, client *s3.Client) error {
 	body, err := r.body()
 	if err != nil {
 		return err
@@ -259,7 +262,10 @@ func (r *Object) put(ctx context.Context, client *s3.Client) error {
 // runtime.ErrNotFound so a plan recreates the object. The head opts into the
 // checksum mode so a stored checksum comes back in the same call; an object
 // without one simply leaves the checksum outputs empty.
-func (r *Object) read(ctx context.Context, client *s3.Client) (*ObjectOutput, error) {
+func (r *ObjectResource) read(
+	ctx context.Context,
+	client *s3.Client,
+) (*ObjectResourceOutput, error) {
 	bucket := r.Bucket
 	key := objectCleanKey(r.Key)
 	head, err := client.HeadObject(ctx, &s3.HeadObjectInput{
@@ -280,7 +286,7 @@ func (r *Object) read(ctx context.Context, client *s3.Client) (*ObjectOutput, er
 	if storageClass == "" {
 		storageClass = string(s3types.StorageClassStandard)
 	}
-	return &ObjectOutput{
+	return &ObjectResourceOutput{
 		Arn:                  objectARN(region, bucket, key),
 		Key:                  key,
 		Etag:                 strings.Trim(aws.ToString(head.ETag), `"`),
@@ -302,7 +308,7 @@ func (r *Object) read(ctx context.Context, client *s3.Client) (*ObjectOutput, er
 // string, base64-encoded bytes, or a file at the given path. With none set the
 // body is nil, which puts an empty object. The constraints guarantee at most
 // one source, so the first match wins.
-func (r *Object) body() (io.Reader, error) {
+func (r *ObjectResource) body() (io.Reader, error) {
 	switch {
 	case r.BodyContent != nil:
 		return strings.NewReader(*r.BodyContent), nil
@@ -325,7 +331,7 @@ func (r *Object) body() (io.Reader, error) {
 
 // objectLockRequested reports whether any object-lock field is set, in which
 // case S3 requires a checksum on the put.
-func (r *Object) objectLockRequested() bool {
+func (r *ObjectResource) objectLockRequested() bool {
 	return r.ObjectLockMode != nil ||
 		r.ObjectLockRetainUntilDate != nil ||
 		r.ObjectLockLegalHoldStatus != nil
@@ -335,7 +341,7 @@ func (r *Object) objectLockRequested() bool {
 // which case Update re-puts. The body, metadata, encryption, ACL, storage
 // class, and object-lock settings all ride the put, so a change to any of them
 // re-uploads the whole object rather than patching one header.
-func (r *Object) contentChanged(prior Object) bool {
+func (r *ObjectResource) contentChanged(prior ObjectResource) bool {
 	return runtime.Changed(prior.BodyContent, r.BodyContent) ||
 		runtime.Changed(prior.BodyPath, r.BodyPath) ||
 		runtime.Changed(prior.BodyBase64, r.BodyBase64) ||

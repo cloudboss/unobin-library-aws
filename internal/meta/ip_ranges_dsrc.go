@@ -16,30 +16,33 @@ import (
 
 const defaultIPRangesURL = "https://ip-ranges.amazonaws.com/ip-ranges.json"
 
-// IPRanges reads AWS public IP range metadata and filters it by service and
+// IPRangesDataSource reads AWS public IP range metadata and filters it by service and
 // optionally by region.
-type IPRanges struct {
+type IPRangesDataSource struct {
 	Regions  *[]string `ub:"regions"`
 	Services []string  `ub:"services"`
 	URL      *string   `ub:"url"`
 }
 
-// IPRangesOutput contains the matched IPv4 and IPv6 CIDR blocks.
-type IPRangesOutput struct {
+// IPRangesDataSourceOutput contains the matched IPv4 and IPv6 CIDR blocks.
+type IPRangesDataSourceOutput struct {
 	CIDRBlocks     []string `ub:"cidr-blocks"`
 	CreateDate     string   `ub:"create-date"`
 	IPv6CIDRBlocks []string `ub:"ipv6-cidr-blocks"`
 	SyncToken      int64    `ub:"sync-token"`
 }
 
-func (d IPRanges) Constraints() []constraint.Constraint {
+func (d IPRangesDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.NotEmpty(d.Services)).
 			Message("services must list at least one service"),
 	}
 }
 
-func (d *IPRanges) Read(ctx context.Context, _ *awsCfg) (*IPRangesOutput, error) {
+func (d *IPRangesDataSource) Read(
+	ctx context.Context,
+	_ *awsCfg,
+) (*IPRangesDataSourceOutput, error) {
 	if len(d.Services) == 0 {
 		return nil, errors.New("services must list at least one service")
 	}
@@ -56,7 +59,7 @@ func (d *IPRanges) Read(ctx context.Context, _ *awsCfg) (*IPRangesOutput, error)
 		return nil, fmt.Errorf("parse sync token: %w", err)
 	}
 	ipv4, ipv6 := d.matchingCIDRBlocks(ranges)
-	return &IPRangesOutput{
+	return &IPRangesDataSourceOutput{
 		CIDRBlocks:     ipv4,
 		CreateDate:     ranges.CreateDate,
 		IPv6CIDRBlocks: ipv6,
@@ -64,7 +67,7 @@ func (d *IPRanges) Read(ctx context.Context, _ *awsCfg) (*IPRangesOutput, error)
 	}, nil
 }
 
-func (d *IPRanges) matchingCIDRBlocks(ranges ipRangesDocument) ([]string, []string) {
+func (d *IPRangesDataSource) matchingCIDRBlocks(ranges ipRangesDocument) ([]string, []string) {
 	regions := lowerSet(sliceValue(d.Regions))
 	services := lowerSet(d.Services)
 	matches := func(region, service string) bool {

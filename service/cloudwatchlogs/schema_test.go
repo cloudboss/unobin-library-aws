@@ -19,10 +19,10 @@ import (
 func TestLibraryRegistersCloudwatchlogsResources(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"log-group":           reflect.TypeFor[*svc.LogGroupOutput](),
-		"metric-filter":       reflect.TypeFor[*svc.MetricFilterOutput](),
-		"resource-policy":     reflect.TypeFor[*svc.ResourcePolicyOutput](),
-		"subscription-filter": reflect.TypeFor[*svc.SubscriptionFilterOutput](),
+		"log-group":           reflect.TypeFor[*svc.LogGroupResourceOutput](),
+		"metric-filter":       reflect.TypeFor[*svc.MetricFilterResourceOutput](),
+		"resource-policy":     reflect.TypeFor[*svc.ResourcePolicyResourceOutput](),
+		"subscription-filter": reflect.TypeFor[*svc.SubscriptionFilterResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {

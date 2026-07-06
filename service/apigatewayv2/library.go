@@ -23,13 +23,13 @@ func Library() *runtime.Library {
 		Description:   "AWS API Gateway v2 library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"api":         makeResource[svc.Api, *svc.ApiOutput](),
-			"integration": makeResource[svc.Integration, *svc.IntegrationOutput](),
-			"authorizer":  makeResource[svc.Authorizer, *svc.AuthorizerOutput](),
-			"route":       makeResource[svc.Route, *svc.RouteOutput](),
-			"stage":       makeResource[svc.Stage, *svc.StageOutput](),
-			"domain-name": makeResource[svc.DomainName, *svc.DomainNameOutput](),
-			"api-mapping": makeResource[svc.ApiMapping, *svc.ApiMappingOutput](),
+			"api":         makeResource[svc.ApiResource, *svc.ApiResourceOutput](),
+			"integration": makeResource[svc.IntegrationResource, *svc.IntegrationResourceOutput](),
+			"authorizer":  makeResource[svc.AuthorizerResource, *svc.AuthorizerResourceOutput](),
+			"route":       makeResource[svc.RouteResource, *svc.RouteResourceOutput](),
+			"stage":       makeResource[svc.StageResource, *svc.StageResourceOutput](),
+			"domain-name": makeResource[svc.DomainNameResource, *svc.DomainNameResourceOutput](),
+			"api-mapping": makeResource[svc.ApiMappingResource, *svc.ApiMappingResourceOutput](),
 		},
 	}
 }

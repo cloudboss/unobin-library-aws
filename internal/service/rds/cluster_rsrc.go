@@ -59,7 +59,7 @@ const clusterIamRoleInvalidMsg = "IAM role ARN value is invalid or does not " +
 var finalSnapshotIdentifierRe = regexp.MustCompile(
 	`^[a-zA-Z](?:-?[a-zA-Z0-9])*$`)
 
-// Cluster manages an Amazon Aurora or Multi-AZ DB cluster, the way CloudFormation
+// ClusterResource manages an Amazon Aurora or Multi-AZ DB cluster, the way CloudFormation
 // models AWS::RDS::DBCluster. A cluster is created through one of four calls
 // chosen by which input is set: a snapshot restore, an S3 restore, a
 // point-in-time restore, or a plain create. Each restore call accepts only a
@@ -82,7 +82,7 @@ var finalSnapshotIdentifierRe = regexp.MustCompile(
 // performance-insights toggle as distinct from its key and retention, and the
 // pre-signed-url cross-region restore plumbing. The apply-immediately flag is not
 // an input: every ModifyDBCluster is sent with it set.
-type Cluster struct {
+type ClusterResource struct {
 	ClusterIdentifier string `ub:"cluster-identifier"`
 	Engine            string `ub:"engine"`
 
@@ -156,7 +156,7 @@ type Cluster struct {
 	Tags *map[string]string `ub:"tags"`
 }
 
-// ClusterOutput holds the values RDS computes for a DB cluster once it is
+// ClusterResourceOutput holds the values RDS computes for a DB cluster once it is
 // available. The ARN is the cluster's handle, against which its tags and IAM
 // roles are managed. The endpoint and reader endpoint are the writer and
 // load-balanced reader addresses; the hosted zone id is the zone those endpoints
@@ -166,7 +166,7 @@ type Cluster struct {
 // present only when the password is managed by RDS. The actual engine version is
 // the version RDS resolved from a partial one. The global cluster identifier is
 // the global database the cluster belongs to, empty when it belongs to none.
-type ClusterOutput struct {
+type ClusterResourceOutput struct {
 	Arn                     string                   `ub:"arn"`
 	Endpoint                string                   `ub:"endpoint"`
 	ReaderEndpoint          string                   `ub:"reader-endpoint"`
@@ -179,7 +179,7 @@ type ClusterOutput struct {
 	GlobalClusterIdentifier string                   `ub:"global-cluster-identifier"`
 }
 
-func (r *Cluster) SchemaVersion() int { return 1 }
+func (r *ClusterResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when a cluster is created. A change to
 // any of them cannot be applied to an existing cluster, so it requires a new one.
@@ -193,7 +193,7 @@ func (r *Cluster) SchemaVersion() int { return 1 }
 // changing snapshot-identifier replaces the cluster. The alternative -- omitting
 // it from ReplaceFields -- would let a changed snapshot id silently do nothing,
 // which is the worse surprise.
-func (r *Cluster) ReplaceFields() []string {
+func (r *ClusterResource) ReplaceFields() []string {
 	return []string{
 		"availability-zones",
 		"cluster-identifier",
@@ -219,7 +219,7 @@ func (r *Cluster) ReplaceFields() []string {
 // optional enums and numeric bounds are checked only when present. The inner
 // rules of the restore-to-point-in-time and s3-import blocks are checked in
 // Create, since the constraint layer does not reach into a nested block.
-func (r Cluster) Constraints() []constraint.Constraint {
+func (r ClusterResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.SnapshotIdentifier, r.S3Import, r.RestoreToPointInTime),
 		constraint.ForbiddenWith(r.SnapshotIdentifier, r.GlobalClusterIdentifier),
@@ -268,7 +268,7 @@ func (r Cluster) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, error) {
+func (r *ClusterResource) Create(ctx context.Context, cfg *awsCfg) (*ClusterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func (r *Cluster) Create(ctx context.Context, cfg *awsCfg) (*ClusterOutput, erro
 // follow-on modify is needed -- except that when the cluster joins a global
 // cluster, the insights and performance-insights settings are deferred, since
 // sending them on the create of a global member would reset them.
-func (r *Cluster) createPlain(
+func (r *ClusterResource) createPlain(
 	ctx context.Context, client *rds.Client,
 ) (bool, error) {
 	joinsGlobal := r.GlobalClusterIdentifier != nil && *r.GlobalClusterIdentifier != ""
@@ -417,7 +417,7 @@ func (r *Cluster) createPlain(
 // backup window, retention, maintenance window, password management, or
 // serverless v2 scaling, which are deferred to the post-create modify. It always
 // returns true so the deferred modify runs.
-func (r *Cluster) createFromSnapshot(
+func (r *ClusterResource) createFromSnapshot(
 	ctx context.Context, client *rds.Client,
 ) (bool, error) {
 	in := &rds.RestoreDBClusterFromSnapshotInput{
@@ -465,7 +465,7 @@ func (r *Cluster) createFromSnapshot(
 // fields directly, so no follow-on modify is needed -- it returns false. RDS
 // requires a master username for an S3 restore, which Constraints cannot express
 // across the block boundary, so it is checked here.
-func (r *Cluster) createFromS3(
+func (r *ClusterResource) createFromS3(
 	ctx context.Context, client *rds.Client,
 ) (bool, error) {
 	if r.MasterUsername == nil {
@@ -524,7 +524,7 @@ func (r *Cluster) createFromS3(
 // not accept the backup window, retention, maintenance window, password
 // management, or either scaling block, which are deferred to the post-create
 // modify. It always returns true so the deferred modify runs.
-func (r *Cluster) createToPointInTime(
+func (r *ClusterResource) createToPointInTime(
 	ctx context.Context, client *rds.Client,
 ) (bool, error) {
 	b := r.RestoreToPointInTime
@@ -577,7 +577,7 @@ func (r *Cluster) createToPointInTime(
 // global-member plain create defers the insights and performance-insights
 // settings instead. The call always sets ApplyImmediately so the change takes
 // effect at once.
-func (r *Cluster) deferredModifyInput() *rds.ModifyDBClusterInput {
+func (r *ClusterResource) deferredModifyInput() *rds.ModifyDBClusterInput {
 	in := &rds.ModifyDBClusterInput{
 		DBClusterIdentifier: aws.String(r.ClusterIdentifier),
 		ApplyImmediately:    aws.Bool(true),
@@ -615,7 +615,7 @@ func (r *Cluster) deferredModifyInput() *rds.ModifyDBClusterInput {
 // restore type from a fixed set. The s3-import block requires the bucket,
 // ingestion role, source engine, and source engine version. Each scaling block
 // checks its own capacity and timeout bounds.
-func (r *Cluster) validate() error {
+func (r *ClusterResource) validate() error {
 	if b := r.RestoreToPointInTime; b != nil {
 		hasId := b.SourceClusterIdentifier != nil
 		hasResourceId := b.SourceClusterResourceId != nil
@@ -648,9 +648,8 @@ func (r *Cluster) validate() error {
 	return r.ServerlessV2Scaling.validate()
 }
 
-func (r *Cluster) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterOutput,
-) (*ClusterOutput, error) {
+func (r *ClusterResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *ClusterResourceOutput) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -661,12 +660,15 @@ func (r *Cluster) Read(
 // read fetches the cluster by identifier, maps it to outputs, and recovers its
 // global cluster membership. A missing cluster maps to runtime.ErrNotFound so a
 // plan recreates it.
-func (r *Cluster) read(ctx context.Context, client *rds.Client) (*ClusterOutput, error) {
+func (r *ClusterResource) read(
+	ctx context.Context,
+	client *rds.Client,
+) (*ClusterResourceOutput, error) {
 	cluster, err := findCluster(ctx, client, r.ClusterIdentifier)
 	if err != nil {
 		return nil, err
 	}
-	out := &ClusterOutput{
+	out := &ClusterResourceOutput{
 		Arn:                 aws.ToString(cluster.DBClusterArn),
 		Endpoint:            aws.ToString(cluster.Endpoint),
 		ReaderEndpoint:      aws.ToString(cluster.ReaderEndpoint),
@@ -691,7 +693,7 @@ func (r *Cluster) read(ctx context.Context, client *rds.Client) (*ClusterOutput,
 // scanning the global clusters for one that lists this cluster's ARN. That scan
 // is best-effort: a not-found, or an access-denied on a partition without Global
 // Databases, leaves the membership empty rather than failing the read.
-func (r *Cluster) readGlobalMembership(
+func (r *ClusterResource) readGlobalMembership(
 	ctx context.Context, client *rds.Client, arn string, cluster *rdstypes.DBCluster,
 ) (string, error) {
 	if id := aws.ToString(cluster.GlobalClusterIdentifier); id != "" {
@@ -712,9 +714,9 @@ func (r *Cluster) readGlobalMembership(
 	return id, nil
 }
 
-func (r *Cluster) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Cluster, *ClusterOutput],
-) (*ClusterOutput, error) {
+func (r *ClusterResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+) (*ClusterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -784,8 +786,8 @@ func (r *Cluster) Update(
 // parameters are never sent here. The cloudwatch logs exports are sent as an
 // enable/disable diff rather than a whole set. The HTTP endpoint rides this call
 // only when the engine mode is not provisioned.
-func (r *Cluster) modifyInput(
-	prior runtime.Prior[Cluster, *ClusterOutput],
+func (r *ClusterResource) modifyInput(
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
 ) (*rds.ModifyDBClusterInput, bool) {
 	p := prior.Inputs
 	in := &rds.ModifyDBClusterInput{
@@ -901,7 +903,11 @@ func (r *Cluster) modifyInput(
 	return in, changed
 }
 
-func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput) error {
+func (r *ClusterResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ClusterResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -951,7 +957,7 @@ func (r *Cluster) Delete(ctx context.Context, cfg *awsCfg, prior *ClusterOutput)
 // only when the desired state does not keep it on, after which the retry issues
 // the delete again. A not-found fault means the cluster is already gone, which is
 // the outcome the delete wants.
-func (r *Cluster) deleteWithRetry(
+func (r *ClusterResource) deleteWithRetry(
 	ctx context.Context, client *rds.Client, in *rds.DeleteDBClusterInput,
 ) error {
 	healed := false
@@ -978,7 +984,7 @@ func (r *Cluster) deleteWithRetry(
 // clearDeletionProtection turns off deletion protection so a blocked delete can
 // proceed, then waits for the cluster to settle. The modify is retried on the
 // same transient conditions as the update modify.
-func (r *Cluster) clearDeletionProtection(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) clearDeletionProtection(ctx context.Context, client *rds.Client) error {
 	in := &rds.ModifyDBClusterInput{
 		DBClusterIdentifier: aws.String(r.ClusterIdentifier),
 		ApplyImmediately:    aws.Bool(true),
@@ -992,7 +998,7 @@ func (r *Cluster) clearDeletionProtection(ctx context.Context, client *rds.Clien
 
 // modify issues a ModifyDBCluster without a retry, used for the create-time
 // deferred modify where the cluster is freshly available.
-func (r *Cluster) modify(
+func (r *ClusterResource) modify(
 	ctx context.Context, client *rds.Client, in *rds.ModifyDBClusterInput,
 ) error {
 	if _, err := client.ModifyDBCluster(ctx, in); err != nil {
@@ -1005,7 +1011,7 @@ func (r *Cluster) modify(
 // propagated or the cluster is mid-transition. A combination error reporting that
 // the instance parameter group applies only to a major version upgrade is healed
 // by removing that field and retrying, since a minor upgrade rejects it.
-func (r *Cluster) modifyWithRetry(
+func (r *ClusterResource) modifyWithRetry(
 	ctx context.Context, client *rds.Client, in *rds.ModifyDBClusterInput,
 ) error {
 	err := retry.OnError(ctx, isModifyRetryable, func(ctx context.Context) error {
@@ -1023,7 +1029,11 @@ func (r *Cluster) modifyWithRetry(
 
 // modifyHttpEndpoint enables or disables the RDS Data API HTTP endpoint for a
 // provisioned cluster, keyed by the cluster ARN.
-func (r *Cluster) modifyHttpEndpoint(ctx context.Context, client *rds.Client, arn string) error {
+func (r *ClusterResource) modifyHttpEndpoint(
+	ctx context.Context,
+	client *rds.Client,
+	arn string,
+) error {
 	if r.EnableHttpEndpoint != nil && *r.EnableHttpEndpoint {
 		if _, err := client.EnableHttpEndpoint(ctx,
 			&rds.EnableHttpEndpointInput{ResourceArn: aws.String(arn)}); err != nil {
@@ -1040,7 +1050,7 @@ func (r *Cluster) modifyHttpEndpoint(ctx context.Context, client *rds.Client, ar
 
 // promoteReadReplica promotes a read replica cluster to a standalone cluster by
 // clearing its replication source.
-func (r *Cluster) promoteReadReplica(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) promoteReadReplica(ctx context.Context, client *rds.Client) error {
 	_, err := client.PromoteReadReplicaDBCluster(ctx,
 		&rds.PromoteReadReplicaDBClusterInput{
 			DBClusterIdentifier: aws.String(r.ClusterIdentifier),
@@ -1055,9 +1065,9 @@ func (r *Cluster) promoteReadReplica(ctx context.Context, client *rds.Client) er
 // membership. Only removal is supported: a cluster already in a global cluster
 // can be unjoined, but adding or switching membership in place is rejected. On
 // removal the cluster is unjoined and waited on; any other change is an error.
-func (r *Cluster) updateGlobalMembership(
+func (r *ClusterResource) updateGlobalMembership(
 	ctx context.Context, client *rds.Client,
-	prior runtime.Prior[Cluster, *ClusterOutput], arn string,
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput], arn string,
 ) error {
 	desired := aws.ToString(r.GlobalClusterIdentifier)
 	priorID := prior.Outputs.GlobalClusterIdentifier
@@ -1078,7 +1088,7 @@ func (r *Cluster) updateGlobalMembership(
 // cluster ARN. A global-cluster-not-found fault, or a message that the cluster is
 // not found in the global cluster, means the membership is already gone, which is
 // the outcome the removal wants.
-func (r *Cluster) removeFromGlobalCluster(
+func (r *ClusterResource) removeFromGlobalCluster(
 	ctx context.Context, client *rds.Client, globalID, arn string,
 ) error {
 	_, err := client.RemoveFromGlobalCluster(ctx, &rds.RemoveFromGlobalClusterInput{
@@ -1096,7 +1106,7 @@ func (r *Cluster) removeFromGlobalCluster(
 
 // reconcileRoles associates the IAM role ARNs added since the prior apply and
 // disassociates the ones removed.
-func (r *Cluster) reconcileRoles(
+func (r *ClusterResource) reconcileRoles(
 	ctx context.Context, client *rds.Client, priorRoles *[]string,
 ) error {
 	priorList := ptr.Value(priorRoles)
@@ -1127,7 +1137,7 @@ func (r *Cluster) reconcileRoles(
 }
 
 // addRole associates one IAM role ARN with the cluster.
-func (r *Cluster) addRole(ctx context.Context, client *rds.Client, roleArn string) error {
+func (r *ClusterResource) addRole(ctx context.Context, client *rds.Client, roleArn string) error {
 	_, err := client.AddRoleToDBCluster(ctx, &rds.AddRoleToDBClusterInput{
 		DBClusterIdentifier: aws.String(r.ClusterIdentifier),
 		RoleArn:             aws.String(roleArn),
@@ -1139,7 +1149,11 @@ func (r *Cluster) addRole(ctx context.Context, client *rds.Client, roleArn strin
 }
 
 // removeRole disassociates one IAM role ARN from the cluster.
-func (r *Cluster) removeRole(ctx context.Context, client *rds.Client, roleArn string) error {
+func (r *ClusterResource) removeRole(
+	ctx context.Context,
+	client *rds.Client,
+	roleArn string,
+) error {
 	_, err := client.RemoveRoleFromDBCluster(ctx, &rds.RemoveRoleFromDBClusterInput{
 		DBClusterIdentifier: aws.String(r.ClusterIdentifier),
 		RoleArn:             aws.String(roleArn),
@@ -1152,7 +1166,7 @@ func (r *Cluster) removeRole(ctx context.Context, client *rds.Client, roleArn st
 
 // engineModeIs reports whether the cluster's engine mode equals mode. RDS treats
 // an unset engine mode as provisioned, so an absent value matches "provisioned".
-func (r *Cluster) engineModeIs(mode string) bool {
+func (r *ClusterResource) engineModeIs(mode string) bool {
 	if r.EngineMode == nil {
 		return mode == "provisioned"
 	}
@@ -1209,19 +1223,19 @@ var clusterAvailablePending = map[string]bool{
 // A transient not-found while the cluster is still settling keeps the wait going;
 // the returned describe holds the computed ARN, endpoints, and resolved engine
 // version that the create response lacks.
-func (r *Cluster) waitCreated(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) waitCreated(ctx context.Context, client *rds.Client) error {
 	return r.waitAvailableStatus(ctx, client, "created", clusterCreatePending, false, true)
 }
 
 // waitUpdated waits for the cluster to reach available with no pending modified
 // values after a modify.
-func (r *Cluster) waitUpdated(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) waitUpdated(ctx context.Context, client *rds.Client) error {
 	return r.waitAvailableStatus(ctx, client, "updated", clusterUpdatePending, true, false)
 }
 
 // waitAvailable waits for the cluster to reach available with no pending modified
 // values after a promotion or a global unjoin.
-func (r *Cluster) waitAvailable(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) waitAvailable(ctx context.Context, client *rds.Client) error {
 	return r.waitAvailableStatus(ctx, client, "available", clusterAvailablePending, true, false)
 }
 
@@ -1231,7 +1245,7 @@ func (r *Cluster) waitAvailable(ctx context.Context, client *rds.Client) error {
 // pending modified values is treated as not yet settled. When tolerateMissing is
 // set, a not-found cluster is treated as still settling rather than as drift,
 // which suits the window right after a create.
-func (r *Cluster) waitAvailableStatus(
+func (r *ClusterResource) waitAvailableStatus(
 	ctx context.Context, client *rds.Client, verb string,
 	pending map[string]bool, noPending, tolerateMissing bool,
 ) error {
@@ -1262,7 +1276,7 @@ func (r *Cluster) waitAvailableStatus(
 // waitDeleted waits for the cluster to disappear after a delete. The cluster
 // keeps describing for a while after the delete call accepts, so the delete is
 // not complete until the describe returns not-found.
-func (r *Cluster) waitDeleted(ctx context.Context, client *rds.Client) error {
+func (r *ClusterResource) waitDeleted(ctx context.Context, client *rds.Client) error {
 	what := fmt.Sprintf("db cluster %s to be deleted", r.ClusterIdentifier)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := findCluster(ctx, client, r.ClusterIdentifier)

@@ -25,7 +25,7 @@ const policyTypeStep = "StepScaling"
 // policyTypeTargetTracking is the target-tracking policy type.
 const policyTypeTargetTracking = "TargetTrackingScaling"
 
-// Policy is an EC2 Auto Scaling scaling policy: a rule that changes an Auto
+// PolicyResource is an EC2 Auto Scaling scaling policy: a rule that changes an Auto
 // Scaling group's size in response to a CloudWatch alarm or a tracked target.
 // The whole resource is one PutScalingPolicy upsert, used for both create and
 // update, with no waiters or transient retries. Its complexity is the policy
@@ -38,7 +38,7 @@ const policyTypeTargetTracking = "TargetTrackingScaling"
 // PredictiveScaling remains a valid policy type, but its
 // predictive-scaling-configuration block is not modeled here and is left for a
 // future addition.
-type Policy struct {
+type PolicyResource struct {
 	AutoScalingGroupName    string                             `ub:"autoscaling-group-name"`
 	Name                    string                             `ub:"name"`
 	PolicyType              *string                            `ub:"policy-type"`
@@ -64,25 +64,25 @@ type PolicyStepAdjustment struct {
 	MetricIntervalUpperBound *float64 `ub:"metric-interval-upper-bound"`
 }
 
-// PolicyOutput holds the values the API computes or fills for a scaling policy.
+// PolicyResourceOutput holds the values the API computes or fills for a scaling policy.
 // The ARN is the policy's handle. The group and policy names are kept so a
 // replacement's delete, which receives the prior outputs, targets the old
 // policy. The metric aggregation type is filled with Average for a step policy
 // that omits it, so a consumer reads the value the cloud settled on.
-type PolicyOutput struct {
+type PolicyResourceOutput struct {
 	Arn                   string `ub:"arn"`
 	AutoScalingGroupName  string `ub:"autoscaling-group-name"`
 	Name                  string `ub:"name"`
 	MetricAggregationType string `ub:"metric-aggregation-type"`
 }
 
-func (r *Policy) SchemaVersion() int { return 1 }
+func (r *PolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs the API fixes when a policy is created. The
 // group name and the policy name together form the policy's identity; a change
 // to either requires a new policy. Every other field is reconciled in place by
 // re-issuing PutScalingPolicy.
-func (r *Policy) ReplaceFields() []string {
+func (r *PolicyResource) ReplaceFields() []string {
 	return []string{"autoscaling-group-name", "name"}
 }
 
@@ -96,7 +96,7 @@ func (r *Policy) ReplaceFields() []string {
 // metric choice, the metric-math-versus-inline choice, and the period and
 // string-length bounds) stay enforced by the API, matching the constraint
 // vocabulary's reach.
-func (r Policy) Constraints() []constraint.Constraint {
+func (r PolicyResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.PolicyType)).
 			Require(constraint.OneOf(r.PolicyType, "SimpleScaling", "StepScaling",
@@ -143,7 +143,7 @@ func (r Policy) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error) {
+func (r *PolicyResource) Create(ctx context.Context, cfg *awsCfg) (*PolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (r *Policy) Create(ctx context.Context, cfg *awsCfg) (*PolicyOutput, error)
 // always sent; the enabled flag defaults to true. Every other field is sent only
 // for the policy types it is valid for, so a value left over from a different
 // type never reaches the API.
-func (r *Policy) putInput() *autoscaling.PutScalingPolicyInput {
+func (r *PolicyResource) putInput() *autoscaling.PutScalingPolicyInput {
 	in := &autoscaling.PutScalingPolicyInput{
 		AutoScalingGroupName: aws.String(r.AutoScalingGroupName),
 		PolicyName:           aws.String(r.Name),
@@ -192,7 +192,7 @@ func (r *Policy) putInput() *autoscaling.PutScalingPolicyInput {
 
 // policyType returns the effective policy type, defaulting to SimpleScaling when
 // none is given, the same default the API applies.
-func (r *Policy) policyType() string {
+func (r *PolicyResource) policyType() string {
 	if r.PolicyType != nil {
 		return *r.PolicyType
 	}
@@ -201,18 +201,17 @@ func (r *Policy) policyType() string {
 
 // enabled returns the effective enabled flag, defaulting to true, and is always
 // sent so the policy's state is explicit.
-func (r *Policy) enabled() bool {
+func (r *PolicyResource) enabled() bool {
 	if r.Enabled != nil {
 		return *r.Enabled
 	}
 	return true
 }
 
-func (r *Policy) Read(
+func (r *PolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PolicyOutput) (*PolicyOutput,
-	error,
+	prior *PolicyResourceOutput) (*PolicyResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -227,9 +226,9 @@ func (r *Policy) Read(
 // reporting the resource gone, so a transient miss does not make a fresh policy
 // look like it needs recreating. In the steady state a missing policy is drift
 // and maps to runtime.ErrNotFound.
-func (r *Policy) read(
+func (r *PolicyResource) read(
 	ctx context.Context, client *autoscaling.Client, created bool,
-) (*PolicyOutput, error) {
+) (*PolicyResourceOutput, error) {
 	var policy *autoscalingtypes.ScalingPolicy
 	probe := func(ctx context.Context) (bool, error) {
 		p, err := findPolicy(ctx, client, r.AutoScalingGroupName, r.Name)
@@ -253,7 +252,7 @@ func (r *Policy) read(
 	} else if _, err := probe(ctx); err != nil {
 		return nil, err
 	}
-	return &PolicyOutput{
+	return &PolicyResourceOutput{
 		Arn:                   aws.ToString(policy.PolicyARN),
 		AutoScalingGroupName:  aws.ToString(policy.AutoScalingGroupName),
 		Name:                  aws.ToString(policy.PolicyName),
@@ -261,9 +260,9 @@ func (r *Policy) read(
 	}, nil
 }
 
-func (r *Policy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Policy, *PolicyOutput],
-) (*PolicyOutput, error) {
+func (r *PolicyResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[PolicyResource, *PolicyResourceOutput],
+) (*PolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -282,7 +281,7 @@ func (r *Policy) Update(
 // changed reports whether any input that rides PutScalingPolicy differs from the
 // prior inputs. The group name and policy name are not tested: a change to
 // either replaces the policy rather than updating it.
-func (r *Policy) changed(prior runtime.Prior[Policy, *PolicyOutput]) bool {
+func (r *PolicyResource) changed(prior runtime.Prior[PolicyResource, *PolicyResourceOutput]) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.PolicyType, r.PolicyType) ||
 		runtime.Changed(p.Enabled, r.Enabled) ||
@@ -296,7 +295,11 @@ func (r *Policy) changed(prior runtime.Prior[Policy, *PolicyOutput]) bool {
 		runtime.Changed(p.TargetTracking, r.TargetTracking)
 }
 
-func (r *Policy) Delete(ctx context.Context, cfg *awsCfg, prior *PolicyOutput) error {
+func (r *PolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *PolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -13,12 +13,12 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// Route manages a route on an API Gateway v2 API: the route key that matches
+// RouteResource manages a route on an API Gateway v2 API: the route key that matches
 // incoming requests plus the authorization, request validation, and target
 // settings bound to that key. A route belongs to one API for life, so a
 // change to api-id replaces it; every other field, the route key included,
 // changes in place.
-type Route struct {
+type RouteResource struct {
 	// ApiId is the API the route belongs to. Changing it replaces the route.
 	ApiId string `ub:"api-id"`
 	// RouteKey selects the requests the route handles. For HTTP APIs it is
@@ -59,21 +59,21 @@ type Route struct {
 	Target *string `ub:"target"`
 }
 
-// RouteOutput holds the identity of a route. API Gateway generates the route
+// RouteResourceOutput holds the identity of a route. API Gateway generates the route
 // id; the api id is recorded beside it because the pair addresses every call
 // on the route and GetRoute does not echo it back. The api id is fixed for
 // the life of the route, so recording it cannot hide drift.
-type RouteOutput struct {
+type RouteResourceOutput struct {
 	ApiId   string `ub:"api-id"`
 	RouteId string `ub:"route-id"`
 }
 
-func (r *Route) SchemaVersion() int { return 1 }
+func (r *RouteResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs fixed at create time. A route cannot move
 // between APIs, so a new api-id means a new route. The route key, despite
 // naming the route, updates in place.
-func (r *Route) ReplaceFields() []string {
+func (r *RouteResource) ReplaceFields() []string {
 	return []string{"api-id"}
 }
 
@@ -82,7 +82,7 @@ func (r *Route) ReplaceFields() []string {
 // authorizer, so they require one. The operation name and target also have
 // API-enforced maximum lengths (64 and 128 characters); only their non-empty
 // minimum is checked here.
-func (r Route) Constraints() []constraint.Constraint {
+func (r RouteResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.AuthorizationType)).
 			Require(constraint.OneOf(r.AuthorizationType, "NONE", "AWS_IAM", "CUSTOM", "JWT")).
@@ -99,7 +99,7 @@ func (r Route) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
+func (r *RouteResource) Create(ctx context.Context, cfg *awsCfg) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 	}
 	// The create response holds the route id and nothing settles afterward,
 	// so the outputs come straight from it.
-	return &RouteOutput{
+	return &RouteResourceOutput{
 		ApiId:   r.ApiId,
 		RouteId: aws.ToString(resp.RouteId),
 	}, nil
@@ -159,7 +159,11 @@ func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 // planned api-id replacement still reads the old route as existing. A
 // NotFoundException covers both a deleted route and a deleted parent API,
 // and either one correctly plans a recreate.
-func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*RouteOutput, error) {
+func (r *RouteResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RouteResourceOutput,
+) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -177,7 +181,7 @@ func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*Rou
 	if resp == nil {
 		return nil, fmt.Errorf("get route %s: empty response", prior.RouteId)
 	}
-	return &RouteOutput{
+	return &RouteResourceOutput{
 		ApiId:   prior.ApiId,
 		RouteId: aws.ToString(resp.RouteId),
 	}, nil
@@ -190,9 +194,9 @@ func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*Rou
 // are the exception: the patch map only adds or overwrites keys, so departed
 // keys are removed first with DeleteRouteRequestParameter, and when those
 // removals are the whole change the patch call is skipped.
-func (r *Route) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Route, *RouteOutput],
-) (*RouteOutput, error) {
+func (r *RouteResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput],
+) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -289,7 +293,7 @@ func (r *Route) Update(
 // outputs so that a replacement deletes the old route rather than the new
 // one's coordinates. A NotFoundException means the route is already gone,
 // which is the desired end state.
-func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) error {
+func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, prior *RouteResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -313,8 +317,10 @@ func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) err
 // diff the API needs: a flipped required flag deletes the key here and
 // re-adds it through the following patch. Each delete tolerates
 // NotFoundException, since a parameter already gone needs no removal.
-func (r *Route) removeDepartedParameters(
-	ctx context.Context, client *apigatewayv2.Client, prior runtime.Prior[Route, *RouteOutput],
+func (r *RouteResource) removeDepartedParameters(
+	ctx context.Context,
+	client *apigatewayv2.Client,
+	prior runtime.Prior[RouteResource, *RouteResourceOutput],
 ) error {
 	var keys []string
 	for key, required := range ptr.Value(prior.Inputs.RequestParameters) {

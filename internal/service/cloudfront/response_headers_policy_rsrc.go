@@ -12,7 +12,7 @@ import (
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
-// ResponseHeadersPolicy manages a CloudFront response headers policy: a named
+// ResponseHeadersPolicyResource manages a CloudFront response headers policy: a named
 // set of HTTP headers a distribution adds to or removes from its responses,
 // grouped into CORS, custom, removed, security, and server-timing
 // configurations. CloudFront replaces the whole policy on every update rather
@@ -20,7 +20,7 @@ import (
 // delete is guarded by the policy's current version, an ETag that the create and
 // read both return; the ETag is an output the update and delete pass back as the
 // IfMatch concurrency token.
-type ResponseHeadersPolicy struct {
+type ResponseHeadersPolicyResource struct {
 	Name                      string                              `ub:"name"`
 	Comment                   *string                             `ub:"comment"`
 	CorsConfig                *ResponseHeadersPolicyCors          `ub:"cors-config"`
@@ -30,24 +30,24 @@ type ResponseHeadersPolicy struct {
 	ServerTimingHeadersConfig *ResponseHeadersPolicyServerTiming  `ub:"server-timing-headers-config"`
 }
 
-// ResponseHeadersPolicyOutput holds the values CloudFront computes for a
+// ResponseHeadersPolicyResourceOutput holds the values CloudFront computes for a
 // response headers policy. Id is the stable handle used to read, update, and
 // delete it and the value a distribution links the policy by. ETag is the
 // policy's current version, the concurrency token CloudFront requires as
 // IfMatch on an update or delete. The policy's ARN is omitted: composing it
 // needs the account id, and the policy is referenced by id, as the origin
 // access control resource is.
-type ResponseHeadersPolicyOutput struct {
+type ResponseHeadersPolicyResourceOutput struct {
 	Id   string `ub:"id"`
 	ETag string `ub:"etag"`
 }
 
-func (r *ResponseHeadersPolicy) SchemaVersion() int { return 1 }
+func (r *ResponseHeadersPolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields is empty: every setting of a response headers policy reconciles
 // in place through UpdateResponseHeadersPolicy, including the name, so none
 // forces a new resource.
-func (r *ResponseHeadersPolicy) ReplaceFields() []string {
+func (r *ResponseHeadersPolicyResource) ReplaceFields() []string {
 	return nil
 }
 
@@ -60,7 +60,7 @@ func (r *ResponseHeadersPolicy) ReplaceFields() []string {
 // rule holds whether or not the server-timing block is set. The
 // access-control-allow-methods values stay API-enforced, since the constraint
 // layer cannot express a per-element enum over a list nested inside a block.
-func (r ResponseHeadersPolicy) Constraints() []constraint.Constraint {
+func (r ResponseHeadersPolicyResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtLeastOneOf(r.CorsConfig, r.CustomHeadersConfig, r.RemoveHeadersConfig,
 			r.SecurityHeadersConfig, r.ServerTimingHeadersConfig),
@@ -85,7 +85,7 @@ func (r ResponseHeadersPolicy) Constraints() []constraint.Constraint {
 // config builds the ResponseHeadersPolicyConfig sent on create and update. Each
 // configuration block expands only when set; the comment is included only when
 // present.
-func (r *ResponseHeadersPolicy) config() *cloudfronttypes.ResponseHeadersPolicyConfig {
+func (r *ResponseHeadersPolicyResource) config() *cloudfronttypes.ResponseHeadersPolicyConfig {
 	return &cloudfronttypes.ResponseHeadersPolicyConfig{
 		Name:                      aws.String(r.Name),
 		Comment:                   r.Comment,
@@ -97,9 +97,9 @@ func (r *ResponseHeadersPolicy) config() *cloudfronttypes.ResponseHeadersPolicyC
 	}
 }
 
-func (r *ResponseHeadersPolicy) Create(
+func (r *ResponseHeadersPolicyResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*ResponseHeadersPolicyOutput, error) {
+) (*ResponseHeadersPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -118,12 +118,14 @@ func (r *ResponseHeadersPolicy) Create(
 	// The create response includes the id and the ETag, the concurrency token a
 	// later update or delete passes as IfMatch, so the outputs come straight from
 	// it with no follow-up read.
-	return &ResponseHeadersPolicyOutput{Id: id, ETag: aws.ToString(resp.ETag)}, nil
+	return &ResponseHeadersPolicyResourceOutput{Id: id, ETag: aws.ToString(resp.ETag)}, nil
 }
 
-func (r *ResponseHeadersPolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *ResponseHeadersPolicyOutput,
-) (*ResponseHeadersPolicyOutput, error) {
+func (r *ResponseHeadersPolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ResponseHeadersPolicyResourceOutput,
+) (*ResponseHeadersPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -135,9 +137,9 @@ func (r *ResponseHeadersPolicy) Read(
 // gone policy maps to runtime.ErrNotFound so a plan recreates it. The ETag
 // comes from the top level of the response, not from the config, and is the
 // version token a later update or delete passes as IfMatch.
-func (r *ResponseHeadersPolicy) read(
+func (r *ResponseHeadersPolicyResource) read(
 	ctx context.Context, client *cloudfront.Client, id string,
-) (*ResponseHeadersPolicyOutput, error) {
+) (*ResponseHeadersPolicyResourceOutput, error) {
 	resp, err := client.GetResponseHeadersPolicy(ctx,
 		&cloudfront.GetResponseHeadersPolicyInput{
 			Id: aws.String(id),
@@ -148,16 +150,16 @@ func (r *ResponseHeadersPolicy) read(
 		}
 		return nil, fmt.Errorf("get response headers policy %s: %w", id, err)
 	}
-	return &ResponseHeadersPolicyOutput{
+	return &ResponseHeadersPolicyResourceOutput{
 		Id:   id,
 		ETag: aws.ToString(resp.ETag),
 	}, nil
 }
 
-func (r *ResponseHeadersPolicy) Update(
+func (r *ResponseHeadersPolicyResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[ResponseHeadersPolicy, *ResponseHeadersPolicyOutput],
-) (*ResponseHeadersPolicyOutput, error) {
+	prior runtime.Prior[ResponseHeadersPolicyResource, *ResponseHeadersPolicyResourceOutput],
+) (*ResponseHeadersPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -179,9 +181,8 @@ func (r *ResponseHeadersPolicy) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *ResponseHeadersPolicy) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ResponseHeadersPolicyOutput,
-) error {
+func (r *ResponseHeadersPolicyResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *ResponseHeadersPolicyResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

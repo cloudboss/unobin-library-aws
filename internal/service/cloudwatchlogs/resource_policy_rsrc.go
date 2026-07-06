@@ -24,23 +24,23 @@ var (
 		`^(aws|aws-managed|third-party|aws-marketplace|partner-managed|\d{12}|cw.{10})$`)
 )
 
-// ResourcePolicy manages a CloudWatch Logs resource policy. The resource has
+// ResourcePolicyResource manages a CloudWatch Logs resource policy. The resource has
 // two identity modes: policy-name creates an account-scoped policy, while
 // resource-arn creates a resource-scoped policy attached to that ARN. The
 // identity fields force replacement; the policy document is updated in place by
 // PutResourcePolicy. The document must be valid JSON and is compacted before it
 // is sent so insignificant whitespace does not cause a cloud write.
-type ResourcePolicy struct {
+type ResourcePolicyResource struct {
 	PolicyDocument string  `ub:"policy-document"`
 	PolicyName     *string `ub:"policy-name"`
 	ResourceArn    *string `ub:"resource-arn"`
 }
 
-// ResourcePolicyOutput holds the policy handle plus values CloudWatch Logs
+// ResourcePolicyResourceOutput holds the policy handle plus values CloudWatch Logs
 // returns from DescribeResourcePolicies. The identity fields are stored so a
 // replacement deletes the prior policy, and the resource-scoped revision ID is
 // stored because updates and deletes use it as the expected revision token.
-type ResourcePolicyOutput struct {
+type ResourcePolicyResourceOutput struct {
 	PolicyDocument string  `ub:"policy-document"`
 	PolicyName     *string `ub:"policy-name"`
 	PolicyScope    string  `ub:"policy-scope"`
@@ -48,12 +48,12 @@ type ResourcePolicyOutput struct {
 	RevisionId     *string `ub:"revision-id"`
 }
 
-func (r *ResourcePolicy) SchemaVersion() int { return 1 }
+func (r *ResourcePolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the fields that choose the policy's identity mode and
 // handle. Changing either names a different policy, so the old policy is
 // deleted and a new one is put.
-func (r *ResourcePolicy) ReplaceFields() []string {
+func (r *ResourcePolicyResource) ReplaceFields() []string {
 	return []string{
 		"policy-name",
 		"resource-arn",
@@ -63,20 +63,20 @@ func (r *ResourcePolicy) ReplaceFields() []string {
 // Constraints declares the two mutually exclusive CloudWatch Logs resource
 // policy identity modes. The ARN parse and regex checks run in validate because
 // they need ARN parsing and regular expressions.
-func (r ResourcePolicy) Constraints() []constraint.Constraint {
+func (r ResourcePolicyResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.PolicyName, r.ResourceArn),
 	}
 }
 
-func (r *ResourcePolicy) ValidateInputs(_ context.Context, _ *awsCfg) error {
+func (r *ResourcePolicyResource) ValidateInputs(_ context.Context, _ *awsCfg) error {
 	_, err := r.validate()
 	return err
 }
 
-func (r *ResourcePolicy) Create(
+func (r *ResourcePolicyResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*ResourcePolicyOutput, error) {
+) (*ResourcePolicyResourceOutput, error) {
 	document, err := r.validate()
 	if err != nil {
 		return nil, err
@@ -91,9 +91,11 @@ func (r *ResourcePolicy) Create(
 	return r.read(ctx, client, r.key(nil))
 }
 
-func (r *ResourcePolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *ResourcePolicyOutput,
-) (*ResourcePolicyOutput, error) {
+func (r *ResourcePolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ResourcePolicyResourceOutput,
+) (*ResourcePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -101,10 +103,10 @@ func (r *ResourcePolicy) Read(
 	return r.read(ctx, client, r.key(prior))
 }
 
-func (r *ResourcePolicy) Update(
+func (r *ResourcePolicyResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[ResourcePolicy, *ResourcePolicyOutput],
-) (*ResourcePolicyOutput, error) {
+	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
+) (*ResourcePolicyResourceOutput, error) {
 	document, err := r.validate()
 	if err != nil {
 		return nil, err
@@ -122,9 +124,8 @@ func (r *ResourcePolicy) Update(
 	return r.read(ctx, client, r.key(prior.Outputs))
 }
 
-func (r *ResourcePolicy) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ResourcePolicyOutput,
-) error {
+func (r *ResourcePolicyResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *ResourcePolicyResourceOutput) error {
 	if prior == nil {
 		return errors.New("delete resource policy: missing prior output")
 	}
@@ -145,7 +146,7 @@ func (r *ResourcePolicy) Delete(
 	return nil
 }
 
-func (r *ResourcePolicy) putInput(
+func (r *ResourcePolicyResource) putInput(
 	document string, expectedRevisionId *string,
 ) *cloudwatchlogs.PutResourcePolicyInput {
 	in := &cloudwatchlogs.PutResourcePolicyInput{
@@ -162,9 +163,9 @@ func (r *ResourcePolicy) putInput(
 	return in
 }
 
-func (r *ResourcePolicy) read(
+func (r *ResourcePolicyResource) read(
 	ctx context.Context, client *cloudwatchlogs.Client, key resourcePolicyKey,
-) (*ResourcePolicyOutput, error) {
+) (*ResourcePolicyResourceOutput, error) {
 	if err := key.validate(); err != nil {
 		return nil, err
 	}
@@ -215,8 +216,8 @@ func findResourcePolicy(
 
 func resourcePolicyOutput(
 	key resourcePolicyKey, policy *cloudwatchlogstypes.ResourcePolicy,
-) *ResourcePolicyOutput {
-	out := &ResourcePolicyOutput{
+) *ResourcePolicyResourceOutput {
+	out := &ResourcePolicyResourceOutput{
 		PolicyDocument: aws.ToString(policy.PolicyDocument),
 		PolicyName:     nonEmptyStringPtr(policy.PolicyName),
 		PolicyScope:    string(policy.PolicyScope),
@@ -239,8 +240,8 @@ func resourcePolicyOutput(
 	return out
 }
 
-func (r *ResourcePolicy) shouldPut(
-	desiredDocument string, prior runtime.Prior[ResourcePolicy, *ResourcePolicyOutput],
+func (r *ResourcePolicyResource) shouldPut(
+	desiredDocument string, prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
 ) bool {
 	priorDocument, err := normalizeResourcePolicyDocument(prior.Inputs.PolicyDocument)
 	if err != nil || priorDocument != desiredDocument {
@@ -253,7 +254,7 @@ func (r *ResourcePolicy) shouldPut(
 	return err != nil || observedDocument != desiredDocument
 }
 
-func (r *ResourcePolicy) key(prior *ResourcePolicyOutput) resourcePolicyKey {
+func (r *ResourcePolicyResource) key(prior *ResourcePolicyResourceOutput) resourcePolicyKey {
 	if prior != nil {
 		if resourceArn := effectiveOptionalString(prior.ResourceArn); resourceArn != "" {
 			return resourcePolicyKey{ResourceArn: resourceArn}
@@ -271,7 +272,7 @@ func (r *ResourcePolicy) key(prior *ResourcePolicyOutput) resourcePolicyKey {
 	return resourcePolicyKey{}
 }
 
-func (r *ResourcePolicy) validate() (string, error) {
+func (r *ResourcePolicyResource) validate() (string, error) {
 	document, err := normalizeResourcePolicyDocument(r.PolicyDocument)
 	if err != nil {
 		return "", err
@@ -323,7 +324,7 @@ func validResourcePolicyARN(s string) bool {
 }
 
 func resourcePolicyExpectedRevisionId(
-	prior runtime.Prior[ResourcePolicy, *ResourcePolicyOutput],
+	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
 ) *string {
 	if prior.Observed != nil {
 		if revisionId := effectiveOptionalString(prior.Observed.RevisionId); revisionId != "" {
@@ -339,8 +340,7 @@ func resourcePolicyExpectedRevisionId(
 }
 
 func deleteResourcePolicyInput(
-	prior *ResourcePolicyOutput,
-) (*cloudwatchlogs.DeleteResourcePolicyInput, error) {
+	prior *ResourcePolicyResourceOutput) (*cloudwatchlogs.DeleteResourcePolicyInput, error) {
 	resourceArn := effectiveOptionalString(prior.ResourceArn)
 	if resourceArn != "" {
 		revisionId := effectiveOptionalString(prior.RevisionId)

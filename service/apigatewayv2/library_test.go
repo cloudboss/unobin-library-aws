@@ -67,13 +67,13 @@ func TestLibraryRegistersAPIGatewayV2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"api":         reflect.TypeFor[*svc.ApiOutput](),
-		"integration": reflect.TypeFor[*svc.IntegrationOutput](),
-		"authorizer":  reflect.TypeFor[*svc.AuthorizerOutput](),
-		"route":       reflect.TypeFor[*svc.RouteOutput](),
-		"stage":       reflect.TypeFor[*svc.StageOutput](),
-		"domain-name": reflect.TypeFor[*svc.DomainNameOutput](),
-		"api-mapping": reflect.TypeFor[*svc.ApiMappingOutput](),
+		"api":         reflect.TypeFor[*svc.ApiResourceOutput](),
+		"integration": reflect.TypeFor[*svc.IntegrationResourceOutput](),
+		"authorizer":  reflect.TypeFor[*svc.AuthorizerResourceOutput](),
+		"route":       reflect.TypeFor[*svc.RouteResourceOutput](),
+		"stage":       reflect.TypeFor[*svc.StageResourceOutput](),
+		"domain-name": reflect.TypeFor[*svc.DomainNameResourceOutput](),
+		"api-mapping": reflect.TypeFor[*svc.ApiMappingResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

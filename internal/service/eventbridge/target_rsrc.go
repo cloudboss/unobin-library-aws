@@ -22,7 +22,7 @@ import (
 // rule's targets are read in as few calls as possible.
 const listTargetsLimit = 100
 
-// Target attaches one destination to an EventBridge rule, the way
+// TargetResource attaches one destination to an EventBridge rule, the way
 // AWS::Events::Target's underlying model treats a single entry in the rule's
 // target list. There is no separate target API object: a target is written,
 // read, and removed as a member of its rule through PutTargets,
@@ -33,7 +33,7 @@ const listTargetsLimit = 100
 // target; the destination ARN and every parameter block update in place. The
 // input or input transformation comes from at most one of three mutually
 // exclusive forms.
-type Target struct {
+type TargetResource struct {
 	Rule                        string                             `ub:"rule"`
 	Arn                         string                             `ub:"arn"`
 	EventBusName                *string                            `ub:"event-bus-name"`
@@ -56,21 +56,21 @@ type Target struct {
 	ForceDestroy                *bool                              `ub:"force-destroy"`
 }
 
-// TargetOutput holds the settled target id. When the input omits it, a unique
+// TargetResourceOutput holds the settled target id. When the input omits it, a unique
 // id is generated and recorded here so it becomes the target's stable identity:
 // the next plan reads the target by this id, and an omitted input does not
 // regenerate the id and force a replace.
-type TargetOutput struct {
+type TargetResourceOutput struct {
 	TargetId string `ub:"target-id"`
 }
 
-func (r *Target) SchemaVersion() int { return 1 }
+func (r *TargetResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that form the target's identity. The rule a
 // target belongs to, the event bus that rule lives on, and the target id are
 // fixed once written; a change to any of them removes the old target and adds a
 // new one. The destination ARN and every parameter update in place.
-func (r *Target) ReplaceFields() []string {
+func (r *TargetResource) ReplaceFields() []string {
 	return []string{"event-bus-name", "rule", "target-id"}
 }
 
@@ -81,7 +81,7 @@ func (r *Target) ReplaceFields() []string {
 // members, and collection counts their doc comments state. String length
 // limits and the reserved AWS input-path key prefix are left to the
 // EventBridge API.
-func (r Target) Constraints() []constraint.Constraint {
+func (r TargetResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.Input, r.InputPath, r.InputTransformer),
 		constraint.Must(constraint.MaxItems(r.InputTransformer.InputPaths, 100)).
@@ -160,7 +160,7 @@ func (r Target) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Target) Create(ctx context.Context, cfg *awsCfg) (*TargetOutput, error) {
+func (r *TargetResource) Create(ctx context.Context, cfg *awsCfg) (*TargetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -175,11 +175,10 @@ func (r *Target) Create(ctx context.Context, cfg *awsCfg) (*TargetOutput, error)
 	return r.read(ctx, client, targetID)
 }
 
-func (r *Target) Read(
+func (r *TargetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TargetOutput) (*TargetOutput,
-	error,
+	prior *TargetResourceOutput) (*TargetResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -188,9 +187,9 @@ func (r *Target) Read(
 	return r.read(ctx, client, prior.TargetId)
 }
 
-func (r *Target) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Target, *TargetOutput],
-) (*TargetOutput, error) {
+func (r *TargetResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TargetResource, *TargetResourceOutput],
+) (*TargetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -208,7 +207,11 @@ func (r *Target) Update(
 	return r.read(ctx, client, targetID)
 }
 
-func (r *Target) Delete(ctx context.Context, cfg *awsCfg, prior *TargetOutput) error {
+func (r *TargetResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TargetResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -246,7 +249,11 @@ func (r *Target) Delete(ctx context.Context, cfg *awsCfg, prior *TargetOutput) e
 // non-empty failed-entry list, a silent failure channel, so the entries are
 // inspected after every call and turned into an error. Concurrent writes to one
 // rule race, so the call retries through the conflict EventBridge raises.
-func (r *Target) putTargets(ctx context.Context, client *eventbridge.Client, id string) error {
+func (r *TargetResource) putTargets(
+	ctx context.Context,
+	client *eventbridge.Client,
+	id string,
+) error {
 	in := &eventbridge.PutTargetsInput{
 		Rule:         aws.String(r.Rule),
 		EventBusName: r.EventBusName,
@@ -270,9 +277,9 @@ func (r *Target) putTargets(ctx context.Context, client *eventbridge.Client, id 
 // read finds the target by id among the rule's targets and returns its output.
 // A read maps to runtime.ErrNotFound, so a plan recreates the target, when the
 // rule itself is gone or when no target on the rule has the id.
-func (r *Target) read(
+func (r *TargetResource) read(
 	ctx context.Context, client *eventbridge.Client, id string,
-) (*TargetOutput, error) {
+) (*TargetResourceOutput, error) {
 	found, err := r.findTarget(ctx, client, id)
 	if err != nil {
 		return nil, err
@@ -280,7 +287,7 @@ func (r *Target) read(
 	if found == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &TargetOutput{TargetId: aws.ToString(found.Id)}, nil
+	return &TargetResourceOutput{TargetId: aws.ToString(found.Id)}, nil
 }
 
 // findTarget pages ListTargetsByRule for the rule and returns the target whose
@@ -288,7 +295,7 @@ func (r *Target) read(
 // not-found rather than an error, so the caller treats it as a gone target. The
 // EventBridge SDK has no paginator for this call, so the pages are walked by the
 // next-token directly.
-func (r *Target) findTarget(
+func (r *TargetResource) findTarget(
 	ctx context.Context, client *eventbridge.Client, id string,
 ) (*eventbridgetypes.Target, error) {
 	in := &eventbridge.ListTargetsByRuleInput{
@@ -320,7 +327,7 @@ func (r *Target) findTarget(
 // block. The destination ARN and id are always set; the optional role and the
 // three input forms are passed through, and each block converts itself, leaving
 // its member unset when absent.
-func (r *Target) target(id string) eventbridgetypes.Target {
+func (r *TargetResource) target(id string) eventbridgetypes.Target {
 	return eventbridgetypes.Target{
 		Id:                          aws.String(id),
 		Arn:                         aws.String(r.Arn),
@@ -346,7 +353,7 @@ func (r *Target) target(id string) eventbridgetypes.Target {
 // when none is given. The generated id is the prefix "unobin-" followed by 32
 // hex characters, 39 in all, within the 64-character limit and the
 // [0-9A-Za-z_.-] character set EventBridge accepts.
-func (r *Target) resolveTargetID() (string, error) {
+func (r *TargetResource) resolveTargetID() (string, error) {
 	if r.TargetId != nil {
 		return *r.TargetId, nil
 	}
@@ -361,7 +368,7 @@ func (r *Target) resolveTargetID() (string, error) {
 // prior inputs. It covers every parameter and the destination ARN, but not the
 // identity inputs, which trigger a replace instead of an update, nor
 // force-destroy, which acts only at delete.
-func (r *Target) targetChanged(prior Target) bool {
+func (r *TargetResource) targetChanged(prior TargetResource) bool {
 	return runtime.Changed(prior.Arn, r.Arn) ||
 		runtime.Changed(prior.RoleArn, r.RoleArn) ||
 		runtime.Changed(prior.Input, r.Input) ||

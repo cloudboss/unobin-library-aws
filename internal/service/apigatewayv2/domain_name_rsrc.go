@@ -36,13 +36,13 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// DomainName manages an API Gateway v2 custom domain and its regional endpoint
+// DomainNameResource manages an API Gateway v2 custom domain and its regional endpoint
 // configuration. API Gateway accepts exactly one domain-name-configuration, so
 // the list length and the ARN syntax are checked in validate. Endpoint-type,
 // security-policy, and routing-mode are also checked there because the service
 // accepts the documented values case-insensitively, which the constraint layer
 // cannot express compactly.
-type DomainName struct {
+type DomainNameResource struct {
 	// DomainName is the custom host name and the resource identity. It must be 1
 	// to 512 characters, counted in validate because AWS counts characters and
 	// the constraint layer counts bytes.
@@ -81,13 +81,13 @@ type DomainNameMutualTlsAuthentication struct {
 	TruststoreVersion *string `ub:"truststore-version"`
 }
 
-// DomainNameOutput holds the domain identity and the values API Gateway fills
+// DomainNameResourceOutput holds the domain identity and the values API Gateway fills
 // after creation. ApiGatewayDomainName and HostedZoneId are the Route 53 alias
 // target values. TargetDomainName repeats ApiGatewayDomainName under the Route
 // 53 alias name. Arn is composed client-side because GetDomainName does not
 // return the no-account apigateway ARN that tag calls require. Tags are the
 // user-managed tags API Gateway reports, with AWS system tags removed.
-type DomainNameOutput struct {
+type DomainNameResourceOutput struct {
 	DomainName                          string            `ub:"domain-name"`
 	Arn                                 string            `ub:"arn"`
 	ApiGatewayDomainName                string            `ub:"api-gateway-domain-name"`
@@ -102,17 +102,17 @@ type DomainNameOutput struct {
 	Tags                                map[string]string `ub:"tags"`
 }
 
-func (r *DomainName) SchemaVersion() int { return 1 }
+func (r *DomainNameResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the domain identity, the one field API Gateway cannot
 // change in place.
-func (r *DomainName) ReplaceFields() []string {
+func (r *DomainNameResource) ReplaceFields() []string {
 	return []string{"domain-name"}
 }
 
 // Constraints declares list-size and enum rules the schema can express exactly.
 // The other enum fields accept case-insensitive values and are checked in validate.
-func (r DomainName) Constraints() []constraint.Constraint {
+func (r DomainNameResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(
 			constraint.MinItems(r.DomainNameConfigurations, 1),
@@ -130,7 +130,7 @@ func (r DomainName) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *DomainName) validate() error {
+func (r *DomainNameResource) validate() error {
 	if n := utf8.RuneCountInString(r.DomainName); n < 1 || n > 512 {
 		return errors.New("domain-name must be between 1 and 512 characters")
 	}
@@ -165,7 +165,10 @@ func (r *DomainName) validate() error {
 	return nil
 }
 
-func (r *DomainName) Create(ctx context.Context, cfg *awsCfg) (*DomainNameOutput, error) {
+func (r *DomainNameResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*DomainNameResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -209,9 +212,11 @@ func (r *DomainName) Create(ctx context.Context, cfg *awsCfg) (*DomainNameOutput
 	return out, nil
 }
 
-func (r *DomainName) Read(
-	ctx context.Context, cfg *awsCfg, prior *DomainNameOutput,
-) (*DomainNameOutput, error) {
+func (r *DomainNameResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *DomainNameResourceOutput,
+) (*DomainNameResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -219,9 +224,9 @@ func (r *DomainName) Read(
 	return r.read(ctx, client, prior.DomainName)
 }
 
-func (r *DomainName) read(
+func (r *DomainNameResource) read(
 	ctx context.Context, client *apigatewayv2.Client, domainName string,
-) (*DomainNameOutput, error) {
+) (*DomainNameResourceOutput, error) {
 	resp, err := getDomainName(ctx, client, domainName)
 	if err != nil {
 		if isNotFound(err) {
@@ -235,9 +240,11 @@ func (r *DomainName) read(
 	return domainNameOutput(client.Options().Region, domainName, resp), nil
 }
 
-func (r *DomainName) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[DomainName, *DomainNameOutput],
-) (*DomainNameOutput, error) {
+func (r *DomainNameResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput],
+) (*DomainNameResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -271,7 +278,11 @@ func (r *DomainName) Update(
 	return r.read(ctx, client, domainName)
 }
 
-func (r *DomainName) Delete(ctx context.Context, cfg *awsCfg, prior *DomainNameOutput) error {
+func (r *DomainNameResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *DomainNameResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -288,8 +299,8 @@ func (r *DomainName) Delete(ctx context.Context, cfg *awsCfg, prior *DomainNameO
 	return nil
 }
 
-func (r *DomainName) tagsNeedSync(
-	prior runtime.Prior[DomainName, *DomainNameOutput],
+func (r *DomainNameResource) tagsNeedSync(
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput],
 ) bool {
 	desired := domainNameUserTags(ptr.Value(r.Tags))
 	if !maps.Equal(domainNameUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
@@ -298,8 +309,8 @@ func (r *DomainName) tagsNeedSync(
 	return prior.Observed != nil && !maps.Equal(domainNameUserTags(prior.Observed.Tags), desired)
 }
 
-func (r *DomainName) updateDomainNameInput(
-	prior runtime.Prior[DomainName, *DomainNameOutput], domainName string,
+func (r *DomainNameResource) updateDomainNameInput(
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput], domainName string,
 ) (*apigatewayv2.UpdateDomainNameInput, bool) {
 	configChanged := runtime.Changed(
 		prior.Inputs.DomainNameConfigurations, r.DomainNameConfigurations)
@@ -326,7 +337,9 @@ func (r *DomainName) updateDomainNameInput(
 	return in, true
 }
 
-func (r *DomainName) configuredConfigurationDrifted(observed *DomainNameOutput) bool {
+func (r *DomainNameResource) configuredConfigurationDrifted(
+	observed *DomainNameResourceOutput,
+) bool {
 	if observed == nil || len(r.DomainNameConfigurations) == 0 {
 		return false
 	}
@@ -343,7 +356,7 @@ func (r *DomainName) configuredConfigurationDrifted(observed *DomainNameOutput) 
 	return false
 }
 
-func (r *DomainName) configuredRoutingModeDrifted(observed *DomainNameOutput) bool {
+func (r *DomainNameResource) configuredRoutingModeDrifted(observed *DomainNameResourceOutput) bool {
 	if observed == nil || r.RoutingMode == nil {
 		return false
 	}
@@ -351,7 +364,7 @@ func (r *DomainName) configuredRoutingModeDrifted(observed *DomainNameOutput) bo
 	return ok && observed.RoutingMode != desired
 }
 
-func (r *DomainName) mutualTLSUpdate(
+func (r *DomainNameResource) mutualTLSUpdate(
 	prior *DomainNameMutualTlsAuthentication,
 ) *apigatewayv2types.MutualTlsAuthenticationInput {
 	if r.MutualTlsAuthentication == nil {
@@ -362,14 +375,14 @@ func (r *DomainName) mutualTLSUpdate(
 	return r.MutualTlsAuthentication.sdkChanged(prior)
 }
 
-func (r *DomainName) updateRoutingMode() apigatewayv2types.RoutingMode {
+func (r *DomainNameResource) updateRoutingMode() apigatewayv2types.RoutingMode {
 	if r.RoutingMode == nil {
 		return apigatewayv2types.RoutingMode("API_MAPPING_ONLY")
 	}
 	return domainNameRoutingMode(*r.RoutingMode)
 }
 
-func (r *DomainName) deleteAfterCreateFailure(
+func (r *DomainNameResource) deleteAfterCreateFailure(
 	ctx context.Context, client *apigatewayv2.Client, domainName string,
 ) {
 	_ = withConflictRetry(ctx, func(ctx context.Context) error {
@@ -513,14 +526,14 @@ func getDomainName(
 
 func domainNameOutput(
 	region, requestedName string, resp *apigatewayv2.GetDomainNameOutput,
-) *DomainNameOutput {
+) *DomainNameResourceOutput {
 	config := resp.DomainNameConfigurations[0]
 	domainName := aws.ToString(resp.DomainName)
 	if domainName == "" {
 		domainName = requestedName
 	}
 	apiGatewayDomainName := aws.ToString(config.ApiGatewayDomainName)
-	return &DomainNameOutput{
+	return &DomainNameResourceOutput{
 		DomainName:                          domainName,
 		Arn:                                 domainNameARN(region, domainName),
 		ApiGatewayDomainName:                apiGatewayDomainName,

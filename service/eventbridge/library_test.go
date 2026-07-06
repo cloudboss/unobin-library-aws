@@ -63,9 +63,9 @@ func TestLibraryRegistersEventBridgeLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"event-bus": reflect.TypeFor[*svc.EventBusOutput](),
-		"rule":      reflect.TypeFor[*svc.RuleOutput](),
-		"target":    reflect.TypeFor[*svc.TargetOutput](),
+		"event-bus": reflect.TypeFor[*svc.EventBusResourceOutput](),
+		"rule":      reflect.TypeFor[*svc.RuleResourceOutput](),
+		"target":    reflect.TypeFor[*svc.TargetResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

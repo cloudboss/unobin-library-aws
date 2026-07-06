@@ -32,11 +32,13 @@ func Library() *runtime.Library {
 		Description:   "AWS Secrets Manager library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"secret":         makeResource[svc.Secret, *svc.SecretOutput](),
-			"secret-version": makeResource[svc.SecretVersion, *svc.SecretVersionOutput](),
+			"secret":         makeResource[svc.SecretResource, *svc.SecretResourceOutput](),
+			"secret-version": makeResource[svc.SecretVersionResource, *svc.SecretVersionResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"secret-version": makeDataSource[svc.SecretVersionData, *svc.SecretVersionDataOutput](),
+			"secret-version": makeDataSource[
+				svc.SecretVersionDataSource,
+				*svc.SecretVersionDataSourceOutput](),
 		},
 	}
 }

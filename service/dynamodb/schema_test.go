@@ -18,7 +18,7 @@ import (
 func TestLibraryRegistersDynamodb(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"table": reflect.TypeFor[*svc.TableOutput](),
+		"table": reflect.TypeFor[*svc.TableResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

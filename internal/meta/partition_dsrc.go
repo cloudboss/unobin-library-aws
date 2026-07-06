@@ -2,17 +2,20 @@ package meta
 
 import "context"
 
-// Partition resolves the AWS partition that contains the configured region.
-type Partition struct{}
+// PartitionDataSource resolves the AWS partition that contains the configured region.
+type PartitionDataSource struct{}
 
-// PartitionOutput describes the resolved AWS partition.
-type PartitionOutput struct {
+// PartitionDataSourceOutput describes the resolved AWS partition.
+type PartitionDataSourceOutput struct {
 	DNSSuffix        string `ub:"dns-suffix"`
 	Partition        string `ub:"partition"`
 	ReverseDNSPrefix string `ub:"reverse-dns-prefix"`
 }
 
-func (d *Partition) Read(ctx context.Context, cfg *awsCfg) (*PartitionOutput, error) {
+func (d *PartitionDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*PartitionDataSourceOutput, error) {
 	region, err := configuredRegion(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -22,7 +25,7 @@ func (d *Partition) Read(ctx context.Context, cfg *awsCfg) (*PartitionOutput, er
 		return nil, err
 	}
 	dnsSuffix := partition.Partition.DNSSuffix()
-	return &PartitionOutput{
+	return &PartitionDataSourceOutput{
 		DNSSuffix:        dnsSuffix,
 		Partition:        partition.Partition.ID(),
 		ReverseDNSPrefix: reverseDNSPrefix(dnsSuffix),

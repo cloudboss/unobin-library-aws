@@ -17,13 +17,13 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// Stage manages a stage of an API Gateway v2 API: a named deployment of the
+// StageResource manages a stage of an API Gateway v2 API: a named deployment of the
 // API, reachable at its own URL. A stage is addressed by the pair of its API
 // id and its name, so a change to either replaces it; every other input is
 // reconciled in place. The API's protocol type, HTTP or WebSocket, decides
 // which route-setting members may be sent, so creates and updates first read
 // the API itself.
-type Stage struct {
+type StageResource struct {
 	// ApiId is the identifier of the API the stage belongs to.
 	ApiId string `ub:"api-id"`
 	// Name is the stage name: up to 128 characters of alphanumerics,
@@ -67,14 +67,14 @@ type Stage struct {
 	Tags *map[string]string `ub:"tags"`
 }
 
-// StageOutput holds the stage's identity and the values composed for it.
+// StageResourceOutput holds the stage's identity and the values composed for it.
 // The API id and name are the composite identity every later call takes, so
 // they live here for the delete after a replace. The ARN, which has no
 // account id, is the identifier the tagging calls use. The invoke URL is
 // where clients reach the stage. The deployment id is the deployment the
 // stage serves; with auto-deploy enabled AWS replaces it on its own, so each
 // auto-deployment refreshes this output on the next plan without any write.
-type StageOutput struct {
+type StageResourceOutput struct {
 	ApiId        string `ub:"api-id"`
 	Name         string `ub:"name"`
 	Arn          string `ub:"arn"`
@@ -82,12 +82,12 @@ type StageOutput struct {
 	DeploymentId string `ub:"deployment-id"`
 }
 
-func (r *Stage) SchemaVersion() int { return 1 }
+func (r *StageResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the create-only inputs. A stage is addressed by its
 // API and its name, so moving it to another API or renaming it means a new
 // stage.
-func (r *Stage) ReplaceFields() []string {
+func (r *StageResource) ReplaceFields() []string {
 	return []string{"api-id", "name"}
 }
 
@@ -98,7 +98,7 @@ func (r *Stage) ReplaceFields() []string {
 // declared here, because the protocol type lives on the referenced API and
 // is unknown at plan time; it is enforced in code by omitting those members
 // when the API is an HTTP API.
-func (r Stage) Constraints() []constraint.Constraint {
+func (r StageResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.IsTrue(r.AutoDeploy)).
 			Require(constraint.Absent(r.DeploymentId)).
@@ -120,7 +120,7 @@ func (r Stage) Constraints() []constraint.Constraint {
 
 // validate checks the length bounds the constraint layer cannot express,
 // since AWS counts characters and the length predicate counts bytes.
-func (r *Stage) validate() error {
+func (r *StageResource) validate() error {
 	if n := utf8.RuneCountInString(r.Name); n < 1 || n > 128 {
 		return errors.New("name must be between 1 and 128 characters")
 	}
@@ -130,7 +130,7 @@ func (r *Stage) validate() error {
 	return nil
 }
 
-func (r *Stage) Create(ctx context.Context, cfg *awsCfg) (*StageOutput, error) {
+func (r *StageResource) Create(ctx context.Context, cfg *awsCfg) (*StageResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -192,7 +192,11 @@ func (r *Stage) Create(ctx context.Context, cfg *awsCfg) (*StageOutput, error) {
 	return stageOutput(client.Options().Region, r.ApiId, r.Name, api, resp.DeploymentId), nil
 }
 
-func (r *Stage) Read(ctx context.Context, cfg *awsCfg, prior *StageOutput) (*StageOutput, error) {
+func (r *StageResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *StageResourceOutput,
+) (*StageResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -203,9 +207,9 @@ func (r *Stage) Read(ctx context.Context, cfg *awsCfg, prior *StageOutput) (*Sta
 // read fetches the stage and the API it belongs to and composes the
 // outputs. A stage cannot outlive its API, so a not-found on either read
 // means the stage is gone.
-func (r *Stage) read(
+func (r *StageResource) read(
 	ctx context.Context, client *apigatewayv2.Client, apiID, name string,
-) (*StageOutput, error) {
+) (*StageResourceOutput, error) {
 	stage, err := client.GetStage(ctx, &apigatewayv2.GetStageInput{
 		ApiId:     aws.String(apiID),
 		StageName: aws.String(name),
@@ -226,9 +230,9 @@ func (r *Stage) read(
 	return stageOutput(client.Options().Region, apiID, name, api, stage.DeploymentId), nil
 }
 
-func (r *Stage) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Stage, *StageOutput],
-) (*StageOutput, error) {
+func (r *StageResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[StageResource, *StageResourceOutput],
+) (*StageResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -257,7 +261,7 @@ func (r *Stage) Update(
 
 // settingsChanged reports whether any input that rides UpdateStage differs
 // from the prior apply. Tags reconcile separately and do not count.
-func (r *Stage) settingsChanged(prior Stage) bool {
+func (r *StageResource) settingsChanged(prior StageResource) bool {
 	return runtime.Changed(prior.AccessLogSettings, r.AccessLogSettings) ||
 		runtime.Changed(prior.AutoDeploy, r.AutoDeploy) ||
 		runtime.Changed(prior.ClientCertificateId, r.ClientCertificateId) ||
@@ -281,9 +285,8 @@ func (r *Stage) settingsChanged(prior Stage) bool {
 // which clears the description and detaches the certificate. The deployment
 // id keeps its last value when the input is removed, so it is sent only
 // while present.
-func (r *Stage) updateStage(
-	ctx context.Context, client *apigatewayv2.Client, apiID, name string, prior Stage,
-) error {
+func (r *StageResource) updateStage(
+	ctx context.Context, client *apigatewayv2.Client, apiID, name string, prior StageResource) error {
 	api, err := client.GetApi(ctx, &apigatewayv2.GetApiInput{ApiId: aws.String(apiID)})
 	if err != nil {
 		return fmt.Errorf("get api: %w", err)
@@ -391,7 +394,7 @@ func stageDeleteAccessLogSettings(
 // Delete removes the stage, keying off the prior outputs so that on a
 // replace the old stage is the one deleted. A stage already gone counts as
 // deleted.
-func (r *Stage) Delete(ctx context.Context, cfg *awsCfg, prior *StageOutput) error {
+func (r *StageResource) Delete(ctx context.Context, cfg *awsCfg, prior *StageResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -436,8 +439,8 @@ func stageInvokeUrl(api *apigatewayv2.GetApiOutput, name string) string {
 // belongs to, and the deployment id the service reported.
 func stageOutput(
 	region, apiID, name string, api *apigatewayv2.GetApiOutput, deploymentID *string,
-) *StageOutput {
-	return &StageOutput{
+) *StageResourceOutput {
+	return &StageResourceOutput{
 		ApiId:        apiID,
 		Name:         name,
 		Arn:          stageArn(region, apiID, name),

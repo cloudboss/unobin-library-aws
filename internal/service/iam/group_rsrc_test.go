@@ -50,10 +50,10 @@ func TestGroupCreateDefaultsPathAndReadsSettledGroup(t *testing.T) {
 			"test-group", "/", "AGPASETTLED", "arn:aws:iam::123456789012:group/test-group")
 	})
 
-	out, err := (&Group{Name: "test-group", Path: "/"}).Create(
+	out, err := (&GroupResource{Name: "test-group", Path: "/"}).Create(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &GroupOutput{
+	assert.Equal(t, &GroupResourceOutput{
 		Arn:      "arn:aws:iam::123456789012:group/test-group",
 		UniqueId: "AGPASETTLED",
 		Name:     "test-group",
@@ -72,7 +72,8 @@ func TestGroupCreatePreservesExplicitEmptyPath(t *testing.T) {
 			"empty-path-group", "", "AGPAEMPTY", "arn:aws:iam::123456789012:group/empty-path-group")
 	})
 
-	_, err := (&Group{Name: "empty-path-group"}).Create(context.Background(), fake.configuration())
+	_, err := (&GroupResource{Name: "empty-path-group"}).Create(
+		context.Background(), fake.configuration())
 	require.NoError(t, err)
 }
 
@@ -84,8 +85,8 @@ func TestGroupReadUsesPriorOutputHandle(t *testing.T) {
 			"old-group", "/", "AGPAOLD", "arn:aws:iam::123456789012:group/old-group")
 	})
 
-	out, err := (&Group{Name: "new-group"}).Read(
-		context.Background(), fake.configuration(), &GroupOutput{Name: "old-group"})
+	out, err := (&GroupResource{Name: "new-group"}).Read(
+		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "old-group"})
 	require.NoError(t, err)
 	assert.Equal(t, "old-group", out.Name)
 }
@@ -104,14 +105,14 @@ func TestGroupUpdateUsesPriorHandleAndDefaultsPath(t *testing.T) {
 			"new-group", "/", "AGPANEW", "arn:aws:iam::123456789012:group/new-group")
 	})
 
-	prior := runtime.Prior[Group, *GroupOutput]{
-		Inputs:  Group{Name: "old-group", Path: "/"},
-		Outputs: &GroupOutput{Name: "old-group"},
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+		Inputs:  GroupResource{Name: "old-group", Path: "/"},
+		Outputs: &GroupResourceOutput{Name: "old-group"},
 	}
-	out, err := (&Group{Name: "new-group", Path: "/"}).Update(
+	out, err := (&GroupResource{Name: "new-group", Path: "/"}).Update(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
-	assert.Equal(t, &GroupOutput{
+	assert.Equal(t, &GroupResourceOutput{
 		Arn:      "arn:aws:iam::123456789012:group/new-group",
 		UniqueId: "AGPANEW",
 		Name:     "new-group",
@@ -132,12 +133,15 @@ func TestGroupUpdateReconcilesObservedDriftWhenInputsAreUnchanged(t *testing.T) 
 			"same-group", "/wanted/", "AGPASAME", "arn:aws:iam::123456789012:group/wanted/same-group")
 	})
 
-	prior := runtime.Prior[Group, *GroupOutput]{
-		Inputs:   Group{Name: "same-group", Path: "/wanted/"},
-		Outputs:  &GroupOutput{Name: "same-group"},
-		Observed: &GroupOutput{Name: "same-group", Arn: "arn:aws:iam::123456789012:group/drift/same-group"},
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+		Inputs:  GroupResource{Name: "same-group", Path: "/wanted/"},
+		Outputs: &GroupResourceOutput{Name: "same-group"},
+		Observed: &GroupResourceOutput{
+			Name: "same-group",
+			Arn:  "arn:aws:iam::123456789012:group/drift/same-group",
+		},
 	}
-	out, err := (&Group{Name: "same-group", Path: "/wanted/"}).Update(
+	out, err := (&GroupResource{Name: "same-group", Path: "/wanted/"}).Update(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Equal(t, "arn:aws:iam::123456789012:group/wanted/same-group", out.Arn)
@@ -145,14 +149,14 @@ func TestGroupUpdateReconcilesObservedDriftWhenInputsAreUnchanged(t *testing.T) 
 
 func TestGroupUpdateReturnsObservedWhenOnlyUniqueIdDrifted(t *testing.T) {
 	fake := newFakeIAM(t)
-	observed := &GroupOutput{
+	observed := &GroupResourceOutput{
 		Arn:      "arn:aws:iam::123456789012:group/same-group",
 		Name:     "same-group",
 		UniqueId: "AGPANEW",
 	}
-	prior := runtime.Prior[Group, *GroupOutput]{
-		Inputs: Group{Name: "same-group", Path: "/"},
-		Outputs: &GroupOutput{
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+		Inputs: GroupResource{Name: "same-group", Path: "/"},
+		Outputs: &GroupResourceOutput{
 			Arn:      "arn:aws:iam::123456789012:group/same-group",
 			Name:     "same-group",
 			UniqueId: "AGPAOLD",
@@ -160,7 +164,7 @@ func TestGroupUpdateReturnsObservedWhenOnlyUniqueIdDrifted(t *testing.T) {
 		Observed: observed,
 	}
 
-	out, err := (&Group{Name: "same-group", Path: "/"}).Update(
+	out, err := (&GroupResource{Name: "same-group", Path: "/"}).Update(
 		context.Background(), fake.configuration(), prior)
 	require.NoError(t, err)
 	assert.Same(t, observed, out)
@@ -174,8 +178,8 @@ func TestGroupDeleteTreatsNotFoundAsSuccess(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	err := (&Group{Name: "new-group"}).Delete(
-		context.Background(), fake.configuration(), &GroupOutput{Name: "old-group"})
+	err := (&GroupResource{Name: "new-group"}).Delete(
+		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "old-group"})
 	require.NoError(t, err)
 }
 
@@ -185,8 +189,8 @@ func TestGroupReadMapsEmptyResultToNotFound(t *testing.T) {
 		return 200, emptyGetGroupResponseXML
 	})
 
-	_, err := (&Group{Name: "missing-group"}).Read(
-		context.Background(), fake.configuration(), &GroupOutput{Name: "missing-group"})
+	_, err := (&GroupResource{Name: "missing-group"}).Read(
+		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "missing-group"})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 

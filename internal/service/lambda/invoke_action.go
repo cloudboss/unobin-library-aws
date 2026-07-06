@@ -13,14 +13,14 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-// Invoke runs a Lambda function once and returns its result. Unlike a resource,
+// InvokeAction runs a Lambda function once and returns its result. Unlike a resource,
 // an invocation has no desired state to reconcile and nothing to read back or
 // destroy: it is a single Invoke call. The JSON payload is given inline through
 // payload-content or read from a file through payload-path. invocation-type
 // selects whether the call is synchronous (RequestResponse, the default),
 // asynchronous (Event), or a permission-and-validation dry run (DryRun), and
 // log-type Tail asks for the tail of the execution log alongside the response.
-type Invoke struct {
+type InvokeAction struct {
 	FunctionName   string  `ub:"function-name"`
 	PayloadContent *string `ub:"payload-content"`
 	PayloadPath    *string `ub:"payload-path"`
@@ -31,13 +31,13 @@ type Invoke struct {
 	TenantId       *string `ub:"tenant-id"`
 }
 
-// InvokeOutput holds what the function call returned. status-code is in the 200
+// InvokeActionOutput holds what the function call returned. status-code is in the 200
 // range for a successful request and does not reflect a function error, which
 // fails the action instead. payload is the function's response body, empty for
 // an asynchronous or dry-run call. executed-version is the version the call
 // resolved to, and log-result is the decoded execution log, present only when
 // log-type is Tail.
-type InvokeOutput struct {
+type InvokeActionOutput struct {
 	StatusCode      int64  `ub:"status-code"`
 	Payload         string `ub:"payload"`
 	ExecutedVersion string `ub:"executed-version"`
@@ -48,7 +48,7 @@ type InvokeOutput struct {
 // Exactly one of payload-content or payload-path supplies the payload, which is
 // required. invocation-type and log-type each accept a fixed set of values when
 // given.
-func (r Invoke) Constraints() []constraint.Constraint {
+func (r InvokeAction) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.PayloadContent, r.PayloadPath),
 		constraint.When(constraint.Present(r.InvocationType)).
@@ -60,7 +60,7 @@ func (r Invoke) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Invoke) Run(ctx context.Context, cfg *awsCfg) (*InvokeOutput, error) {
+func (r *InvokeAction) Run(ctx context.Context, cfg *awsCfg) (*InvokeActionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (r *Invoke) Run(ctx context.Context, cfg *awsCfg) (*InvokeOutput, error) {
 		return nil, fmt.Errorf("lambda function %s returned an error (%s): %s",
 			r.FunctionName, functionError, string(out.Payload))
 	}
-	result := &InvokeOutput{
+	result := &InvokeActionOutput{
 		StatusCode:      int64(out.StatusCode),
 		Payload:         string(out.Payload),
 		ExecutedVersion: aws.ToString(out.ExecutedVersion),
@@ -132,7 +132,7 @@ func (r *Invoke) Run(ctx context.Context, cfg *awsCfg) (*InvokeOutput, error) {
 // payload resolves the function input from whichever of payload-content or
 // payload-path was given. Constraints guarantee exactly one is set, so an
 // inline value is returned as is and a path is read from disk.
-func (r *Invoke) payload() ([]byte, error) {
+func (r *InvokeAction) payload() ([]byte, error) {
 	if r.PayloadContent != nil {
 		return []byte(*r.PayloadContent), nil
 	}

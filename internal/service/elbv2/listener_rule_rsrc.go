@@ -31,7 +31,7 @@ const defaultRulePriority = "default"
 // AWS console and other tools allow for the same races.
 const rulePropagationTimeout = 5 * time.Minute
 
-// ListenerRule is one routing rule on an Application Load Balancer listener: an
+// ListenerRuleResource is one routing rule on an Application Load Balancer listener: an
 // ordered set of conditions that match a request and the actions to take when
 // they do. The fields mirror the ELBv2 CreateRule API, which an update
 // reconciles through ModifyRule, with priority reconciled by the separate
@@ -49,7 +49,7 @@ const rulePropagationTimeout = 5 * time.Minute
 // condition sets exactly one matcher with non-empty values, a forward block
 // names one to five weighted target groups, and every query-string pair sets
 // a value.
-type ListenerRule struct {
+type ListenerRuleResource struct {
 	ListenerArn string                  `ub:"listener-arn"`
 	Priority    *int64                  `ub:"priority"`
 	Actions     []ListenerRuleAction    `ub:"actions"`
@@ -57,20 +57,20 @@ type ListenerRule struct {
 	Tags        *map[string]string      `ub:"tags"`
 }
 
-// ListenerRuleOutput holds the value ELBv2 computes for a rule. The ARN is the
+// ListenerRuleResourceOutput holds the value ELBv2 computes for a rule. The ARN is the
 // rule's stable handle and CloudFormation primary identifier, returned by
 // CreateRule and read back by DescribeRules.
-type ListenerRuleOutput struct {
+type ListenerRuleResourceOutput struct {
 	Arn string `ub:"arn"`
 }
 
-func (r *ListenerRule) SchemaVersion() int { return 1 }
+func (r *ListenerRuleResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ELBv2 cannot change on an existing rule. A
 // rule is created on one listener and cannot be moved, so changing the listener
 // ARN requires a new rule. The priority is deliberately not listed: it is
 // modifiable in place through SetRulePriorities.
-func (r *ListenerRule) ReplaceFields() []string {
+func (r *ListenerRuleResource) ReplaceFields() []string {
 	return []string{"listener-arn"}
 }
 
@@ -81,7 +81,7 @@ func (r *ListenerRule) ReplaceFields() []string {
 // fixed-response enums, the forward target-group and stickiness rules, and
 // each condition setting exactly one matcher with non-empty values, a
 // query-string matcher's pairs each setting a value.
-func (r ListenerRule) Constraints() []constraint.Constraint {
+func (r ListenerRuleResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Priority)).
 			Require(constraint.AtLeast(r.Priority, 1), constraint.AtMost(r.Priority, 50000)).
@@ -196,7 +196,10 @@ func (r ListenerRule) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *ListenerRule) Create(ctx context.Context, cfg *awsCfg) (*ListenerRuleOutput, error) {
+func (r *ListenerRuleResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ListenerRuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -207,7 +210,9 @@ func (r *ListenerRule) Create(ctx context.Context, cfg *awsCfg) (*ListenerRuleOu
 	// Some partitions, such as the ISO partitions, cannot tag a rule as it is
 	// created. When the tagged create fails for that reason, create the rule
 	// without tags and apply them with a separate call below.
-	if err != nil && len(ptr.Value(r.Tags)) > 0 && partition.UnsupportedOperation(region(client), err) {
+	if err != nil &&
+		len(ptr.Value(r.Tags)) > 0 &&
+		partition.UnsupportedOperation(region(client), err) {
 		arn, err = r.create(ctx, client, actions, conditions, nil)
 		if err == nil && len(ptr.Value(r.Tags)) > 0 {
 			err = syncTags(ctx, client, arn, ptr.Value(r.Tags))
@@ -225,9 +230,11 @@ func (r *ListenerRule) Create(ctx context.Context, cfg *awsCfg) (*ListenerRuleOu
 	return r.read(ctx, client, arn)
 }
 
-func (r *ListenerRule) Read(
-	ctx context.Context, cfg *awsCfg, prior *ListenerRuleOutput,
-) (*ListenerRuleOutput, error) {
+func (r *ListenerRuleResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ListenerRuleResourceOutput,
+) (*ListenerRuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -235,9 +242,11 @@ func (r *ListenerRule) Read(
 	return r.read(ctx, client, prior.Arn)
 }
 
-func (r *ListenerRule) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ListenerRule, *ListenerRuleOutput],
-) (*ListenerRuleOutput, error) {
+func (r *ListenerRuleResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[ListenerRuleResource, *ListenerRuleResourceOutput],
+) (*ListenerRuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -286,7 +295,11 @@ func (r *ListenerRule) Update(
 	return prior.Outputs, nil
 }
 
-func (r *ListenerRule) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerRuleOutput) error {
+func (r *ListenerRuleResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ListenerRuleResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -307,7 +320,7 @@ func (r *ListenerRule) Delete(ctx context.Context, cfg *awsCfg, prior *ListenerR
 // above the listener's highest non-default rule and the create is retried on a
 // PriorityInUse conflict, recomputing each time, since another rule may claim
 // that slot first. It returns the new rule's ARN.
-func (r *ListenerRule) create(
+func (r *ListenerRuleResource) create(
 	ctx context.Context, client *elbv2.Client,
 	actions []elbv2types.Action, conditions []elbv2types.RuleCondition,
 	tags []elbv2types.Tag,
@@ -350,7 +363,10 @@ func (r *ListenerRule) create(
 // listener's rules, or 1 when the listener has no non-default rules. ELBv2
 // reports the default rule's priority as the literal "default", which is skipped
 // here.
-func (r *ListenerRule) nextPriority(ctx context.Context, client *elbv2.Client) (int32, error) {
+func (r *ListenerRuleResource) nextPriority(
+	ctx context.Context,
+	client *elbv2.Client,
+) (int32, error) {
 	var highest int32
 	paginator := elbv2.NewDescribeRulesPaginator(client,
 		&elbv2.DescribeRulesInput{ListenerArn: aws.String(r.ListenerArn)})
@@ -380,7 +396,11 @@ func (r *ListenerRule) nextPriority(ctx context.Context, client *elbv2.Client) (
 // CreateRule returns before the rule is consistently readable. A not-found read
 // means the create is still propagating, so the wait keeps polling; any other
 // error stops it.
-func (r *ListenerRule) waitVisible(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *ListenerRuleResource) waitVisible(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	return wait.Until(ctx, fmt.Sprintf("rule %s", arn),
 		func(ctx context.Context) (bool, error) {
 			_, err := client.DescribeRules(ctx,
@@ -398,9 +418,9 @@ func (r *ListenerRule) waitVisible(ctx context.Context, client *elbv2.Client, ar
 // read fetches the rule by ARN and returns its computed output. A rule that has
 // gone missing is drift, which DescribeRules reports as RuleNotFound and read
 // turns into runtime.ErrNotFound so the runtime recreates it.
-func (r *ListenerRule) read(
+func (r *ListenerRuleResource) read(
 	ctx context.Context, client *elbv2.Client, arn string,
-) (*ListenerRuleOutput, error) {
+) (*ListenerRuleResourceOutput, error) {
 	resp, err := client.DescribeRules(ctx,
 		&elbv2.DescribeRulesInput{RuleArns: []string{arn}})
 	if err != nil {
@@ -412,13 +432,13 @@ func (r *ListenerRule) read(
 	if len(resp.Rules) == 0 {
 		return nil, runtime.ErrNotFound
 	}
-	return &ListenerRuleOutput{Arn: aws.ToString(resp.Rules[0].RuleArn)}, nil
+	return &ListenerRuleResourceOutput{Arn: aws.ToString(resp.Rules[0].RuleArn)}, nil
 }
 
 // actions expands the rule's actions into the SDK type. When an action omits
 // its order, it is given a 1-based index so the order is stable across applies
 // and matches the order ELBv2 applies them in.
-func (r *ListenerRule) actions() []elbv2types.Action {
+func (r *ListenerRuleResource) actions() []elbv2types.Action {
 	out := make([]elbv2types.Action, 0, len(r.Actions))
 	for i := range r.Actions {
 		out = append(out, r.Actions[i].to(int32(i+1)))
@@ -427,7 +447,7 @@ func (r *ListenerRule) actions() []elbv2types.Action {
 }
 
 // conditions expands the rule's conditions into the SDK type.
-func (r *ListenerRule) conditions() []elbv2types.RuleCondition {
+func (r *ListenerRuleResource) conditions() []elbv2types.RuleCondition {
 	out := make([]elbv2types.RuleCondition, 0, len(r.Conditions))
 	for i := range r.Conditions {
 		out = append(out, r.Conditions[i].to())

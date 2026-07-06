@@ -32,12 +32,12 @@ func TestGroupPolicyAttachmentCreateAttachesAndReadsPolicy(t *testing.T) {
 			attachedPolicyXML("test-policy", policyArn))
 	})
 
-	out, err := (&GroupPolicyAttachment{
+	out, err := (&GroupPolicyAttachmentResource{
 		GroupName: "test-group",
 		PolicyArn: policyArn,
 	}).Create(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &GroupPolicyAttachmentOutput{
+	assert.Equal(t, &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: policyArn,
 	}, out)
@@ -64,15 +64,15 @@ func TestGroupPolicyAttachmentReadUsesPriorIdentityAndPaginates(t *testing.T) {
 		}
 	})
 
-	out, err := (&GroupPolicyAttachment{
+	out, err := (&GroupPolicyAttachmentResource{
 		GroupName: "desired-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/desired-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: policyArn,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, &GroupPolicyAttachmentOutput{
+	assert.Equal(t, &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: policyArn,
 	}, out)
@@ -84,10 +84,10 @@ func TestGroupPolicyAttachmentReadMapsMissingGroupToNotFound(t *testing.T) {
 		return 404, noSuchEntityXML
 	})
 
-	_, err := (&GroupPolicyAttachment{
+	_, err := (&GroupPolicyAttachmentResource{
 		GroupName: "missing-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
 		GroupName: "missing-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
 	})
@@ -101,10 +101,10 @@ func TestGroupPolicyAttachmentReadMapsAbsentPolicyToNotFound(t *testing.T) {
 			attachedPolicyXML("other", "arn:aws:iam::123456789012:policy/other"))
 	})
 
-	_, err := (&GroupPolicyAttachment{
+	_, err := (&GroupPolicyAttachmentResource{
 		GroupName: "test-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentOutput{
+	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
 	})
@@ -120,10 +120,10 @@ func TestGroupPolicyAttachmentDeleteUsesPriorIdentityAndTreatsNotFoundAsSuccess(
 		return 404, noSuchEntityXML
 	})
 
-	err := (&GroupPolicyAttachment{
+	err := (&GroupPolicyAttachmentResource{
 		GroupName: "new-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/new-policy",
-	}).Delete(context.Background(), fake.configuration(), &GroupPolicyAttachmentOutput{
+	}).Delete(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
 		GroupName: "old-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/old-policy",
 	})

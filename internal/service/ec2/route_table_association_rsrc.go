@@ -29,35 +29,35 @@ const routeTablePropagationTimeout = 5 * time.Minute
 // during this settling window.
 const routeTableAssociationNotFoundChecks = 1000
 
-// RouteTableAssociation links one route table to a subnet or a gateway. Exactly
+// RouteTableAssociationResource links one route table to a subnet or a gateway. Exactly
 // one of subnet-id or gateway-id names what the table attaches to, and both are
 // fixed at create time, so a change to either replaces the association; the
 // route table is changed in place by ReplaceRouteTableAssociation, which mints a
 // fresh association id. AssociateRouteTable creates the association and returns
 // its id; the state is not in that response, so the association is waited to
 // associated before the resource reports it.
-type RouteTableAssociation struct {
+type RouteTableAssociationResource struct {
 	RouteTableId string  `ub:"route-table-id"`
 	SubnetId     *string `ub:"subnet-id"`
 	GatewayId    *string `ub:"gateway-id"`
 }
 
-// RouteTableAssociationOutput holds the one value EC2 computes for an
+// RouteTableAssociationResourceOutput holds the one value EC2 computes for an
 // association: its id. The id is the association's handle for read and delete,
 // and ReplaceRouteTableAssociation replaces it with a new id, so a route table
 // change refreshes this value from the replace response's NewAssociationId.
-type RouteTableAssociationOutput struct {
+type RouteTableAssociationResourceOutput struct {
 	RouteTableAssociationId string `ub:"route-table-association-id"`
 }
 
-func (r *RouteTableAssociation) SchemaVersion() int { return 1 }
+func (r *RouteTableAssociationResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when an association is created. The
 // subnet or gateway an association attaches to cannot change on an existing
 // association, so a change to either requires a new association. The route table
 // is not listed: a route table change is reconciled in place by Update through
 // ReplaceRouteTableAssociation.
-func (r *RouteTableAssociation) ReplaceFields() []string {
+func (r *RouteTableAssociationResource) ReplaceFields() []string {
 	return []string{
 		"subnet-id",
 		"gateway-id",
@@ -68,15 +68,15 @@ func (r *RouteTableAssociation) ReplaceFields() []string {
 // association attaches a route table to exactly one of a subnet or a gateway,
 // never both and never neither. The route table itself is required, which the
 // non-pointer route-table-id field already enforces.
-func (r RouteTableAssociation) Constraints() []constraint.Constraint {
+func (r RouteTableAssociationResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.SubnetId, r.GatewayId),
 	}
 }
 
-func (r *RouteTableAssociation) Create(
+func (r *RouteTableAssociationResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*RouteTableAssociationOutput, error) {
+) (*RouteTableAssociationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -96,9 +96,11 @@ func (r *RouteTableAssociation) Create(
 	return r.read(ctx, client, id, true)
 }
 
-func (r *RouteTableAssociation) Read(
-	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationOutput,
-) (*RouteTableAssociationOutput, error) {
+func (r *RouteTableAssociationResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RouteTableAssociationResourceOutput,
+) (*RouteTableAssociationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -106,10 +108,10 @@ func (r *RouteTableAssociation) Read(
 	return r.read(ctx, client, prior.RouteTableAssociationId, false)
 }
 
-func (r *RouteTableAssociation) Update(
+func (r *RouteTableAssociationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[RouteTableAssociation, *RouteTableAssociationOutput],
-) (*RouteTableAssociationOutput, error) {
+	prior runtime.Prior[RouteTableAssociationResource, *RouteTableAssociationResourceOutput],
+) (*RouteTableAssociationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -151,9 +153,8 @@ func (r *RouteTableAssociation) Update(
 	return r.read(ctx, client, newID, true)
 }
 
-func (r *RouteTableAssociation) Delete(
-	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationOutput,
-) error {
+func (r *RouteTableAssociationResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -176,7 +177,7 @@ func (r *RouteTableAssociation) Delete(
 // A route table created in the same apply may not be visible to this call yet,
 // reported as InvalidRouteTableID.NotFound, so the call retries through that
 // eventual-consistency window.
-func (r *RouteTableAssociation) associate(
+func (r *RouteTableAssociationResource) associate(
 	ctx context.Context, client *ec2.Client,
 ) (string, error) {
 	in := &ec2.AssociateRouteTableInput{
@@ -201,9 +202,9 @@ func (r *RouteTableAssociation) associate(
 // it has not propagated to a describe yet and read waits through that window;
 // otherwise a not-found is drift and maps to runtime.ErrNotFound at once. A
 // disassociated association is logically gone and reads as not-found either way.
-func (r *RouteTableAssociation) read(
+func (r *RouteTableAssociationResource) read(
 	ctx context.Context, client *ec2.Client, id string, created bool,
-) (*RouteTableAssociationOutput, error) {
+) (*RouteTableAssociationResourceOutput, error) {
 	err := wait.Until(ctx, fmt.Sprintf("route table association %s", id),
 		func(ctx context.Context) (bool, error) {
 			_, found, err := findRouteTableAssociation(ctx, client, id)
@@ -221,7 +222,7 @@ func (r *RouteTableAssociation) read(
 	if err != nil {
 		return nil, err
 	}
-	return &RouteTableAssociationOutput{RouteTableAssociationId: id}, nil
+	return &RouteTableAssociationResourceOutput{RouteTableAssociationId: id}, nil
 }
 
 // waitAssociated polls the association until it reaches associated. An
@@ -231,7 +232,7 @@ func (r *RouteTableAssociation) read(
 // can be absent from a describe before it appears, and counting consecutive
 // not-founds keeps the wait from ending while the association is still on its
 // way.
-func (r *RouteTableAssociation) waitAssociated(
+func (r *RouteTableAssociationResource) waitAssociated(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	notFound := 0
@@ -265,7 +266,7 @@ func (r *RouteTableAssociation) waitAssociated(
 // with the status message EC2 reports. A not-found means the disassociation
 // finished, as does a disassociated record, which is logically gone even before
 // EC2 removes it.
-func (r *RouteTableAssociation) waitDisassociated(
+func (r *RouteTableAssociationResource) waitDisassociated(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	what := fmt.Sprintf("route table association %s to disassociate", id)

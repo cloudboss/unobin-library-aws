@@ -66,12 +66,12 @@ func TestLibraryRegistersELBv2LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"load-balancer":           reflect.TypeFor[*svc.LoadBalancerOutput](),
-		"target-group":            reflect.TypeFor[*svc.TargetGroupOutput](),
-		"target-group-attachment": reflect.TypeFor[*svc.TargetGroupAttachmentOutput](),
-		"listener":                reflect.TypeFor[*svc.ListenerOutput](),
-		"listener-rule":           reflect.TypeFor[*svc.ListenerRuleOutput](),
-		"listener-certificate":    reflect.TypeFor[*svc.ListenerCertificateOutput](),
+		"load-balancer":           reflect.TypeFor[*svc.LoadBalancerResourceOutput](),
+		"target-group":            reflect.TypeFor[*svc.TargetGroupResourceOutput](),
+		"target-group-attachment": reflect.TypeFor[*svc.TargetGroupAttachmentResourceOutput](),
+		"listener":                reflect.TypeFor[*svc.ListenerResourceOutput](),
+		"listener-rule":           reflect.TypeFor[*svc.ListenerRuleResourceOutput](),
+		"listener-certificate":    reflect.TypeFor[*svc.ListenerCertificateResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

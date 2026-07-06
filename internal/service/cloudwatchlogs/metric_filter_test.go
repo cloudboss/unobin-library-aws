@@ -17,7 +17,7 @@ import (
 func TestMetricFilterPutInput(t *testing.T) {
 	defaultValue := 0.0
 	dimensions := map[string]string{"service": "$.service"}
-	r := MetricFilter{
+	r := MetricFilterResource{
 		FilterName:             "errors",
 		LogGroupName:           "app/logs",
 		FilterPattern:          "  { $.level = \"error\" }\n",
@@ -49,7 +49,7 @@ func TestMetricFilterPutInput(t *testing.T) {
 
 func TestMetricFilterPutInputDefaultsAndOmissions(t *testing.T) {
 	emptyDimensions := map[string]string{}
-	r := MetricFilter{
+	r := MetricFilterResource{
 		FilterName:    "all",
 		LogGroupName:  "app/logs",
 		FilterPattern: "",
@@ -123,7 +123,7 @@ func TestMetricFilterTransformationOutput(t *testing.T) {
 }
 
 func TestMetricFilterUpdateValidatesBeforeNoop(t *testing.T) {
-	r := MetricFilter{
+	r := MetricFilterResource{
 		FilterName:    "metric-filter",
 		LogGroupName:  "app/logs",
 		FilterPattern: strings.Repeat(" ", metricFilterPatternMaxRunes+1),
@@ -135,9 +135,9 @@ func TestMetricFilterUpdateValidatesBeforeNoop(t *testing.T) {
 	}
 	priorInputs := r
 	priorInputs.FilterPattern = ""
-	prior := runtime.Prior[MetricFilter, *MetricFilterOutput]{
+	prior := runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput]{
 		Inputs: priorInputs,
-		Observed: &MetricFilterOutput{
+		Observed: &MetricFilterResourceOutput{
 			FilterPattern:          "",
 			MetricTransformation:   MetricFilterMetricTransformationOutput{Unit: metricFilterDefaultUnit},
 			ApplyOnTransformedLogs: false,
@@ -153,7 +153,7 @@ func TestMetricFilterShouldPut(t *testing.T) {
 	unit := "Count"
 	dimensions := map[string]string{"service": "api"}
 	defaultValue := 0.0
-	r := MetricFilter{
+	r := MetricFilterResource{
 		FilterPattern:          "  " + pattern + "\n",
 		ApplyOnTransformedLogs: aws.Bool(true),
 		MetricTransformation: MetricFilterMetricTransformation{
@@ -182,11 +182,10 @@ func TestMetricFilterShouldPut(t *testing.T) {
 }
 
 func runtimePriorMetricFilter(
-	r MetricFilter,
-) runtime.Prior[MetricFilter, *MetricFilterOutput] {
-	return runtime.Prior[MetricFilter, *MetricFilterOutput]{
+	r MetricFilterResource) runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput] {
+	return runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput]{
 		Inputs: r,
-		Observed: &MetricFilterOutput{
+		Observed: &MetricFilterResourceOutput{
 			FilterPattern:          strings.TrimSpace(r.FilterPattern),
 			ApplyOnTransformedLogs: aws.ToBool(r.ApplyOnTransformedLogs),
 			MetricTransformation: MetricFilterMetricTransformationOutput{
@@ -202,7 +201,7 @@ func runtimePriorMetricFilter(
 }
 
 func TestMetricFilterValidate(t *testing.T) {
-	valid := MetricFilter{
+	valid := MetricFilterResource{
 		FilterName:    "metric-filter",
 		LogGroupName:  "app/logs",
 		FilterPattern: "",
@@ -216,7 +215,7 @@ func TestMetricFilterValidate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		modify  func(*MetricFilter)
+		modify  func(*MetricFilterResource)
 		wantErr string
 	}{
 		{
@@ -224,42 +223,42 @@ func TestMetricFilterValidate(t *testing.T) {
 		},
 		{
 			name: "empty filter name",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.FilterName = ""
 			},
 			wantErr: "filter-name must be 1 to 512 bytes",
 		},
 		{
 			name: "invalid filter name character",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.FilterName = "bad:name"
 			},
 			wantErr: "filter-name must not contain colon or asterisk",
 		},
 		{
 			name: "invalid log group name",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.LogGroupName = "bad name"
 			},
 			wantErr: "log-group-name must contain only",
 		},
 		{
 			name: "pattern too long",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.FilterPattern = strings.Repeat("é", metricFilterPatternMaxRunes+1)
 			},
 			wantErr: "filter-pattern must be at most 1024 characters",
 		},
 		{
 			name: "metric name invalid character",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.MetricTransformation.MetricName = "bad$name"
 			},
 			wantErr: "metric-name must not contain colon, asterisk, or dollar sign",
 		},
 		{
 			name: "metric namespace too long",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.MetricTransformation.MetricNamespace = strings.Repeat(
 					"n", metricTransformationNameMaxBytes+1)
 			},
@@ -267,7 +266,7 @@ func TestMetricFilterValidate(t *testing.T) {
 		},
 		{
 			name: "metric namespace too many bytes",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.MetricTransformation.MetricNamespace = strings.Repeat(
 					"é", metricTransformationNameMaxBytes/2+1)
 			},
@@ -275,7 +274,7 @@ func TestMetricFilterValidate(t *testing.T) {
 		},
 		{
 			name: "metric value too long",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.MetricTransformation.MetricValue = strings.Repeat(
 					"v", metricTransformationValueMaxBytes+1)
 			},
@@ -283,7 +282,7 @@ func TestMetricFilterValidate(t *testing.T) {
 		},
 		{
 			name: "unit invalid",
-			modify: func(r *MetricFilter) {
+			modify: func(r *MetricFilterResource) {
 				r.MetricTransformation.Unit = aws.String("BadUnit")
 			},
 			wantErr: "unit must be a valid CloudWatch unit",

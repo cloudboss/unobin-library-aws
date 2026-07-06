@@ -22,9 +22,9 @@ import (
 
 const certificateDataLookupTimeout = time.Minute
 
-var errCertificateDataNoSummaries = errors.New("no matching ACM certificate summaries")
+var errCertificateDataSourceNoSummaries = errors.New("no matching ACM certificate summaries")
 
-// CertificateData resolves one existing ACM certificate. ListCertificates is
+// CertificateDataSource resolves one existing ACM certificate. ListCertificates is
 // queried with the requested key algorithms and certificate statuses, defaulting
 // statuses to ISSUED, then the summaries are filtered client-side by exact
 // domain and type. An empty summary set is retried for one minute to absorb ACM
@@ -32,7 +32,7 @@ var errCertificateDataNoSummaries = errors.New("no matching ACM certificate summ
 // and vanished candidates are skipped, optional tag filters are applied as a
 // requested-subset match, and the data source returns either the sole match or
 // the most recent match according to ACM's status-specific timestamps.
-type CertificateData struct {
+type CertificateDataSource struct {
 	Domain     *string            `ub:"domain"`
 	Tags       *map[string]string `ub:"tags"`
 	KeyTypes   *[]string          `ub:"key-types"`
@@ -41,11 +41,11 @@ type CertificateData struct {
 	MostRecent bool               `ub:"most-recent"`
 }
 
-// CertificateDataOutput holds the selected certificate attributes. Certificate
+// CertificateDataSourceOutput holds the selected certificate attributes. Certificate
 // and CertificateChain are set only for ISSUED certificates, since ACM only
 // returns PEM material for an issued certificate; for any other status they are
 // null. Tags are the actual user-visible tags on the selected certificate.
-type CertificateDataOutput struct {
+type CertificateDataSourceOutput struct {
 	Arn              string            `ub:"arn"`
 	Domain           string            `ub:"domain"`
 	Status           string            `ub:"status"`
@@ -57,7 +57,7 @@ type CertificateDataOutput struct {
 // Defaults gives most-recent its false default and marks the collection inputs
 // a certificate lookup may omit. An empty or omitted statuses list searches
 // ISSUED certificates only.
-func (r CertificateData) Defaults() []defaults.Default {
+func (r CertificateDataSource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.MostRecent, false),
 	}
@@ -66,7 +66,7 @@ func (r CertificateData) Defaults() []defaults.Default {
 // Constraints declares the lookup's schema-visible rules. A lookup needs at
 // least a domain or tag selector, and the enum-list entries must be valid ACM
 // values.
-func (r CertificateData) Constraints() []constraint.Constraint {
+func (r CertificateDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
 			constraint.Present(r.Domain),
@@ -99,7 +99,10 @@ func (r CertificateData) Constraints() []constraint.Constraint {
 
 // Read resolves the certificate data source. A missing or ambiguous lookup is a
 // descriptive data-source error, not runtime.ErrNotFound.
-func (r *CertificateData) Read(ctx context.Context, cfg *awsCfg) (*CertificateDataOutput, error) {
+func (r *CertificateDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*CertificateDataSourceOutput, error) {
 	if err := r.checkLookupKeys(); err != nil {
 		return nil, err
 	}
@@ -122,7 +125,7 @@ func (r *CertificateData) Read(ctx context.Context, cfg *awsCfg) (*CertificateDa
 	return r.output(ctx, client, selected.detail)
 }
 
-func (r *CertificateData) checkLookupKeys() error {
+func (r *CertificateDataSource) checkLookupKeys() error {
 	// The lookup-key rule is syntactic: explicitly empty domain or tags values
 	// count as supplied, but the empty values do not filter candidates later.
 	if r.Domain != nil || ptr.Value(r.Tags) != nil {
@@ -131,25 +134,25 @@ func (r *CertificateData) checkLookupKeys() error {
 	return errors.New("at least one of domain or tags must be supplied")
 }
 
-func (r *CertificateData) findSummariesWithRetry(
+func (r *CertificateDataSource) findSummariesWithRetry(
 	ctx context.Context,
 	client *acm.Client,
 ) ([]acmtypes.CertificateSummary, error) {
 	var summaries []acmtypes.CertificateSummary
-	err := retry.OnError(ctx, isCertificateDataNoSummaries,
+	err := retry.OnError(ctx, isCertificateDataSourceNoSummaries,
 		func(ctx context.Context) error {
 			found, err := r.findSummaries(ctx, client)
 			if err != nil {
 				return err
 			}
 			if len(found) == 0 {
-				return errCertificateDataNoSummaries
+				return errCertificateDataSourceNoSummaries
 			}
 			summaries = found
 			return nil
 		},
 		retry.WithTimeout(certificateDataLookupTimeout))
-	if errors.Is(err, errCertificateDataNoSummaries) {
+	if errors.Is(err, errCertificateDataSourceNoSummaries) {
 		return nil, errors.New("no matching ACM Certificate found")
 	}
 	if err != nil {
@@ -158,11 +161,11 @@ func (r *CertificateData) findSummariesWithRetry(
 	return summaries, nil
 }
 
-func isCertificateDataNoSummaries(err error) bool {
-	return errors.Is(err, errCertificateDataNoSummaries)
+func isCertificateDataSourceNoSummaries(err error) bool {
+	return errors.Is(err, errCertificateDataSourceNoSummaries)
 }
 
-func (r *CertificateData) findSummaries(
+func (r *CertificateDataSource) findSummaries(
 	ctx context.Context,
 	client *acm.Client,
 ) ([]acmtypes.CertificateSummary, error) {
@@ -182,7 +185,7 @@ func (r *CertificateData) findSummaries(
 	return summaries, nil
 }
 
-func (r *CertificateData) listInput() *acm.ListCertificatesInput {
+func (r *CertificateDataSource) listInput() *acm.ListCertificatesInput {
 	in := &acm.ListCertificatesInput{
 		CertificateStatuses: []acmtypes.CertificateStatus{acmtypes.CertificateStatusIssued},
 	}
@@ -195,7 +198,7 @@ func (r *CertificateData) listInput() *acm.ListCertificatesInput {
 	return in
 }
 
-func (r *CertificateData) summaryMatches(summary acmtypes.CertificateSummary) bool {
+func (r *CertificateDataSource) summaryMatches(summary acmtypes.CertificateSummary) bool {
 	if r.Domain != nil && *r.Domain != "" && aws.ToString(summary.DomainName) != *r.Domain {
 		return false
 	}
@@ -225,7 +228,7 @@ type certificateDataCandidate struct {
 	detail *acmtypes.CertificateDetail
 }
 
-func (r *CertificateData) findCandidates(
+func (r *CertificateDataSource) findCandidates(
 	ctx context.Context,
 	client *acm.Client,
 	summaries []acmtypes.CertificateSummary,
@@ -275,7 +278,7 @@ func certificateDataContainsTags(actual, want map[string]string) bool {
 	return true
 }
 
-func (r *CertificateData) selectCandidate(
+func (r *CertificateDataSource) selectCandidate(
 	candidates []certificateDataCandidate,
 ) (certificateDataCandidate, error) {
 	switch len(candidates) {
@@ -322,13 +325,13 @@ func certificateDataSelectionTime(detail *acmtypes.CertificateDetail) time.Time 
 	return time.Time{}
 }
 
-func (r *CertificateData) output(
+func (r *CertificateDataSource) output(
 	ctx context.Context,
 	client *acm.Client,
 	detail *acmtypes.CertificateDetail,
-) (*CertificateDataOutput, error) {
+) (*CertificateDataSourceOutput, error) {
 	arn := aws.ToString(detail.CertificateArn)
-	out := &CertificateDataOutput{
+	out := &CertificateDataSourceOutput{
 		Arn:    arn,
 		Domain: aws.ToString(detail.DomainName),
 		Status: string(detail.Status),

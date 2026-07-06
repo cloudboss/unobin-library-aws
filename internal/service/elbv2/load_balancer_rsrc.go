@@ -38,7 +38,7 @@ const loadBalancerActiveTimeout = 10 * time.Minute
 var unsupportedAttributeKey = regexp.MustCompile(
 	`attribute key '([^']+)' is not (recognized|supported)`)
 
-// LoadBalancer manages an Elastic Load Balancing v2 load balancer, the way
+// LoadBalancerResource manages an Elastic Load Balancing v2 load balancer, the way
 // CloudFormation models AWS::ElasticLoadBalancingV2::LoadBalancer. The name,
 // scheme (internal vs internet-facing), and type are fixed at creation, as is
 // the Outposts customer-owned address pool, so a change to any of them replaces
@@ -54,7 +54,7 @@ var unsupportedAttributeKey = regexp.MustCompile(
 // AWS enforces the name's own bounds, so they are not expressed as constraints:
 // the name is at most 32 characters matching ^[0-9A-Za-z-]+$, must not begin or
 // end with a hyphen, and must not begin with "internal-".
-type LoadBalancer struct {
+type LoadBalancerResource struct {
 	Name                  string                       `ub:"name"`
 	LoadBalancerType      *string                      `ub:"load-balancer-type"`
 	Internal              *bool                        `ub:"internal"`
@@ -81,13 +81,13 @@ type LoadBalancer struct {
 	DnsRecordClientRoutingPolicy          *string `ub:"dns-record-client-routing-policy"`
 }
 
-// LoadBalancerOutput holds the values ELBv2 computes for a load balancer once it
+// LoadBalancerResourceOutput holds the values ELBv2 computes for a load balancer once it
 // is active. The ARN is its stable handle, used to read, modify, and delete it;
 // the DNS name and canonical hosted zone id are what listeners and Route 53
 // aliases point at. The ARN suffix is the form a CloudWatch metric dimension
 // takes. The VPC id, IP address type, name, and scheme are filled by AWS, so
 // they are reported rather than echoed from the inputs.
-type LoadBalancerOutput struct {
+type LoadBalancerResourceOutput struct {
 	Arn                   string `ub:"arn"`
 	DNSName               string `ub:"dns-name"`
 	CanonicalHostedZoneId string `ub:"canonical-hosted-zone-id"`
@@ -98,7 +98,7 @@ type LoadBalancerOutput struct {
 	Scheme                string `ub:"scheme"`
 }
 
-func (r *LoadBalancer) SchemaVersion() int { return 1 }
+func (r *LoadBalancerResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ELBv2 fixes when a load balancer is created.
 // The name is baked into the ARN, the scheme and type cannot be changed on an
@@ -108,7 +108,7 @@ func (r *LoadBalancer) SchemaVersion() int { return 1 }
 // than replaced, which is legal for Application and Gateway load balancers; a
 // change ELBv2 forbids in place on a Network Load Balancer comes back as an API
 // error.
-func (r *LoadBalancer) ReplaceFields() []string {
+func (r *LoadBalancerResource) ReplaceFields() []string {
 	return []string{
 		"name",
 		"internal",
@@ -124,7 +124,7 @@ func (r *LoadBalancer) ReplaceFields() []string {
 // default. Enabled access or connection logs need a bucket. The remaining
 // bounds, such as the idle timeout range and the per-type applicability of
 // each attribute, are enforced by the API and in code.
-func (r LoadBalancer) Constraints() []constraint.Constraint {
+func (r LoadBalancerResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
 			constraint.All(
@@ -162,7 +162,10 @@ func (r LoadBalancer) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LoadBalancer) Create(ctx context.Context, cfg *awsCfg) (*LoadBalancerOutput, error) {
+func (r *LoadBalancerResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*LoadBalancerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -213,9 +216,11 @@ func (r *LoadBalancer) Create(ctx context.Context, cfg *awsCfg) (*LoadBalancerOu
 	return r.read(ctx, client, arn)
 }
 
-func (r *LoadBalancer) Read(
-	ctx context.Context, cfg *awsCfg, prior *LoadBalancerOutput,
-) (*LoadBalancerOutput, error) {
+func (r *LoadBalancerResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LoadBalancerResourceOutput,
+) (*LoadBalancerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -229,9 +234,9 @@ func (r *LoadBalancer) Read(
 // also means it is gone, the eventual-consistency guard for a just-created
 // load balancer whose describe has not caught up. All three map to
 // runtime.ErrNotFound so the runtime recreates it.
-func (r *LoadBalancer) read(
+func (r *LoadBalancerResource) read(
 	ctx context.Context, client *elbv2.Client, arn string,
-) (*LoadBalancerOutput, error) {
+) (*LoadBalancerResourceOutput, error) {
 	resp, err := client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{
 		LoadBalancerArns: []string{arn},
 	})
@@ -251,9 +256,11 @@ func (r *LoadBalancer) read(
 	return loadBalancerOutput(lb), nil
 }
 
-func (r *LoadBalancer) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LoadBalancer, *LoadBalancerOutput],
-) (*LoadBalancerOutput, error) {
+func (r *LoadBalancerResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[LoadBalancerResource, *LoadBalancerResourceOutput],
+) (*LoadBalancerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -269,7 +276,8 @@ func (r *LoadBalancer) Update(
 			}
 		}
 	}
-	if ptr.Value(r.SecurityGroups) != nil && runtime.Changed(ptr.Value(prior.Inputs.SecurityGroups), ptr.Value(r.SecurityGroups)) {
+	if ptr.Value(r.SecurityGroups) != nil &&
+		runtime.Changed(ptr.Value(prior.Inputs.SecurityGroups), ptr.Value(r.SecurityGroups)) {
 		if err := r.setSecurityGroups(ctx, client, arn); err != nil {
 			return nil, err
 		}
@@ -299,7 +307,11 @@ func (r *LoadBalancer) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *LoadBalancer) Delete(ctx context.Context, cfg *awsCfg, prior *LoadBalancerOutput) error {
+func (r *LoadBalancerResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LoadBalancerResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -325,7 +337,7 @@ func (r *LoadBalancer) Delete(ctx context.Context, cfg *awsCfg, prior *LoadBalan
 // otherwise, matching AWS's default. The type, IP address type, subnets or
 // subnet mappings, security groups, customer-owned pool, and tags ride only when
 // set so an omitted one takes AWS's default.
-func (r *LoadBalancer) createInput() *elbv2.CreateLoadBalancerInput {
+func (r *LoadBalancerResource) createInput() *elbv2.CreateLoadBalancerInput {
 	in := &elbv2.CreateLoadBalancerInput{
 		Name:                  aws.String(r.Name),
 		CustomerOwnedIpv4Pool: r.CustomerOwnedIpv4Pool,
@@ -353,7 +365,7 @@ func (r *LoadBalancer) createInput() *elbv2.CreateLoadBalancerInput {
 // resolvedType returns the load balancer type, applying AWS's default of
 // application when none is set. Attribute applicability turns on the type, so it
 // is resolved once here.
-func (r *LoadBalancer) resolvedType() string {
+func (r *LoadBalancerResource) resolvedType() string {
 	if r.LoadBalancerType == nil {
 		return loadBalancerTypeApplication
 	}
@@ -370,7 +382,7 @@ func (r *LoadBalancer) resolvedType() string {
 // Application load balancers only; the DNS routing policy applies to Network load
 // balancers only. An attribute is added only when its field is set, so an
 // omitted field leaves ELBv2's current value alone.
-func (r *LoadBalancer) attributes() []elbv2types.LoadBalancerAttribute {
+func (r *LoadBalancerResource) attributes() []elbv2types.LoadBalancerAttribute {
 	lbType := r.resolvedType()
 	application := lbType == "application"
 	network := lbType == "network"
@@ -434,7 +446,7 @@ func (r *LoadBalancer) attributes() []elbv2types.LoadBalancerAttribute {
 // differs from the prior inputs, so the modify runs on update only when it has
 // work to do. The log blocks are compared by value, so a changed bucket or
 // toggle inside one counts.
-func (r *LoadBalancer) attributesChanged(prior LoadBalancer) bool {
+func (r *LoadBalancerResource) attributesChanged(prior LoadBalancerResource) bool {
 	return runtime.Changed(prior.IdleTimeout, r.IdleTimeout) ||
 		runtime.Changed(prior.EnableDeletionProtection, r.EnableDeletionProtection) ||
 		runtime.Changed(prior.EnableHttp2, r.EnableHttp2) ||
@@ -456,7 +468,7 @@ func (r *LoadBalancer) attributesChanged(prior LoadBalancer) bool {
 // rejects as not applying to the load balancer's type or partition. On such a
 // rejection it removes the named key and retries, until the batch succeeds or
 // every offending key has been removed. Any other error stops it.
-func (r *LoadBalancer) modifyAttributes(
+func (r *LoadBalancerResource) modifyAttributes(
 	ctx context.Context, client *elbv2.Client, arn string,
 	attrs []elbv2types.LoadBalancerAttribute,
 ) error {
@@ -482,7 +494,11 @@ func (r *LoadBalancer) modifyAttributes(
 // type alongside so a subnet change that also moves between IP address types is
 // applied in one call. Subnets are given as a plain list or as subnet mappings,
 // whichever the input uses.
-func (r *LoadBalancer) setSubnets(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *LoadBalancerResource) setSubnets(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	in := &elbv2.SetSubnetsInput{
 		LoadBalancerArn: aws.String(arn),
 		Subnets:         ptr.Value(r.Subnets),
@@ -498,7 +514,7 @@ func (r *LoadBalancer) setSubnets(ctx context.Context, client *elbv2.Client, arn
 }
 
 // setSecurityGroups reconciles the load balancer's security groups.
-func (r *LoadBalancer) setSecurityGroups(
+func (r *LoadBalancerResource) setSecurityGroups(
 	ctx context.Context, client *elbv2.Client, arn string,
 ) error {
 	_, err := client.SetSecurityGroups(ctx, &elbv2.SetSecurityGroupsInput{
@@ -512,7 +528,7 @@ func (r *LoadBalancer) setSecurityGroups(
 }
 
 // setIpAddressType reconciles the load balancer's IP address type.
-func (r *LoadBalancer) setIpAddressType(
+func (r *LoadBalancerResource) setIpAddressType(
 	ctx context.Context, client *elbv2.Client, arn string,
 ) error {
 	if r.IpAddressType == nil {
@@ -532,7 +548,11 @@ func (r *LoadBalancer) setIpAddressType(
 // provisioning state for active. A load balancer that settles into the failed
 // state will never become active, so the wait stops at once and reports the
 // failure reason ELBv2 gives.
-func (r *LoadBalancer) waitActive(ctx context.Context, client *elbv2.Client, arn string) error {
+func (r *LoadBalancerResource) waitActive(
+	ctx context.Context,
+	client *elbv2.Client,
+	arn string,
+) error {
 	what := fmt.Sprintf("load balancer %s", r.Name)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		resp, err := client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{
@@ -561,9 +581,9 @@ func (r *LoadBalancer) waitActive(ctx context.Context, client *elbv2.Client, arn
 }
 
 // loadBalancerOutput maps a described load balancer to its computed outputs.
-func loadBalancerOutput(lb elbv2types.LoadBalancer) *LoadBalancerOutput {
+func loadBalancerOutput(lb elbv2types.LoadBalancer) *LoadBalancerResourceOutput {
 	arn := aws.ToString(lb.LoadBalancerArn)
-	return &LoadBalancerOutput{
+	return &LoadBalancerResourceOutput{
 		Arn:                   arn,
 		DNSName:               aws.ToString(lb.DNSName),
 		CanonicalHostedZoneId: aws.ToString(lb.CanonicalHostedZoneId),

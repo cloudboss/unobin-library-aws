@@ -67,10 +67,10 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlOutput](),
-		"function":                reflect.TypeFor[*svc.FunctionOutput](),
-		"response-headers-policy": reflect.TypeFor[*svc.ResponseHeadersPolicyOutput](),
-		"distribution":            reflect.TypeFor[*svc.DistributionOutput](),
+		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlResourceOutput](),
+		"function":                reflect.TypeFor[*svc.FunctionResourceOutput](),
+		"response-headers-policy": reflect.TypeFor[*svc.ResponseHeadersPolicyResourceOutput](),
+		"distribution":            reflect.TypeFor[*svc.DistributionResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -79,8 +79,8 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataOutput](),
-		"origin-request-policy": reflect.TypeFor[*svc.OriginRequestPolicyDataOutput](),
+		"cache-policy":          reflect.TypeFor[*svc.CachePolicyDataSourceOutput](),
+		"origin-request-policy": reflect.TypeFor[*svc.OriginRequestPolicyDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

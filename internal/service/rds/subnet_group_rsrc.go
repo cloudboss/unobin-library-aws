@@ -35,12 +35,12 @@ const subnetGroupNameMaxLen = 255
 // can still find it briefly; three minutes is ample for the group to clear.
 const subnetGroupDeleteTimeout = 3 * time.Minute
 
-// SubnetGroup is an RDS DB subnet group: the set of VPC subnets an RDS instance
+// SubnetGroupResource is an RDS DB subnet group: the set of VPC subnets an RDS instance
 // or cluster may place its network interfaces in. The group is keyed by name,
 // the one field RDS fixes at create time, so a change to the name replaces the
 // group; the description and subnet set are reconciled in place. The VPC is
 // inferred by RDS from the supplied subnets and is never an input.
-type SubnetGroup struct {
+type SubnetGroupResource struct {
 	// Name is the DB subnet group name. RDS stores it lowercased. It must hold
 	// only lowercase letters, digits, hyphen, underscore, period, or space, be
 	// no longer than 255 characters, and not equal "default", which RDS
@@ -51,22 +51,22 @@ type SubnetGroup struct {
 	Tags        *map[string]string `ub:"tags"`
 }
 
-// SubnetGroupOutput holds the values RDS computes for a DB subnet group. The ARN
+// SubnetGroupResourceOutput holds the values RDS computes for a DB subnet group. The ARN
 // is the group's handle, against which its tags are managed. The VPC id is
 // inferred by RDS from the subnets. The supported network types are the address
 // families the subnets allow, such as IPV4 or DUAL.
-type SubnetGroupOutput struct {
+type SubnetGroupResourceOutput struct {
 	Arn                   string   `ub:"arn"`
 	VpcId                 string   `ub:"vpc-id"`
 	SupportedNetworkTypes []string `ub:"supported-network-types"`
 }
 
-func (r *SubnetGroup) SchemaVersion() int { return 1 }
+func (r *SubnetGroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when a DB subnet group is created.
 // Only the name is immutable; a change to it requires a new group. The
 // description and subnet set are reconciled in place by ModifyDBSubnetGroup.
-func (r *SubnetGroup) ReplaceFields() []string {
+func (r *SubnetGroupResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
@@ -75,14 +75,17 @@ func (r *SubnetGroup) ReplaceFields() []string {
 // present, leaving the count and zone rules to RDS. The name's character,
 // length, and reserved-word rules are patterns the constraint layer cannot
 // express and are checked in Create.
-func (r SubnetGroup) Constraints() []constraint.Constraint {
+func (r SubnetGroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.NotEmpty(r.SubnetIds)).
 			Message("subnet-ids must not be empty"),
 	}
 }
 
-func (r *SubnetGroup) Create(ctx context.Context, cfg *awsCfg) (*SubnetGroupOutput, error) {
+func (r *SubnetGroupResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*SubnetGroupResourceOutput, error) {
 	if err := r.validateName(); err != nil {
 		return nil, err
 	}
@@ -102,9 +105,11 @@ func (r *SubnetGroup) Create(ctx context.Context, cfg *awsCfg) (*SubnetGroupOutp
 	return r.read(ctx, client)
 }
 
-func (r *SubnetGroup) Read(
-	ctx context.Context, cfg *awsCfg, prior *SubnetGroupOutput,
-) (*SubnetGroupOutput, error) {
+func (r *SubnetGroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SubnetGroupResourceOutput,
+) (*SubnetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -114,23 +119,25 @@ func (r *SubnetGroup) Read(
 
 // read fetches the group by name and maps it to outputs, returning
 // runtime.ErrNotFound when it is gone.
-func (r *SubnetGroup) read(
+func (r *SubnetGroupResource) read(
 	ctx context.Context, client *rds.Client,
-) (*SubnetGroupOutput, error) {
+) (*SubnetGroupResourceOutput, error) {
 	g, err := findSubnetGroup(ctx, client, r.Name)
 	if err != nil {
 		return nil, err
 	}
-	return &SubnetGroupOutput{
+	return &SubnetGroupResourceOutput{
 		Arn:                   aws.ToString(g.DBSubnetGroupArn),
 		VpcId:                 aws.ToString(g.VpcId),
 		SupportedNetworkTypes: g.SupportedNetworkTypes,
 	}, nil
 }
 
-func (r *SubnetGroup) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SubnetGroup, *SubnetGroupOutput],
-) (*SubnetGroupOutput, error) {
+func (r *SubnetGroupResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput],
+) (*SubnetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -158,7 +165,11 @@ func (r *SubnetGroup) Update(
 	return r.read(ctx, client)
 }
 
-func (r *SubnetGroup) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetGroupOutput) error {
+func (r *SubnetGroupResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SubnetGroupResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -180,7 +191,7 @@ func (r *SubnetGroup) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetGrou
 // waitGone polls until the group no longer describes. DeleteDBSubnetGroup is
 // asynchronous, so a read can still find the group for a short time after the
 // delete call accepts; the delete is not complete until the group is gone.
-func (r *SubnetGroup) waitGone(ctx context.Context, client *rds.Client) error {
+func (r *SubnetGroupResource) waitGone(ctx context.Context, client *rds.Client) error {
 	what := fmt.Sprintf("db subnet group %s to be deleted", r.Name)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := findSubnetGroup(ctx, client, r.Name)
@@ -198,7 +209,7 @@ func (r *SubnetGroup) waitGone(ctx context.Context, client *rds.Client) error {
 // constraint layer cannot express: the permitted character set, the 255-byte
 // length bound, and the reserved value "default", which RDS matches
 // case-insensitively.
-func (r *SubnetGroup) validateName() error {
+func (r *SubnetGroupResource) validateName() error {
 	if len(r.Name) > subnetGroupNameMaxLen {
 		return fmt.Errorf("name must be at most %d characters", subnetGroupNameMaxLen)
 	}

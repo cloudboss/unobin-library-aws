@@ -61,7 +61,7 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"repository": reflect.TypeFor[*svc.RepositoryOutput](),
+		"repository": reflect.TypeFor[*svc.RepositoryResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

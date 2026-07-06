@@ -14,85 +14,88 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
 )
 
-// CachePolicyData resolves one existing CloudFront cache policy by exactly one
+// CachePolicyDataSource resolves one existing CloudFront cache policy by exactly one
 // selector: its id, read directly with GetCachePolicy, or its name, resolved by
 // paging through ListCachePolicies and stopping at the first exact name match.
 // The final output always comes from GetCachePolicy. The ARN is composed locally
 // because CloudFront does not return one for a cache policy read.
-type CachePolicyData struct {
+type CachePolicyDataSource struct {
 	Id   *string `ub:"id"`
 	Name *string `ub:"name"`
 }
 
-// CachePolicyDataOutput holds the selected cache policy's attributes. Arn is a
+// CachePolicyDataSourceOutput holds the selected cache policy's attributes. Arn is a
 // global CloudFront ARN built from the configured partition and account id. The
 // nested parameters block is absent when CloudFront omits it; within it the
 // Quantity members on cookie, header, and query-string lists are ignored and
 // only their Items lists are exposed.
-type CachePolicyDataOutput struct {
-	Id                                       string                     `ub:"id"`
-	Arn                                      string                     `ub:"arn"`
-	Comment                                  string                     `ub:"comment"`
-	DefaultTTL                               int64                      `ub:"default-ttl"`
-	ETag                                     string                     `ub:"etag"`
-	MaxTTL                                   int64                      `ub:"max-ttl"`
-	MinTTL                                   int64                      `ub:"min-ttl"`
-	Name                                     string                     `ub:"name"`
-	ParametersInCacheKeyAndForwardedToOrigin *CachePolicyDataParameters `ub:"parameters-in-cache-key-and-forwarded-to-origin"`
+type CachePolicyDataSourceOutput struct {
+	Id                                       string                           `ub:"id"`
+	Arn                                      string                           `ub:"arn"`
+	Comment                                  string                           `ub:"comment"`
+	DefaultTTL                               int64                            `ub:"default-ttl"`
+	ETag                                     string                           `ub:"etag"`
+	MaxTTL                                   int64                            `ub:"max-ttl"`
+	MinTTL                                   int64                            `ub:"min-ttl"`
+	Name                                     string                           `ub:"name"`
+	ParametersInCacheKeyAndForwardedToOrigin *CachePolicyDataSourceParameters `ub:"parameters-in-cache-key-and-forwarded-to-origin"`
 }
 
-// CachePolicyDataParameters is the cache-key parameter block CloudFront returns
+// CachePolicyDataSourceParameters is the cache-key parameter block CloudFront returns
 // inside CachePolicyConfig.
-type CachePolicyDataParameters struct {
-	CookiesConfig              *CachePolicyDataCookiesConfig      `ub:"cookies-config"`
-	EnableAcceptEncodingGzip   bool                               `ub:"enable-accept-encoding-gzip"`
-	HeadersConfig              *CachePolicyDataHeadersConfig      `ub:"headers-config"`
-	QueryStringsConfig         *CachePolicyDataQueryStringsConfig `ub:"query-strings-config"`
-	EnableAcceptEncodingBrotli bool                               `ub:"enable-accept-encoding-brotli"`
+type CachePolicyDataSourceParameters struct {
+	CookiesConfig *CachePolicyDataSourceCookiesConfig `ub:"cookies-config"`
+
+	EnableAcceptEncodingGzip bool `ub:"enable-accept-encoding-gzip"`
+
+	HeadersConfig      *CachePolicyDataSourceHeadersConfig      `ub:"headers-config"`
+	QueryStringsConfig *CachePolicyDataSourceQueryStringsConfig `ub:"query-strings-config"`
+
+	EnableAcceptEncodingBrotli bool `ub:"enable-accept-encoding-brotli"`
 }
 
-// CachePolicyDataCookiesConfig describes which cookies are part of the cache
+// CachePolicyDataSourceCookiesConfig describes which cookies are part of the cache
 // key and forwarded to the origin.
-type CachePolicyDataCookiesConfig struct {
-	CookieBehavior string                      `ub:"cookie-behavior"`
-	Cookies        *CachePolicyDataCookieNames `ub:"cookies"`
+type CachePolicyDataSourceCookiesConfig struct {
+	CookieBehavior string                            `ub:"cookie-behavior"`
+	Cookies        *CachePolicyDataSourceCookieNames `ub:"cookies"`
 }
 
-// CachePolicyDataCookieNames exposes only the cookie Items list; CloudFront's
+// CachePolicyDataSourceCookieNames exposes only the cookie Items list; CloudFront's
 // Quantity field is deliberately ignored.
-type CachePolicyDataCookieNames struct {
+type CachePolicyDataSourceCookieNames struct {
 	Items []string `ub:"items"`
 }
 
-// CachePolicyDataHeadersConfig describes which headers are part of the cache
+// CachePolicyDataSourceHeadersConfig describes which headers are part of the cache
 // key and forwarded to the origin.
-type CachePolicyDataHeadersConfig struct {
-	HeaderBehavior string                  `ub:"header-behavior"`
-	Headers        *CachePolicyDataHeaders `ub:"headers"`
+type CachePolicyDataSourceHeadersConfig struct {
+	HeaderBehavior string                        `ub:"header-behavior"`
+	Headers        *CachePolicyDataSourceHeaders `ub:"headers"`
 }
 
-// CachePolicyDataHeaders exposes only the header Items list; CloudFront's
+// CachePolicyDataSourceHeaders exposes only the header Items list; CloudFront's
 // Quantity field is deliberately ignored.
-type CachePolicyDataHeaders struct {
+type CachePolicyDataSourceHeaders struct {
 	Items []string `ub:"items"`
 }
 
-// CachePolicyDataQueryStringsConfig describes which query strings are part of
+// CachePolicyDataSourceQueryStringsConfig describes which query strings are part of
 // the cache key and forwarded to the origin.
-type CachePolicyDataQueryStringsConfig struct {
-	QueryStringBehavior string                           `ub:"query-string-behavior"`
-	QueryStrings        *CachePolicyDataQueryStringNames `ub:"query-strings"`
+type CachePolicyDataSourceQueryStringsConfig struct {
+	QueryStringBehavior string                                 `ub:"query-string-behavior"`
+	QueryStrings        *CachePolicyDataSourceQueryStringNames `ub:"query-strings"`
 }
 
-// CachePolicyDataQueryStringNames exposes only the query string Items list;
+// CachePolicyDataSourceQueryStringNames exposes only the query string Items list;
 // CloudFront's Quantity field is deliberately ignored.
-type CachePolicyDataQueryStringNames struct {
+type CachePolicyDataSourceQueryStringNames struct {
 	Items []string `ub:"items"`
 }
 
 // Constraints declares the lookup selector rule: callers must set exactly one
 // of id or name.
-func (r CachePolicyData) Constraints() []constraint.Constraint {
+func (r CachePolicyDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Id, r.Name),
 	}
@@ -101,7 +104,10 @@ func (r CachePolicyData) Constraints() []constraint.Constraint {
 // Read resolves the cache policy and returns its current config. A lookup that
 // finds no policy returns a descriptive data-source error rather than
 // runtime.ErrNotFound.
-func (r *CachePolicyData) Read(ctx context.Context, cfg *awsCfg) (*CachePolicyDataOutput, error) {
+func (r *CachePolicyDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*CachePolicyDataSourceOutput, error) {
 	client, sdkCfg, err := newClientConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -110,7 +116,7 @@ func (r *CachePolicyData) Read(ctx context.Context, cfg *awsCfg) (*CachePolicyDa
 	if err != nil {
 		return nil, err
 	}
-	policy, etag, err := getCachePolicyData(ctx, client, id)
+	policy, etag, err := getCachePolicyDataSource(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +127,7 @@ func (r *CachePolicyData) Read(ctx context.Context, cfg *awsCfg) (*CachePolicyDa
 	return cachePolicyDataOutput(client.Options().Region, accountID, id, etag, policy), nil
 }
 
-func (r *CachePolicyData) resolveID(
+func (r *CachePolicyDataSource) resolveID(
 	ctx context.Context, client *cloudfront.Client,
 ) (string, error) {
 	if err := r.checkSelector(); err != nil {
@@ -133,7 +139,7 @@ func (r *CachePolicyData) resolveID(
 	return r.findIDByName(ctx, client, *r.Name)
 }
 
-func (r *CachePolicyData) checkSelector() error {
+func (r *CachePolicyDataSource) checkSelector() error {
 	switch {
 	case r.Id != nil && r.Name != nil:
 		return errors.New("exactly one of id or name must be supplied")
@@ -144,7 +150,7 @@ func (r *CachePolicyData) checkSelector() error {
 	}
 }
 
-func (r *CachePolicyData) findIDByName(
+func (r *CachePolicyDataSource) findIDByName(
 	ctx context.Context,
 	client *cloudfront.Client,
 	name string,
@@ -184,7 +190,7 @@ func (r *CachePolicyData) findIDByName(
 	return "", fmt.Errorf("no CloudFront Cache Policy named %q found", name)
 }
 
-func getCachePolicyData(
+func getCachePolicyDataSource(
 	ctx context.Context,
 	client *cloudfront.Client,
 	id string,
@@ -240,13 +246,13 @@ func cachePolicyDataOutput(
 	resolvedID string,
 	etag string,
 	policy *cloudfronttypes.CachePolicy,
-) *CachePolicyDataOutput {
+) *CachePolicyDataSourceOutput {
 	config := policy.CachePolicyConfig
 	id := aws.ToString(policy.Id)
 	if id == "" {
 		id = resolvedID
 	}
-	return &CachePolicyDataOutput{
+	return &CachePolicyDataSourceOutput{
 		Id:         id,
 		Arn:        cachePolicyDataARN(region, accountID, id),
 		Comment:    aws.ToString(config.Comment),
@@ -267,11 +273,11 @@ func cachePolicyDataARN(region, accountID, id string) string {
 
 func flattenCachePolicyParameters(
 	in *cloudfronttypes.ParametersInCacheKeyAndForwardedToOrigin,
-) *CachePolicyDataParameters {
+) *CachePolicyDataSourceParameters {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataParameters{
+	return &CachePolicyDataSourceParameters{
 		CookiesConfig:              flattenCachePolicyCookiesConfig(in.CookiesConfig),
 		EnableAcceptEncodingGzip:   aws.ToBool(in.EnableAcceptEncodingGzip),
 		HeadersConfig:              flattenCachePolicyHeadersConfig(in.HeadersConfig),
@@ -282,49 +288,51 @@ func flattenCachePolicyParameters(
 
 func flattenCachePolicyCookiesConfig(
 	in *cloudfronttypes.CachePolicyCookiesConfig,
-) *CachePolicyDataCookiesConfig {
+) *CachePolicyDataSourceCookiesConfig {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataCookiesConfig{
+	return &CachePolicyDataSourceCookiesConfig{
 		CookieBehavior: string(in.CookieBehavior),
 		Cookies:        flattenCachePolicyCookieNames(in.Cookies),
 	}
 }
 
-func flattenCachePolicyCookieNames(in *cloudfronttypes.CookieNames) *CachePolicyDataCookieNames {
+func flattenCachePolicyCookieNames(
+	in *cloudfronttypes.CookieNames,
+) *CachePolicyDataSourceCookieNames {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataCookieNames{Items: append([]string(nil), in.Items...)}
+	return &CachePolicyDataSourceCookieNames{Items: append([]string(nil), in.Items...)}
 }
 
 func flattenCachePolicyHeadersConfig(
 	in *cloudfronttypes.CachePolicyHeadersConfig,
-) *CachePolicyDataHeadersConfig {
+) *CachePolicyDataSourceHeadersConfig {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataHeadersConfig{
+	return &CachePolicyDataSourceHeadersConfig{
 		HeaderBehavior: string(in.HeaderBehavior),
 		Headers:        flattenCachePolicyHeaders(in.Headers),
 	}
 }
 
-func flattenCachePolicyHeaders(in *cloudfronttypes.Headers) *CachePolicyDataHeaders {
+func flattenCachePolicyHeaders(in *cloudfronttypes.Headers) *CachePolicyDataSourceHeaders {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataHeaders{Items: append([]string(nil), in.Items...)}
+	return &CachePolicyDataSourceHeaders{Items: append([]string(nil), in.Items...)}
 }
 
 func flattenCachePolicyQueryStringsConfig(
 	in *cloudfronttypes.CachePolicyQueryStringsConfig,
-) *CachePolicyDataQueryStringsConfig {
+) *CachePolicyDataSourceQueryStringsConfig {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataQueryStringsConfig{
+	return &CachePolicyDataSourceQueryStringsConfig{
 		QueryStringBehavior: string(in.QueryStringBehavior),
 		QueryStrings:        flattenCachePolicyQueryStringNames(in.QueryStrings),
 	}
@@ -332,11 +340,11 @@ func flattenCachePolicyQueryStringsConfig(
 
 func flattenCachePolicyQueryStringNames(
 	in *cloudfronttypes.QueryStringNames,
-) *CachePolicyDataQueryStringNames {
+) *CachePolicyDataSourceQueryStringNames {
 	if in == nil {
 		return nil
 	}
-	return &CachePolicyDataQueryStringNames{Items: append([]string(nil), in.Items...)}
+	return &CachePolicyDataSourceQueryStringNames{Items: append([]string(nil), in.Items...)}
 }
 
 func isCachePolicyNotFound(err error) bool {

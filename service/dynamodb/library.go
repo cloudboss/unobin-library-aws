@@ -23,7 +23,7 @@ func Library() *runtime.Library {
 		Description:   "AWS DynamoDB library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"table": makeResource[svc.Table, *svc.TableOutput](),
+			"table": makeResource[svc.TableResource, *svc.TableResourceOutput](),
 		},
 	}
 }

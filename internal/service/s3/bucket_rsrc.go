@@ -36,7 +36,7 @@ const bucketRegionUSEast1 = "us-east-1"
 // this before each bulk delete.
 const bucketDeleteBatch = 1000
 
-// Bucket manages an S3 bucket and its configuration as one resource, the way
+// BucketResource manages an S3 bucket and its configuration as one resource, the way
 // CloudFormation models AWS::S3::Bucket. The name and whether Object Lock is
 // enabled are fixed at creation, so a change to either replaces the bucket;
 // tags and every configuration block reconcile in place. Each block is its own
@@ -44,7 +44,7 @@ const bucketDeleteBatch = 1000
 // PutPublicAccessBlock, and the rest -- but they are declared together here. A
 // nil block leaves that facet of the bucket untouched. EmptyOnDestroy is a
 // delete-time switch, not a property of the live bucket.
-type Bucket struct {
+type BucketResource struct {
 	Bucket            string                   `ub:"bucket"`
 	ObjectLockEnabled *bool                    `ub:"object-lock-enabled"`
 	Tags              *map[string]string       `ub:"tags"`
@@ -62,26 +62,26 @@ type Bucket struct {
 	EmptyOnDestroy    *bool                    `ub:"empty-on-destroy"`
 }
 
-// BucketOutput holds the values S3 computes for a bucket. Arn identifies the
+// BucketResourceOutput holds the values S3 computes for a bucket. Arn identifies the
 // bucket in policies and grants. BucketRegion is the region the bucket lives
 // in, reported by S3 rather than assumed. The two domain names are the
 // addresses callers reach the bucket at, the regional form pinning the region
 // into the host so a request is not redirected.
-type BucketOutput struct {
+type BucketResourceOutput struct {
 	Arn                      string `ub:"arn"`
 	BucketRegion             string `ub:"bucket-region"`
 	BucketDomainName         string `ub:"bucket-domain-name"`
 	BucketRegionalDomainName string `ub:"bucket-regional-domain-name"`
 }
 
-func (r *Bucket) SchemaVersion() int { return 1 }
+func (r *BucketResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs S3 fixes when a bucket is created. The name is
 // the bucket's identity and S3 offers no rename, and Object Lock can only be
 // turned on at creation, so a change to either requires a new bucket. Tags are
 // reconciled in place by Update. EmptyOnDestroy never reaches create, so it is
 // not a replace trigger.
-func (r *Bucket) ReplaceFields() []string {
+func (r *BucketResource) ReplaceFields() []string {
 	return []string{"bucket", "object-lock-enabled"}
 }
 
@@ -90,7 +90,7 @@ func (r *Bucket) ReplaceFields() []string {
 // of the cors, lifecycle, routing, and grant lists, the cors method values and
 // rule count, the per-transition rules of a lifecycle rule, and the
 // object-lock block's dependence on object-lock-enabled.
-func (r Bucket) Constraints() []constraint.Constraint {
+func (r BucketResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Accelerate.Status)).
 			Require(constraint.OneOf(r.Accelerate.Status, "Enabled", "Suspended")).
@@ -252,7 +252,7 @@ func (r Bucket) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Bucket) Create(ctx context.Context, cfg *awsCfg) (*BucketOutput, error) {
+func (r *BucketResource) Create(ctx context.Context, cfg *awsCfg) (*BucketResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -305,11 +305,15 @@ func (r *Bucket) Create(ctx context.Context, cfg *awsCfg) (*BucketOutput, error)
 // other the way it does when separate resources race a shared bucket. Ownership
 // controls come before the ACL: enforcing bucket-owner ownership disables ACLs,
 // so the ACL write must see the ownership setting already in place.
-func (r *Bucket) reconcile(ctx context.Context, client *s3.Client, prior *Bucket) error {
+func (r *BucketResource) reconcile(
+	ctx context.Context,
+	client *s3.Client,
+	prior *BucketResource,
+) error {
 	// A nil prior is a create: substitute a zero bucket so every prior block reads
 	// as absent, and each reconcile sees its block as new.
 	if prior == nil {
-		prior = &Bucket{}
+		prior = &BucketResource{}
 	}
 	steps := []func() error{
 		func() error {
@@ -388,7 +392,11 @@ func bucketConfigDelete(
 // part stripped and the create retried, leaving the tags to be applied
 // separately. Every attempt is retried through the transient OperationAborted a
 // freshly deleted or in-flight name returns.
-func (r *Bucket) create(ctx context.Context, client *s3.Client, region string) (bool, error) {
+func (r *BucketResource) create(
+	ctx context.Context,
+	client *s3.Client,
+	region string,
+) (bool, error) {
 	tagged := len(ptr.Value(r.Tags)) > 0
 	withTags := r.createInput(region, true, true)
 	err := bucketCreateRetry(ctx, client, withTags)
@@ -421,7 +429,11 @@ func (r *Bucket) create(ctx context.Context, client *s3.Client, region string) (
 // the desired tags in the configuration; withConfig includes the configuration
 // body at all. The location constraint is set only outside us-east-1. Object
 // Lock is requested when the input asks for it.
-func (r *Bucket) createInput(region string, withTags, withConfig bool) *s3.CreateBucketInput {
+func (r *BucketResource) createInput(
+	region string,
+	withTags,
+	withConfig bool,
+) *s3.CreateBucketInput {
 	in := &s3.CreateBucketInput{
 		Bucket:                     aws.String(r.Bucket),
 		ObjectLockEnabledForBucket: r.ObjectLockEnabled,
@@ -445,9 +457,8 @@ func (r *Bucket) createInput(region string, withTags, withConfig bool) *s3.Creat
 	return in
 }
 
-func (r *Bucket) Read(
-	ctx context.Context, cfg *awsCfg, prior *BucketOutput,
-) (*BucketOutput, error) {
+func (r *BucketResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *BucketResourceOutput) (*BucketResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -461,9 +472,9 @@ func (r *Bucket) Read(
 // may live in a different region than the one the call was made from. The
 // bucket name is the read key and comes from the receiver, since it is an input
 // the prior output does not carry.
-func (r *Bucket) read(
+func (r *BucketResource) read(
 	ctx context.Context, client *s3.Client, region string,
-) (*BucketOutput, error) {
+) (*BucketResourceOutput, error) {
 	resp, err := client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(r.Bucket)})
 	if err != nil {
 		if bucketIsGone(err) {
@@ -479,7 +490,7 @@ func (r *Bucket) read(
 	if err != nil {
 		return nil, err
 	}
-	return &BucketOutput{
+	return &BucketResourceOutput{
 		Arn:                      bucketARN(region, r.Bucket),
 		BucketRegion:             bucketRegion,
 		BucketDomainName:         domain,
@@ -487,9 +498,9 @@ func (r *Bucket) read(
 	}, nil
 }
 
-func (r *Bucket) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Bucket, *BucketOutput],
-) (*BucketOutput, error) {
+func (r *BucketResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[BucketResource, *BucketResourceOutput],
+) (*BucketResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -507,7 +518,11 @@ func (r *Bucket) Update(
 	return r.read(ctx, client, client.Options().Region)
 }
 
-func (r *Bucket) Delete(ctx context.Context, cfg *awsCfg, prior *BucketOutput) error {
+func (r *BucketResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *BucketResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -551,7 +566,7 @@ func (r *Bucket) Delete(ctx context.Context, cfg *awsCfg, prior *BucketOutput) e
 
 // waitExists polls HeadBucket until the bucket is visible, for the propagation
 // window after a create.
-func (r *Bucket) waitExists(ctx context.Context, client *s3.Client) error {
+func (r *BucketResource) waitExists(ctx context.Context, client *s3.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("bucket %s", r.Bucket),
 		func(ctx context.Context) (bool, error) {
 			gone, err := bucketHeadGone(ctx, client, r.Bucket)
@@ -566,7 +581,7 @@ func (r *Bucket) waitExists(ctx context.Context, client *s3.Client) error {
 // waitGone polls HeadBucket until the bucket reports gone after a delete. It
 // polls every second, since a deleted bucket disappears quickly, unlike the
 // slower wait for a create to become visible.
-func (r *Bucket) waitGone(ctx context.Context, client *s3.Client) error {
+func (r *BucketResource) waitGone(ctx context.Context, client *s3.Client) error {
 	return wait.Until(ctx, fmt.Sprintf("bucket %s to be gone", r.Bucket),
 		func(ctx context.Context) (bool, error) {
 			return bucketHeadGone(ctx, client, r.Bucket)
@@ -578,7 +593,7 @@ func (r *Bucket) waitGone(ctx context.Context, client *s3.Client) error {
 // putTags writes the desired tags onto the bucket, replacing whatever tag set
 // is there. It is the separate-tagging path taken after a create that could
 // not tag the bucket inline.
-func (r *Bucket) putTags(ctx context.Context, client *s3.Client) error {
+func (r *BucketResource) putTags(ctx context.Context, client *s3.Client) error {
 	_, err := client.PutBucketTagging(ctx, &s3.PutBucketTaggingInput{
 		Bucket:  aws.String(r.Bucket),
 		Tagging: &s3types.Tagging{TagSet: bucketTags(ptr.Value(r.Tags))},
@@ -597,7 +612,7 @@ func (r *Bucket) putTags(ctx context.Context, client *s3.Client) error {
 // result is only consulted for whether a change is needed, since S3 cannot act
 // on the per-key sets it returns. GetBucketTagging returns NoSuchTagSet on a
 // bucket that has never been tagged, taken here as an empty set.
-func (r *Bucket) syncTags(ctx context.Context, client *s3.Client) error {
+func (r *BucketResource) syncTags(ctx context.Context, client *s3.Client) error {
 	current, err := r.readTags(ctx, client)
 	if err != nil {
 		return err
@@ -620,7 +635,10 @@ func (r *Bucket) syncTags(ctx context.Context, client *s3.Client) error {
 
 // readTags returns the bucket's live tags as a map. A bucket that has never
 // been tagged returns the NoSuchTagSet code, taken as an empty set.
-func (r *Bucket) readTags(ctx context.Context, client *s3.Client) (map[string]string, error) {
+func (r *BucketResource) readTags(
+	ctx context.Context,
+	client *s3.Client,
+) (map[string]string, error) {
 	resp, err := client.GetBucketTagging(ctx, &s3.GetBucketTaggingInput{
 		Bucket: aws.String(r.Bucket),
 	})

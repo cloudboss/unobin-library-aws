@@ -6,22 +6,22 @@ import (
 	"fmt"
 )
 
-// Region resolves one AWS region by name, EC2 endpoint, or the current
+// RegionDataSource resolves one AWS region by name, EC2 endpoint, or the current
 // library configuration.
-type Region struct {
+type RegionDataSource struct {
 	Endpoint *string `ub:"endpoint"`
 	Region   *string `ub:"region"`
 }
 
-// RegionOutput describes an AWS region and its EC2 endpoint.
-type RegionOutput struct {
+// RegionDataSourceOutput describes an AWS region and its EC2 endpoint.
+type RegionDataSourceOutput struct {
 	Description string `ub:"description"`
 	Endpoint    string `ub:"endpoint"`
 	Partition   string `ub:"partition"`
 	Region      string `ub:"region"`
 }
 
-func (d *Region) Read(ctx context.Context, cfg *awsCfg) (*RegionOutput, error) {
+func (d *RegionDataSource) Read(ctx context.Context, cfg *awsCfg) (*RegionDataSourceOutput, error) {
 	info, err := d.resolveRegion(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (d *Region) Read(ctx context.Context, cfg *awsCfg) (*RegionOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve EC2 endpoint: %w", err)
 	}
-	return &RegionOutput{
+	return &RegionDataSourceOutput{
 		Description: info.Description,
 		Endpoint:    endpoint,
 		Partition:   info.Partition.ID(),
@@ -38,7 +38,7 @@ func (d *Region) Read(ctx context.Context, cfg *awsCfg) (*RegionOutput, error) {
 	}, nil
 }
 
-func (d *Region) resolveRegion(ctx context.Context, cfg *awsCfg) (regionInfo, error) {
+func (d *RegionDataSource) resolveRegion(ctx context.Context, cfg *awsCfg) (regionInfo, error) {
 	var byEndpoint *regionInfo
 	if endpoint := stringValue(d.Endpoint); endpoint != "" {
 		info, err := findRegionByEndpoint(ctx, endpoint)

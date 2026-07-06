@@ -29,13 +29,13 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// EventBus is an EventBridge custom or partner event bus. Name fixes the bus'
+// EventBusResource is an EventBridge custom or partner event bus. Name fixes the bus'
 // identity and EventSourceName binds a partner bus to its source, so both are
 // replace fields. Description, dead-letter queue, KMS key, and logging settings
 // update in place through UpdateEventBus, while tags reconcile through the tag
 // APIs addressed by the bus ARN. Length, ARN, and partner-source pattern rules
 // run in validate because they need character counts or regular expressions.
-type EventBus struct {
+type EventBusResource struct {
 	Name             string                    `ub:"name"`
 	DeadLetterConfig *EventBusDeadLetterConfig `ub:"dead-letter-config"`
 	Description      *string                   `ub:"description"`
@@ -45,24 +45,24 @@ type EventBus struct {
 	Tags             *map[string]string        `ub:"tags"`
 }
 
-// EventBusOutput holds the ARN DescribeEventBus returns, plus the name handle
+// EventBusResourceOutput holds the ARN DescribeEventBus returns, plus the name handle
 // needed to read or delete the prior bus during replacement.
-type EventBusOutput struct {
+type EventBusResourceOutput struct {
 	Arn  string `ub:"arn"`
 	Name string `ub:"name"`
 }
 
-func (r *EventBus) SchemaVersion() int { return 1 }
+func (r *EventBusResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the event bus inputs EventBridge fixes at creation. The
 // name is the API identity, and a partner event source can only be matched when
 // the bus is created.
-func (r *EventBus) ReplaceFields() []string {
+func (r *EventBusResource) ReplaceFields() []string {
 	return []string{"name", "event-source-name"}
 }
 
 // Constraints declares the enum and reserved-name rules the schema can express.
-func (r EventBus) Constraints() []constraint.Constraint {
+func (r EventBusResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.NotEquals(r.Name, "default")).
 			Message("name cannot be default"),
@@ -75,7 +75,10 @@ func (r EventBus) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *EventBus) Create(ctx context.Context, cfg *awsCfg) (*EventBusOutput, error) {
+func (r *EventBusResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*EventBusResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -106,9 +109,8 @@ func (r *EventBus) Create(ctx context.Context, cfg *awsCfg) (*EventBusOutput, er
 	return r.read(ctx, client, r.Name)
 }
 
-func (r *EventBus) Read(
-	ctx context.Context, cfg *awsCfg, prior *EventBusOutput,
-) (*EventBusOutput, error) {
+func (r *EventBusResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *EventBusResourceOutput) (*EventBusResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -116,9 +118,9 @@ func (r *EventBus) Read(
 	return r.read(ctx, client, eventBusName(r.Name, prior))
 }
 
-func (r *EventBus) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EventBus, *EventBusOutput],
-) (*EventBusOutput, error) {
+func (r *EventBusResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EventBusResource, *EventBusResourceOutput],
+) (*EventBusResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -144,7 +146,11 @@ func (r *EventBus) Update(
 	return r.read(ctx, client, name)
 }
 
-func (r *EventBus) Delete(ctx context.Context, cfg *awsCfg, prior *EventBusOutput) error {
+func (r *EventBusResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *EventBusResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -161,7 +167,7 @@ func (r *EventBus) Delete(ctx context.Context, cfg *awsCfg, prior *EventBusOutpu
 	return nil
 }
 
-func (r *EventBus) createInput() *eventbridge.CreateEventBusInput {
+func (r *EventBusResource) createInput() *eventbridge.CreateEventBusInput {
 	return &eventbridge.CreateEventBusInput{
 		Name:             aws.String(r.Name),
 		DeadLetterConfig: r.DeadLetterConfig.to(),
@@ -173,7 +179,7 @@ func (r *EventBus) createInput() *eventbridge.CreateEventBusInput {
 	}
 }
 
-func (r *EventBus) updateInput(name string) *eventbridge.UpdateEventBusInput {
+func (r *EventBusResource) updateInput(name string) *eventbridge.UpdateEventBusInput {
 	in := &eventbridge.UpdateEventBusInput{
 		Name:        aws.String(name),
 		Description: eventBusDescription(r.Description),
@@ -190,9 +196,9 @@ func (r *EventBus) updateInput(name string) *eventbridge.UpdateEventBusInput {
 	return in
 }
 
-func (r *EventBus) read(
+func (r *EventBusResource) read(
 	ctx context.Context, client *eventbridge.Client, name string,
-) (*EventBusOutput, error) {
+) (*EventBusResourceOutput, error) {
 	resp, err := client.DescribeEventBus(ctx, &eventbridge.DescribeEventBusInput{
 		Name: aws.String(name),
 	})
@@ -214,14 +220,14 @@ func (r *EventBus) read(
 	return out, nil
 }
 
-func (r *EventBus) eventBusChanged(prior EventBus) bool {
+func (r *EventBusResource) eventBusChanged(prior EventBusResource) bool {
 	return runtime.Changed(prior.DeadLetterConfig, r.DeadLetterConfig) ||
 		runtime.Changed(prior.Description, r.Description) ||
 		runtime.Changed(prior.KmsKeyIdentifier, r.KmsKeyIdentifier) ||
 		runtime.Changed(prior.LogConfig, r.LogConfig)
 }
 
-func (r *EventBus) createdArn(
+func (r *EventBusResource) createdArn(
 	ctx context.Context, client *eventbridge.Client, resp *eventbridge.CreateEventBusOutput,
 ) (string, error) {
 	if resp != nil && aws.ToString(resp.EventBusArn) != "" {
@@ -234,12 +240,11 @@ func (r *EventBus) createdArn(
 	return out.Arn, nil
 }
 
-func (r *EventBus) priorArn(
+func (r *EventBusResource) priorArn(
 	ctx context.Context,
 	client *eventbridge.Client,
 	name string,
-	prior *EventBusOutput,
-) (string, error) {
+	prior *EventBusResourceOutput) (string, error) {
 	if prior != nil && prior.Arn != "" {
 		return prior.Arn, nil
 	}
@@ -250,7 +255,11 @@ func (r *EventBus) priorArn(
 	return out.Arn, nil
 }
 
-func (r *EventBus) syncTags(ctx context.Context, client *eventbridge.Client, arn string) error {
+func (r *EventBusResource) syncTags(
+	ctx context.Context,
+	client *eventbridge.Client,
+	arn string,
+) error {
 	return tagsync.Sync(ctx, eventBusUserTags(ptr.Value(r.Tags)),
 		func(ctx context.Context) (map[string]string, error) {
 			return readEventBusTags(ctx, client, arn, true)
@@ -286,7 +295,7 @@ func (r *EventBus) syncTags(ctx context.Context, client *eventbridge.Client, arn
 
 // validate checks the string length, ARN, and partner-source-name rules the
 // constraint vocabulary cannot express.
-func (r *EventBus) validate() error {
+func (r *EventBusResource) validate() error {
 	if n := utf8.RuneCountInString(r.Name); n < 1 || n > 256 {
 		return fmt.Errorf("name must be between 1 and 256 characters, got %d", n)
 	}
@@ -368,7 +377,7 @@ func (b *EventBusLogConfig) to() *eventbridgetypes.LogConfig {
 	return out
 }
 
-func eventBusName(current string, prior *EventBusOutput) string {
+func eventBusName(current string, prior *EventBusResourceOutput) string {
 	if prior != nil && prior.Name != "" {
 		return prior.Name
 	}
@@ -382,8 +391,8 @@ func eventBusDescription(description *string) *string {
 	return description
 }
 
-func eventBusOutput(resp *eventbridge.DescribeEventBusOutput) *EventBusOutput {
-	return &EventBusOutput{
+func eventBusOutput(resp *eventbridge.DescribeEventBusOutput) *EventBusResourceOutput {
+	return &EventBusResourceOutput{
 		Arn:  aws.ToString(resp.Arn),
 		Name: aws.ToString(resp.Name),
 	}

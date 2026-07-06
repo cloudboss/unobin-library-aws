@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCertificateDataListInput(t *testing.T) {
+func TestCertificateDataSourceListInput(t *testing.T) {
 	cases := []struct {
 		name         string
-		lookup       CertificateData
+		lookup       CertificateDataSource
 		wantStatuses []acmtypes.CertificateStatus
 		wantKeyTypes []acmtypes.KeyAlgorithm
 	}{
@@ -27,7 +27,7 @@ func TestCertificateDataListInput(t *testing.T) {
 		},
 		{
 			name: "uses explicit statuses and key types",
-			lookup: CertificateData{
+			lookup: CertificateDataSource{
 				Statuses: &[]string{"PENDING_VALIDATION", "ISSUED"},
 				KeyTypes: &[]string{"RSA_2048", "EC_prime256v1"},
 			},
@@ -56,12 +56,12 @@ func TestCertificateDataListInput(t *testing.T) {
 	}
 }
 
-func TestCertificateDataCheckLookupKeys(t *testing.T) {
+func TestCertificateDataSourceCheckLookupKeys(t *testing.T) {
 	emptyDomain := ""
 
 	cases := []struct {
 		name    string
-		lookup  CertificateData
+		lookup  CertificateDataSource
 		wantErr string
 	}{
 		{
@@ -70,11 +70,11 @@ func TestCertificateDataCheckLookupKeys(t *testing.T) {
 		},
 		{
 			name:   "accepts explicit empty domain",
-			lookup: CertificateData{Domain: &emptyDomain},
+			lookup: CertificateDataSource{Domain: &emptyDomain},
 		},
 		{
 			name:   "accepts explicit empty tags",
-			lookup: CertificateData{Tags: new(map[string]string{})},
+			lookup: CertificateDataSource{Tags: new(map[string]string{})},
 		},
 	}
 
@@ -90,7 +90,7 @@ func TestCertificateDataCheckLookupKeys(t *testing.T) {
 	}
 }
 
-func TestCertificateDataDecodeExplicitEmptySelectors(t *testing.T) {
+func TestCertificateDataSourceDecodeExplicitEmptySelectors(t *testing.T) {
 	cases := []struct {
 		name   string
 		inputs map[string]any
@@ -107,27 +107,27 @@ func TestCertificateDataDecodeExplicitEmptySelectors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			var lookup CertificateData
+			var lookup CertificateDataSource
 			require.NoError(t, runtime.Decode(&lookup, tc.inputs))
 			require.NoError(t, lookup.checkLookupKeys())
 		})
 	}
 }
 
-func TestCertificateDataSummaryMatches(t *testing.T) {
+func TestCertificateDataSourceSummaryMatches(t *testing.T) {
 	emptyDomain := ""
 	exampleDomain := "example.com"
 	otherDomain := "other.example.com"
 
 	cases := []struct {
 		name    string
-		lookup  CertificateData
+		lookup  CertificateDataSource
 		summary acmtypes.CertificateSummary
 		want    bool
 	}{
 		{
 			name:   "empty domain does not filter",
-			lookup: CertificateData{Domain: &emptyDomain},
+			lookup: CertificateDataSource{Domain: &emptyDomain},
 			summary: acmtypes.CertificateSummary{
 				DomainName: aws.String(exampleDomain),
 			},
@@ -135,7 +135,7 @@ func TestCertificateDataSummaryMatches(t *testing.T) {
 		},
 		{
 			name:   "non-empty domain matches exact summary domain",
-			lookup: CertificateData{Domain: &exampleDomain},
+			lookup: CertificateDataSource{Domain: &exampleDomain},
 			summary: acmtypes.CertificateSummary{
 				DomainName: aws.String(exampleDomain),
 			},
@@ -143,14 +143,14 @@ func TestCertificateDataSummaryMatches(t *testing.T) {
 		},
 		{
 			name:   "non-empty domain rejects different summary domain",
-			lookup: CertificateData{Domain: &exampleDomain},
+			lookup: CertificateDataSource{Domain: &exampleDomain},
 			summary: acmtypes.CertificateSummary{
 				DomainName: aws.String(otherDomain),
 			},
 		},
 		{
 			name:   "non-empty types filter requires membership",
-			lookup: CertificateData{Types: &[]string{"IMPORTED"}},
+			lookup: CertificateDataSource{Types: &[]string{"IMPORTED"}},
 			summary: acmtypes.CertificateSummary{
 				Type: acmtypes.CertificateTypeAmazonIssued,
 			},
@@ -200,7 +200,7 @@ func TestCertificateDetailFromDescribe(t *testing.T) {
 	}
 }
 
-func TestCertificateDataContainsTags(t *testing.T) {
+func TestCertificateDataSourceContainsTags(t *testing.T) {
 	cases := []struct {
 		name   string
 		actual map[string]string
@@ -232,7 +232,7 @@ func TestCertificateDataContainsTags(t *testing.T) {
 	}
 }
 
-func TestCertificateDataUserTags(t *testing.T) {
+func TestCertificateDataSourceUserTags(t *testing.T) {
 	tags := certificateDataUserTags(map[string]string{
 		"aws:cloudformation:stack-name": "owned",
 		"empty":                         "",
@@ -258,7 +258,7 @@ func (e *certificateDataAPIError) ErrorMessage() string {
 }
 func (e *certificateDataAPIError) ErrorFault() smithy.ErrorFault { return smithy.FaultClient }
 
-func TestCertificateDataSuppressOutputTagError(t *testing.T) {
+func TestCertificateDataSourceSuppressOutputTagError(t *testing.T) {
 	cases := []struct {
 		name   string
 		region string
@@ -314,7 +314,7 @@ func TestCertificateDataSuppressOutputTagError(t *testing.T) {
 	}
 }
 
-func TestCertificateDataMostRecent(t *testing.T) {
+func TestCertificateDataSourceMostRecent(t *testing.T) {
 	oldTime := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	newTime := oldTime.Add(time.Hour)
 

@@ -10,20 +10,20 @@ import (
 	"github.com/cloudboss/unobin/pkg/defaults"
 )
 
-// ParameterData resolves one existing SSM parameter by name with a single
+// ParameterDataSource resolves one existing SSM parameter by name with a single
 // GetParameter call. with-decryption defaults to true, matching the lookup's
 // read-sensitive-value behavior while still allowing an explicit false. A
 // missing parameter is a data-source failure, not resource-style drift.
-type ParameterData struct {
+type ParameterDataSource struct {
 	Name           string `ub:"name"`
 	WithDecryption *bool  `ub:"with-decryption"`
 }
 
-// ParameterDataOutput holds the attributes returned by GetParameter. Value is
+// ParameterDataSourceOutput holds the attributes returned by GetParameter. Value is
 // always sensitive, even for a plain String or StringList parameter. The
 // non-sensitive insecure-value is populated only when SSM reports a non-secure
 // parameter type.
-type ParameterDataOutput struct {
+type ParameterDataSourceOutput struct {
 	Arn           string  `ub:"arn"`
 	Name          string  `ub:"name"`
 	Type          string  `ub:"type"`
@@ -34,7 +34,7 @@ type ParameterDataOutput struct {
 
 // Defaults gives with-decryption its data-source default. Read also treats a nil
 // field as true so direct calls behave the same as runtime-defaulted calls.
-func (r ParameterData) Defaults() []defaults.Default {
+func (r ParameterDataSource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.NullableValue(r.WithDecryption, true),
 	}
@@ -43,7 +43,10 @@ func (r ParameterData) Defaults() []defaults.Default {
 // Read fetches the requested SSM parameter and flattens the returned parameter
 // object. A missing parameter, nil response, or nil Parameter member is returned
 // as a descriptive data-source error rather than runtime.ErrNotFound.
-func (r *ParameterData) Read(ctx context.Context, cfg *awsCfg) (*ParameterDataOutput, error) {
+func (r *ParameterDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ParameterDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -61,19 +64,22 @@ func (r *ParameterData) Read(ctx context.Context, cfg *awsCfg) (*ParameterDataOu
 	return parameterDataOutput(r.Name, resp)
 }
 
-func (r *ParameterData) withDecryption() bool {
+func (r *ParameterDataSource) withDecryption() bool {
 	if r.WithDecryption == nil {
 		return true
 	}
 	return *r.WithDecryption
 }
 
-func parameterDataOutput(name string, resp *ssm.GetParameterOutput) (*ParameterDataOutput, error) {
+func parameterDataOutput(
+	name string,
+	resp *ssm.GetParameterOutput,
+) (*ParameterDataSourceOutput, error) {
 	if resp == nil || resp.Parameter == nil {
 		return nil, fmt.Errorf("ssm parameter %q not found", name)
 	}
 	param := resp.Parameter
-	out := &ParameterDataOutput{
+	out := &ParameterDataSourceOutput{
 		Arn:     aws.ToString(param.ARN),
 		Name:    aws.ToString(param.Name),
 		Type:    string(param.Type),

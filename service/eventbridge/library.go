@@ -23,9 +23,9 @@ func Library() *runtime.Library {
 		Description:   "AWS EventBridge library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"event-bus": makeResource[svc.EventBus, *svc.EventBusOutput](),
-			"rule":      makeResource[svc.Rule, *svc.RuleOutput](),
-			"target":    makeResource[svc.Target, *svc.TargetOutput](),
+			"event-bus": makeResource[svc.EventBusResource, *svc.EventBusResourceOutput](),
+			"rule":      makeResource[svc.RuleResource, *svc.RuleResourceOutput](),
+			"target":    makeResource[svc.TargetResource, *svc.TargetResourceOutput](),
 		},
 	}
 }

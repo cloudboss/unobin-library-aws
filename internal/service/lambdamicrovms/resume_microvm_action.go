@@ -8,11 +8,14 @@ import (
 	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 )
 
-type ResumeMicrovm struct {
+type ResumeMicrovmAction struct {
 	MicrovmIdentifier string `ub:"microvm-identifier"`
 }
 
-func (r *ResumeMicrovm) Run(ctx context.Context, cfg *awsCfg) (*ResumeMicrovmOutput, error) {
+func (r *ResumeMicrovmAction) Run(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ResumeMicrovmActionOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -23,5 +26,5 @@ func (r *ResumeMicrovm) Run(ctx context.Context, cfg *awsCfg) (*ResumeMicrovmOut
 	if err != nil {
 		return nil, fmt.Errorf("resume Microvm %s: %w", r.MicrovmIdentifier, err)
 	}
-	return &ResumeMicrovmOutput{MicrovmIdentifier: r.MicrovmIdentifier}, nil
+	return &ResumeMicrovmActionOutput{MicrovmIdentifier: r.MicrovmIdentifier}, nil
 }

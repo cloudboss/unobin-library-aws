@@ -12,35 +12,38 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// UserPolicy manages an inline policy embedded in an IAM user. The user name
+// UserPolicyResource manages an inline policy embedded in an IAM user. The user name
 // and policy name identify the policy, so changes to either replace it. The
 // policy document is normalized before it is sent to IAM and updated in place
 // with PutUserPolicy.
-type UserPolicy struct {
+type UserPolicyResource struct {
 	UserName       string `ub:"user-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-// UserPolicyOutput holds the identity and policy document IAM stores. The
+// UserPolicyResourceOutput holds the identity and policy document IAM stores. The
 // document is URL-decoded and normalized so references see the stored JSON
 // rather than IAM's percent-encoded transport value.
-type UserPolicyOutput struct {
+type UserPolicyResourceOutput struct {
 	UserName       string `ub:"user-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-func (r *UserPolicy) SchemaVersion() int { return 1 }
+func (r *UserPolicyResource) SchemaVersion() int { return 1 }
 
-func (r *UserPolicy) ReplaceFields() []string {
+func (r *UserPolicyResource) ReplaceFields() []string {
 	return []string{
 		"user-name",
 		"policy-name",
 	}
 }
 
-func (r *UserPolicy) Create(ctx context.Context, cfg *awsCfg) (*UserPolicyOutput, error) {
+func (r *UserPolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*UserPolicyResourceOutput, error) {
 	document, err := normalizeIAMPolicyJSON(r.PolicyDocument)
 	if err != nil {
 		return nil, err
@@ -55,22 +58,26 @@ func (r *UserPolicy) Create(ctx context.Context, cfg *awsCfg) (*UserPolicyOutput
 	return r.read(ctx, client, true)
 }
 
-func (r *UserPolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *UserPolicyOutput,
-) (*UserPolicyOutput, error) {
+func (r *UserPolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *UserPolicyResourceOutput,
+) (*UserPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return (&UserPolicy{
+	return (&UserPolicyResource{
 		UserName:   prior.UserName,
 		PolicyName: prior.PolicyName,
 	}).read(ctx, client, false)
 }
 
-func (r *UserPolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[UserPolicy, *UserPolicyOutput],
-) (*UserPolicyOutput, error) {
+func (r *UserPolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput],
+) (*UserPolicyResourceOutput, error) {
 	desiredDocument, err := normalizeIAMPolicyJSON(r.PolicyDocument)
 	if err != nil {
 		return nil, err
@@ -88,7 +95,11 @@ func (r *UserPolicy) Update(
 	return r.read(ctx, client, false)
 }
 
-func (r *UserPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *UserPolicyOutput) error {
+func (r *UserPolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *UserPolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -106,7 +117,11 @@ func (r *UserPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *UserPolicyO
 	return nil
 }
 
-func (r *UserPolicy) putDocument(ctx context.Context, client *iam.Client, document string) error {
+func (r *UserPolicyResource) putDocument(
+	ctx context.Context,
+	client *iam.Client,
+	document string,
+) error {
 	in := &iam.PutUserPolicyInput{
 		UserName:       aws.String(r.UserName),
 		PolicyName:     aws.String(r.PolicyName),
@@ -118,14 +133,14 @@ func (r *UserPolicy) putDocument(ctx context.Context, client *iam.Client, docume
 	return nil
 }
 
-func userPolicyDocumentDrifted(observed *UserPolicyOutput, desired string) bool {
+func userPolicyDocumentDrifted(observed *UserPolicyResourceOutput, desired string) bool {
 	return observed != nil && runtime.Changed(observed.PolicyDocument, desired)
 }
 
-func (r *UserPolicy) read(
+func (r *UserPolicyResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*UserPolicyOutput, error) {
-	var out *UserPolicyOutput
+) (*UserPolicyResourceOutput, error) {
+	var out *UserPolicyResourceOutput
 	what := fmt.Sprintf("user policy %s on user %s", r.PolicyName, r.UserName)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		resp, err := client.GetUserPolicy(ctx, &iam.GetUserPolicyInput{
@@ -151,7 +166,7 @@ func (r *UserPolicy) read(
 		if err != nil {
 			return false, err
 		}
-		out = &UserPolicyOutput{
+		out = &UserPolicyResourceOutput{
 			UserName:       r.outputUserName(resp),
 			PolicyName:     r.outputPolicyName(resp),
 			PolicyDocument: document,
@@ -164,14 +179,14 @@ func (r *UserPolicy) read(
 	return out, nil
 }
 
-func (r *UserPolicy) outputUserName(resp *iam.GetUserPolicyOutput) string {
+func (r *UserPolicyResource) outputUserName(resp *iam.GetUserPolicyOutput) string {
 	if resp.UserName != nil {
 		return aws.ToString(resp.UserName)
 	}
 	return r.UserName
 }
 
-func (r *UserPolicy) outputPolicyName(resp *iam.GetUserPolicyOutput) string {
+func (r *UserPolicyResource) outputPolicyName(resp *iam.GetUserPolicyOutput) string {
 	if resp.PolicyName != nil {
 		return aws.ToString(resp.PolicyName)
 	}

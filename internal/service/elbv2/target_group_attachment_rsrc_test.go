@@ -13,7 +13,7 @@ import (
 )
 
 func TestTargetGroupAttachmentReplaceFields(t *testing.T) {
-	r := &TargetGroupAttachment{}
+	r := &TargetGroupAttachmentResource{}
 	assert.Equal(t, []string{
 		"target-group-arn",
 		"target-id",
@@ -32,30 +32,30 @@ func TestTargetGroupAttachmentEffectiveTuple(t *testing.T) {
 
 	tests := []struct {
 		name string
-		in   TargetGroupAttachment
-		want TargetGroupAttachmentOutput
+		in   TargetGroupAttachmentResource
+		want TargetGroupAttachmentResourceOutput
 	}{
 		{
 			name: "required fields only",
-			in: TargetGroupAttachment{
+			in: TargetGroupAttachmentResource{
 				TargetGroupArn: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:       "10.20.1.50",
 			},
-			want: TargetGroupAttachmentOutput{
+			want: TargetGroupAttachmentResourceOutput{
 				TargetGroupArn: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:       "10.20.1.50",
 			},
 		},
 		{
 			name: "optional tuple fields",
-			in: TargetGroupAttachment{
+			in: TargetGroupAttachmentResource{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(az),
 				Port:             aws.Int64(port),
 				QuicServerId:     aws.String(quicServerID),
 			},
-			want: TargetGroupAttachmentOutput{
+			want: TargetGroupAttachmentResourceOutput{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(az),
@@ -65,14 +65,14 @@ func TestTargetGroupAttachmentEffectiveTuple(t *testing.T) {
 		},
 		{
 			name: "zero optional tuple fields are absent",
-			in: TargetGroupAttachment{
+			in: TargetGroupAttachmentResource{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(empty),
 				Port:             aws.Int64(zero),
 				QuicServerId:     aws.String(empty),
 			},
-			want: TargetGroupAttachmentOutput{
+			want: TargetGroupAttachmentResourceOutput{
 				TargetGroupArn: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 				TargetId:       "10.20.1.50",
 			},
@@ -91,7 +91,7 @@ func TestTargetGroupAttachmentTupleWithFallback(t *testing.T) {
 	newPort := int64(9090)
 	zero := int64(0)
 	empty := ""
-	current := &TargetGroupAttachment{
+	current := &TargetGroupAttachmentResource{
 		TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:new",
 		TargetId:         "10.20.2.50",
 		AvailabilityZone: aws.String("us-east-1b"),
@@ -101,19 +101,19 @@ func TestTargetGroupAttachmentTupleWithFallback(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		prior *TargetGroupAttachmentOutput
-		want  TargetGroupAttachmentOutput
+		prior *TargetGroupAttachmentResourceOutput
+		want  TargetGroupAttachmentResourceOutput
 	}{
 		{
 			name: "usable prior output wins",
-			prior: &TargetGroupAttachmentOutput{
+			prior: &TargetGroupAttachmentResourceOutput{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:old",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String("us-east-1a"),
 				Port:             aws.Int64(oldPort),
 				QuicServerId:     aws.String("0x0123456789abcdef"),
 			},
-			want: TargetGroupAttachmentOutput{
+			want: TargetGroupAttachmentResourceOutput{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:old",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String("us-east-1a"),
@@ -123,14 +123,14 @@ func TestTargetGroupAttachmentTupleWithFallback(t *testing.T) {
 		},
 		{
 			name: "usable prior output does not take current optional fields",
-			prior: &TargetGroupAttachmentOutput{
+			prior: &TargetGroupAttachmentResourceOutput{
 				TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:old",
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(empty),
 				Port:             aws.Int64(zero),
 				QuicServerId:     aws.String(empty),
 			},
-			want: TargetGroupAttachmentOutput{
+			want: TargetGroupAttachmentResourceOutput{
 				TargetGroupArn: "arn:aws:elasticloadbalancing:us-east-1:123:old",
 				TargetId:       "10.20.1.50",
 			},
@@ -142,7 +142,7 @@ func TestTargetGroupAttachmentTupleWithFallback(t *testing.T) {
 		},
 		{
 			name: "prior output without required fields falls back to current input",
-			prior: &TargetGroupAttachmentOutput{
+			prior: &TargetGroupAttachmentResourceOutput{
 				TargetGroupArn: "",
 				TargetId:       "10.20.1.50",
 				Port:           aws.Int64(oldPort),
@@ -167,12 +167,12 @@ func TestTargetGroupAttachmentTargetDescription(t *testing.T) {
 
 	tests := []struct {
 		name string
-		in   TargetGroupAttachmentOutput
+		in   TargetGroupAttachmentResourceOutput
 		want elbv2types.TargetDescription
 	}{
 		{
 			name: "required fields only",
-			in: TargetGroupAttachmentOutput{
+			in: TargetGroupAttachmentResourceOutput{
 				TargetId: "10.20.1.50",
 			},
 			want: elbv2types.TargetDescription{
@@ -181,7 +181,7 @@ func TestTargetGroupAttachmentTargetDescription(t *testing.T) {
 		},
 		{
 			name: "optional tuple fields",
-			in: TargetGroupAttachmentOutput{
+			in: TargetGroupAttachmentResourceOutput{
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(az),
 				Port:             aws.Int64(port),
@@ -196,7 +196,7 @@ func TestTargetGroupAttachmentTargetDescription(t *testing.T) {
 		},
 		{
 			name: "zero optional tuple fields are absent",
-			in: TargetGroupAttachmentOutput{
+			in: TargetGroupAttachmentResourceOutput{
 				TargetId:         "10.20.1.50",
 				AvailabilityZone: aws.String(empty),
 				Port:             aws.Int64(zero),
@@ -218,7 +218,7 @@ func TestTargetGroupAttachmentTargetDescription(t *testing.T) {
 func TestTargetGroupAttachmentInputs(t *testing.T) {
 	zero := int64(0)
 	empty := ""
-	tuple := TargetGroupAttachmentOutput{
+	tuple := TargetGroupAttachmentResourceOutput{
 		TargetGroupArn:   "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/abc",
 		TargetId:         "10.20.1.50",
 		AvailabilityZone: aws.String(empty),

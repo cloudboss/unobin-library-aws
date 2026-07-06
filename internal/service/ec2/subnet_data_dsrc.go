@@ -12,35 +12,35 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// SubnetData resolves exactly one existing EC2 subnet with DescribeSubnets. The
+// SubnetDataSource resolves exactly one existing EC2 subnet with DescribeSubnets. The
 // lookup combines the optional id selector, scalar filters, tag filters, and
 // generic filters as one conjunctive query. A missing or ambiguous lookup is a
 // normal data-source error, not runtime.ErrNotFound. The selected subnet's IPv6
 // association and private-DNS launch options are flattened into the output.
-type SubnetData struct {
-	Id                 *string             `ub:"id"`
-	AvailabilityZone   *string             `ub:"availability-zone"`
-	AvailabilityZoneId *string             `ub:"availability-zone-id"`
-	DefaultForAz       *bool               `ub:"default-for-az"`
-	State              *string             `ub:"state"`
-	VpcId              *string             `ub:"vpc-id"`
-	CidrBlock          *string             `ub:"cidr-block"`
-	Ipv6CidrBlock      *string             `ub:"ipv6-cidr-block"`
-	Tags               *map[string]string  `ub:"tags"`
-	Filter             *[]SubnetDataFilter `ub:"filter"`
+type SubnetDataSource struct {
+	Id                 *string                   `ub:"id"`
+	AvailabilityZone   *string                   `ub:"availability-zone"`
+	AvailabilityZoneId *string                   `ub:"availability-zone-id"`
+	DefaultForAz       *bool                     `ub:"default-for-az"`
+	State              *string                   `ub:"state"`
+	VpcId              *string                   `ub:"vpc-id"`
+	CidrBlock          *string                   `ub:"cidr-block"`
+	Ipv6CidrBlock      *string                   `ub:"ipv6-cidr-block"`
+	Tags               *map[string]string        `ub:"tags"`
+	Filter             *[]SubnetDataSourceFilter `ub:"filter"`
 }
 
-// SubnetDataFilter is one DescribeSubnets filter. The name and values pass to
+// SubnetDataSourceFilter is one DescribeSubnets filter. The name and values pass to
 // EC2 unchanged; empty-string values and empty value lists are preserved.
-type SubnetDataFilter struct {
+type SubnetDataSourceFilter struct {
 	Name   string   `ub:"name"`
 	Values []string `ub:"values"`
 }
 
-// SubnetDataOutput holds the attributes of the selected subnet. The IPv6 CIDR
+// SubnetDataSourceOutput holds the attributes of the selected subnet. The IPv6 CIDR
 // fields are set only from an association whose state is associated. The
 // private-DNS launch option fields are unset when EC2 omits the nested options.
-type SubnetDataOutput struct {
+type SubnetDataSourceOutput struct {
 	Id                                      string            `ub:"id"`
 	Arn                                     string            `ub:"arn"`
 	AssignIpv6AddressOnCreation             bool              `ub:"assign-ipv6-address-on-creation"`
@@ -70,7 +70,7 @@ type SubnetDataOutput struct {
 // Read resolves the subnet data source. DescribeSubnets is paginated in full
 // before singularity is asserted, so a single page cannot look unique by
 // accident.
-func (r *SubnetData) Read(ctx context.Context, cfg *awsCfg) (*SubnetDataOutput, error) {
+func (r *SubnetDataSource) Read(ctx context.Context, cfg *awsCfg) (*SubnetDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (r *SubnetData) Read(ctx context.Context, cfg *awsCfg) (*SubnetDataOutput, 
 	return subnetDataOutput(subnet), nil
 }
 
-func (r *SubnetData) findSubnet(
+func (r *SubnetDataSource) findSubnet(
 	ctx context.Context,
 	client *ec2.Client,
 ) (ec2types.Subnet, error) {
@@ -101,7 +101,7 @@ func (r *SubnetData) findSubnet(
 	}
 }
 
-func (r *SubnetData) findSubnets(
+func (r *SubnetDataSource) findSubnets(
 	ctx context.Context,
 	client *ec2.Client,
 ) ([]ec2types.Subnet, error) {
@@ -120,7 +120,7 @@ func (r *SubnetData) findSubnets(
 	return subnets, nil
 }
 
-func (r *SubnetData) describeInput() *ec2.DescribeSubnetsInput {
+func (r *SubnetDataSource) describeInput() *ec2.DescribeSubnetsInput {
 	in := &ec2.DescribeSubnetsInput{}
 	if r.Id != nil && *r.Id != "" {
 		in.SubnetIds = []string{*r.Id}
@@ -132,20 +132,20 @@ func (r *SubnetData) describeInput() *ec2.DescribeSubnetsInput {
 	return in
 }
 
-func (r *SubnetData) describeFilters() []ec2types.Filter {
+func (r *SubnetDataSource) describeFilters() []ec2types.Filter {
 	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter))+7)
-	filters = appendSubnetDataStringFilter(filters, "availabilityZone", r.AvailabilityZone)
-	filters = appendSubnetDataStringFilter(filters, "availabilityZoneId", r.AvailabilityZoneId)
+	filters = appendSubnetDataSourceStringFilter(filters, "availabilityZone", r.AvailabilityZone)
+	filters = appendSubnetDataSourceStringFilter(filters, "availabilityZoneId", r.AvailabilityZoneId)
 	if r.DefaultForAz != nil && *r.DefaultForAz {
 		filters = append(filters, ec2types.Filter{
 			Name:   aws.String("defaultForAz"),
 			Values: []string{"true"},
 		})
 	}
-	filters = appendSubnetDataStringFilter(filters, "state", r.State)
-	filters = appendSubnetDataStringFilter(filters, "vpc-id", r.VpcId)
-	filters = appendSubnetDataStringFilter(filters, "cidrBlock", r.CidrBlock)
-	filters = appendSubnetDataStringFilter(filters,
+	filters = appendSubnetDataSourceStringFilter(filters, "state", r.State)
+	filters = appendSubnetDataSourceStringFilter(filters, "vpc-id", r.VpcId)
+	filters = appendSubnetDataSourceStringFilter(filters, "cidrBlock", r.CidrBlock)
+	filters = appendSubnetDataSourceStringFilter(filters,
 		"ipv6-cidr-block-association.ipv6-cidr-block", r.Ipv6CidrBlock)
 	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{
@@ -162,7 +162,7 @@ func (r *SubnetData) describeFilters() []ec2types.Filter {
 	return filters
 }
 
-func appendSubnetDataStringFilter(
+func appendSubnetDataSourceStringFilter(
 	filters []ec2types.Filter,
 	name string,
 	value *string,
@@ -176,8 +176,8 @@ func appendSubnetDataStringFilter(
 	})
 }
 
-func subnetDataOutput(subnet ec2types.Subnet) *SubnetDataOutput {
-	out := &SubnetDataOutput{
+func subnetDataOutput(subnet ec2types.Subnet) *SubnetDataSourceOutput {
+	out := &SubnetDataSourceOutput{
 		Id:                          aws.ToString(subnet.SubnetId),
 		Arn:                         aws.ToString(subnet.SubnetArn),
 		AssignIpv6AddressOnCreation: aws.ToBool(subnet.AssignIpv6AddressOnCreation),
@@ -198,14 +198,13 @@ func subnetDataOutput(subnet ec2types.Subnet) *SubnetDataOutput {
 		Tags:                        subnetDataTags(subnet.Tags),
 		VpcId:                       aws.ToString(subnet.VpcId),
 	}
-	setSubnetDataIpv6(out, subnet.Ipv6CidrBlockAssociationSet)
-	setSubnetDataPrivateDNS(out, subnet.PrivateDnsNameOptionsOnLaunch)
+	setSubnetDataSourceIpv6(out, subnet.Ipv6CidrBlockAssociationSet)
+	setSubnetDataSourcePrivateDNS(out, subnet.PrivateDnsNameOptionsOnLaunch)
 	return out
 }
 
-func setSubnetDataIpv6(
-	out *SubnetDataOutput,
-	associations []ec2types.SubnetIpv6CidrBlockAssociation,
+func setSubnetDataSourceIpv6(
+	out *SubnetDataSourceOutput, associations []ec2types.SubnetIpv6CidrBlockAssociation,
 ) {
 	for _, association := range associations {
 		if association.Ipv6CidrBlockState == nil ||
@@ -213,15 +212,14 @@ func setSubnetDataIpv6(
 				ec2types.SubnetCidrBlockStateCodeAssociated {
 			continue
 		}
-		out.Ipv6CidrBlock = copySubnetDataString(association.Ipv6CidrBlock)
-		out.Ipv6CidrBlockAssociationId = copySubnetDataString(association.AssociationId)
+		out.Ipv6CidrBlock = copySubnetDataSourceString(association.Ipv6CidrBlock)
+		out.Ipv6CidrBlockAssociationId = copySubnetDataSourceString(association.AssociationId)
 		return
 	}
 }
 
-func setSubnetDataPrivateDNS(
-	out *SubnetDataOutput,
-	options *ec2types.PrivateDnsNameOptionsOnLaunch,
+func setSubnetDataSourcePrivateDNS(
+	out *SubnetDataSourceOutput, options *ec2types.PrivateDnsNameOptionsOnLaunch,
 ) {
 	if options == nil {
 		return
@@ -234,7 +232,7 @@ func setSubnetDataPrivateDNS(
 	out.PrivateDnsHostnameTypeOnLaunch = &hostnameType
 }
 
-func copySubnetDataString(value *string) *string {
+func copySubnetDataSourceString(value *string) *string {
 	if value == nil {
 		return nil
 	}

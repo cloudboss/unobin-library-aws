@@ -21,7 +21,7 @@ func TestAliasCreateSendsEmptyDescriptionAndRoutingConfig(t *testing.T) {
 		return 200, `{"AliasArn":"` + aliasArn + `","Name":"live","FunctionVersion":"1"}`
 	})
 
-	out, err := (&Alias{
+	out, err := (&AliasResource{
 		Name:            "live",
 		FunctionName:    "fn",
 		FunctionVersion: "1",
@@ -50,8 +50,8 @@ func TestAliasUpdateUsesPriorIdentityAndClearsRemovedMutableState(t *testing.T) 
 		return 200, `{"AliasArn":"` + aliasArn + `","Name":"live","FunctionVersion":"2"}`
 	})
 	weights := map[string]float64{"3": 0.2}
-	prior := runtime.Prior[Alias, *AliasOutput]{
-		Inputs: Alias{
+	prior := runtime.Prior[AliasResource, *AliasResourceOutput]{
+		Inputs: AliasResource{
 			Name:            "live",
 			FunctionName:    "old-fn",
 			FunctionVersion: "1",
@@ -60,14 +60,14 @@ func TestAliasUpdateUsesPriorIdentityAndClearsRemovedMutableState(t *testing.T) 
 				AdditionalVersionWeights: &weights,
 			},
 		},
-		Outputs: &AliasOutput{
+		Outputs: &AliasResourceOutput{
 			Arn:          aliasArn,
 			FunctionName: "old-fn",
 			Name:         "live",
 		},
 	}
 
-	out, err := (&Alias{
+	out, err := (&AliasResource{
 		Name:            "new-live",
 		FunctionName:    "new-fn",
 		FunctionVersion: "2",
@@ -150,9 +150,9 @@ func TestAliasEquivalentInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := (&Alias{}).EquivalentInput(tt.field,
-				Alias{FunctionName: tt.prior},
-				Alias{FunctionName: tt.current})
+			got := (&AliasResource{}).EquivalentInput(tt.field,
+				AliasResource{FunctionName: tt.prior},
+				AliasResource{FunctionName: tt.current})
 			assert.Equal(t, tt.want, got)
 		})
 	}

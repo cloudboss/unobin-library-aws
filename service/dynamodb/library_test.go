@@ -61,7 +61,7 @@ func TestLibraryRegistersDynamoDBLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"table": reflect.TypeFor[*svc.TableOutput](),
+		"table": reflect.TypeFor[*svc.TableResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

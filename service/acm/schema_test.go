@@ -18,8 +18,8 @@ import (
 func TestLibraryRegistersAcmResources(t *testing.T) {
 	lib := Library()
 	cases := map[string]reflect.Type{
-		"certificate":            reflect.TypeFor[*svc.CertificateOutput](),
-		"certificate-validation": reflect.TypeFor[*svc.CertificateValidationOutput](),
+		"certificate":            reflect.TypeFor[*svc.CertificateResourceOutput](),
+		"certificate-validation": reflect.TypeFor[*svc.CertificateValidationResourceOutput](),
 	}
 	for key, outputType := range cases {
 		t.Run(key, func(t *testing.T) {
@@ -34,7 +34,7 @@ func TestLibraryRegistersAcmResources(t *testing.T) {
 func TestLibraryRegistersAcmDataSources(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "certificate")
-	assert.Equal(t, reflect.TypeFor[*svc.CertificateDataOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.CertificateDataSourceOutput](),
 		lib.DataSources["certificate"].OutputType())
 }
 

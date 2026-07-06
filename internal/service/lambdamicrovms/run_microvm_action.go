@@ -13,7 +13,7 @@ import (
 
 const maxRunHookPayloadBytes = 16_384
 
-type RunMicrovm struct {
+type RunMicrovmAction struct {
 	ImageIdentifier          string      `ub:"image-identifier"`
 	ImageVersion             *string     `ub:"image-version"`
 	ExecutionRoleArn         *string     `ub:"execution-role-arn"`
@@ -26,7 +26,7 @@ type RunMicrovm struct {
 	RunHookPayloadPath       *string     `ub:"run-hook-payload-path"`
 }
 
-func (r RunMicrovm) Constraints() []constraint.Constraint {
+func (r RunMicrovmAction) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.RunHookPayloadContent, r.RunHookPayloadPath),
 		constraint.When(constraint.Present(r.MaximumDurationInSeconds)).
@@ -49,7 +49,7 @@ func (r RunMicrovm) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *RunMicrovm) Run(ctx context.Context, cfg *awsCfg) (*MicrovmDataOutput, error) {
+func (r *RunMicrovmAction) Run(ctx context.Context, cfg *awsCfg) (*RunMicrovmActionOutput, error) {
 	payload, err := r.payload()
 	if err != nil {
 		return nil, err
@@ -81,10 +81,10 @@ func (r *RunMicrovm) Run(ctx context.Context, cfg *awsCfg) (*MicrovmDataOutput, 
 	if err != nil {
 		return nil, fmt.Errorf("run Microvm from image %s: %w", r.ImageIdentifier, err)
 	}
-	return microvmOutputFromRun(out), nil
+	return (*RunMicrovmActionOutput)(microvmOutputFromRun(out)), nil
 }
 
-func (r *RunMicrovm) payload() (*string, error) {
+func (r *RunMicrovmAction) payload() (*string, error) {
 	if r.RunHookPayloadContent != nil && r.RunHookPayloadPath != nil {
 		return nil, errors.New("at most one run-hook payload source may be set")
 	}

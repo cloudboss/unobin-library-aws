@@ -63,9 +63,9 @@ func TestLibraryRegistersSNSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"topic":              reflect.TypeFor[*svc.TopicOutput](),
-		"topic-policy":       reflect.TypeFor[*svc.TopicPolicyOutput](),
-		"topic-subscription": reflect.TypeFor[*svc.TopicSubscriptionOutput](),
+		"topic":              reflect.TypeFor[*svc.TopicResourceOutput](),
+		"topic-policy":       reflect.TypeFor[*svc.TopicPolicyResourceOutput](),
+		"topic-subscription": reflect.TypeFor[*svc.TopicSubscriptionResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

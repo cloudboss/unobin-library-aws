@@ -64,10 +64,10 @@ func TestLibraryRegistersECSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"capacity-provider": reflect.TypeFor[*svc.CapacityProviderOutput](),
-		"cluster":           reflect.TypeFor[*svc.ClusterOutput](),
-		"task-definition":   reflect.TypeFor[*svc.TaskDefinitionOutput](),
-		"service":           reflect.TypeFor[*svc.ServiceOutput](),
+		"capacity-provider": reflect.TypeFor[*svc.CapacityProviderResourceOutput](),
+		"cluster":           reflect.TypeFor[*svc.ClusterResourceOutput](),
+		"task-definition":   reflect.TypeFor[*svc.TaskDefinitionResourceOutput](),
+		"service":           reflect.TypeFor[*svc.ServiceResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

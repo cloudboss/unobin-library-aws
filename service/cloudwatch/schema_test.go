@@ -18,7 +18,7 @@ import (
 func TestLibraryRegistersCloudwatch(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"metric-alarm": reflect.TypeFor[*svc.MetricAlarmOutput](),
+		"metric-alarm": reflect.TypeFor[*svc.MetricAlarmResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

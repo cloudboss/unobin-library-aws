@@ -18,22 +18,22 @@ import (
 func TestLibraryRegistersRds(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.Resources, "subnet-group")
-	assert.Equal(t, reflect.TypeFor[*svc.SubnetGroupOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.SubnetGroupResourceOutput](),
 		lib.Resources["subnet-group"].OutputType())
 	require.Contains(t, lib.Resources, "parameter-group")
-	assert.Equal(t, reflect.TypeFor[*svc.ParameterGroupOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ParameterGroupResourceOutput](),
 		lib.Resources["parameter-group"].OutputType())
 	require.Contains(t, lib.Resources, "cluster-parameter-group")
-	assert.Equal(t, reflect.TypeFor[*svc.ClusterParameterGroupOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ClusterParameterGroupResourceOutput](),
 		lib.Resources["cluster-parameter-group"].OutputType())
 	require.Contains(t, lib.Resources, "instance")
-	assert.Equal(t, reflect.TypeFor[*svc.InstanceOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.InstanceResourceOutput](),
 		lib.Resources["instance"].OutputType())
 	require.Contains(t, lib.Resources, "cluster")
-	assert.Equal(t, reflect.TypeFor[*svc.ClusterOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ClusterResourceOutput](),
 		lib.Resources["cluster"].OutputType())
 	require.Contains(t, lib.Resources, "cluster-instance")
-	assert.Equal(t, reflect.TypeFor[*svc.ClusterInstanceOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.ClusterInstanceResourceOutput](),
 		lib.Resources["cluster-instance"].OutputType())
 }
 

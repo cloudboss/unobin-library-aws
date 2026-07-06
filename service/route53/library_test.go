@@ -64,8 +64,8 @@ func TestLibraryRegistersRoute53LocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"hosted-zone": reflect.TypeFor[*svc.HostedZoneOutput](),
-		"record-set":  reflect.TypeFor[*svc.RecordSetOutput](),
+		"hosted-zone": reflect.TypeFor[*svc.HostedZoneResourceOutput](),
+		"record-set":  reflect.TypeFor[*svc.RecordSetResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLibraryRegistersRoute53LocalKinds(t *testing.T) {
 	}
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"zone": reflect.TypeFor[*svc.ZoneDataOutput](),
+		"zone": reflect.TypeFor[*svc.ZoneDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

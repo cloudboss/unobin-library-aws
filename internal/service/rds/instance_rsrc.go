@@ -68,7 +68,7 @@ var instanceAvailableStatuses = []string{
 	"storage-optimization",
 }
 
-// Instance is a standalone Amazon RDS database instance. It has five
+// InstanceResource is a standalone Amazon RDS database instance. It has five
 // mutually-exclusive create modes, chosen by which input is set: a read replica
 // of another instance (replicate-source-db), a restore from an S3 backup
 // (s3-import), a restore from a snapshot (snapshot-identifier), a point-in-time
@@ -85,7 +85,7 @@ var instanceAvailableStatuses = []string{
 // deletion-protection retry clears protection before retrying the delete. The
 // blue/green deployment update strategy is not modeled: every ModifyDBInstance
 // applies immediately in place, so there is no apply-immediately input.
-type Instance struct {
+type InstanceResource struct {
 	Identifier    string  `ub:"identifier"`
 	Engine        *string `ub:"engine"`
 	EngineVersion *string `ub:"engine-version"`
@@ -174,14 +174,14 @@ type createResult struct {
 	deferMultiAz bool
 }
 
-// InstanceOutput holds the values RDS computes or fills for an instance. The ARN
+// InstanceResourceOutput holds the values RDS computes or fills for an instance. The ARN
 // is the instance's handle in tagging and policies; the resource id is the
 // stable identity Read keys on, since the user identifier can be renamed in
 // place. The endpoint, address, port, and hosted-zone settle only after the
 // instance is available, as does the managed secret and the engine version RDS
 // resolved from the requested one. The replicas are the identifiers of the read
 // replicas pointing at this instance.
-type InstanceOutput struct {
+type InstanceResourceOutput struct {
 	Arn                  string                    `ub:"arn"`
 	ResourceId           string                    `ub:"resource-id"`
 	Endpoint             string                    `ub:"endpoint"`
@@ -197,7 +197,7 @@ type InstanceOutput struct {
 	Replicas             []string                  `ub:"replicas"`
 }
 
-func (r *Instance) SchemaVersion() int { return 1 }
+func (r *InstanceResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs RDS fixes when an instance is created. A change
 // to any of them cannot be applied to the running instance and requires a new
@@ -206,7 +206,7 @@ func (r *Instance) SchemaVersion() int { return 1 }
 // removal promotes the replica to a standalone instance rather than replacing
 // it. The s3-import and restore-to-point-in-time blocks are immutable as wholes,
 // so a change to any of their inner fields replaces the instance.
-func (r *Instance) ReplaceFields() []string {
+func (r *InstanceResource) ReplaceFields() []string {
 	return []string{
 		"availability-zone",
 		"backup-target",
@@ -235,7 +235,7 @@ func (r *Instance) ReplaceFields() []string {
 // modes), the exactly-two domain DNS IPs, the restore-point exclusivity inside
 // the point-in-time block, the performance-insights retention divisibility, and
 // the master-user-secret-kms-key-id requiring manage-master-user-password.
-func (r Instance) Constraints() []constraint.Constraint {
+func (r InstanceResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(
 			r.ReplicateSourceDb, r.S3Import, r.SnapshotIdentifier, r.RestoreToPointInTime),
@@ -296,7 +296,10 @@ func (r Instance) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Instance) Create(ctx context.Context, cfg *awsCfg) (*InstanceOutput, error) {
+func (r *InstanceResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*InstanceResourceOutput, error) {
 	if err := r.validateCreate(); err != nil {
 		return nil, err
 	}
@@ -332,9 +335,8 @@ func (r *Instance) Create(ctx context.Context, cfg *awsCfg) (*InstanceOutput, er
 	return r.read(ctx, client, result.resourceID)
 }
 
-func (r *Instance) Read(
-	ctx context.Context, cfg *awsCfg, prior *InstanceOutput,
-) (*InstanceOutput, error) {
+func (r *InstanceResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *InstanceResourceOutput) (*InstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -342,9 +344,9 @@ func (r *Instance) Read(
 	return r.read(ctx, client, prior.ResourceId)
 }
 
-func (r *Instance) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Instance, *InstanceOutput],
-) (*InstanceOutput, error) {
+func (r *InstanceResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+) (*InstanceResourceOutput, error) {
 	if err := r.validateCommon(); err != nil {
 		return nil, err
 	}
@@ -379,7 +381,11 @@ func (r *Instance) Update(
 	return r.read(ctx, client, resourceID)
 }
 
-func (r *Instance) Delete(ctx context.Context, cfg *awsCfg, prior *InstanceOutput) error {
+func (r *InstanceResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *InstanceResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -417,7 +423,7 @@ func (r *Instance) Delete(ctx context.Context, cfg *awsCfg, prior *InstanceOutpu
 // express: the fields a mode requires, the restore-point exclusivity in the
 // point-in-time block, and the rules common to create and update. Each returns
 // a clear error so a bad config fails before any call.
-func (r *Instance) validateCreate() error {
+func (r *InstanceResource) validateCreate() error {
 	mode := r.createMode()
 	if mode == createModePlain || mode == createModeS3 {
 		if r.Engine == nil || r.Username == nil || r.AllocatedStorage == nil {
@@ -449,7 +455,7 @@ func (r *Instance) validateCreate() error {
 // to both create and update: the exactly-two domain DNS IPs, the managed-secret
 // KMS key needing the managed password, and the performance-insights retention
 // divisibility.
-func (r *Instance) validateCommon() error {
+func (r *InstanceResource) validateCommon() error {
 	if err := validateInstanceIdentifier(r.Identifier); err != nil {
 		return err
 	}
@@ -491,7 +497,7 @@ func validateInstanceIdentifier(id string) error {
 
 // createMode reports which of the five create modes the inputs select, in the
 // order RDS checks them.
-func (r *Instance) createMode() createMode {
+func (r *InstanceResource) createMode() createMode {
 	switch {
 	case r.ReplicateSourceDb != nil:
 		return createModeReplica
@@ -521,7 +527,7 @@ const (
 // result: the new instance's resource id plus the follow-on flags. Only the
 // read-replica path needs a reboot, and only the snapshot path can defer
 // multi-AZ to the follow-on modify.
-func (r *Instance) runCreateMode(
+func (r *InstanceResource) runCreateMode(
 	ctx context.Context, client *rds.Client,
 ) (createResult, error) {
 	switch r.createMode() {
@@ -547,7 +553,7 @@ func (r *Instance) runCreateMode(
 // nearly every field; only the CA certificate identifier is left to the
 // follow-on modify. It retries through the enhanced-monitoring and instance-role
 // propagation races RDS reports right after a role is created.
-func (r *Instance) createPlain(ctx context.Context, client *rds.Client) (string, error) {
+func (r *InstanceResource) createPlain(ctx context.Context, client *rds.Client) (string, error) {
 	in := &rds.CreateDBInstanceInput{
 		DBInstanceIdentifier:               aws.String(r.Identifier),
 		DBInstanceClass:                    r.InstanceClass,
@@ -621,7 +627,7 @@ func (r *Instance) createPlain(ctx context.Context, client *rds.Client) (string,
 // engine, the call retries without it. The replica reboots afterward when its
 // parameter group differs from the source's, so a different parameter group
 // signals the reboot.
-func (r *Instance) createReadReplica(
+func (r *InstanceResource) createReadReplica(
 	ctx context.Context, client *rds.Client,
 ) (string, bool, error) {
 	in := &rds.CreateDBInstanceReadReplicaInput{
@@ -682,7 +688,7 @@ func (r *Instance) createReadReplica(
 // through the enhanced-monitoring propagation race; if RDS rejects a parameter
 // group because the engine forbids one at replica creation, it clears the group
 // and retries once, deferring the group to the follow-on modify.
-func (r *Instance) createReadReplicaCall(
+func (r *InstanceResource) createReadReplicaCall(
 	ctx context.Context, client *rds.Client, in *rds.CreateDBInstanceReadReplicaInput,
 ) (*rds.CreateDBInstanceReadReplicaOutput, error) {
 	var out *rds.CreateDBInstanceReadReplicaOutput
@@ -712,7 +718,7 @@ func (r *Instance) createReadReplicaCall(
 // restores to a plain create and requires engine, username, and allocated
 // storage. It retries through the enhanced-monitoring race and the S3 ingestion
 // races RDS reports while the bucket access settles.
-func (r *Instance) restoreFromS3(ctx context.Context, client *rds.Client) (string, error) {
+func (r *InstanceResource) restoreFromS3(ctx context.Context, client *rds.Client) (string, error) {
 	s := r.S3Import
 	in := &rds.RestoreDBInstanceFromS3Input{
 		DBInstanceIdentifier:               aws.String(r.Identifier),
@@ -783,7 +789,7 @@ func (r *Instance) restoreFromS3(ctx context.Context, client *rds.Client) (strin
 // reconciles. The database name is skipped for the engines where a snapshot
 // restore rejects it. It retries through the instance-profile role race. The
 // returned bool reports whether multi-AZ was deferred to the follow-on modify.
-func (r *Instance) restoreFromSnapshot(
+func (r *InstanceResource) restoreFromSnapshot(
 	ctx context.Context, client *rds.Client,
 ) (string, bool, error) {
 	in := &rds.RestoreDBInstanceFromDBSnapshotInput{
@@ -837,7 +843,7 @@ func (r *Instance) restoreFromSnapshot(
 // mirroring because the snapshot is SQL Server and backups are at zero, it
 // clears multi-AZ and retries once, reporting that multi-AZ is now deferred to
 // the follow-on modify.
-func (r *Instance) restoreFromSnapshotCall(
+func (r *InstanceResource) restoreFromSnapshotCall(
 	ctx context.Context, client *rds.Client,
 	in *rds.RestoreDBInstanceFromDBSnapshotInput, deferMultiAz bool,
 ) (*rds.RestoreDBInstanceFromDBSnapshotOutput, bool, error) {
@@ -869,7 +875,10 @@ func (r *Instance) restoreFromSnapshotCall(
 // source and restore point from the block; the password and monitoring fields
 // are reconciled by the follow-on modify. It retries through the instance-profile
 // role race.
-func (r *Instance) restoreToPointInTime(ctx context.Context, client *rds.Client) (string, error) {
+func (r *InstanceResource) restoreToPointInTime(
+	ctx context.Context,
+	client *rds.Client,
+) (string, error) {
 	in := &rds.RestoreDBInstanceToPointInTimeInput{
 		TargetDBInstanceIdentifier:      aws.String(r.Identifier),
 		DBInstanceClass:                 r.InstanceClass,
@@ -922,7 +931,7 @@ func (r *Instance) restoreToPointInTime(ctx context.Context, client *rds.Client)
 // restore or replica create could not accept. It returns nil for the plain
 // create, whose call accepts everything, except that the plain create still
 // reconciles the CA certificate identifier when one is given.
-func (r *Instance) createFollowOnModify(deferMultiAz bool) *rds.ModifyDBInstanceInput {
+func (r *InstanceResource) createFollowOnModify(deferMultiAz bool) *rds.ModifyDBInstanceInput {
 	switch r.createMode() {
 	case createModeReplica:
 		return nilIfNoFollowOnWork(r.replicaFollowOnModify())
@@ -958,7 +967,7 @@ func nilIfNoFollowOnWork(in *rds.ModifyDBInstanceInput) *rds.ModifyDBInstanceInp
 // replicaFollowOnModify reconciles the fields CreateDBInstanceReadReplica does
 // not accept: the backup, maintenance, password, parameter-group, and CA fields,
 // plus the managed master-user password.
-func (r *Instance) replicaFollowOnModify() *rds.ModifyDBInstanceInput {
+func (r *InstanceResource) replicaFollowOnModify() *rds.ModifyDBInstanceInput {
 	in := &rds.ModifyDBInstanceInput{
 		ApplyImmediately:           aws.Bool(true),
 		BackupRetentionPeriod:      ptr.Int32(r.BackupRetentionPeriod),
@@ -983,7 +992,7 @@ func (r *Instance) replicaFollowOnModify() *rds.ModifyDBInstanceInput {
 // version fields, plus the managed master-user password. When deferMultiAz is
 // set, multi-AZ is applied here rather than on the restore, since the restore
 // could not take it for a SQL Server snapshot whose backups are at zero.
-func (r *Instance) snapshotFollowOnModify(deferMultiAz bool) *rds.ModifyDBInstanceInput {
+func (r *InstanceResource) snapshotFollowOnModify(deferMultiAz bool) *rds.ModifyDBInstanceInput {
 	in := &rds.ModifyDBInstanceInput{
 		ApplyImmediately:                   aws.Bool(true),
 		AllocatedStorage:                   ptr.Int32(r.AllocatedStorage),
@@ -1019,7 +1028,7 @@ func (r *Instance) snapshotFollowOnModify(deferMultiAz bool) *rds.ModifyDBInstan
 // pointInTimeFollowOnModify reconciles the fields a point-in-time restore does
 // not accept: the monitoring and password fields and the managed master-user
 // password.
-func (r *Instance) pointInTimeFollowOnModify() *rds.ModifyDBInstanceInput {
+func (r *InstanceResource) pointInTimeFollowOnModify() *rds.ModifyDBInstanceInput {
 	in := &rds.ModifyDBInstanceInput{
 		ApplyImmediately:         aws.Bool(true),
 		MonitoringInterval:       ptr.Int32(r.MonitoringInterval),
@@ -1036,7 +1045,7 @@ func (r *Instance) pointInTimeFollowOnModify() *rds.ModifyDBInstanceInput {
 
 // s3FollowOnModify reconciles the CA certificate identifier after a restore from
 // S3, the one field that restore leaves to a follow-on modify.
-func (r *Instance) s3FollowOnModify() *rds.ModifyDBInstanceInput {
+func (r *InstanceResource) s3FollowOnModify() *rds.ModifyDBInstanceInput {
 	if r.CaCertIdentifier == nil {
 		return nil
 	}
@@ -1052,8 +1061,8 @@ func (r *Instance) s3FollowOnModify() *rds.ModifyDBInstanceInput {
 // its value; the CloudWatch log exports are reconciled as an enable/disable
 // diff, and a rename rides NewDBInstanceIdentifier. The storage co-send rules
 // the API requires are applied after the per-field diff.
-func (r *Instance) updateModify(
-	prior runtime.Prior[Instance, *InstanceOutput],
+func (r *InstanceResource) updateModify(
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) *rds.ModifyDBInstanceInput {
 	p := prior.Inputs
 	in := &rds.ModifyDBInstanceInput{ApplyImmediately: aws.Bool(true)}
@@ -1188,26 +1197,26 @@ func (r *Instance) updateModify(
 
 // databaseInsightsModeChanged reports whether the database-insights mode input
 // changed for an update.
-func (r *Instance) databaseInsightsModeChanged(p Instance) bool {
+func (r *InstanceResource) databaseInsightsModeChanged(p InstanceResource) bool {
 	return runtime.Changed(p.DatabaseInsightsMode, r.DatabaseInsightsMode) &&
 		r.DatabaseInsightsMode != nil
 }
 
 // replicaModeChanged reports whether the replica-mode input changed for an
 // update.
-func (r *Instance) replicaModeChanged(p Instance) bool {
+func (r *InstanceResource) replicaModeChanged(p InstanceResource) bool {
 	return runtime.Changed(p.ReplicaMode, r.ReplicaMode) && r.ReplicaMode != nil
 }
 
 // engineVersionChanged reports whether the engine version input changed for an
 // update; a change sends the allow-major-version-upgrade flag alongside it.
-func (r *Instance) engineVersionChanged(p Instance) bool {
+func (r *InstanceResource) engineVersionChanged(p InstanceResource) bool {
 	return runtime.Changed(p.EngineVersion, r.EngineVersion) && r.EngineVersion != nil
 }
 
 // domainChanged reports whether any Active Directory field changed for an
 // update.
-func (r *Instance) domainChanged(p Instance) bool {
+func (r *InstanceResource) domainChanged(p InstanceResource) bool {
 	return runtime.Changed(p.Domain, r.Domain) ||
 		runtime.Changed(p.DomainIamRoleName, r.DomainIamRoleName) ||
 		runtime.Changed(p.DomainFqdn, r.DomainFqdn) ||
@@ -1219,7 +1228,9 @@ func (r *Instance) domainChanged(p Instance) bool {
 // logsExportConfig builds the CloudWatch logs export configuration for an
 // update: the log types newly listed are enabled, the ones no longer listed are
 // disabled.
-func (r *Instance) logsExportConfig(prior []string) *rdstypes.CloudwatchLogsExportConfiguration {
+func (r *InstanceResource) logsExportConfig(
+	prior []string,
+) *rdstypes.CloudwatchLogsExportConfiguration {
 	enable, disable := stringSetDiff(prior, ptr.Value(r.EnabledCloudwatchLogsExports))
 	return &rdstypes.CloudwatchLogsExportConfiguration{
 		EnableLogTypes:  enable,
@@ -1231,7 +1242,7 @@ func (r *Instance) logsExportConfig(prior []string) *rdstypes.CloudwatchLogsExpo
 // upper limit. Disabling autoscaling means setting the limit equal to the
 // allocated storage, since RDS reads a limit equal to the current storage as
 // off; a zero or unset limit with a known allocated storage uses it.
-func (r *Instance) maxAllocatedStorageValue() *int32 {
+func (r *InstanceResource) maxAllocatedStorageValue() *int32 {
 	if r.MaxAllocatedStorage != nil && *r.MaxAllocatedStorage > 0 {
 		return ptr.Int32(r.MaxAllocatedStorage)
 	}
@@ -1247,8 +1258,8 @@ func (r *Instance) maxAllocatedStorageValue() *int32 {
 // storage type, the allocated storage, or the IOPS must send the allocated
 // storage and IOPS as a pair. A throughput change co-sends them too. The
 // co-sent values come from the inputs.
-func (r *Instance) applyStorageCoSends(
-	in *rds.ModifyDBInstanceInput, prior runtime.Prior[Instance, *InstanceOutput],
+func (r *InstanceResource) applyStorageCoSends(
+	in *rds.ModifyDBInstanceInput, prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
 ) {
 	storageFieldChange := runtime.Changed(prior.Inputs.StorageType, r.StorageType) ||
 		runtime.Changed(prior.Inputs.AllocatedStorage, r.AllocatedStorage) ||
@@ -1278,7 +1289,7 @@ func (r *Instance) applyStorageCoSends(
 // gp3BelowThreshold reports whether the allocated storage is below the
 // engine-specific threshold under which gp3 storage does not take an IOPS value.
 // Below the threshold RDS rejects a co-sent IOPS, so the co-send is skipped.
-func (r *Instance) gp3BelowThreshold() bool {
+func (r *InstanceResource) gp3BelowThreshold() bool {
 	if r.AllocatedStorage == nil {
 		return false
 	}
@@ -1302,7 +1313,9 @@ func (r *Instance) gp3BelowThreshold() bool {
 // A rename changes the identifier through NewDBInstanceIdentifier, but the call
 // must still address the instance by its prior identifier, so the prior input's
 // identifier is used when it differs.
-func (r *Instance) currentIdentifier(prior runtime.Prior[Instance, *InstanceOutput]) string {
+func (r *InstanceResource) currentIdentifier(
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+) string {
 	if prior.Inputs.Identifier != "" {
 		return prior.Inputs.Identifier
 	}
@@ -1312,7 +1325,7 @@ func (r *Instance) currentIdentifier(prior runtime.Prior[Instance, *InstanceOutp
 // modifyAndWait issues a ModifyDBInstance and waits the instance back to
 // available. It retries through the IAM, storage-optimization, and cluster-state
 // races RDS reports while a related change settles.
-func (r *Instance) modifyAndWait(
+func (r *InstanceResource) modifyAndWait(
 	ctx context.Context, client *rds.Client, in *rds.ModifyDBInstanceInput, timeout time.Duration,
 ) error {
 	err := retry.OnError(ctx, instanceModifyRetryable, func(ctx context.Context) error {
@@ -1328,7 +1341,7 @@ func (r *Instance) modifyAndWait(
 // rebootAndWait reboots the instance and waits it back to available. A read
 // replica reboots after create to load a parameter group that differs from the
 // source's.
-func (r *Instance) rebootAndWait(
+func (r *InstanceResource) rebootAndWait(
 	ctx context.Context, client *rds.Client, timeout time.Duration,
 ) error {
 	_, err := client.RebootDBInstance(ctx, &rds.RebootDBInstanceInput{
@@ -1342,7 +1355,7 @@ func (r *Instance) rebootAndWait(
 
 // promoteAndWait promotes a read replica to a standalone instance and waits it
 // back to available. This is how removing the replication source is applied.
-func (r *Instance) promoteAndWait(ctx context.Context, client *rds.Client) error {
+func (r *InstanceResource) promoteAndWait(ctx context.Context, client *rds.Client) error {
 	_, err := client.PromoteReadReplica(ctx, &rds.PromoteReadReplicaInput{
 		DBInstanceIdentifier: aws.String(r.Identifier),
 	})
@@ -1355,7 +1368,7 @@ func (r *Instance) promoteAndWait(ctx context.Context, client *rds.Client) error
 // clearDeletionProtection turns off deletion protection so a blocked delete can
 // proceed. It retries through the IAM-role and instance-state races RDS reports
 // while a modify settles, then waits the instance available.
-func (r *Instance) clearDeletionProtection(ctx context.Context, client *rds.Client) error {
+func (r *InstanceResource) clearDeletionProtection(ctx context.Context, client *rds.Client) error {
 	in := &rds.ModifyDBInstanceInput{
 		DBInstanceIdentifier: aws.String(r.Identifier),
 		DeletionProtection:   aws.Bool(false),
@@ -1374,7 +1387,7 @@ func (r *Instance) clearDeletionProtection(ctx context.Context, client *rds.Clie
 // deleteInput builds the DeleteDBInstance request. A final snapshot is taken
 // unless skip-final-snapshot is set, in which case the final snapshot identifier
 // is required. The automated backups are removed by default.
-func (r *Instance) deleteInput() (*rds.DeleteDBInstanceInput, error) {
+func (r *InstanceResource) deleteInput() (*rds.DeleteDBInstanceInput, error) {
 	in := &rds.DeleteDBInstanceInput{
 		DBInstanceIdentifier:   aws.String(r.Identifier),
 		DeleteAutomatedBackups: aws.Bool(aws.ToBool(orTrue(r.DeleteAutomatedBackups))),
@@ -1395,7 +1408,7 @@ func (r *Instance) deleteInput() (*rds.DeleteDBInstanceInput, error) {
 // setDomainInput fills the Active Directory create fields from the inputs. The
 // AWS-managed mode uses the domain id and role name; the self-managed mode uses
 // the FQDN, organizational unit, auth secret, and DNS IPs.
-func (r *Instance) setDomainInput(
+func (r *InstanceResource) setDomainInput(
 	domain, roleName, fqdn, ou, authSecret **string, dnsIps *[]string,
 ) {
 	*domain = r.Domain
@@ -1409,7 +1422,7 @@ func (r *Instance) setDomainInput(
 // setDomainModify fills the Active Directory fields on an update modify. When no
 // domain is configured, the modify clears any joined domain through the
 // disable-domain flag, since a null does not leave a domain on its own.
-func (r *Instance) setDomainModify(in *rds.ModifyDBInstanceInput) {
+func (r *InstanceResource) setDomainModify(in *rds.ModifyDBInstanceInput) {
 	if r.Domain == nil && r.DomainFqdn == nil {
 		in.DisableDomain = aws.Bool(true)
 		return
@@ -1426,15 +1439,15 @@ func (r *Instance) setDomainModify(in *rds.ModifyDBInstanceInput) {
 // returning runtime.ErrNotFound when it is gone. The endpoint, secret, and
 // resolved engine version come from this post-wait describe, since the create
 // and modify responses do not have them in final form.
-func (r *Instance) read(
+func (r *InstanceResource) read(
 	ctx context.Context, client *rds.Client, resourceID string,
-) (*InstanceOutput, error) {
+) (*InstanceResourceOutput, error) {
 	inst, err := findInstanceByResourceID(ctx, client, resourceID)
 	if err != nil {
 		return nil, err
 	}
 	endpoint, address, hostedZone, port := flattenEndpoint(inst.Endpoint)
-	out := &InstanceOutput{
+	out := &InstanceResourceOutput{
 		Arn:                 aws.ToString(inst.DBInstanceArn),
 		ResourceId:          aws.ToString(inst.DbiResourceId),
 		Endpoint:            endpoint,
@@ -1461,7 +1474,7 @@ func (r *Instance) read(
 // has reached a state it will not leave on its own. A not-found right after a
 // create is the describe not yet seeing the new instance, so the wait keeps
 // polling rather than failing.
-func (r *Instance) waitAvailable(
+func (r *InstanceResource) waitAvailable(
 	ctx context.Context, client *rds.Client, timeout time.Duration,
 ) error {
 	what := fmt.Sprintf("db instance %s to be available", r.Identifier)
@@ -1489,7 +1502,7 @@ func (r *Instance) waitAvailable(
 // consecutive gone reads so a lagging replica does not report it gone early. The
 // describe keeps returning the deleting instance for a while after the delete
 // call accepts, so the delete is not complete until the describe goes empty.
-func (r *Instance) waitDeleted(ctx context.Context, client *rds.Client) error {
+func (r *InstanceResource) waitDeleted(ctx context.Context, client *rds.Client) error {
 	what := fmt.Sprintf("db instance %s to be deleted", r.Identifier)
 	return wait.UntilStable(ctx, what, 3, func(ctx context.Context) (bool, error) {
 		_, err := findInstanceByIdentifier(ctx, client, r.Identifier)

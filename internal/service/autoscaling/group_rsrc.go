@@ -19,7 +19,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Group is an EC2 Auto Scaling group: a fleet of instances kept at a target
+// GroupResource is an EC2 Auto Scaling group: a fleet of instances kept at a target
 // size from a launch template. The group is keyed by name, the one field fixed
 // at create time; everything else is reconciled in place. CreateAutoScalingGroup
 // accepts the size, placement, health-check, and policy fields plus the
@@ -38,7 +38,7 @@ import (
 // deprecated launch-configuration ELB-health wait variant, and the deletion of
 // failed scaling activities by an ignore flag are likewise omitted; the
 // failed-activity short-circuit itself is always applied.
-type Group struct {
+type GroupResource struct {
 	Name                      string                          `ub:"name"`
 	MinSize                   int64                           `ub:"min-size"`
 	MaxSize                   int64                           `ub:"max-size"`
@@ -67,12 +67,12 @@ type Group struct {
 	WaitForCapacityTimeout    *string                         `ub:"wait-for-capacity-timeout"`
 }
 
-// GroupOutput holds the values the API computes or fills for an Auto Scaling
+// GroupResourceOutput holds the values the API computes or fills for an Auto Scaling
 // group. The ARN is the group's handle. The Availability Zones and VPC zone
 // identifier are filled with whichever was not supplied, the default cooldown,
 // health-check type, desired capacity, and service-linked role are filled when
 // omitted -- so a consumer reads the real values the cloud settled on.
-type GroupOutput struct {
+type GroupResourceOutput struct {
 	Arn                  string   `ub:"arn"`
 	AvailabilityZones    []string `ub:"availability-zones"`
 	VPCZoneIdentifier    []string `ub:"vpc-zone-identifier"`
@@ -82,12 +82,12 @@ type GroupOutput struct {
 	ServiceLinkedRoleArn string   `ub:"service-linked-role-arn"`
 }
 
-func (r *Group) SchemaVersion() int { return 1 }
+func (r *GroupResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs the API fixes when a group is created. Only the
 // name is immutable; a change to it requires a new group. Every other field --
 // capacity, launch template, zones, health check -- is updatable in place.
-func (r *Group) ReplaceFields() []string {
+func (r *GroupResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
@@ -97,7 +97,7 @@ func (r *Group) ReplaceFields() []string {
 // template by id or by name, never both, and one of them is required. The
 // optional enums -- desired-capacity unit, health-check type, metrics
 // granularity -- are checked only when present.
-func (r Group) Constraints() []constraint.Constraint {
+func (r GroupResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.AtLeast(r.MinSize, 0)).
 			Message("min-size must be zero or greater"),
@@ -128,7 +128,7 @@ func (r Group) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
+func (r *GroupResource) Create(ctx context.Context, cfg *awsCfg) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func (r *Group) Create(ctx context.Context, cfg *awsCfg) (*GroupOutput, error) {
 // not have propagated yet, so it retries on the matching ValidationError. On a
 // partition that cannot tag at create time it retries once without tags and
 // applies them afterward.
-func (r *Group) create(ctx context.Context, client *autoscaling.Client) error {
+func (r *GroupResource) create(ctx context.Context, client *autoscaling.Client) error {
 	in := r.createInput()
 	err := retry.OnError(ctx, isInvalidInstanceProfile, func(ctx context.Context) error {
 		_, err := client.CreateAutoScalingGroup(ctx, in)
@@ -195,7 +195,7 @@ func (r *Group) create(ctx context.Context, client *autoscaling.Client) error {
 // createInput builds the CreateAutoScalingGroup request. The desired capacity
 // is sent only when set above zero; scale-in protection is always sent so the
 // group's setting is explicit.
-func (r *Group) createInput() *autoscaling.CreateAutoScalingGroupInput {
+func (r *GroupResource) createInput() *autoscaling.CreateAutoScalingGroupInput {
 	in := &autoscaling.CreateAutoScalingGroupInput{
 		AutoScalingGroupName:             aws.String(r.Name),
 		MinSize:                          ptr.Int32(aws.Int64(r.MinSize)),
@@ -232,7 +232,11 @@ func (r *Group) createInput() *autoscaling.CreateAutoScalingGroupInput {
 	return in
 }
 
-func (r *Group) Read(ctx context.Context, cfg *awsCfg, prior *GroupOutput) (*GroupOutput, error) {
+func (r *GroupResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *GroupResourceOutput,
+) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -242,12 +246,15 @@ func (r *Group) Read(ctx context.Context, cfg *awsCfg, prior *GroupOutput) (*Gro
 
 // read fetches the group by name and maps it to outputs, returning
 // runtime.ErrNotFound when it is gone.
-func (r *Group) read(ctx context.Context, client *autoscaling.Client) (*GroupOutput, error) {
+func (r *GroupResource) read(
+	ctx context.Context,
+	client *autoscaling.Client,
+) (*GroupResourceOutput, error) {
 	g, err := findGroup(ctx, client, r.Name)
 	if err != nil {
 		return nil, err
 	}
-	out := &GroupOutput{
+	out := &GroupResourceOutput{
 		Arn:                  aws.ToString(g.AutoScalingGroupARN),
 		AvailabilityZones:    g.AvailabilityZones,
 		DefaultCooldown:      int64(aws.ToInt32(g.DefaultCooldown)),
@@ -261,9 +268,9 @@ func (r *Group) read(ctx context.Context, client *autoscaling.Client) (*GroupOut
 	return out, nil
 }
 
-func (r *Group) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Group, *GroupOutput],
-) (*GroupOutput, error) {
+func (r *GroupResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput],
+) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -315,7 +322,9 @@ func (r *Group) Update(
 // differs from the prior inputs. The set-reconciled fields -- tags, target
 // groups, suspended processes, metrics -- are handled by their own calls and
 // are not tested here.
-func (r *Group) groupChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
+func (r *GroupResource) groupChanged(
+	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.MinSize, r.MinSize) ||
 		runtime.Changed(p.MaxSize, r.MaxSize) ||
@@ -339,7 +348,9 @@ func (r *Group) groupChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
 
 // metricsChanged reports whether the enabled metrics or their granularity
 // differ from the prior inputs; a granularity change re-enables the metrics.
-func (r *Group) metricsChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
+func (r *GroupResource) metricsChanged(
+	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+) bool {
 	return runtime.Changed(ptr.Value(prior.Inputs.EnabledMetrics), ptr.Value(r.EnabledMetrics)) ||
 		runtime.Changed(prior.Inputs.MetricsGranularity, r.MetricsGranularity)
 }
@@ -353,8 +364,10 @@ func (r *Group) metricsChanged(prior runtime.Prior[Group, *GroupOutput]) bool {
 // sentinel, and only when that field itself changed. A health-check-type
 // change re-sends a grace period in the same call, which the API requires
 // present when the type changes.
-func (r *Group) update(
-	ctx context.Context, client *autoscaling.Client, prior runtime.Prior[Group, *GroupOutput],
+func (r *GroupResource) update(
+	ctx context.Context,
+	client *autoscaling.Client,
+	prior runtime.Prior[GroupResource, *GroupResourceOutput],
 ) error {
 	p := prior.Inputs
 	in := &autoscaling.UpdateAutoScalingGroupInput{
@@ -431,7 +444,7 @@ func (r *Group) update(
 // changes. When the input declares no period, the group's current value is
 // fetched and re-sent unchanged, since there is no stored default to fall back
 // on.
-func (r *Group) setHealthCheck(
+func (r *GroupResource) setHealthCheck(
 	ctx context.Context, client *autoscaling.Client, in *autoscaling.UpdateAutoScalingGroupInput,
 ) error {
 	in.HealthCheckType = r.HealthCheckType
@@ -449,7 +462,7 @@ func (r *Group) setHealthCheck(
 
 // setCapacityRebalance sets capacity rebalance on the update, sending an
 // explicit false when it is omitted, since a null does not reset it at the API.
-func (r *Group) setCapacityRebalance(in *autoscaling.UpdateAutoScalingGroupInput) {
+func (r *GroupResource) setCapacityRebalance(in *autoscaling.UpdateAutoScalingGroupInput) {
 	if r.CapacityRebalance != nil {
 		in.CapacityRebalance = r.CapacityRebalance
 		return
@@ -459,7 +472,7 @@ func (r *Group) setCapacityRebalance(in *autoscaling.UpdateAutoScalingGroupInput
 
 // setTerminationPolicies sets the termination policies on the update, sending
 // the default policy when they are omitted, since a null does not reset them.
-func (r *Group) setTerminationPolicies(in *autoscaling.UpdateAutoScalingGroupInput) {
+func (r *GroupResource) setTerminationPolicies(in *autoscaling.UpdateAutoScalingGroupInput) {
 	if len(ptr.Value(r.TerminationPolicies)) > 0 {
 		in.TerminationPolicies = ptr.Value(r.TerminationPolicies)
 		return
@@ -470,7 +483,7 @@ func (r *Group) setTerminationPolicies(in *autoscaling.UpdateAutoScalingGroupInp
 // setMaintenancePolicy sets the instance-maintenance policy on the update,
 // sending the removal sentinel when the block is omitted, since a null does not
 // clear a previously set policy.
-func (r *Group) setMaintenancePolicy(in *autoscaling.UpdateAutoScalingGroupInput) {
+func (r *GroupResource) setMaintenancePolicy(in *autoscaling.UpdateAutoScalingGroupInput) {
 	if r.InstanceMaintenancePolicy != nil {
 		in.InstanceMaintenancePolicy = expandMaintenancePolicy(*r.InstanceMaintenancePolicy)
 		return
@@ -478,7 +491,7 @@ func (r *Group) setMaintenancePolicy(in *autoscaling.UpdateAutoScalingGroupInput
 	in.InstanceMaintenancePolicy = removedMaintenancePolicy()
 }
 
-func (r *Group) Delete(ctx context.Context, cfg *awsCfg, prior *GroupOutput) error {
+func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -506,7 +519,7 @@ func (r *Group) Delete(ctx context.Context, cfg *awsCfg, prior *GroupOutput) err
 // clears scale-in protection on any protected instance, then waits for the
 // instance count to reach zero. A live group cannot be deleted, so this
 // precedes the delete call when force-delete is off.
-func (r *Group) drain(
+func (r *GroupResource) drain(
 	ctx context.Context, client *autoscaling.Client, g *autoscalingtypes.AutoScalingGroup,
 ) error {
 	_, err := client.UpdateAutoScalingGroup(ctx, &autoscaling.UpdateAutoScalingGroupInput{
@@ -528,7 +541,7 @@ func (r *Group) drain(
 // instance so it can terminate during the drain. The instances are cleared in
 // batches; an instance that has already left the group raises a ValidationError
 // that is swallowed, since its departure is the outcome the drain wants.
-func (r *Group) clearScaleInProtection(
+func (r *GroupResource) clearScaleInProtection(
 	ctx context.Context, client *autoscaling.Client, g *autoscalingtypes.AutoScalingGroup,
 ) error {
 	var protected []string
@@ -553,7 +566,11 @@ func (r *Group) clearScaleInProtection(
 // deleteGroup issues DeleteAutoScalingGroup, retrying through an in-progress
 // scaling activity or another conflicting operation. A group already gone
 // reports a ValidationError saying so, which is treated as success.
-func (r *Group) deleteGroup(ctx context.Context, client *autoscaling.Client, force bool) error {
+func (r *GroupResource) deleteGroup(
+	ctx context.Context,
+	client *autoscaling.Client,
+	force bool,
+) error {
 	err := retry.OnError(ctx, isDeleteConflict, func(ctx context.Context) error {
 		_, err := client.DeleteAutoScalingGroup(ctx, &autoscaling.DeleteAutoScalingGroupInput{
 			AutoScalingGroupName: aws.String(r.Name),
@@ -568,7 +585,7 @@ func (r *Group) deleteGroup(ctx context.Context, client *autoscaling.Client, for
 }
 
 // suspendProcesses suspends the named scaling processes when any are given.
-func (r *Group) suspendProcesses(
+func (r *GroupResource) suspendProcesses(
 	ctx context.Context, client *autoscaling.Client, processes []string,
 ) error {
 	if len(processes) == 0 {
@@ -585,7 +602,7 @@ func (r *Group) suspendProcesses(
 }
 
 // resumeProcesses resumes the named scaling processes when any are given.
-func (r *Group) resumeProcesses(
+func (r *GroupResource) resumeProcesses(
 	ctx context.Context, client *autoscaling.Client, processes []string,
 ) error {
 	if len(processes) == 0 {
@@ -603,7 +620,7 @@ func (r *Group) resumeProcesses(
 
 // syncSuspendedProcesses reconciles the suspended-process set to the declared
 // set: it resumes the processes no longer listed and suspends the newly listed.
-func (r *Group) syncSuspendedProcesses(
+func (r *GroupResource) syncSuspendedProcesses(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
 	added, removed := stringSetDiff(prior, ptr.Value(r.SuspendedProcesses))
@@ -615,7 +632,7 @@ func (r *Group) syncSuspendedProcesses(
 
 // enableMetrics enables the named group metrics at the configured granularity
 // when any are given.
-func (r *Group) enableMetrics(
+func (r *GroupResource) enableMetrics(
 	ctx context.Context, client *autoscaling.Client, metrics []string,
 ) error {
 	if len(metrics) == 0 {
@@ -633,7 +650,7 @@ func (r *Group) enableMetrics(
 }
 
 // disableMetrics disables the named group metrics when any are given.
-func (r *Group) disableMetrics(
+func (r *GroupResource) disableMetrics(
 	ctx context.Context, client *autoscaling.Client, metrics []string,
 ) error {
 	if len(metrics) == 0 {
@@ -653,7 +670,7 @@ func (r *Group) disableMetrics(
 // granularity changed it re-enables the whole set, since the granularity rides
 // the enable call; otherwise it disables the removed metrics and enables the
 // added ones.
-func (r *Group) syncMetrics(
+func (r *GroupResource) syncMetrics(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
 	if runtime.Changed(prior, ptr.Value(r.EnabledMetrics)) {
@@ -669,7 +686,11 @@ func (r *Group) syncMetrics(
 
 // syncTags reconciles the structured tag set to the declared set: it deletes
 // the tags removed and creates or updates the tags added or changed.
-func (r *Group) syncTags(ctx context.Context, client *autoscaling.Client, prior []GroupTag) error {
+func (r *GroupResource) syncTags(
+	ctx context.Context,
+	client *autoscaling.Client,
+	prior []GroupTag,
+) error {
 	remove, upsert := diffTags(prior, ptr.Value(r.Tags))
 	if len(remove) > 0 {
 		tags := make([]autoscalingtypes.Tag, 0, len(remove))
@@ -694,7 +715,7 @@ func (r *Group) syncTags(ctx context.Context, client *autoscaling.Client, prior 
 // detaching the ARNs removed and attaching the ARNs added. Each direction is
 // batched, and each batch is waited until the count in transition reaches zero
 // so a later read does not race the attach or detach settling.
-func (r *Group) syncTargetGroups(
+func (r *GroupResource) syncTargetGroups(
 	ctx context.Context, client *autoscaling.Client, prior []string,
 ) error {
 	added, removed := stringSetDiff(prior, ptr.Value(r.TargetGroupArns))
@@ -730,7 +751,7 @@ func (r *Group) syncTargetGroups(
 // waitTargetGroupsSettled polls until no attached target group is still in the
 // given transitional state, so an attach or detach is fully settled before the
 // next batch.
-func (r *Group) waitTargetGroupsSettled(
+func (r *GroupResource) waitTargetGroupsSettled(
 	ctx context.Context, client *autoscaling.Client, state string,
 ) error {
 	what := fmt.Sprintf("group %s target groups to leave %s", r.Name, state)
@@ -757,7 +778,7 @@ func (r *Group) waitTargetGroupsSettled(
 // wait so a doomed launch does not run out the timeout. The wait is governed by
 // wait-for-capacity-timeout, defaulting to ten minutes; a zero value disables
 // it.
-func (r *Group) waitCapacity(
+func (r *GroupResource) waitCapacity(
 	ctx context.Context, client *autoscaling.Client, since time.Time, target int64, exact bool,
 ) error {
 	timeout, err := r.capacityTimeout()
@@ -786,7 +807,7 @@ func (r *Group) waitCapacity(
 
 // capacityTimeout parses the wait-for-capacity-timeout knob. It defaults to ten
 // minutes when unset; a value of zero disables the capacity wait.
-func (r *Group) capacityTimeout() (time.Duration, error) {
+func (r *GroupResource) capacityTimeout() (time.Duration, error) {
 	if r.WaitForCapacityTimeout == nil {
 		return 10 * time.Minute, nil
 	}
@@ -802,7 +823,7 @@ func (r *Group) capacityTimeout() (time.Duration, error) {
 // since the operation began has failed outright, so a doomed launch fails fast.
 // An activity failing on an unpropagated IAM instance profile is skipped, since
 // the create retry covers that race and the profile usually catches up.
-func (r *Group) checkScalingActivities(
+func (r *GroupResource) checkScalingActivities(
 	ctx context.Context, client *autoscaling.Client, since time.Time,
 ) error {
 	paginator := autoscaling.NewDescribeScalingActivitiesPaginator(client,
@@ -837,7 +858,7 @@ func (r *Group) checkScalingActivities(
 
 // waitDrained polls until the group holds no instances, the precondition for
 // deleting it without a force delete.
-func (r *Group) waitDrained(ctx context.Context, client *autoscaling.Client) error {
+func (r *GroupResource) waitDrained(ctx context.Context, client *autoscaling.Client) error {
 	what := fmt.Sprintf("group %s to drain to zero instances", r.Name)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		g, err := findGroup(ctx, client, r.Name)
@@ -854,7 +875,7 @@ func (r *Group) waitDrained(ctx context.Context, client *autoscaling.Client) err
 // waitGone polls until the group no longer describes. The API keeps returning a
 // deleted group for a while after the delete call accepts, so the delete is not
 // complete until the describe goes empty.
-func (r *Group) waitGone(ctx context.Context, client *autoscaling.Client) error {
+func (r *GroupResource) waitGone(ctx context.Context, client *autoscaling.Client) error {
 	what := fmt.Sprintf("group %s to be deleted", r.Name)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := findGroup(ctx, client, r.Name)

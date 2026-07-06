@@ -14,10 +14,11 @@ import (
 func stringPtr(v string) *string { return &v }
 
 func TestARNRead(t *testing.T) {
-	out, err := (&ARN{ARN: "arn:aws:lambda:us-east-1:123456789012:function:api"}).Read(
-		context.Background(), nil)
+	out, err := (&ARNDataSource{
+		ARN: "arn:aws:lambda:us-east-1:123456789012:function:api",
+	}).Read(context.Background(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, &ARNOutput{
+	assert.Equal(t, &ARNDataSourceOutput{
 		Account:   "123456789012",
 		Partition: "aws",
 		Region:    "us-east-1",
@@ -27,11 +28,11 @@ func TestARNRead(t *testing.T) {
 }
 
 func TestPartitionRead(t *testing.T) {
-	out, err := (&Partition{}).Read(context.Background(), &awscfg.Configuration{
+	out, err := (&PartitionDataSource{}).Read(context.Background(), &awscfg.Configuration{
 		Region: stringPtr("eusc-de-east-1"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, &PartitionOutput{
+	assert.Equal(t, &PartitionDataSourceOutput{
 		DNSSuffix:        "amazonaws.eu",
 		Partition:        "aws-eusc",
 		ReverseDNSPrefix: "eu.amazonaws",
@@ -39,7 +40,9 @@ func TestPartitionRead(t *testing.T) {
 }
 
 func TestRegionReadByName(t *testing.T) {
-	out, err := (&Region{Region: stringPtr("cn-north-1")}).Read(context.Background(), nil)
+	out, err := (&RegionDataSource{
+		Region: stringPtr("cn-north-1"),
+	}).Read(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "China (Beijing)", out.Description)
 	assert.Equal(t, "ec2.cn-north-1.amazonaws.com.cn", out.Endpoint)
@@ -48,7 +51,7 @@ func TestRegionReadByName(t *testing.T) {
 }
 
 func TestRegionReadByEndpoint(t *testing.T) {
-	out, err := (&Region{Endpoint: stringPtr("ec2.us-east-2.amazonaws.com")}).Read(
+	out, err := (&RegionDataSource{Endpoint: stringPtr("ec2.us-east-2.amazonaws.com")}).Read(
 		context.Background(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "us-east-2", out.Region)
@@ -56,10 +59,10 @@ func TestRegionReadByEndpoint(t *testing.T) {
 }
 
 func TestServicePrincipalRead(t *testing.T) {
-	out, err := (&ServicePrincipal{ServiceName: "logs"}).Read(
+	out, err := (&ServicePrincipalDataSource{ServiceName: "logs"}).Read(
 		context.Background(), &awscfg.Configuration{Region: stringPtr("cn-north-1")})
 	require.NoError(t, err)
-	assert.Equal(t, &ServicePrincipalOutput{
+	assert.Equal(t, &ServicePrincipalDataSourceOutput{
 		Name:   "logs.amazonaws.com.cn",
 		Region: "cn-north-1",
 		Suffix: "amazonaws.com.cn",
@@ -67,10 +70,10 @@ func TestServicePrincipalRead(t *testing.T) {
 }
 
 func TestServiceRead(t *testing.T) {
-	out, err := (&Service{ServiceID: stringPtr("ec2")}).Read(
+	out, err := (&ServiceDataSource{ServiceID: stringPtr("ec2")}).Read(
 		context.Background(), &awscfg.Configuration{Region: stringPtr("us-east-1")})
 	require.NoError(t, err)
-	assert.Equal(t, &ServiceOutput{
+	assert.Equal(t, &ServiceDataSourceOutput{
 		DNSName:          "ec2.us-east-1.amazonaws.com",
 		Partition:        "aws",
 		Region:           "us-east-1",
@@ -82,8 +85,9 @@ func TestServiceRead(t *testing.T) {
 }
 
 func TestServiceReadFromDNSName(t *testing.T) {
-	out, err := (&Service{DNSName: stringPtr("S3.CN-NORTH-1.AMAZONAWS.COM.CN")}).Read(
-		context.Background(), nil)
+	out, err := (&ServiceDataSource{
+		DNSName: stringPtr("S3.CN-NORTH-1.AMAZONAWS.COM.CN"),
+	}).Read(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "s3.cn-north-1.amazonaws.com.cn", out.DNSName)
 	assert.Equal(t, "aws-cn", out.Partition)
@@ -94,7 +98,7 @@ func TestServiceReadFromDNSName(t *testing.T) {
 }
 
 func TestServiceReadUnsupported(t *testing.T) {
-	out, err := (&Service{ServiceID: stringPtr("not-a-service")}).Read(
+	out, err := (&ServiceDataSource{ServiceID: stringPtr("not-a-service")}).Read(
 		context.Background(), &awscfg.Configuration{Region: stringPtr("us-east-1")})
 	require.NoError(t, err)
 	assert.Equal(t, "not-a-service.us-east-1.amazonaws.com", out.DNSName)
@@ -120,13 +124,13 @@ func TestIPRangesRead(t *testing.T) {
 	}))
 	defer server.Close()
 
-	out, err := (&IPRanges{
+	out, err := (&IPRangesDataSource{
 		Regions:  &[]string{"US-EAST-1"},
 		Services: []string{"amazon"},
 		URL:      &server.URL,
 	}).Read(context.Background(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, &IPRangesOutput{
+	assert.Equal(t, &IPRangesDataSourceOutput{
 		CIDRBlocks:     []string{"10.1.0.0/16"},
 		CreateDate:     "2026-07-02-00-00-00",
 		IPv6CIDRBlocks: []string{"2001:db8:1::/48"},
@@ -136,7 +140,7 @@ func TestIPRangesRead(t *testing.T) {
 
 func TestRegionsDescribeInput(t *testing.T) {
 	allRegions := true
-	in := (&Regions{
+	in := (&RegionsDataSource{
 		AllRegions: &allRegions,
 		Filters: &[]RegionsFilter{{
 			Name:   "opt-in-status",

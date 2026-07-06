@@ -8,11 +8,14 @@ import (
 	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 )
 
-type MicrovmData struct {
+type MicrovmDataSource struct {
 	MicrovmIdentifier string `ub:"microvm-identifier"`
 }
 
-func (r *MicrovmData) Read(ctx context.Context, cfg *awsCfg) (*MicrovmDataOutput, error) {
+func (r *MicrovmDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*MicrovmDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err

@@ -61,7 +61,7 @@ func TestLibraryRegistersSTSLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	dataSourceOutputs := map[string]reflect.Type{
-		"caller-identity": reflect.TypeFor[*svc.CallerIdentityOutput](),
+		"caller-identity": reflect.TypeFor[*svc.CallerIdentityDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {

@@ -23,7 +23,7 @@ import (
 // minute, so a create or update wrapping its call retries over one minute.
 const certRetryTimeout = time.Minute
 
-// Distribution manages a CloudFront distribution: the edge configuration that
+// DistributionResource manages a CloudFront distribution: the edge configuration that
 // tells CloudFront where to fetch content (its origins) and how to serve it
 // (its cache behaviors), plus the TLS, geo, logging, and error-handling
 // settings. CloudFront takes the whole configuration in one call and replaces
@@ -48,7 +48,7 @@ const certRetryTimeout = time.Minute
 // real-time log config, smooth streaming, and gRPC; the anycast IP list; the
 // cache-tag config; the viewer mTLS config; and the multi-tenant distribution
 // (a separate resource).
-type Distribution struct {
+type DistributionResource struct {
 	Enabled              *bool                              `ub:"enabled"`
 	Aliases              *[]string                          `ub:"aliases"`
 	Comment              *string                            `ub:"comment"`
@@ -67,7 +67,7 @@ type Distribution struct {
 	Tags                 *map[string]string                 `ub:"tags"`
 }
 
-// DistributionOutput holds the values CloudFront computes for a distribution.
+// DistributionResourceOutput holds the values CloudFront computes for a distribution.
 // Id is the stable handle used to read, update, and delete it and the value a
 // Route 53 alias target references. DomainName is the dxxx.cloudfront.net host
 // that downstream DNS points at. ETag is the distribution's current version,
@@ -77,7 +77,7 @@ type Distribution struct {
 // resent unchanged on every update. HostedZoneId is the fixed CloudFront zone
 // for the partition, used to build an alias record, and is a constant rather
 // than an API value.
-type DistributionOutput struct {
+type DistributionResourceOutput struct {
 	Id              string `ub:"id"`
 	Arn             string `ub:"arn"`
 	DomainName      string `ub:"domain-name"`
@@ -87,13 +87,13 @@ type DistributionOutput struct {
 	CallerReference string `ub:"caller-reference"`
 }
 
-func (r *Distribution) SchemaVersion() int { return 1 }
+func (r *DistributionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields is empty: CloudFront reconciles every core setting in place
 // through UpdateDistribution, which replaces the whole configuration, so none
 // forces a new resource. The one field that would force a replace, the staging
 // flag, is deferred.
-func (r *Distribution) ReplaceFields() []string {
+func (r *DistributionResource) ReplaceFields() []string {
 	return nil
 }
 
@@ -105,7 +105,7 @@ func (r *Distribution) ReplaceFields() []string {
 // the default CloudFront certificate, an ACM certificate, or an IAM
 // certificate; the rule chains through the optional block, reading null and
 // passing when it is absent.
-func (r Distribution) Constraints() []constraint.Constraint {
+func (r DistributionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.PriceClass)).
 			Require(constraint.OneOf(r.PriceClass,
@@ -175,7 +175,10 @@ func (r Distribution) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Distribution) Create(ctx context.Context, cfg *awsCfg) (*DistributionOutput, error) {
+func (r *DistributionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*DistributionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -209,9 +212,11 @@ func (r *Distribution) Create(ctx context.Context, cfg *awsCfg) (*DistributionOu
 	return r.read(ctx, client, id)
 }
 
-func (r *Distribution) Read(
-	ctx context.Context, cfg *awsCfg, prior *DistributionOutput,
-) (*DistributionOutput, error) {
+func (r *DistributionResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *DistributionResourceOutput,
+) (*DistributionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -225,9 +230,9 @@ func (r *Distribution) Read(
 // not part of its config, and is the version token a later update or delete
 // passes as IfMatch. The hosted zone id is the fixed CloudFront zone for the
 // client's partition, not an API value.
-func (r *Distribution) read(
+func (r *DistributionResource) read(
 	ctx context.Context, client *cloudfront.Client, id string,
-) (*DistributionOutput, error) {
+) (*DistributionResourceOutput, error) {
 	resp, err := client.GetDistribution(ctx, &cloudfront.GetDistributionInput{
 		Id: aws.String(id),
 	})
@@ -245,7 +250,7 @@ func (r *Distribution) read(
 	if dist.DistributionConfig != nil {
 		callerReference = aws.ToString(dist.DistributionConfig.CallerReference)
 	}
-	return &DistributionOutput{
+	return &DistributionResourceOutput{
 		Id:              aws.ToString(dist.Id),
 		Arn:             aws.ToString(dist.ARN),
 		DomainName:      aws.ToString(dist.DomainName),
@@ -256,9 +261,11 @@ func (r *Distribution) read(
 	}, nil
 }
 
-func (r *Distribution) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Distribution, *DistributionOutput],
-) (*DistributionOutput, error) {
+func (r *DistributionResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
+) (*DistributionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -301,8 +308,8 @@ func (r *Distribution) Update(
 // UpdateDistribution. Tags reconcile separately through their own change check,
 // so they are excluded here. When this is false and only tags changed, Update
 // skips the full UpdateDistribution and its long redeploy wait entirely.
-func (r *Distribution) configChanged(
-	prior runtime.Prior[Distribution, *DistributionOutput],
+func (r *DistributionResource) configChanged(
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
 ) bool {
 	return runtime.Changed(prior.Inputs.Enabled, r.Enabled) ||
 		runtime.Changed(ptr.Value(prior.Inputs.Aliases), ptr.Value(r.Aliases)) ||
@@ -327,7 +334,7 @@ func (r *Distribution) configChanged(
 // version no longer matches because the distribution changed out of band,
 // CloudFront returns PreconditionFailed, so the call re-reads a fresh ETag and
 // retries.
-func (r *Distribution) updateConfig(
+func (r *DistributionResource) updateConfig(
 	ctx context.Context, client *cloudfront.Client, id, etag string,
 	config *cloudfronttypes.DistributionConfig,
 ) error {
@@ -367,9 +374,9 @@ func (r *Distribution) updateConfig(
 // schema does not document (the is-ipv6-enabled default is unstated, and
 // http-version defaults to http1.1, not http2). It returns the config and the
 // ETag read with it, the concurrency token the write that follows guards on.
-func (r *Distribution) updatedConfig(
+func (r *DistributionResource) updatedConfig(
 	ctx context.Context, client *cloudfront.Client, id string,
-	prior runtime.Prior[Distribution, *DistributionOutput],
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
 ) (*cloudfronttypes.DistributionConfig, string, error) {
 	cur, err := client.GetDistributionConfig(ctx, &cloudfront.GetDistributionConfigInput{
 		Id: aws.String(id),
@@ -387,8 +394,9 @@ func (r *Distribution) updatedConfig(
 // value. The set of fields mirrors configChanged, which decides whether an
 // update runs at all.
 func overlayChangedConfig(
-	config *cloudfronttypes.DistributionConfig, r *Distribution,
-	prior runtime.Prior[Distribution, *DistributionOutput],
+	config *cloudfronttypes.DistributionConfig,
+	r *DistributionResource,
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
 ) {
 	if runtime.Changed(prior.Inputs.Enabled, r.Enabled) {
 		config.Enabled = boolOrFalse(r.Enabled)
@@ -440,7 +448,11 @@ func overlayChangedConfig(
 // syncTags reconciles the distribution's tags with the desired set, reading the
 // live tags through ListTagsForResource and writing changes with TagResource
 // and UntagResource. CloudFront addresses a distribution's tags by its ARN.
-func (r *Distribution) syncTags(ctx context.Context, client *cloudfront.Client, arn string) error {
+func (r *DistributionResource) syncTags(
+	ctx context.Context,
+	client *cloudfront.Client,
+	arn string,
+) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForResource(ctx,

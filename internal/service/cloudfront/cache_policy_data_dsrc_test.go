@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCachePolicyDataARN(t *testing.T) {
+func TestCachePolicyDataSourceARN(t *testing.T) {
 	tests := []struct {
 		name      string
 		region    string

@@ -19,36 +19,36 @@ import (
 
 const previousStage = "AWSPREVIOUS"
 
-// SecretVersion manages one immutable Secrets Manager value version. The secret
+// SecretVersionResource manages one immutable Secrets Manager value version. The secret
 // id and payload create the version through PutSecretValue and cannot change in
 // place; only the version-stages label set reconciles after creation with
 // UpdateSecretVersionStage. A binary payload can be supplied inline as bytes in
 // a string. With no explicit version stages, Secrets Manager applies its default
 // labels and unobin leaves them service-managed. An explicit empty list manages
 // labels and removes every removable label on update.
-type SecretVersion struct {
+type SecretVersionResource struct {
 	SecretId            string    `ub:"secret-id"`
 	SecretBinaryContent *string   `ub:"secret-binary-content,sensitive"`
 	SecretString        *string   `ub:"secret-string,sensitive"`
 	VersionStages       *[]string `ub:"version-stages"`
 }
 
-// SecretVersionOutput holds the server-computed identity and staging labels for
+// SecretVersionResourceOutput holds the server-computed identity and staging labels for
 // a secret version. SecretId is stored with the returned version id so Read and
 // Delete keep addressing the original version when a replacement changes the
 // parent secret input.
-type SecretVersionOutput struct {
+type SecretVersionResourceOutput struct {
 	SecretId      string   `ub:"secret-id"`
 	Arn           string   `ub:"arn"`
 	VersionId     string   `ub:"version-id"`
 	VersionStages []string `ub:"version-stages"`
 }
 
-func (r *SecretVersion) SchemaVersion() int { return 1 }
+func (r *SecretVersionResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the values Secrets Manager fixes for a version. Staging
 // labels are mutable; the parent secret and value bytes are not.
-func (r *SecretVersion) ReplaceFields() []string {
+func (r *SecretVersionResource) ReplaceFields() []string {
 	return []string{
 		"secret-id",
 		"secret-binary-content",
@@ -58,7 +58,7 @@ func (r *SecretVersion) ReplaceFields() []string {
 
 // Constraints declares that only one payload can be used. A value is not
 // required here; if none is supplied, Secrets Manager rejects the create.
-func (r SecretVersion) Constraints() []constraint.Constraint {
+func (r SecretVersionResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(
 			r.SecretBinaryContent,
@@ -67,7 +67,10 @@ func (r SecretVersion) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *SecretVersion) Create(ctx context.Context, cfg *awsCfg) (*SecretVersionOutput, error) {
+func (r *SecretVersionResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*SecretVersionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -96,9 +99,11 @@ func (r *SecretVersion) Create(ctx context.Context, cfg *awsCfg) (*SecretVersion
 	return r.waitReadable(ctx, client, r.SecretId, aws.ToString(resp.VersionId))
 }
 
-func (r *SecretVersion) Read(
-	ctx context.Context, cfg *awsCfg, prior *SecretVersionOutput,
-) (*SecretVersionOutput, error) {
+func (r *SecretVersionResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecretVersionResourceOutput,
+) (*SecretVersionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -107,11 +112,11 @@ func (r *SecretVersion) Read(
 	return r.readByID(ctx, client, secretID, versionID)
 }
 
-func (r *SecretVersion) Update(
+func (r *SecretVersionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[SecretVersion, *SecretVersionOutput],
-) (*SecretVersionOutput, error) {
+	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput],
+) (*SecretVersionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -125,7 +130,11 @@ func (r *SecretVersion) Update(
 	return r.readByID(ctx, client, secretID, versionID)
 }
 
-func (r *SecretVersion) Delete(ctx context.Context, cfg *awsCfg, prior *SecretVersionOutput) error {
+func (r *SecretVersionResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecretVersionResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -152,7 +161,7 @@ func (r *SecretVersion) Delete(ctx context.Context, cfg *awsCfg, prior *SecretVe
 	return r.waitDetached(ctx, client, secretID, versionID)
 }
 
-func (r *SecretVersion) identity(prior *SecretVersionOutput) (string, string) {
+func (r *SecretVersionResource) identity(prior *SecretVersionResourceOutput) (string, string) {
 	secretID := r.SecretId
 	versionID := ""
 	if prior != nil {
@@ -164,7 +173,7 @@ func (r *SecretVersion) identity(prior *SecretVersionOutput) (string, string) {
 	return secretID, versionID
 }
 
-func (r *SecretVersion) setPayload(in *secretsmanager.PutSecretValueInput) error {
+func (r *SecretVersionResource) setPayload(in *secretsmanager.PutSecretValueInput) error {
 	switch {
 	case r.SecretString != nil:
 		in.SecretString = r.SecretString
@@ -174,12 +183,12 @@ func (r *SecretVersion) setPayload(in *secretsmanager.PutSecretValueInput) error
 	return nil
 }
 
-func (r *SecretVersion) readByID(
+func (r *SecretVersionResource) readByID(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
 	versionID string,
-) (*SecretVersionOutput, error) {
+) (*SecretVersionResourceOutput, error) {
 	if secretID == "" || versionID == "" {
 		return nil, runtime.ErrNotFound
 	}
@@ -200,7 +209,7 @@ func (r *SecretVersion) readByID(
 	if gotVersionID == "" {
 		gotVersionID = versionID
 	}
-	return &SecretVersionOutput{
+	return &SecretVersionResourceOutput{
 		SecretId:      secretID,
 		Arn:           aws.ToString(resp.ARN),
 		VersionId:     gotVersionID,
@@ -208,13 +217,13 @@ func (r *SecretVersion) readByID(
 	}, nil
 }
 
-func (r *SecretVersion) waitReadable(
+func (r *SecretVersionResource) waitReadable(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
 	versionID string,
-) (*SecretVersionOutput, error) {
-	var out *SecretVersionOutput
+) (*SecretVersionResourceOutput, error) {
+	var out *SecretVersionResourceOutput
 	what := fmt.Sprintf("secret version %s", versionID)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		read, err := r.readByID(ctx, client, secretID, versionID)
@@ -233,8 +242,8 @@ func (r *SecretVersion) waitReadable(
 	return out, nil
 }
 
-func (r *SecretVersion) stagesNeedUpdate(
-	prior runtime.Prior[SecretVersion, *SecretVersionOutput],
+func (r *SecretVersionResource) stagesNeedUpdate(
+	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput],
 ) bool {
 	if r.VersionStages == nil {
 		return false
@@ -246,7 +255,7 @@ func (r *SecretVersion) stagesNeedUpdate(
 		secretVersionStageActionNeeded(prior.Observed.VersionStages, r.desiredVersionStages())
 }
 
-func (r *SecretVersion) reconcileStages(
+func (r *SecretVersionResource) reconcileStages(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -274,7 +283,7 @@ func (r *SecretVersion) reconcileStages(
 	return nil
 }
 
-func (r *SecretVersion) addStage(
+func (r *SecretVersionResource) addStage(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -305,7 +314,7 @@ func (r *SecretVersion) addStage(
 	return nil
 }
 
-func (r *SecretVersion) removeStage(
+func (r *SecretVersionResource) removeStage(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -327,7 +336,7 @@ func (r *SecretVersion) removeStage(
 	return nil
 }
 
-func (r *SecretVersion) waitDetached(
+func (r *SecretVersionResource) waitDetached(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -350,7 +359,7 @@ type secretVersionEntry struct {
 	VersionStages []string
 }
 
-func (r *SecretVersion) findVersionEntry(
+func (r *SecretVersionResource) findVersionEntry(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -386,7 +395,7 @@ func (r *SecretVersion) findVersionEntry(
 	return nil, runtime.ErrNotFound
 }
 
-func (r *SecretVersion) findVersionWithStage(
+func (r *SecretVersionResource) findVersionWithStage(
 	ctx context.Context,
 	client *secretsmanager.Client,
 	secretID string,
@@ -431,7 +440,7 @@ func secretVersionStages(stages []string) []string {
 	return slices.Compact(out)
 }
 
-func (r *SecretVersion) desiredVersionStages() []string {
+func (r *SecretVersionResource) desiredVersionStages() []string {
 	if r.VersionStages == nil {
 		return nil
 	}

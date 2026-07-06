@@ -41,45 +41,46 @@ func Library() *runtime.Library {
 		Description:   "AWS Lambda MicroVMs library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"microvm-image": makeResource[svc.MicrovmImage, *svc.MicrovmImageOutput](),
+			"microvm-image": makeResource[svc.MicrovmImageResource, *svc.MicrovmImageResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"microvm-image": makeDataSource[
-				svc.MicrovmImageData, *svc.MicrovmImageDataOutput](),
+				svc.MicrovmImageDataSource, *svc.MicrovmImageDataSourceOutput](),
 			"microvm-images": makeDataSource[
-				svc.MicrovmImages, *svc.MicrovmImagesOutput](),
+				svc.MicrovmImagesDataSource, *svc.MicrovmImagesDataSourceOutput](),
 			"microvm-image-version": makeDataSource[
-				svc.MicrovmImageVersionData, *svc.MicrovmImageVersionDataOutput](),
+				svc.MicrovmImageVersionDataSource, *svc.MicrovmImageVersionDataSourceOutput](),
 			"microvm-image-versions": makeDataSource[
-				svc.MicrovmImageVersions, *svc.MicrovmImageVersionsOutput](),
+				svc.MicrovmImageVersionsDataSource, *svc.MicrovmImageVersionsDataSourceOutput](),
 			"microvm-image-build": makeDataSource[
-				svc.MicrovmImageBuildData, *svc.MicrovmImageBuildDataOutput](),
+				svc.MicrovmImageBuildDataSource, *svc.MicrovmImageBuildDataSourceOutput](),
 			"microvm-image-builds": makeDataSource[
-				svc.MicrovmImageBuilds, *svc.MicrovmImageBuildsOutput](),
+				svc.MicrovmImageBuildsDataSource, *svc.MicrovmImageBuildsDataSourceOutput](),
 			"managed-microvm-images": makeDataSource[
-				svc.ManagedMicrovmImages, *svc.ManagedMicrovmImagesOutput](),
+				svc.ManagedMicrovmImagesDataSource, *svc.ManagedMicrovmImagesDataSourceOutput](),
 			"managed-microvm-image-versions": makeDataSource[
-				svc.ManagedMicrovmImageVersions, *svc.ManagedMicrovmImageVersionsOutput](),
+				svc.ManagedMicrovmImageVersionsDataSource, *svc.ManagedMicrovmImageVersionsDataSourceOutput](),
 			"microvm": makeDataSource[
-				svc.MicrovmData, *svc.MicrovmDataOutput](),
+				svc.MicrovmDataSource, *svc.MicrovmDataSourceOutput](),
 			"microvms": makeDataSource[
-				svc.Microvms, *svc.MicrovmsOutput](),
+				svc.MicrovmsDataSource, *svc.MicrovmsDataSourceOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
-			"run-microvm": makeAction[svc.RunMicrovm, *svc.MicrovmDataOutput](),
+			"run-microvm": makeAction[
+				svc.RunMicrovmAction, *svc.RunMicrovmActionOutput](),
 			"create-microvm-auth-token": makeAction[
-				svc.MicrovmAuthToken, *svc.MicrovmAuthTokenOutput](),
+				svc.MicrovmAuthTokenAction, *svc.MicrovmAuthTokenActionOutput](),
 			"create-microvm-shell-auth-token": makeAction[
-				svc.MicrovmShellAuthToken, *svc.MicrovmShellAuthTokenOutput](),
+				svc.MicrovmShellAuthTokenAction, *svc.MicrovmShellAuthTokenActionOutput](),
 			"suspend-microvm": makeAction[
-				svc.SuspendMicrovm, *svc.SuspendMicrovmOutput](),
+				svc.SuspendMicrovmAction, *svc.SuspendMicrovmActionOutput](),
 			"resume-microvm": makeAction[
-				svc.ResumeMicrovm, *svc.ResumeMicrovmOutput](),
+				svc.ResumeMicrovmAction, *svc.ResumeMicrovmActionOutput](),
 			"terminate-microvm": makeAction[
-				svc.TerminateMicrovm, *svc.TerminateMicrovmOutput](),
+				svc.TerminateMicrovmAction, *svc.TerminateMicrovmActionOutput](),
 			"update-microvm-image-version-status": makeAction[
-				svc.UpdateMicrovmImageVersionStatus,
-				*svc.MicrovmImageVersionDataOutput](),
+				svc.UpdateMicrovmImageVersionStatusAction,
+				*svc.UpdateMicrovmImageVersionStatusActionOutput](),
 		},
 	}
 }

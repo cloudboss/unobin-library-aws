@@ -32,12 +32,12 @@ func Library() *runtime.Library {
 		Description:   "AWS ACM library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"certificate": makeResource[svc.Certificate, *svc.CertificateOutput](),
+			"certificate": makeResource[svc.CertificateResource, *svc.CertificateResourceOutput](),
 			"certificate-validation": makeResource[
-				svc.CertificateValidation, *svc.CertificateValidationOutput](),
+				svc.CertificateValidationResource, *svc.CertificateValidationResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"certificate": makeDataSource[svc.CertificateData, *svc.CertificateDataOutput](),
+			"certificate": makeDataSource[svc.CertificateDataSource, *svc.CertificateDataSourceOutput](),
 		},
 	}
 }

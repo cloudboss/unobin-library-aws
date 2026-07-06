@@ -9,9 +9,9 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 )
 
-// Service describes the DNS names and partition support for an AWS service
+// ServiceDataSource describes the DNS names and partition support for an AWS service
 // endpoint identifier in a region.
-type Service struct {
+type ServiceDataSource struct {
 	DNSName          *string `ub:"dns-name"`
 	Region           *string `ub:"region"`
 	ReverseDNSName   *string `ub:"reverse-dns-name"`
@@ -19,8 +19,8 @@ type Service struct {
 	ServiceID        *string `ub:"service-id"`
 }
 
-// ServiceOutput contains forward and reverse DNS names for the service.
-type ServiceOutput struct {
+// ServiceDataSourceOutput contains forward and reverse DNS names for the service.
+type ServiceDataSourceOutput struct {
 	DNSName          string `ub:"dns-name"`
 	Partition        string `ub:"partition"`
 	Region           string `ub:"region"`
@@ -30,13 +30,16 @@ type ServiceOutput struct {
 	Supported        bool   `ub:"supported"`
 }
 
-func (d Service) Constraints() []constraint.Constraint {
+func (d ServiceDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(d.DNSName, d.ReverseDNSName, d.ServiceID),
 	}
 }
 
-func (d *Service) Read(ctx context.Context, cfg *awsCfg) (*ServiceOutput, error) {
+func (d *ServiceDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*ServiceDataSourceOutput, error) {
 	resolved, err := d.resolve(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -52,7 +55,7 @@ type resolvedService struct {
 	supported        bool
 }
 
-func (d *Service) resolve(ctx context.Context, cfg *awsCfg) (*resolvedService, error) {
+func (d *ServiceDataSource) resolve(ctx context.Context, cfg *awsCfg) (*resolvedService, error) {
 	resolved := &resolvedService{
 		region:           stringValue(d.Region),
 		reverseDNSPrefix: stringValue(d.ReverseDNSPrefix),
@@ -83,7 +86,7 @@ func (d *Service) resolve(ctx context.Context, cfg *awsCfg) (*resolvedService, e
 	return resolved, nil
 }
 
-func (d *Service) applyDNSInputs(resolved *resolvedService) error {
+func (d *ServiceDataSource) applyDNSInputs(resolved *resolvedService) error {
 	if v := stringValue(d.ReverseDNSName); v != "" {
 		parsed, err := parseReverseServiceDNSName(v)
 		if err != nil {
@@ -121,9 +124,9 @@ func (s *resolvedService) merge(parsed *resolvedService) error {
 	return nil
 }
 
-func (s *resolvedService) output() *ServiceOutput {
+func (s *resolvedService) output() *ServiceDataSourceOutput {
 	reverseName := reverseDNSName(s.reverseDNSPrefix, s.region, s.serviceID)
-	return &ServiceOutput{
+	return &ServiceDataSourceOutput{
 		DNSName:          dnsName(reverseName),
 		Partition:        s.partition,
 		Region:           s.region,

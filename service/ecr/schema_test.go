@@ -18,7 +18,7 @@ import (
 func TestLibraryRegistersEcr(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
-		"repository": reflect.TypeFor[*svc.RepositoryOutput](),
+		"repository": reflect.TypeFor[*svc.RepositoryResourceOutput](),
 	}
 	for key, outputType := range resources {
 		t.Run(key, func(t *testing.T) {

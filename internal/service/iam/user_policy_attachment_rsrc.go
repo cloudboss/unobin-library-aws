@@ -23,33 +23,33 @@ var (
 			`partner-managed|\d{12}|cw.{10})$`)
 )
 
-// UserPolicyAttachment attaches a managed policy to an IAM user. The user name
+// UserPolicyAttachmentResource attaches a managed policy to an IAM user. The user name
 // and policy ARN are the identity, and IAM has no in-place update, so both
 // inputs are replace-only.
-type UserPolicyAttachment struct {
+type UserPolicyAttachmentResource struct {
 	User      string `ub:"user"`
 	PolicyArn string `ub:"policy-arn"`
 }
 
-// UserPolicyAttachmentOutput records the identity observed after create and
+// UserPolicyAttachmentResourceOutput records the identity observed after create and
 // read so replacement deletes the prior attachment.
-type UserPolicyAttachmentOutput struct {
+type UserPolicyAttachmentResourceOutput struct {
 	User      string `ub:"user"`
 	PolicyArn string `ub:"policy-arn"`
 }
 
-func (r *UserPolicyAttachment) SchemaVersion() int { return 1 }
+func (r *UserPolicyAttachmentResource) SchemaVersion() int { return 1 }
 
-func (r *UserPolicyAttachment) ReplaceFields() []string {
+func (r *UserPolicyAttachmentResource) ReplaceFields() []string {
 	return []string{
 		"user",
 		"policy-arn",
 	}
 }
 
-func (r *UserPolicyAttachment) Create(
+func (r *UserPolicyAttachmentResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*UserPolicyAttachmentOutput, error) {
+) (*UserPolicyAttachmentResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -72,9 +72,11 @@ func (r *UserPolicyAttachment) Create(
 	return r.read(ctx, client, true)
 }
 
-func (r *UserPolicyAttachment) Read(
-	ctx context.Context, cfg *awsCfg, prior *UserPolicyAttachmentOutput,
-) (*UserPolicyAttachmentOutput, error) {
+func (r *UserPolicyAttachmentResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *UserPolicyAttachmentResourceOutput,
+) (*UserPolicyAttachmentResourceOutput, error) {
 	key := r.key(prior)
 	if err := validateUserPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return nil, err
@@ -86,16 +88,15 @@ func (r *UserPolicyAttachment) Read(
 	return key.read(ctx, client, false)
 }
 
-func (r *UserPolicyAttachment) Update(
+func (r *UserPolicyAttachmentResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[UserPolicyAttachment, *UserPolicyAttachmentOutput],
-) (*UserPolicyAttachmentOutput, error) {
+	prior runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput],
+) (*UserPolicyAttachmentResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *UserPolicyAttachment) Delete(
-	ctx context.Context, cfg *awsCfg, prior *UserPolicyAttachmentOutput,
-) error {
+func (r *UserPolicyAttachmentResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *UserPolicyAttachmentResourceOutput) error {
 	key := r.key(prior)
 	if err := validateUserPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return err
@@ -122,10 +123,10 @@ func (r *UserPolicyAttachment) Delete(
 	return nil
 }
 
-func (r *UserPolicyAttachment) read(
+func (r *UserPolicyAttachmentResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*UserPolicyAttachmentOutput, error) {
-	var out *UserPolicyAttachmentOutput
+) (*UserPolicyAttachmentResourceOutput, error) {
+	var out *UserPolicyAttachmentResourceOutput
 	what := fmt.Sprintf("policy %s attached to user %s", r.PolicyArn, r.User)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		policyArn, err := r.find(ctx, client)
@@ -135,7 +136,7 @@ func (r *UserPolicyAttachment) read(
 			}
 			return false, err
 		}
-		out = &UserPolicyAttachmentOutput{User: r.User, PolicyArn: policyArn}
+		out = &UserPolicyAttachmentResourceOutput{User: r.User, PolicyArn: policyArn}
 		return true, nil
 	})
 	if err != nil {
@@ -144,7 +145,10 @@ func (r *UserPolicyAttachment) read(
 	return out, nil
 }
 
-func (r *UserPolicyAttachment) find(ctx context.Context, client *iam.Client) (string, error) {
+func (r *UserPolicyAttachmentResource) find(
+	ctx context.Context,
+	client *iam.Client,
+) (string, error) {
 	paginator := iam.NewListAttachedUserPoliciesPaginator(client,
 		&iam.ListAttachedUserPoliciesInput{
 			UserName: aws.String(r.User),
@@ -167,15 +171,14 @@ func (r *UserPolicyAttachment) find(ctx context.Context, client *iam.Client) (st
 	return "", runtime.ErrNotFound
 }
 
-func (r *UserPolicyAttachment) validate() error {
+func (r *UserPolicyAttachmentResource) validate() error {
 	return validateUserPolicyAttachmentARN(r.PolicyArn)
 }
 
-func (r *UserPolicyAttachment) key(
-	prior *UserPolicyAttachmentOutput,
-) *UserPolicyAttachment {
+func (r *UserPolicyAttachmentResource) key(
+	prior *UserPolicyAttachmentResourceOutput) *UserPolicyAttachmentResource {
 	if prior != nil {
-		return &UserPolicyAttachment{User: prior.User, PolicyArn: prior.PolicyArn}
+		return &UserPolicyAttachmentResource{User: prior.User, PolicyArn: prior.PolicyArn}
 	}
 	return r
 }

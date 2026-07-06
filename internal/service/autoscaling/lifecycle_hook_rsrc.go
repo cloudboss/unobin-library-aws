@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
 )
 
-// LifecycleHook is an EC2 Auto Scaling lifecycle hook: a pause point in an
+// LifecycleHookResource is an EC2 Auto Scaling lifecycle hook: a pause point in an
 // instance's launch or termination that lets a custom action run before the
 // transition completes. The whole resource is one PutLifecycleHook upsert, used
 // for both create and update, with no eventual-consistency waiter. The hook is
@@ -27,7 +27,7 @@ import (
 // it -- may not have propagated, so AWS cannot yet publish its test message.
 // The call retries through that ValidationError for five minutes. Lifecycle
 // hooks are not taggable, so the resource has no tag fields.
-type LifecycleHook struct {
+type LifecycleHookResource struct {
 	AutoScalingGroupName  string  `ub:"autoscaling-group-name"`
 	Name                  string  `ub:"name"`
 	LifecycleTransition   string  `ub:"lifecycle-transition"`
@@ -38,18 +38,18 @@ type LifecycleHook struct {
 	RoleARN               *string `ub:"role-arn"`
 }
 
-// LifecycleHookOutput holds the values the API fills for a lifecycle hook. The
+// LifecycleHookResourceOutput holds the values the API fills for a lifecycle hook. The
 // group and hook names together are the hook's identity, kept so a replacement's
 // delete, which receives the prior outputs, targets the old hook. The default
 // result is filled with CONTINUE when omitted, so a consumer reads the value the
 // cloud settled on.
-type LifecycleHookOutput struct {
+type LifecycleHookResourceOutput struct {
 	AutoScalingGroupName string `ub:"autoscaling-group-name"`
 	Name                 string `ub:"name"`
 	DefaultResult        string `ub:"default-result"`
 }
 
-func (r *LifecycleHook) SchemaVersion() int { return 1 }
+func (r *LifecycleHookResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs the API fixes when a hook is created. The group
 // name and the hook name together form the hook's identity; a change to either
@@ -57,7 +57,7 @@ func (r *LifecycleHook) SchemaVersion() int { return 1 }
 // the API, yet changing it would orphan the old hook under the old group, so it
 // is replaced rather than updated in place. Every other field is reconciled by
 // re-issuing PutLifecycleHook.
-func (r *LifecycleHook) ReplaceFields() []string {
+func (r *LifecycleHookResource) ReplaceFields() []string {
 	return []string{"autoscaling-group-name", "name"}
 }
 
@@ -70,7 +70,7 @@ func (r *LifecycleHook) ReplaceFields() []string {
 // a regular-expression match the condition vocabulary does not offer. The
 // notification target and role ARNs are independently optional with no
 // cross-field rule and are validated only as ARNs by the API.
-func (r LifecycleHook) Constraints() []constraint.Constraint {
+func (r LifecycleHookResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.LifecycleTransition,
 			"autoscaling:EC2_INSTANCE_LAUNCHING", "autoscaling:EC2_INSTANCE_TERMINATING")).
@@ -86,7 +86,10 @@ func (r LifecycleHook) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *LifecycleHook) Create(ctx context.Context, cfg *awsCfg) (*LifecycleHookOutput, error) {
+func (r *LifecycleHookResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*LifecycleHookResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -101,7 +104,7 @@ func (r *LifecycleHook) Create(ctx context.Context, cfg *awsCfg) (*LifecycleHook
 // notification target created moments earlier may not have propagated, so AWS
 // cannot yet publish its test message; the call retries through that
 // ValidationError for five minutes and returns the last error on timeout.
-func (r *LifecycleHook) put(ctx context.Context, client *autoscaling.Client) error {
+func (r *LifecycleHookResource) put(ctx context.Context, client *autoscaling.Client) error {
 	in := r.putInput()
 	err := retry.OnError(ctx, isTestMessageNotPublishable, func(ctx context.Context) error {
 		_, err := client.PutLifecycleHook(ctx, in)
@@ -117,7 +120,7 @@ func (r *LifecycleHook) put(ctx context.Context, client *autoscaling.Client) err
 // lifecycle transition are always sent; every optional field is sent only when
 // set, so an omitted value leaves the API to apply its own default. The default
 // result is never fabricated, so a fresh hook settles on the server's CONTINUE.
-func (r *LifecycleHook) putInput() *autoscaling.PutLifecycleHookInput {
+func (r *LifecycleHookResource) putInput() *autoscaling.PutLifecycleHookInput {
 	in := &autoscaling.PutLifecycleHookInput{
 		AutoScalingGroupName: aws.String(r.AutoScalingGroupName),
 		LifecycleHookName:    aws.String(r.Name),
@@ -133,9 +136,11 @@ func (r *LifecycleHook) putInput() *autoscaling.PutLifecycleHookInput {
 	return in
 }
 
-func (r *LifecycleHook) Read(
-	ctx context.Context, cfg *awsCfg, prior *LifecycleHookOutput,
-) (*LifecycleHookOutput, error) {
+func (r *LifecycleHookResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LifecycleHookResourceOutput,
+) (*LifecycleHookResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -148,23 +153,25 @@ func (r *LifecycleHook) Read(
 // runtime.ErrNotFound. A describe that does error with a ValidationError saying
 // the group is gone maps to the same, so a deleted group reads as drift rather
 // than failing the read.
-func (r *LifecycleHook) read(
+func (r *LifecycleHookResource) read(
 	ctx context.Context, client *autoscaling.Client,
-) (*LifecycleHookOutput, error) {
+) (*LifecycleHookResourceOutput, error) {
 	hook, err := findLifecycleHook(ctx, client, r.AutoScalingGroupName, r.Name)
 	if err != nil {
 		return nil, err
 	}
-	return &LifecycleHookOutput{
+	return &LifecycleHookResourceOutput{
 		AutoScalingGroupName: aws.ToString(hook.AutoScalingGroupName),
 		Name:                 aws.ToString(hook.LifecycleHookName),
 		DefaultResult:        aws.ToString(hook.DefaultResult),
 	}, nil
 }
 
-func (r *LifecycleHook) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LifecycleHook, *LifecycleHookOutput],
-) (*LifecycleHookOutput, error) {
+func (r *LifecycleHookResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput],
+) (*LifecycleHookResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -183,8 +190,8 @@ func (r *LifecycleHook) Update(
 // changed reports whether any input that rides PutLifecycleHook differs from the
 // prior inputs. The group name and hook name are not tested: a change to either
 // replaces the hook rather than updating it.
-func (r *LifecycleHook) changed(
-	prior runtime.Prior[LifecycleHook, *LifecycleHookOutput],
+func (r *LifecycleHookResource) changed(
+	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput],
 ) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.LifecycleTransition, r.LifecycleTransition) ||
@@ -195,7 +202,11 @@ func (r *LifecycleHook) changed(
 		runtime.Changed(p.RoleARN, r.RoleARN)
 }
 
-func (r *LifecycleHook) Delete(ctx context.Context, cfg *awsCfg, prior *LifecycleHookOutput) error {
+func (r *LifecycleHookResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *LifecycleHookResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

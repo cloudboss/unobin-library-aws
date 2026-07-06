@@ -23,7 +23,7 @@ func Library() *runtime.Library {
 		Description:   "AWS ECR library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"repository": makeResource[svc.Repository, *svc.RepositoryOutput](),
+			"repository": makeResource[svc.RepositoryResource, *svc.RepositoryResourceOutput](),
 		},
 	}
 }

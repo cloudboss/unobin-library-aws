@@ -431,8 +431,8 @@ func microvmImageSummaryFromSDK(
 
 func microvmImageOutputFromGet(
 	in *awslambdamicrovms.GetMicrovmImageOutput,
-) *MicrovmImageOutput {
-	return &MicrovmImageOutput{
+) *MicrovmImageResourceOutput {
+	return &MicrovmImageResourceOutput{
 		ImageArn:                 aws.ToString(in.ImageArn),
 		Name:                     aws.ToString(in.Name),
 		State:                    string(in.State),
@@ -445,8 +445,8 @@ func microvmImageOutputFromGet(
 
 func microvmImageDataOutputFromGet(
 	in *awslambdamicrovms.GetMicrovmImageOutput,
-) *MicrovmImageDataOutput {
-	return &MicrovmImageDataOutput{
+) *MicrovmImageDataSourceOutput {
+	return &MicrovmImageDataSourceOutput{
 		ImageArn:                 aws.ToString(in.ImageArn),
 		Name:                     aws.ToString(in.Name),
 		State:                    string(in.State),
@@ -460,7 +460,7 @@ func microvmImageDataOutputFromGet(
 
 func microvmImageVersionOutputFromGet(
 	in *awslambdamicrovms.GetMicrovmImageVersionOutput,
-) (*MicrovmImageVersionDataOutput, error) {
+) (*MicrovmImageVersionDataSourceOutput, error) {
 	return microvmImageVersionDataOutput(
 		aws.ToString(in.ImageArn),
 		aws.ToString(in.ImageVersion),
@@ -487,7 +487,7 @@ func microvmImageVersionOutputFromGet(
 
 func microvmImageVersionOutputFromUpdate(
 	in *awslambdamicrovms.UpdateMicrovmImageVersionOutput,
-) (*MicrovmImageVersionDataOutput, error) {
+) (*MicrovmImageVersionDataSourceOutput, error) {
 	return microvmImageVersionDataOutput(
 		aws.ToString(in.ImageArn),
 		aws.ToString(in.ImageVersion),
@@ -533,7 +533,7 @@ func microvmImageVersionDataOutput(
 	tags map[string]string,
 	createdAt *time.Time,
 	updatedAt *time.Time,
-) (*MicrovmImageVersionDataOutput, error) {
+) (*MicrovmImageVersionDataSourceOutput, error) {
 	codeArtifact, err := codeArtifactFromSDK(codeArtifactIn)
 	if err != nil {
 		return nil, err
@@ -542,7 +542,7 @@ func microvmImageVersionDataOutput(
 	if err != nil {
 		return nil, err
 	}
-	return &MicrovmImageVersionDataOutput{
+	return &MicrovmImageVersionDataSourceOutput{
 		ImageArn:                 imageArn,
 		ImageVersion:             imageVersion,
 		State:                    state,
@@ -603,8 +603,8 @@ func microvmImageVersionSummaryFromSDK(
 
 func microvmImageBuildOutputFromGet(
 	in *awslambdamicrovms.GetMicrovmImageBuildOutput,
-) *MicrovmImageBuildDataOutput {
-	return &MicrovmImageBuildDataOutput{
+) *MicrovmImageBuildDataSourceOutput {
+	return &MicrovmImageBuildDataSourceOutput{
 		ImageArn:          aws.ToString(in.ImageArn),
 		ImageVersion:      aws.ToString(in.ImageVersion),
 		BuildId:           aws.ToString(in.BuildId),
@@ -645,7 +645,7 @@ func snapshotBuildFromSDK(in *lambdamicrovmstypes.SnapshotBuild) *SnapshotBuild 
 	}
 }
 
-func microvmOutputFromGet(in *awslambdamicrovms.GetMicrovmOutput) *MicrovmDataOutput {
+func microvmOutputFromGet(in *awslambdamicrovms.GetMicrovmOutput) *MicrovmDataSourceOutput {
 	return microvmDataOutput(
 		aws.ToString(in.MicrovmId),
 		aws.ToString(in.Endpoint),
@@ -663,7 +663,7 @@ func microvmOutputFromGet(in *awslambdamicrovms.GetMicrovmOutput) *MicrovmDataOu
 	)
 }
 
-func microvmOutputFromRun(in *awslambdamicrovms.RunMicrovmOutput) *MicrovmDataOutput {
+func microvmOutputFromRun(in *awslambdamicrovms.RunMicrovmOutput) *MicrovmDataSourceOutput {
 	return microvmDataOutput(
 		aws.ToString(in.MicrovmId),
 		aws.ToString(in.Endpoint),
@@ -695,8 +695,8 @@ func microvmDataOutput(
 	egressNetworkConnectors []string,
 	idlePolicy *lambdamicrovmstypes.IdlePolicy,
 	stateReason string,
-) *MicrovmDataOutput {
-	return &MicrovmDataOutput{
+) *MicrovmDataSourceOutput {
+	return &MicrovmDataSourceOutput{
 		MicrovmId:                microvmID,
 		Endpoint:                 endpoint,
 		ImageArn:                 imageArn,

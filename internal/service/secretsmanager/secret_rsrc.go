@@ -32,7 +32,7 @@ const secretNameMaxLength = 512
 // it is fixed here rather than exposed.
 const currentStage = "AWSCURRENT"
 
-// Secret manages a Secrets Manager secret: the encrypted value plus the
+// SecretResource manages a Secrets Manager secret: the encrypted value plus the
 // metadata that governs it. The name is fixed at creation, so a change to it
 // replaces the secret; the description, the KMS key, the value, the replica
 // regions, and the tags reconcile in place. The value is a field reconciled by
@@ -45,7 +45,7 @@ const currentStage = "AWSCURRENT"
 // CreateSecret needs one. It must match ^[0-9A-Za-z/_+=.@-]+$ and be at most 512
 // characters; that rule is a regular-expression and byte-length check in Create
 // rather than a declarative constraint.
-type Secret struct {
+type SecretResource struct {
 	Name                        string             `ub:"name"`
 	Description                 *string            `ub:"description"`
 	KmsKeyId                    *string            `ub:"kms-key-id"`
@@ -65,14 +65,14 @@ type SecretReplica struct {
 	KmsKeyId *string `ub:"kms-key-id"`
 }
 
-// SecretOutput holds the values Secrets Manager computes for a secret. The ARN
+// SecretResourceOutput holds the values Secrets Manager computes for a secret. The ARN
 // is the secret's identity in policies and the stable handle every later call
 // addresses it by, so it is the identity Delete keys off the prior outputs on a
 // replace. VersionId is the identifier of the live value version, advanced by
 // each PutSecretValue. ReplicaStatus is the per-region replication state read
 // back from the secret, since add and remove are fire-and-forget and the status
 // settles on its own.
-type SecretOutput struct {
+type SecretResourceOutput struct {
 	Arn           string                `ub:"arn"`
 	VersionId     string                `ub:"version-id"`
 	ReplicaStatus []SecretReplicaStatus `ub:"replica-status"`
@@ -89,14 +89,14 @@ type SecretReplicaStatus struct {
 	LastAccessedDate string `ub:"last-accessed-date"`
 }
 
-func (r *Secret) SchemaVersion() int { return 1 }
+func (r *SecretResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs Secrets Manager fixes when a secret is created.
 // The name is the secret's identity and there is no rename, so a change to it
 // requires a new secret. Every other input reconciles in place by Update. The
 // value is a field reconciled by PutSecretValue, not a replace trigger: a
 // changed value advances to a new version in place.
-func (r *Secret) ReplaceFields() []string {
+func (r *SecretResource) ReplaceFields() []string {
 	return []string{"name"}
 }
 
@@ -108,7 +108,7 @@ func (r *Secret) ReplaceFields() []string {
 // charset and length are a regular-expression and byte-length check in Create
 // rather than declared here, since the constraint layer has no pattern match and
 // counts length in bytes.
-func (r Secret) Constraints() []constraint.Constraint {
+func (r SecretResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.SecretString, r.SecretBinary),
 		constraint.When(constraint.Present(r.RecoveryWindowInDays)).
@@ -123,7 +123,7 @@ func (r Secret) Constraints() []constraint.Constraint {
 // cannot express: the name must match the allowed charset and be no longer than
 // the byte limit, and a secret binary value must be valid base64, since it is
 // decoded before the call.
-func (r *Secret) validate() error {
+func (r *SecretResource) validate() error {
 	if !secretNameRegexp.MatchString(r.Name) {
 		return fmt.Errorf("name %q must match %s", r.Name, secretNameRegexp.String())
 	}
@@ -143,7 +143,7 @@ func (r *Secret) validate() error {
 	return nil
 }
 
-func (r *Secret) Create(ctx context.Context, cfg *awsCfg) (*SecretOutput, error) {
+func (r *SecretResource) Create(ctx context.Context, cfg *awsCfg) (*SecretResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -194,11 +194,10 @@ func (r *Secret) Create(ctx context.Context, cfg *awsCfg) (*SecretOutput, error)
 	return r.read(ctx, client, arn)
 }
 
-func (r *Secret) Read(
+func (r *SecretResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecretOutput) (*SecretOutput,
-	error,
+	prior *SecretResourceOutput) (*SecretResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -212,9 +211,9 @@ func (r *Secret) Read(
 // maps to runtime.ErrNotFound so a plan recreates it. The live value version is
 // read separately through GetSecretValue against the current stage; a value
 // that is gone is treated as no current version rather than an error.
-func (r *Secret) read(
+func (r *SecretResource) read(
 	ctx context.Context, client *secretsmanager.Client, arn string,
-) (*SecretOutput, error) {
+) (*SecretResourceOutput, error) {
 	desc, err := client.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(arn),
 	})
@@ -233,7 +232,7 @@ func (r *Secret) read(
 	if err != nil {
 		return nil, err
 	}
-	return &SecretOutput{
+	return &SecretResourceOutput{
 		Arn:           aws.ToString(desc.ARN),
 		VersionId:     versionID,
 		ReplicaStatus: flattenReplicaStatus(desc.ReplicationStatus),
@@ -245,7 +244,7 @@ func (r *Secret) read(
 // secret that is gone or scheduled for deletion through a not-found or an
 // invalid-request error naming the deletion; both mean there is no current
 // version to report, so they yield an empty id rather than an error.
-func (r *Secret) readVersionID(
+func (r *SecretResource) readVersionID(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) (string, error) {
 	resp, err := client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
@@ -261,9 +260,9 @@ func (r *Secret) readVersionID(
 	return aws.ToString(resp.VersionId), nil
 }
 
-func (r *Secret) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Secret, *SecretOutput],
-) (*SecretOutput, error) {
+func (r *SecretResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SecretResource, *SecretResourceOutput],
+) (*SecretResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -315,7 +314,11 @@ func (r *Secret) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Secret) Delete(ctx context.Context, cfg *awsCfg, prior *SecretOutput) error {
+func (r *SecretResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SecretResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -358,7 +361,7 @@ func (r *Secret) Delete(ctx context.Context, cfg *awsCfg, prior *SecretOutput) e
 // not consistently readable the instant the put returns. The SDK fills a
 // per-attempt ClientRequestToken via its idempotency middleware, so none is set
 // here.
-func (r *Secret) putValue(
+func (r *SecretResource) putValue(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) error {
 	in := &secretsmanager.PutSecretValueInput{SecretId: aws.String(arn)}
@@ -380,7 +383,7 @@ func (r *Secret) putValue(
 
 // waitDescribable polls DescribeSecret until the just-created secret stops
 // reporting as not-found, the eventual-consistency window after a create.
-func (r *Secret) waitDescribable(
+func (r *SecretResource) waitDescribable(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) error {
 	what := fmt.Sprintf("secret %s", arn)
@@ -401,7 +404,7 @@ func (r *Secret) waitDescribable(
 // waitValueGettable polls GetSecretValue until the new version is readable, the
 // eventual-consistency window after a put. The wait targets the version the put
 // returned so it confirms that exact version, not an older one.
-func (r *Secret) waitValueGettable(
+func (r *SecretResource) waitValueGettable(
 	ctx context.Context, client *secretsmanager.Client, arn, versionID string,
 ) error {
 	what := fmt.Sprintf("secret %s value %s", arn, versionID)
@@ -424,7 +427,7 @@ func (r *Secret) waitValueGettable(
 // deleted secret keeps describing for a while after DeleteSecret returns. A
 // described DeletedDate satisfies the wait too, so a window-scheduled deletion
 // counts as gone the same as a force-delete that has propagated.
-func (r *Secret) waitDeleted(
+func (r *SecretResource) waitDeleted(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) error {
 	what := fmt.Sprintf("secret %s deletion", arn)
@@ -445,7 +448,7 @@ func (r *Secret) waitDeleted(
 // syncTags reconciles the secret's tags with the desired set, reading the live
 // tags from DescribeSecret and writing changes with TagResource and
 // UntagResource. Secrets Manager addresses a secret's tags by its ARN.
-func (r *Secret) syncTags(
+func (r *SecretResource) syncTags(
 	ctx context.Context, client *secretsmanager.Client, arn string,
 ) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),

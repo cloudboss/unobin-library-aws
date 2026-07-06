@@ -24,7 +24,7 @@ import (
 // delete as in-use, so the retry runs for twenty minutes.
 const deleteTimeout = 20 * time.Minute
 
-// Certificate manages an ACM certificate created by one of two paths chosen by
+// CertificateResource manages an ACM certificate created by one of two paths chosen by
 // which fields are set. With domain-name set, RequestCertificate issues an
 // Amazon-managed certificate (validated by DNS or email) or, with
 // certificate-authority-arn, a certificate signed by a private CA. With
@@ -36,7 +36,7 @@ const deleteTimeout = 20 * time.Minute
 // reconciled in place. After create, and after a re-import, the resource waits
 // until ACM assigns the DNS validation records and returns them as
 // domain-validation-options, the value a downstream validation resource reads.
-type Certificate struct {
+type CertificateResource struct {
 	// DomainName is the fully qualified domain the certificate secures. Setting
 	// it selects request mode. ACM rejects a name ending in a dot.
 	DomainName *string `ub:"domain-name"`
@@ -68,12 +68,12 @@ type Certificate struct {
 	Tags             *map[string]string `ub:"tags"`
 }
 
-// CertificateOutput holds the values ACM computes for a certificate. The ARN is
+// CertificateResourceOutput holds the values ACM computes for a certificate. The ARN is
 // the certificate's identity and the handle every later call uses. domain-name
 // is read back because ACM derives it from the body for an imported certificate.
 // domain-validation-options is the crux: the DNS records a downstream resource
 // creates to validate domain control, populated only after the settling wait.
-type CertificateOutput struct {
+type CertificateResourceOutput struct {
 	Arn                     string                              `ub:"arn"`
 	DomainName              string                              `ub:"domain-name"`
 	Status                  string                              `ub:"status"`
@@ -85,7 +85,7 @@ type CertificateOutput struct {
 	DomainValidationOptions []CertificateDomainValidationOption `ub:"domain-validation-options"`
 }
 
-func (r *Certificate) SchemaVersion() int { return 1 }
+func (r *CertificateResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ACM fixes when a certificate is requested. The
 // domain identity, key algorithm, alternative names, validation method, and the
@@ -94,7 +94,7 @@ func (r *Certificate) SchemaVersion() int { return 1 }
 // (certificate-body, private-key, certificate-chain) is deliberately absent:
 // ACM re-imports it in place against the same ARN. The options block is also
 // absent: its transparency preference updates in place.
-func (r *Certificate) ReplaceFields() []string {
+func (r *CertificateResource) ReplaceFields() []string {
 	return []string{
 		"certificate-authority-arn",
 		"domain-name",
@@ -113,7 +113,7 @@ func (r *Certificate) ReplaceFields() []string {
 // a way to validate, so a domain-name request requires either a private-CA arn
 // or a validation method. The validation method, key algorithm, and the two
 // options preferences each accept a fixed set of values, applied only when set.
-func (r Certificate) Constraints() []constraint.Constraint {
+func (r CertificateResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.DomainName, r.PrivateKey),
 		constraint.ForbiddenWith(r.PrivateKey,
@@ -154,7 +154,10 @@ func (r Certificate) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Certificate) Create(ctx context.Context, cfg *awsCfg) (*CertificateOutput, error) {
+func (r *CertificateResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*CertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -177,9 +180,11 @@ func (r *Certificate) Create(ctx context.Context, cfg *awsCfg) (*CertificateOutp
 	return r.read(ctx, client, arn)
 }
 
-func (r *Certificate) Read(
-	ctx context.Context, cfg *awsCfg, prior *CertificateOutput,
-) (*CertificateOutput, error) {
+func (r *CertificateResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *CertificateResourceOutput,
+) (*CertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -187,9 +192,11 @@ func (r *Certificate) Read(
 	return r.read(ctx, client, prior.Arn)
 }
 
-func (r *Certificate) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Certificate, *CertificateOutput],
-) (*CertificateOutput, error) {
+func (r *CertificateResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
+) (*CertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -225,7 +232,11 @@ func (r *Certificate) Update(
 	return r.read(ctx, client, arn)
 }
 
-func (r *Certificate) Delete(ctx context.Context, cfg *awsCfg, prior *CertificateOutput) error {
+func (r *CertificateResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *CertificateResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -247,7 +258,7 @@ func (r *Certificate) Delete(ctx context.Context, cfg *awsCfg, prior *Certificat
 }
 
 // request issues a managed or private-CA certificate and returns its ARN.
-func (r *Certificate) request(ctx context.Context, client *acm.Client) (string, error) {
+func (r *CertificateResource) request(ctx context.Context, client *acm.Client) (string, error) {
 	in := &acm.RequestCertificateInput{
 		DomainName:              r.DomainName,
 		CertificateAuthorityArn: r.CertificateAuthorityArn,
@@ -273,7 +284,7 @@ func (r *Certificate) request(ctx context.Context, client *acm.Client) (string, 
 // With arn nil it imports a new certificate; with arn set it re-imports in
 // place against an existing certificate. ACM forbids tags on a re-import, so
 // they ride only the initial import.
-func (r *Certificate) importCertificate(
+func (r *CertificateResource) importCertificate(
 	ctx context.Context, client *acm.Client, arn *string,
 ) (string, error) {
 	in := &acm.ImportCertificateInput{
@@ -298,9 +309,9 @@ func (r *Certificate) importCertificate(
 // not-found maps to runtime.ErrNotFound so a plan recreates it. A certificate
 // whose validation timed out is dead and will be recreated, so it reads as
 // not-found too.
-func (r *Certificate) read(
+func (r *CertificateResource) read(
 	ctx context.Context, client *acm.Client, arn string,
-) (*CertificateOutput, error) {
+) (*CertificateResourceOutput, error) {
 	detail, err := describeCertificate(ctx, client, arn)
 	if err != nil {
 		return nil, err
@@ -308,7 +319,7 @@ func (r *Certificate) read(
 	if detail.Status == acmtypes.CertificateStatusValidationTimedOut {
 		return nil, runtime.ErrNotFound
 	}
-	out := &CertificateOutput{
+	out := &CertificateResourceOutput{
 		Arn:                     aws.ToString(detail.CertificateArn),
 		DomainName:              aws.ToString(detail.DomainName),
 		Status:                  string(detail.Status),
@@ -334,7 +345,7 @@ func (r *Certificate) read(
 // has its DNS record assigned, a validation email recorded, or its validation
 // succeeded, or the whole certificate has issued; a certificate still settling
 // can briefly report not-found, which keeps the wait going rather than aborting.
-func (r *Certificate) waitValidationsAvailable(
+func (r *CertificateResource) waitValidationsAvailable(
 	ctx context.Context, client *acm.Client, arn string,
 ) error {
 	what := fmt.Sprintf("certificate %s validation records", arn)
@@ -369,8 +380,8 @@ func (r *Certificate) waitValidationsAvailable(
 
 // importMaterialChanged reports whether any of the imported PEM fields changed,
 // which an imported certificate reconciles by re-importing in place.
-func (r *Certificate) importMaterialChanged(
-	prior runtime.Prior[Certificate, *CertificateOutput],
+func (r *CertificateResource) importMaterialChanged(
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
 ) bool {
 	return runtime.Changed(prior.Inputs.CertificateBody, r.CertificateBody) ||
 		runtime.Changed(prior.Inputs.PrivateKey, r.PrivateKey) ||
@@ -379,8 +390,8 @@ func (r *Certificate) importMaterialChanged(
 
 // transparencyChanged reports whether the transparency-logging preference
 // changed. The export preference is create-only and is not considered here.
-func (r *Certificate) transparencyChanged(
-	prior runtime.Prior[Certificate, *CertificateOutput],
+func (r *CertificateResource) transparencyChanged(
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
 ) bool {
 	var prev, cur *string
 	if prior.Inputs.Options != nil {
@@ -395,7 +406,7 @@ func (r *Certificate) transparencyChanged(
 // syncTags reconciles the certificate's tags with the desired set, reading the
 // live tags with ListTagsForCertificate and writing changes with
 // AddTagsToCertificate and RemoveTagsFromCertificate.
-func (r *Certificate) syncTags(ctx context.Context, client *acm.Client, arn string) error {
+func (r *CertificateResource) syncTags(ctx context.Context, client *acm.Client, arn string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.ListTagsForCertificate(ctx,

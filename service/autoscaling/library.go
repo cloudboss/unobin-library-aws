@@ -23,9 +23,9 @@ func Library() *runtime.Library {
 		Description:   "AWS Auto Scaling library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"group":          makeResource[svc.Group, *svc.GroupOutput](),
-			"policy":         makeResource[svc.Policy, *svc.PolicyOutput](),
-			"lifecycle-hook": makeResource[svc.LifecycleHook, *svc.LifecycleHookOutput](),
+			"group":          makeResource[svc.GroupResource, *svc.GroupResourceOutput](),
+			"policy":         makeResource[svc.PolicyResource, *svc.PolicyResourceOutput](),
+			"lifecycle-hook": makeResource[svc.LifecycleHookResource, *svc.LifecycleHookResourceOutput](),
 		},
 	}
 }

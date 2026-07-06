@@ -63,9 +63,9 @@ func TestLibraryRegistersAutoScalingLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"group":          reflect.TypeFor[*svc.GroupOutput](),
-		"policy":         reflect.TypeFor[*svc.PolicyOutput](),
-		"lifecycle-hook": reflect.TypeFor[*svc.LifecycleHookOutput](),
+		"group":          reflect.TypeFor[*svc.GroupResourceOutput](),
+		"policy":         reflect.TypeFor[*svc.PolicyResourceOutput](),
+		"lifecycle-hook": reflect.TypeFor[*svc.LifecycleHookResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

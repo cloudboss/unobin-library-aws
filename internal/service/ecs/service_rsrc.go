@@ -51,7 +51,7 @@ const serviceTimeout = 20 * time.Minute
 // target group not yet associated with its load balancer.
 const servicePropagationTimeout = 4 * time.Minute
 
-// Service manages an ECS service. The cluster, name, scheduling strategy,
+// ServiceResource manages an ECS service. The cluster, name, scheduling strategy,
 // and launch type are fixed at create time, so changing any of them replaces
 // the service; every other input is reconciled in place by a single
 // UpdateService call sent only when something it covers changed, and tags by
@@ -78,7 +78,7 @@ const servicePropagationTimeout = 4 * time.Minute
 // other than the ECS rolling controller, deployment alarms, service
 // registries, VPC Lattice configurations, and classic load balancer names
 // are not modeled.
-type Service struct {
+type ServiceResource struct {
 	Name                          string                                 `ub:"name"`
 	Cluster                       *string                                `ub:"cluster"`
 	TaskDefinition                string                                 `ub:"task-definition"`
@@ -101,24 +101,24 @@ type Service struct {
 	ForceDelete                   *bool                                  `ub:"force-delete"`
 }
 
-// ServiceOutput holds the values ECS computes for a service: its ARN and the
+// ServiceResourceOutput holds the values ECS computes for a service: its ARN and the
 // ARN of the cluster it runs in. Both are immutable and together they are the
 // identity handle, so Read and Delete key off them from the prior outputs; on
 // a replace the receiver already holds the new cluster and name while the old
 // service still needs to be found and removed. The cluster ARN is also the
 // normalized form of the cluster input, which may be a short name or absent.
-type ServiceOutput struct {
+type ServiceResourceOutput struct {
 	Arn        string `ub:"arn"`
 	ClusterArn string `ub:"cluster-arn"`
 }
 
-func (r *Service) SchemaVersion() int { return 1 }
+func (r *ServiceResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs ECS fixes when a service is created: the
 // cluster, name, and scheduling strategy, which CloudFormation also marks
 // create-only, and the launch type, which UpdateService has no member for.
 // Everything else changes in place through UpdateService or the tag calls.
-func (r *Service) ReplaceFields() []string {
+func (r *ServiceResource) ReplaceFields() []string {
 	return []string{
 		"cluster",
 		"name",
@@ -137,7 +137,7 @@ func (r *Service) ReplaceFields() []string {
 // rule that a health check grace period needs at least one load balancer
 // keys on the list's contents, so it is checked in Create and Update rather
 // than declared here.
-func (r Service) Constraints() []constraint.Constraint {
+func (r ServiceResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
 			constraint.Absent(r.LaunchType),
@@ -231,7 +231,7 @@ func (r Service) Constraints() []constraint.Constraint {
 // partitions, such as the ISO partitions, cannot tag a service as it is
 // created; when the tagged create fails for that reason, the service is
 // created without tags and tagged once it is active.
-func (r *Service) Create(ctx context.Context, cfg *awsCfg) (*ServiceOutput, error) {
+func (r *ServiceResource) Create(ctx context.Context, cfg *awsCfg) (*ServiceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -281,7 +281,7 @@ func (r *Service) Create(ctx context.Context, cfg *awsCfg) (*ServiceOutput, erro
 			return nil, fmt.Errorf("tag service: %w", err)
 		}
 	}
-	return &ServiceOutput{
+	return &ServiceResourceOutput{
 		Arn:        aws.ToString(svc.ServiceArn),
 		ClusterArn: aws.ToString(svc.ClusterArn),
 	}, nil
@@ -291,9 +291,8 @@ func (r *Service) Create(ctx context.Context, cfg *awsCfg) (*ServiceOutput, erro
 // as INACTIVE long after deletion and as DRAINING while its tasks stop, so
 // any status other than ACTIVE reads as not found; Create and Delete run
 // their own waits, leaving no transitional status for Read to wait out.
-func (r *Service) Read(
-	ctx context.Context, cfg *awsCfg, prior *ServiceOutput,
-) (*ServiceOutput, error) {
+func (r *ServiceResource) Read(
+	ctx context.Context, cfg *awsCfg, prior *ServiceResourceOutput) (*ServiceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -305,7 +304,7 @@ func (r *Service) Read(
 	if aws.ToString(svc.Status) != serviceStatusActive {
 		return nil, runtime.ErrNotFound
 	}
-	return &ServiceOutput{
+	return &ServiceResourceOutput{
 		Arn:        aws.ToString(svc.ServiceArn),
 		ClusterArn: aws.ToString(svc.ClusterArn),
 	}, nil
@@ -317,9 +316,9 @@ func (r *Service) Read(
 // propagation windows as create, then waits for the ACTIVE status, which an
 // ordinary deployment never leaves. The outputs cannot change, so the prior
 // outputs are returned.
-func (r *Service) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Service, *ServiceOutput],
-) (*ServiceOutput, error) {
+func (r *ServiceResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ServiceResource, *ServiceResourceOutput],
+) (*ServiceResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
@@ -365,7 +364,11 @@ func (r *Service) Update(
 // while dependent objects detach, and then the wait holds until the service
 // leaves the ACTIVE and DRAINING statuses; a service that stops describing
 // at all counts as deleted.
-func (r *Service) Delete(ctx context.Context, cfg *awsCfg, prior *ServiceOutput) error {
+func (r *ServiceResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *ServiceResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -416,7 +419,7 @@ func (r *Service) Delete(ctx context.Context, cfg *awsCfg, prior *ServiceOutput)
 // it keys on a list's contents: a health check grace period only means
 // something when health checks exist, so the API rejects it on a service
 // with no load balancer.
-func (r *Service) validate() error {
+func (r *ServiceResource) validate() error {
 	if r.HealthCheckGracePeriodSeconds != nil && len(ptr.Value(r.LoadBalancers)) == 0 {
 		return errors.New(
 			"health-check-grace-period-seconds requires at least one load-balancers entry")
@@ -427,7 +430,7 @@ func (r *Service) validate() error {
 // daemon reports whether the service uses the DAEMON scheduling strategy.
 // The strategy is fixed at create time, so the input always describes the
 // service the receiver manages.
-func (r *Service) daemon() bool {
+func (r *ServiceResource) daemon() bool {
 	return aws.ToString(r.SchedulingStrategy) == string(ecstypes.SchedulingStrategyDaemon)
 }
 
@@ -437,7 +440,7 @@ func (r *Service) daemon() bool {
 // always sends the deployment configuration with its documented defaults. A
 // DAEMON service sends neither, which the API would reject. Optional members
 // stay out of the request when unset so the server defaults apply.
-func (r *Service) createInput(token string) *ecs.CreateServiceInput {
+func (r *ServiceResource) createInput(token string) *ecs.CreateServiceInput {
 	in := &ecs.CreateServiceInput{
 		ServiceName:                   aws.String(r.Name),
 		ClientToken:                   aws.String(token),
@@ -497,8 +500,8 @@ func (r *Service) createInput(token string) *ecs.CreateServiceInput {
 // policy is never stomped by an unrelated apply, and it is never sent for a
 // DAEMON service. Changing the capacity provider strategy sets
 // ForceNewDeployment, which the API requires for that change.
-func (r *Service) updateServiceInput(
-	prior runtime.Prior[Service, *ServiceOutput],
+func (r *ServiceResource) updateServiceInput(
+	prior runtime.Prior[ServiceResource, *ServiceResourceOutput],
 ) (*ecs.UpdateServiceInput, bool) {
 	in := &ecs.UpdateServiceInput{
 		Cluster: aws.String(prior.Outputs.ClusterArn),

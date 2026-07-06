@@ -21,7 +21,7 @@ func TestRunMicrovmSendsInputAndReturnsOutput(t *testing.T) {
 	loggingDisabled := true
 	duration := int64(300)
 	payload := "payload"
-	action := &RunMicrovm{
+	action := &RunMicrovmAction{
 		ImageIdentifier:          "image-1",
 		ImageVersion:             aws.String("1"),
 		ExecutionRoleArn:         aws.String("role-1"),
@@ -65,7 +65,7 @@ func TestRunMicrovmPayloadPath(t *testing.T) {
 	path := t.TempDir() + "/payload.txt"
 	require.NoError(t, os.WriteFile(path, []byte("file payload"), 0o600))
 
-	_, err := (&RunMicrovm{
+	_, err := (&RunMicrovmAction{
 		ImageIdentifier:    "image-1",
 		RunHookPayloadPath: &path,
 	}).Run(context.Background(), fake.configuration())
@@ -79,7 +79,7 @@ func TestRunMicrovmPayloadTooLargeFailsBeforeAWS(t *testing.T) {
 	route := "POST /2025-09-09/microvms"
 	payload := strings.Repeat("x", 16385)
 
-	_, err := (&RunMicrovm{
+	_, err := (&RunMicrovmAction{
 		ImageIdentifier:       "image-1",
 		RunHookPayloadContent: &payload,
 	}).Run(context.Background(), fake.configuration())
@@ -94,7 +94,7 @@ func TestRunMicrovmRejectsTwoPayloadSources(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte("file payload"), 0o600))
 	payload := "inline payload"
 
-	_, err := (&RunMicrovm{
+	_, err := (&RunMicrovmAction{
 		ImageIdentifier:       "image-1",
 		RunHookPayloadContent: &payload,
 		RunHookPayloadPath:    &path,
@@ -112,7 +112,7 @@ func TestCreateMicrovmAuthTokenSendsAllowedPorts(t *testing.T) {
 	allPorts := true
 	port := int64(8443)
 
-	out, err := (&MicrovmAuthToken{
+	out, err := (&MicrovmAuthTokenAction{
 		MicrovmIdentifier:   "microvm-1",
 		ExpirationInMinutes: 15,
 		AllowedPorts: []PortSpecification{
@@ -122,7 +122,7 @@ func TestCreateMicrovmAuthTokenSendsAllowedPorts(t *testing.T) {
 		},
 	}).Run(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &MicrovmAuthTokenOutput{
+	assert.Equal(t, &MicrovmAuthTokenActionOutput{
 		AuthToken: map[string]string{"X-aws-proxy-auth": "token"},
 	}, out)
 	body := sentJSON(t, fake, route, 0)
@@ -142,12 +142,12 @@ func TestCreateMicrovmShellAuthTokenReturnsSensitiveOutput(t *testing.T) {
 		return http.StatusOK, `{"authToken":{"X-aws-proxy-auth":"shell-token"}}`
 	})
 
-	out, err := (&MicrovmShellAuthToken{
+	out, err := (&MicrovmShellAuthTokenAction{
 		MicrovmIdentifier:   "microvm-1",
 		ExpirationInMinutes: 10,
 	}).Run(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &MicrovmShellAuthTokenOutput{
+	assert.Equal(t, &MicrovmShellAuthTokenActionOutput{
 		AuthToken: map[string]string{"X-aws-proxy-auth": "shell-token"},
 	}, out)
 	body := sentJSON(t, fake, route, 0)
@@ -159,10 +159,10 @@ func TestSuspendMicrovmCallsRoute(t *testing.T) {
 	route := "POST /2025-09-09/microvms/microvm-1/suspend"
 	fake.on(route, func(n int) (int, string) { return http.StatusOK, `{}` })
 
-	out, err := (&SuspendMicrovm{MicrovmIdentifier: "microvm-1"}).Run(
+	out, err := (&SuspendMicrovmAction{MicrovmIdentifier: "microvm-1"}).Run(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &SuspendMicrovmOutput{MicrovmIdentifier: "microvm-1"}, out)
+	assert.Equal(t, &SuspendMicrovmActionOutput{MicrovmIdentifier: "microvm-1"}, out)
 	assert.Len(t, fake.sent(route), 1)
 }
 
@@ -171,10 +171,10 @@ func TestResumeMicrovmCallsRoute(t *testing.T) {
 	route := "POST /2025-09-09/microvms/microvm-1/resume"
 	fake.on(route, func(n int) (int, string) { return http.StatusOK, `{}` })
 
-	out, err := (&ResumeMicrovm{MicrovmIdentifier: "microvm-1"}).Run(
+	out, err := (&ResumeMicrovmAction{MicrovmIdentifier: "microvm-1"}).Run(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &ResumeMicrovmOutput{MicrovmIdentifier: "microvm-1"}, out)
+	assert.Equal(t, &ResumeMicrovmActionOutput{MicrovmIdentifier: "microvm-1"}, out)
 	assert.Len(t, fake.sent(route), 1)
 }
 
@@ -183,10 +183,10 @@ func TestTerminateMicrovmCallsRoute(t *testing.T) {
 	route := "DELETE /2025-09-09/microvms/microvm-1"
 	fake.on(route, func(n int) (int, string) { return http.StatusOK, `{}` })
 
-	out, err := (&TerminateMicrovm{MicrovmIdentifier: "microvm-1"}).Run(
+	out, err := (&TerminateMicrovmAction{MicrovmIdentifier: "microvm-1"}).Run(
 		context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, &TerminateMicrovmOutput{MicrovmIdentifier: "microvm-1"}, out)
+	assert.Equal(t, &TerminateMicrovmActionOutput{MicrovmIdentifier: "microvm-1"}, out)
 	assert.Len(t, fake.sent(route), 1)
 }
 
@@ -197,13 +197,14 @@ func TestUpdateMicrovmImageVersionStatusSendsPatchAndReturnsVersion(t *testing.T
 		return http.StatusOK, microvmImageVersionResponse()
 	})
 
-	out, err := (&UpdateMicrovmImageVersionStatus{
+	out, err := (&UpdateMicrovmImageVersionStatusAction{
 		ImageIdentifier: "image-1",
 		ImageVersion:    "1",
 		Status:          "ACTIVE",
 	}).Run(context.Background(), fake.configuration())
 	require.NoError(t, err)
-	assert.Equal(t, microvmImageVersionOutput(), out)
+	assert.Equal(t,
+		(*UpdateMicrovmImageVersionStatusActionOutput)(microvmImageVersionOutput()), out)
 	body := sentJSON(t, fake, route, 0)
 	assert.Equal(t, "ACTIVE", body["status"])
 }
@@ -229,8 +230,8 @@ func microvmRunResponse() string {
 	}`
 }
 
-func microvmRunOutput() *MicrovmDataOutput {
-	return &MicrovmDataOutput{
+func microvmRunOutput() *RunMicrovmActionOutput {
+	return &RunMicrovmActionOutput{
 		MicrovmId:                "microvm-1",
 		Endpoint:                 "https://microvm.example",
 		ImageArn:                 "image-1",

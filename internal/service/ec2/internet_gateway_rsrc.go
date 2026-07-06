@@ -23,7 +23,7 @@ import (
 // it would wait for a state the gateway never reports.
 const internetGatewayAttachStateAvailable = "available"
 
-// InternetGateway is an EC2 internet gateway: the device that gives a VPC a path
+// InternetGatewayResource is an EC2 internet gateway: the device that gives a VPC a path
 // to the public internet. The gateway itself has no settings beyond its tags;
 // its one reconciled property is the VPC it is attached to. The attachment has
 // no create-time setting, so vpc-id is an optional field applied after the
@@ -31,32 +31,35 @@ const internetGatewayAttachStateAvailable = "available"
 // is reconciled by attaching the gateway to that VPC. A change to vpc-id detaches
 // the old VPC and attaches the new one in place, so nothing on the gateway forces
 // a replacement.
-type InternetGateway struct {
+type InternetGatewayResource struct {
 	VpcId *string            `ub:"vpc-id"`
 	Tags  *map[string]string `ub:"tags"`
 }
 
-// InternetGatewayOutput holds the values EC2 computes for an internet gateway.
+// InternetGatewayResourceOutput holds the values EC2 computes for an internet gateway.
 // The id is the gateway's handle, and the owner id is the account that owns it.
 // The attached VPC is reported under the same name as the input field on
 // purpose: the read-back reflects the cloud's actual attachment, so an
 // out-of-band detach reads back as an empty vpc-id and shows up as drift, which
 // schedules an Update that re-attaches. When the gateway is unattached the
 // read-back is the empty string.
-type InternetGatewayOutput struct {
+type InternetGatewayResourceOutput struct {
 	InternetGatewayId string `ub:"internet-gateway-id"`
 	OwnerId           string `ub:"owner-id"`
 	VpcId             string `ub:"vpc-id"`
 }
 
-func (r *InternetGateway) SchemaVersion() int { return 1 }
+func (r *InternetGatewayResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when an internet gateway is created.
 // The gateway has none: its tags change in place, and its VPC attachment is
 // reconciled by detach and attach rather than by replacing the gateway.
-func (r *InternetGateway) ReplaceFields() []string { return nil }
+func (r *InternetGatewayResource) ReplaceFields() []string { return nil }
 
-func (r *InternetGateway) Create(ctx context.Context, cfg *awsCfg) (*InternetGatewayOutput, error) {
+func (r *InternetGatewayResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*InternetGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -80,9 +83,11 @@ func (r *InternetGateway) Create(ctx context.Context, cfg *awsCfg) (*InternetGat
 	return r.read(ctx, client, id, true)
 }
 
-func (r *InternetGateway) Read(
-	ctx context.Context, cfg *awsCfg, prior *InternetGatewayOutput,
-) (*InternetGatewayOutput, error) {
+func (r *InternetGatewayResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *InternetGatewayResourceOutput,
+) (*InternetGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -90,9 +95,11 @@ func (r *InternetGateway) Read(
 	return r.read(ctx, client, prior.InternetGatewayId, false)
 }
 
-func (r *InternetGateway) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[InternetGateway, *InternetGatewayOutput],
-) (*InternetGatewayOutput, error) {
+func (r *InternetGatewayResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[InternetGatewayResource, *InternetGatewayResourceOutput],
+) (*InternetGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -120,11 +127,10 @@ func (r *InternetGateway) Update(
 	return r.read(ctx, client, id, false)
 }
 
-func (r *InternetGateway) Delete(
+func (r *InternetGatewayResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InternetGatewayOutput,
-) error {
+	prior *InternetGatewayResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -171,7 +177,7 @@ func (r *InternetGateway) Delete(
 // where each is a VPC id or the empty string for unattached. It detaches the old
 // VPC before attaching the new one, and does nothing when the two already match,
 // so applying the same desired value twice issues no call.
-func (r *InternetGateway) reconcileAttachment(
+func (r *InternetGatewayResource) reconcileAttachment(
 	ctx context.Context, client *ec2.Client, id, current, desired string,
 ) error {
 	if current == desired {
@@ -194,7 +200,12 @@ func (r *InternetGateway) reconcileAttachment(
 // available state. The AttachInternetGateway call is retried while the
 // just-created gateway is not yet visible, since a create-time propagation lag
 // can briefly report it not-found.
-func (r *InternetGateway) attach(ctx context.Context, client *ec2.Client, id, vpcID string) error {
+func (r *InternetGatewayResource) attach(
+	ctx context.Context,
+	client *ec2.Client,
+	id,
+	vpcID string,
+) error {
 	err := retry.OnError(ctx, isInternetGatewayNotFound, func(ctx context.Context) error {
 		_, err := client.AttachInternetGateway(ctx, &ec2.AttachInternetGatewayInput{
 			InternetGatewayId: aws.String(id),
@@ -215,7 +226,12 @@ func (r *InternetGateway) attach(ctx context.Context, client *ec2.Client, id, vp
 // tell it apart from a real failure. The DetachInternetGateway call is retried
 // while a dependency still holds the public path, which EC2 reports as
 // DependencyViolation, over the same long window the delete uses.
-func (r *InternetGateway) detach(ctx context.Context, client *ec2.Client, id, vpcID string) error {
+func (r *InternetGatewayResource) detach(
+	ctx context.Context,
+	client *ec2.Client,
+	id,
+	vpcID string,
+) error {
 	err := retry.OnError(ctx, isDependencyViolation, func(ctx context.Context) error {
 		_, err := client.DetachInternetGateway(ctx, &ec2.DetachInternetGatewayInput{
 			InternetGatewayId: aws.String(id),
@@ -235,7 +251,7 @@ func (r *InternetGateway) detach(ctx context.Context, client *ec2.Client, id, vp
 // waitAttached polls until the gateway's attachment to vpcID reads as available.
 // A just-attached gateway can briefly describe as not-found, so a not-found is
 // treated as not-ready and does not abort the wait; only the timeout bounds it.
-func (r *InternetGateway) waitAttached(
+func (r *InternetGatewayResource) waitAttached(
 	ctx context.Context, client *ec2.Client, id, vpcID string,
 ) error {
 	what := fmt.Sprintf("internet gateway %s attachment to %s", id, vpcID)
@@ -261,7 +277,7 @@ func (r *InternetGateway) waitAttached(
 // A gateway that has since gone is also detached, so a not-found is ready. While
 // the detach settles the attachment passes through the available and detaching
 // states, both of which read as not-ready.
-func (r *InternetGateway) waitDetached(
+func (r *InternetGatewayResource) waitDetached(
 	ctx context.Context, client *ec2.Client, id, vpcID string,
 ) error {
 	what := fmt.Sprintf("internet gateway %s detachment from %s", id, vpcID)
@@ -286,9 +302,9 @@ func (r *InternetGateway) waitDetached(
 // VPC it is attached to. When created is true the gateway was just made, so a
 // not-found means it has not propagated yet and read waits for it to appear;
 // otherwise a not-found is drift and maps to runtime.ErrNotFound at once.
-func (r *InternetGateway) read(
+func (r *InternetGatewayResource) read(
 	ctx context.Context, client *ec2.Client, id string, created bool,
-) (*InternetGatewayOutput, error) {
+) (*InternetGatewayResourceOutput, error) {
 	var gateway *ec2types.InternetGateway
 	err := wait.Until(ctx, fmt.Sprintf("internet gateway %s", id),
 		func(ctx context.Context) (bool, error) {
@@ -308,7 +324,7 @@ func (r *InternetGateway) read(
 	if err != nil {
 		return nil, err
 	}
-	return &InternetGatewayOutput{
+	return &InternetGatewayResourceOutput{
 		InternetGatewayId: aws.ToString(gateway.InternetGatewayId),
 		OwnerId:           aws.ToString(gateway.OwnerId),
 		VpcId:             internetGatewayAttachedVpc(gateway),

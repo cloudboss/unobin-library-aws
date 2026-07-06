@@ -24,7 +24,7 @@ import (
 // input.
 const policyNameDefault = "default"
 
-// Key manages a KMS key: the protected key material plus the policy that
+// KeyResource manages a KMS key: the protected key material plus the policy that
 // governs who may use it. The key spec, key usage, custom key store, external
 // key, and multi-Region flag are fixed at create time, so a change to any of
 // them replaces the key; the policy, description, and tags change in place.
@@ -33,7 +33,7 @@ const policyNameDefault = "default"
 // key exists: an unset enable-key or enable-key-rotation leaves the AWS default
 // (created enabled, rotation off), and a set value is reconciled by enabling or
 // disabling the key or its rotation.
-type Key struct {
+type KeyResource struct {
 	Policy                         *string            `ub:"policy"`
 	BypassPolicyLockoutSafetyCheck *bool              `ub:"bypass-policy-lockout-safety-check"`
 	Description                    *string            `ub:"description"`
@@ -48,21 +48,21 @@ type Key struct {
 	Tags                           *map[string]string `ub:"tags"`
 }
 
-// KeyOutput holds the values KMS computes for a key. The ARN is the key's
+// KeyResourceOutput holds the values KMS computes for a key. The ARN is the key's
 // identity in policies and grants; the key id is the stable handle used to
 // read, update, and delete it.
-type KeyOutput struct {
+type KeyResourceOutput struct {
 	Arn   string `ub:"arn"`
 	KeyId string `ub:"key-id"`
 }
 
-func (r *Key) SchemaVersion() int { return 1 }
+func (r *KeyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs KMS fixes when a key is created. The key spec,
 // key usage, origin (set by a custom key store or an external key), and the
 // multi-Region flag cannot be changed on an existing key, so a change to any of
 // them requires a new key. Every other input is reconciled in place by Update.
-func (r *Key) ReplaceFields() []string {
+func (r *KeyResource) ReplaceFields() []string {
 	return []string{
 		"key-spec",
 		"key-usage",
@@ -77,7 +77,7 @@ func (r *Key) ReplaceFields() []string {
 // store id. The key spec and key usage each accept a fixed set of values. A
 // rotation period applies only when rotation is enabled and must be between 90
 // and 2560 days.
-func (r Key) Constraints() []constraint.Constraint {
+func (r KeyResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.RequiredWith(r.XksKeyId, r.CustomKeyStoreId),
 		constraint.When(constraint.Present(r.KeySpec)).
@@ -102,7 +102,7 @@ func (r Key) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Key) Create(ctx context.Context, cfg *awsCfg) (*KeyOutput, error) {
+func (r *KeyResource) Create(ctx context.Context, cfg *awsCfg) (*KeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,11 @@ func (r *Key) Create(ctx context.Context, cfg *awsCfg) (*KeyOutput, error) {
 	return r.read(ctx, client, keyID, true)
 }
 
-func (r *Key) Read(ctx context.Context, cfg *awsCfg, prior *KeyOutput) (*KeyOutput, error) {
+func (r *KeyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *KeyResourceOutput,
+) (*KeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -179,9 +183,9 @@ func (r *Key) Read(ctx context.Context, cfg *awsCfg, prior *KeyOutput) (*KeyOutp
 // runtime.ErrNotFound at once. A key already scheduled for deletion, in either
 // the pending-deletion or pending-replica-deletion state, is logically gone and
 // also reads as runtime.ErrNotFound so a plan recreates it.
-func (r *Key) read(
+func (r *KeyResource) read(
 	ctx context.Context, client *kms.Client, keyID string, created bool,
-) (*KeyOutput, error) {
+) (*KeyResourceOutput, error) {
 	var metadata *kmstypes.KeyMetadata
 	err := wait.Until(ctx, fmt.Sprintf("key %s", keyID),
 		func(ctx context.Context) (bool, error) {
@@ -214,15 +218,15 @@ func (r *Key) read(
 	if err != nil {
 		return nil, err
 	}
-	return &KeyOutput{
+	return &KeyResourceOutput{
 		Arn:   aws.ToString(metadata.Arn),
 		KeyId: aws.ToString(metadata.KeyId),
 	}, nil
 }
 
-func (r *Key) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Key, *KeyOutput],
-) (*KeyOutput, error) {
+func (r *KeyResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyResource, *KeyResourceOutput],
+) (*KeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -281,7 +285,7 @@ func (r *Key) Update(
 	return r.read(ctx, client, keyID, false)
 }
 
-func (r *Key) Delete(ctx context.Context, cfg *awsCfg, prior *KeyOutput) error {
+func (r *KeyResource) Delete(ctx context.Context, cfg *awsCfg, prior *KeyResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -307,7 +311,7 @@ func (r *Key) Delete(ctx context.Context, cfg *awsCfg, prior *KeyOutput) error {
 // just-created principal can be rejected as malformed until that principal
 // propagates, and a key still settling can read as not-found, so it retries
 // through both.
-func (r *Key) putPolicy(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) putPolicy(ctx context.Context, client *kms.Client, keyID string) error {
 	in := &kms.PutKeyPolicyInput{
 		KeyId:                          aws.String(keyID),
 		Policy:                         r.Policy,
@@ -327,7 +331,7 @@ func (r *Key) putPolicy(ctx context.Context, client *kms.Client, keyID string) e
 // enableKey enables the key, retrying while a just-created key is still
 // propagating and reports as not found. That window clears in about a second,
 // so the retry polls at that interval rather than the slower default.
-func (r *Key) enableKey(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) enableKey(ctx context.Context, client *kms.Client, keyID string) error {
 	err := retry.OnError(ctx, isNotFound, func(ctx context.Context) error {
 		_, err := client.EnableKey(ctx, &kms.EnableKeyInput{KeyId: aws.String(keyID)})
 		return err
@@ -340,7 +344,7 @@ func (r *Key) enableKey(ctx context.Context, client *kms.Client, keyID string) e
 
 // disableKey disables the key, retrying through the same not-found settling
 // window as enableKey, at the same one-second interval.
-func (r *Key) disableKey(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) disableKey(ctx context.Context, client *kms.Client, keyID string) error {
 	err := retry.OnError(ctx, isNotFound, func(ctx context.Context) error {
 		_, err := client.DisableKey(ctx, &kms.DisableKeyInput{KeyId: aws.String(keyID)})
 		return err
@@ -355,7 +359,7 @@ func (r *Key) disableKey(ctx context.Context, client *kms.Client, keyID string) 
 // one is given. A key still settling can report as not found or not yet
 // enabled; that window clears fast, so the call retries through both at a
 // one-second interval.
-func (r *Key) enableRotation(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) enableRotation(ctx context.Context, client *kms.Client, keyID string) error {
 	in := &kms.EnableKeyRotationInput{
 		KeyId:                aws.String(keyID),
 		RotationPeriodInDays: ptr.Int32(r.RotationPeriodInDays),
@@ -372,7 +376,7 @@ func (r *Key) enableRotation(ctx context.Context, client *kms.Client, keyID stri
 
 // disableRotation turns off automatic rotation, retrying through the same
 // settling states as enableRotation, at the same one-second interval.
-func (r *Key) disableRotation(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) disableRotation(ctx context.Context, client *kms.Client, keyID string) error {
 	err := retry.OnError(ctx, kmsRotationRetryable, func(ctx context.Context) error {
 		_, err := client.DisableKeyRotation(ctx, &kms.DisableKeyRotationInput{
 			KeyId: aws.String(keyID),
@@ -388,7 +392,7 @@ func (r *Key) disableRotation(ctx context.Context, client *kms.Client, keyID str
 // syncTags reconciles the key's tags with the desired set, reading the live
 // tags through the paginated ListResourceTags and writing changes with
 // TagResource and UntagResource. KMS addresses key tags by key id.
-func (r *Key) syncTags(ctx context.Context, client *kms.Client, keyID string) error {
+func (r *KeyResource) syncTags(ctx context.Context, client *kms.Client, keyID string) error {
 	return tagsync.Sync(ctx, ptr.Value(r.Tags),
 		func(ctx context.Context) (map[string]string, error) {
 			current := map[string]string{}

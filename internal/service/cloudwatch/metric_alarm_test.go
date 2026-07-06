@@ -212,13 +212,13 @@ func TestExpandMetricQuery(t *testing.T) {
 
 func TestExpandPutMetricAlarmInputThreshold(t *testing.T) {
 	t.Run("static threshold sent when no metric id", func(t *testing.T) {
-		r := &MetricAlarm{AlarmName: "a", Threshold: aws.Float64(80)}
+		r := &MetricAlarmResource{AlarmName: "a", Threshold: aws.Float64(80)}
 		in := r.expandPutMetricAlarmInput()
 		assert.Equal(t, float64(80), aws.ToFloat64(in.Threshold))
 		assert.Nil(t, in.ThresholdMetricId)
 	})
 	t.Run("metric id sent instead of static threshold", func(t *testing.T) {
-		r := &MetricAlarm{
+		r := &MetricAlarmResource{
 			AlarmName:         "a",
 			Threshold:         aws.Float64(80),
 			ThresholdMetricId: aws.String("ad1"),
@@ -231,13 +231,13 @@ func TestExpandPutMetricAlarmInputThreshold(t *testing.T) {
 
 func TestExpandPutMetricAlarmInputDefaults(t *testing.T) {
 	t.Run("omitted defaults are always sent", func(t *testing.T) {
-		r := &MetricAlarm{AlarmName: "a"}
+		r := &MetricAlarmResource{AlarmName: "a"}
 		in := r.expandPutMetricAlarmInput()
 		assert.True(t, aws.ToBool(in.ActionsEnabled))
 		assert.Equal(t, "missing", aws.ToString(in.TreatMissingData))
 	})
 	t.Run("explicit values override defaults", func(t *testing.T) {
-		r := &MetricAlarm{
+		r := &MetricAlarmResource{
 			AlarmName:        "a",
 			ActionsEnabled:   aws.Bool(false),
 			TreatMissingData: aws.String("breaching"),
@@ -249,7 +249,7 @@ func TestExpandPutMetricAlarmInputDefaults(t *testing.T) {
 }
 
 func TestChangedExceptTags(t *testing.T) {
-	base := MetricAlarm{
+	base := MetricAlarmResource{
 		AlarmName:          "a",
 		ComparisonOperator: aws.String("GreaterThanThreshold"),
 		EvaluationPeriods:  aws.Int64(1),
@@ -286,6 +286,6 @@ func TestMetricAlarmTags(t *testing.T) {
 }
 
 func TestReplaceFields(t *testing.T) {
-	r := &MetricAlarm{}
+	r := &MetricAlarmResource{}
 	assert.Equal(t, []string{"alarm-name"}, r.ReplaceFields())
 }

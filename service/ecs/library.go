@@ -23,10 +23,14 @@ func Library() *runtime.Library {
 		Description:   "AWS ECS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"capacity-provider": makeResource[svc.CapacityProvider, *svc.CapacityProviderOutput](),
-			"cluster":           makeResource[svc.Cluster, *svc.ClusterOutput](),
-			"task-definition":   makeResource[svc.TaskDefinition, *svc.TaskDefinitionOutput](),
-			"service":           makeResource[svc.Service, *svc.ServiceOutput](),
+			"capacity-provider": makeResource[
+				svc.CapacityProviderResource,
+				*svc.CapacityProviderResourceOutput](),
+			"cluster": makeResource[svc.ClusterResource, *svc.ClusterResourceOutput](),
+			"task-definition": makeResource[
+				svc.TaskDefinitionResource,
+				*svc.TaskDefinitionResourceOutput](),
+			"service": makeResource[svc.ServiceResource, *svc.ServiceResourceOutput](),
 		},
 	}
 }

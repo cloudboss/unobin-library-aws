@@ -20,13 +20,13 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Route is one route in a route table. It matches a destination -- an IPv4 or
+// RouteResource is one route in a route table. It matches a destination -- an IPv4 or
 // IPv6 CIDR block, or a prefix list -- to exactly one target, such as a gateway,
 // NAT gateway, network interface, or peering connection. There is no route id;
 // a route is addressed forever by its table and its destination, both fixed at
 // create. Each field maps to the AWS SDK field that holds it on CreateRoute
 // and ReplaceRoute.
-type Route struct {
+type RouteResource struct {
 	RouteTableId                string  `ub:"route-table-id"`
 	DestinationCidrBlock        *string `ub:"destination-cidr-block"`
 	DestinationIpv6CidrBlock    *string `ub:"destination-ipv6-cidr-block"`
@@ -43,11 +43,11 @@ type Route struct {
 	VpcPeeringConnectionId      *string `ub:"vpc-peering-connection-id"`
 }
 
-// RouteOutput holds the one value EC2 computes for a route. A route has no
+// RouteResourceOutput holds the one value EC2 computes for a route. A route has no
 // server id -- its identity is its table and destination, both inputs -- so the
 // only observable worth recording is its state: active normally, blackhole when
 // its target stops existing, which then reads back as drift.
-type RouteOutput struct {
+type RouteResourceOutput struct {
 	State string `ub:"state"`
 }
 
@@ -78,12 +78,12 @@ const routeReadyTimeout = 5 * time.Minute
 // short interval confirms it without sleeping a full poll cycle.
 const routeWaitInterval = 2 * time.Second
 
-func (r *Route) SchemaVersion() int { return 1 }
+func (r *RouteResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the properties EC2 cannot change in place. The table a
 // route lives in and the destination it matches are fixed at create; changing
 // any of them recreates the route. The target updates in place via ReplaceRoute.
-func (r *Route) ReplaceFields() []string {
+func (r *RouteResource) ReplaceFields() []string {
 	return []string{
 		"route-table-id",
 		"destination-cidr-block",
@@ -98,7 +98,7 @@ func (r *Route) ReplaceFields() []string {
 // egress-only internet gateway and a VPC endpoint cannot pair with the wrong
 // destination form. The gateway-id value local names the route table's own
 // local route, which this resource does not manage, so it is rejected here.
-func (r Route) Constraints() []constraint.Constraint {
+func (r RouteResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.DestinationCidrBlock, r.DestinationIpv6CidrBlock,
 			r.DestinationPrefixListId),
@@ -115,7 +115,7 @@ func (r Route) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
+func (r *RouteResource) Create(ctx context.Context, cfg *awsCfg) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -130,10 +130,14 @@ func (r *Route) Create(ctx context.Context, cfg *awsCfg) (*RouteOutput, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RouteOutput{State: string(route.State)}, nil
+	return &RouteResourceOutput{State: string(route.State)}, nil
 }
 
-func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*RouteOutput, error) {
+func (r *RouteResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *RouteResourceOutput,
+) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -142,12 +146,12 @@ func (r *Route) Read(ctx context.Context, cfg *awsCfg, prior *RouteOutput) (*Rou
 	if err != nil {
 		return nil, err
 	}
-	return &RouteOutput{State: string(route.State)}, nil
+	return &RouteResourceOutput{State: string(route.State)}, nil
 }
 
-func (r *Route) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Route, *RouteOutput],
-) (*RouteOutput, error) {
+func (r *RouteResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput],
+) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -161,10 +165,10 @@ func (r *Route) Update(
 	if err != nil {
 		return nil, err
 	}
-	return &RouteOutput{State: string(route.State)}, nil
+	return &RouteResourceOutput{State: string(route.State)}, nil
 }
 
-func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) error {
+func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, prior *RouteResourceOutput) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -180,7 +184,7 @@ func (r *Route) Delete(ctx context.Context, cfg *awsCfg, prior *RouteOutput) err
 // route, so a route already present with Origin CreateRoute is reported as an
 // error here rather than left to a confusing API failure. A not-found result
 // means the destination is free; any other error fails the create.
-func (r *Route) checkNotExists(ctx context.Context, client *ec2.Client) error {
+func (r *RouteResource) checkNotExists(ctx context.Context, client *ec2.Client) error {
 	route, err := r.find(ctx, client)
 	if err != nil {
 		if errors.Is(err, runtime.ErrNotFound) {
@@ -198,7 +202,7 @@ func (r *Route) checkNotExists(ctx context.Context, client *ec2.Client) error {
 // create calls CreateRoute, retrying while a freshly created table or target is
 // still propagating. A failure naming the gateway local is turned into guidance:
 // the local route belongs to the route table and is not created here.
-func (r *Route) create(ctx context.Context, client *ec2.Client) error {
+func (r *RouteResource) create(ctx context.Context, client *ec2.Client) error {
 	in := &ec2.CreateRouteInput{RouteTableId: aws.String(r.RouteTableId)}
 	r.applyDestination(&in.DestinationCidrBlock, &in.DestinationIpv6CidrBlock,
 		&in.DestinationPrefixListId)
@@ -228,7 +232,7 @@ func (r *Route) create(ctx context.Context, client *ec2.Client) error {
 
 // replace calls ReplaceRoute with the unchanged destination and the new target.
 // Only the target can change in place; the destination is part of the identity.
-func (r *Route) replace(ctx context.Context, client *ec2.Client) error {
+func (r *RouteResource) replace(ctx context.Context, client *ec2.Client) error {
 	in := &ec2.ReplaceRouteInput{RouteTableId: aws.String(r.RouteTableId)}
 	r.applyDestination(&in.DestinationCidrBlock, &in.DestinationIpv6CidrBlock,
 		&in.DestinationPrefixListId)
@@ -251,7 +255,7 @@ func (r *Route) replace(ctx context.Context, client *ec2.Client) error {
 // delete calls DeleteRoute, retrying while a transient parameter error clears.
 // A route already gone, or the API's refusal to remove a local route, both count
 // as a finished delete with nothing left to do.
-func (r *Route) delete(ctx context.Context, client *ec2.Client) error {
+func (r *RouteResource) delete(ctx context.Context, client *ec2.Client) error {
 	in := &ec2.DeleteRouteInput{RouteTableId: aws.String(r.RouteTableId)}
 	r.applyDestination(&in.DestinationCidrBlock, &in.DestinationIpv6CidrBlock,
 		&in.DestinationPrefixListId)
@@ -271,7 +275,7 @@ func (r *Route) delete(ctx context.Context, client *ec2.Client) error {
 // applyDestination fills exactly one of the three destination pointers from the
 // route's set destination. The same destination feeds CreateRoute, ReplaceRoute,
 // and DeleteRoute, so the three operations share this.
-func (r *Route) applyDestination(cidr, ipv6, prefixList **string) {
+func (r *RouteResource) applyDestination(cidr, ipv6, prefixList **string) {
 	switch {
 	case r.DestinationCidrBlock != nil:
 		*cidr = r.DestinationCidrBlock
@@ -285,7 +289,7 @@ func (r *Route) applyDestination(cidr, ipv6, prefixList **string) {
 // targetChanged reports whether any target field differs from the prior inputs.
 // The destination cannot change in place, so only the targets are compared; a
 // destination change forces a replace of the whole route instead.
-func (r *Route) targetChanged(prior Route) bool {
+func (r *RouteResource) targetChanged(prior RouteResource) bool {
 	return runtime.Changed(prior.CarrierGatewayId, r.CarrierGatewayId) ||
 		runtime.Changed(prior.CoreNetworkArn, r.CoreNetworkArn) ||
 		runtime.Changed(prior.EgressOnlyInternetGatewayId, r.EgressOnlyInternetGatewayId) ||
@@ -303,7 +307,7 @@ func (r *Route) targetChanged(prior Route) bool {
 // the route is found only through its parent table. A table that no longer
 // exists and a table that no longer holds the route both yield
 // runtime.ErrNotFound: the route is gone either way.
-func (r *Route) find(ctx context.Context, client *ec2.Client) (*ec2types.Route, error) {
+func (r *RouteResource) find(ctx context.Context, client *ec2.Client) (*ec2types.Route, error) {
 	resp, err := client.DescribeRouteTables(ctx, &ec2.DescribeRouteTablesInput{
 		RouteTableIds: []string{r.RouteTableId},
 	})
@@ -329,7 +333,7 @@ func (r *Route) find(ctx context.Context, client *ec2.Client) (*ec2types.Route, 
 // destination matches by parsed-CIDR equality, so a block the API returns in a
 // different but equal spelling still matches; a prefix-list destination matches
 // by string equality.
-func (r *Route) matches(route *ec2types.Route) bool {
+func (r *RouteResource) matches(route *ec2types.Route) bool {
 	switch {
 	case r.DestinationCidrBlock != nil:
 		return routeCIDREqual(aws.ToString(route.DestinationCidrBlock),
@@ -347,7 +351,10 @@ func (r *Route) matches(route *ec2types.Route) bool {
 // reads, then returns the matched route. A route can be absent from its table
 // for many polls right after CreateRoute or ReplaceRoute returns, so a not-found
 // keeps the wait going rather than ending it; the last found route is returned.
-func (r *Route) waitReady(ctx context.Context, client *ec2.Client) (*ec2types.Route, error) {
+func (r *RouteResource) waitReady(
+	ctx context.Context,
+	client *ec2.Client,
+) (*ec2types.Route, error) {
 	var found *ec2types.Route
 	what := fmt.Sprintf("route in table %s", r.RouteTableId)
 	err := wait.UntilStable(ctx, what, 2, func(ctx context.Context) (bool, error) {
@@ -370,7 +377,7 @@ func (r *Route) waitReady(ctx context.Context, client *ec2.Client) (*ec2types.Ro
 // waitDeleted polls the finder until the route reads as gone on two consecutive
 // reads. A route still present keeps the wait going; a not-found is the success
 // the wait is waiting for, so the finder's ErrNotFound counts as ready here.
-func (r *Route) waitDeleted(ctx context.Context, client *ec2.Client) error {
+func (r *RouteResource) waitDeleted(ctx context.Context, client *ec2.Client) error {
 	what := fmt.Sprintf("route in table %s to be removed", r.RouteTableId)
 	return wait.UntilStable(ctx, what, 2, func(ctx context.Context) (bool, error) {
 		_, err := r.find(ctx, client)

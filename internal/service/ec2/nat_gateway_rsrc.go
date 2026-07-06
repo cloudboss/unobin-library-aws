@@ -15,7 +15,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// NatGateway is a zonal (single-AZ) NAT gateway: a managed device in one subnet
+// NatGatewayResource is a zonal (single-AZ) NAT gateway: a managed device in one subnet
 // that lets instances reach the internet (public connectivity) or other VPCs
 // (private connectivity) without exposing them to inbound traffic. The subnet,
 // the connectivity type, the Elastic IP allocation, and the primary private
@@ -30,7 +30,7 @@ import (
 // Only the zonal NAT gateway is modeled here. The regional (multi-AZ) variant --
 // the availability-mode, vpc-id, and per-Availability-Zone address fields -- is a
 // separable addition; omitting availability-mode defaults the gateway to zonal.
-type NatGateway struct {
+type NatGatewayResource struct {
 	SubnetId         string  `ub:"subnet-id"`
 	ConnectivityType *string `ub:"connectivity-type"`
 	AllocationId     *string `ub:"allocation-id"`
@@ -53,20 +53,20 @@ type NatGateway struct {
 	Tags                           *map[string]string `ub:"tags"`
 }
 
-// NatGatewayOutput holds the values EC2 computes for the gateway's primary
+// NatGatewayResourceOutput holds the values EC2 computes for the gateway's primary
 // address. The id is the gateway's handle. The network interface, the public IP
 // (public gateways only), and the private IP come from the primary
 // NatGatewayAddress of the settled gateway after the create wait; the private IP
 // is computed when the input left it for EC2 to assign, so it is reported here
 // even though it shares the input name.
-type NatGatewayOutput struct {
+type NatGatewayResourceOutput struct {
 	NatGatewayId       string `ub:"nat-gateway-id"`
 	NetworkInterfaceId string `ub:"network-interface-id"`
 	PublicIp           string `ub:"public-ip"`
 	PrivateIp          string `ub:"private-ip"`
 }
 
-func (r *NatGateway) SchemaVersion() int { return 1 }
+func (r *NatGatewayResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when a NAT gateway is created. The
 // connectivity type, the Elastic IP allocation, the primary private address, and
@@ -75,7 +75,7 @@ func (r *NatGateway) SchemaVersion() int { return 1 }
 // it only rides create, and the count is legal solely for a private gateway,
 // where changing it after the fact replaces the gateway rather than reconciling
 // addresses in place.
-func (r *NatGateway) ReplaceFields() []string {
+func (r *NatGatewayResource) ReplaceFields() []string {
 	return []string{
 		"allocation-id",
 		"connectivity-type",
@@ -92,7 +92,7 @@ func (r *NatGateway) ReplaceFields() []string {
 // allocation list applies only to a public gateway. The secondary private
 // address count applies only to a private gateway, and it cannot combine with an
 // explicit list of secondary private addresses.
-func (r NatGateway) Constraints() []constraint.Constraint {
+func (r NatGatewayResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.ConnectivityType)).
 			Require(constraint.OneOf(r.ConnectivityType, "public", "private")).
@@ -119,7 +119,10 @@ func (r NatGateway) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *NatGateway) Create(ctx context.Context, cfg *awsCfg) (*NatGatewayOutput, error) {
+func (r *NatGatewayResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*NatGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -151,9 +154,11 @@ func (r *NatGateway) Create(ctx context.Context, cfg *awsCfg) (*NatGatewayOutput
 	return r.read(ctx, client, id)
 }
 
-func (r *NatGateway) Read(
-	ctx context.Context, cfg *awsCfg, prior *NatGatewayOutput,
-) (*NatGatewayOutput, error) {
+func (r *NatGatewayResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *NatGatewayResourceOutput,
+) (*NatGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -161,9 +166,11 @@ func (r *NatGateway) Read(
 	return r.read(ctx, client, prior.NatGatewayId)
 }
 
-func (r *NatGateway) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[NatGateway, *NatGatewayOutput],
-) (*NatGatewayOutput, error) {
+func (r *NatGatewayResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[NatGatewayResource, *NatGatewayResourceOutput],
+) (*NatGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -204,7 +211,11 @@ func (r *NatGateway) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *NatGateway) Delete(ctx context.Context, cfg *awsCfg, prior *NatGatewayOutput) error {
+func (r *NatGatewayResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *NatGatewayResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -232,14 +243,14 @@ func (r *NatGateway) Delete(ctx context.Context, cfg *awsCfg, prior *NatGatewayO
 // read fetches the gateway by id and returns the computed outputs from its
 // primary address. The primary address is the one EC2 marks IsPrimary, falling
 // back to the sole address when no entry is marked.
-func (r *NatGateway) read(
+func (r *NatGatewayResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*NatGatewayOutput, error) {
+) (*NatGatewayResourceOutput, error) {
 	gw, err := describeNatGateway(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	out := &NatGatewayOutput{NatGatewayId: aws.ToString(gw.NatGatewayId)}
+	out := &NatGatewayResourceOutput{NatGatewayId: aws.ToString(gw.NatGatewayId)}
 	if addr := natGatewayPrimaryAddress(gw); addr != nil {
 		out.NetworkInterfaceId = aws.ToString(addr.NetworkInterfaceId)
 		out.PublicIp = aws.ToString(addr.PublicIp)
@@ -254,7 +265,7 @@ func (r *NatGateway) read(
 // until succeeded. Removed allocations are disassociated by their association
 // ids, which a fresh read maps from the allocation ids, and each waited until
 // gone.
-func (r *NatGateway) reconcileSecondaryAllocations(
+func (r *NatGatewayResource) reconcileSecondaryAllocations(
 	ctx context.Context, client *ec2.Client, id string, priorAllocations, priorPrivate *[]string,
 ) error {
 	desiredAllocations := ptr.Value(r.SecondaryAllocationIds)
@@ -309,7 +320,7 @@ func (r *NatGateway) reconcileSecondaryAllocations(
 // reconcilePrivateAddresses brings a private gateway's secondary private
 // addresses to the desired set. Added addresses are assigned and each waited
 // until succeeded; removed addresses are unassigned and each waited until gone.
-func (r *NatGateway) reconcilePrivateAddresses(
+func (r *NatGatewayResource) reconcilePrivateAddresses(
 	ctx context.Context, client *ec2.Client, id string, prior *[]string,
 ) error {
 	desired := ptr.Value(r.SecondaryPrivateIpAddresses)
@@ -354,7 +365,7 @@ func (r *NatGateway) reconcilePrivateAddresses(
 // records. A describe that cannot yet find the just-created gateway is tolerated
 // for a bounded number of consecutive polls, covering the post-create describe
 // lag, before the wait gives up.
-func (r *NatGateway) waitCreated(ctx context.Context, client *ec2.Client, id string) error {
+func (r *NatGatewayResource) waitCreated(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("nat gateway %s to become available", id)
 	notFound := 0
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
@@ -385,7 +396,7 @@ func (r *NatGateway) waitCreated(ctx context.Context, client *ec2.Client, id str
 // waitDeleted polls the gateway until a describe no longer finds it. A gateway
 // that reads as deleted, or as not-found, has finished deleting. NAT gateway
 // deletion is slow, so the wait runs over a long window at a ten-second pace.
-func (r *NatGateway) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
+func (r *NatGatewayResource) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("nat gateway %s deletion", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := describeNatGateway(ctx, client, id)
@@ -403,7 +414,7 @@ func (r *NatGateway) waitDeleted(ctx context.Context, client *ec2.Client, id str
 // in a non-detached state, the precondition for deleting the gateway. A zonal
 // gateway lists none, so the first poll passes. A gateway that is already gone
 // has nothing attached, so a not-found completes the wait.
-func (r *NatGateway) waitAppliancesDetached(
+func (r *NatGatewayResource) waitAppliancesDetached(
 	ctx context.Context, client *ec2.Client, id string,
 ) error {
 	what := fmt.Sprintf("nat gateway %s attached appliances to detach", id)
@@ -432,7 +443,7 @@ func (r *NatGateway) waitAppliancesDetached(
 // single read against a caught-up replica does not end the wait early. An address
 // that reaches failed stops the wait with the message EC2 records. A missing
 // address is tolerated as still associating.
-func (r *NatGateway) waitAddressAssociated(
+func (r *NatGatewayResource) waitAddressAssociated(
 	ctx context.Context, client *ec2.Client, id, allocationID string,
 ) error {
 	what := fmt.Sprintf("nat gateway %s address %s association", id, allocationID)
@@ -454,7 +465,7 @@ func (r *NatGateway) waitAddressAssociated(
 // allocation id is gone on several consecutive observations. The address stays in
 // the succeeded or disassociating state while it transitions out, so neither is
 // treated as done; the address being absent is.
-func (r *NatGateway) waitAddressDisassociated(
+func (r *NatGatewayResource) waitAddressDisassociated(
 	ctx context.Context, client *ec2.Client, id, allocationID string,
 ) error {
 	what := fmt.Sprintf("nat gateway %s address %s disassociation", id, allocationID)
@@ -478,7 +489,7 @@ func (r *NatGateway) waitAddressDisassociated(
 // waitAddressAssigned polls the gateway until the private address reports
 // succeeded. An address that reaches failed stops the wait with its message. A
 // missing address is tolerated as still assigning.
-func (r *NatGateway) waitAddressAssigned(
+func (r *NatGatewayResource) waitAddressAssigned(
 	ctx context.Context, client *ec2.Client, id, privateIP string,
 ) error {
 	what := fmt.Sprintf("nat gateway %s address %s assignment", id, privateIP)
@@ -497,7 +508,7 @@ func (r *NatGateway) waitAddressAssigned(
 // waitAddressUnassigned polls the gateway until the private address is gone. The
 // address stays in the succeeded or unassigning state while it transitions out,
 // so neither is treated as done; the address being absent is.
-func (r *NatGateway) waitAddressUnassigned(
+func (r *NatGatewayResource) waitAddressUnassigned(
 	ctx context.Context, client *ec2.Client, id, privateIP string,
 ) error {
 	what := fmt.Sprintf("nat gateway %s address %s unassignment", id, privateIP)

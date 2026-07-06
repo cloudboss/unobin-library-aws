@@ -64,10 +64,10 @@ func TestLibraryRegistersCloudWatchLogsLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"log-group":           reflect.TypeFor[*svc.LogGroupOutput](),
-		"subscription-filter": reflect.TypeFor[*svc.SubscriptionFilterOutput](),
-		"metric-filter":       reflect.TypeFor[*svc.MetricFilterOutput](),
-		"resource-policy":     reflect.TypeFor[*svc.ResourcePolicyOutput](),
+		"log-group":           reflect.TypeFor[*svc.LogGroupResourceOutput](),
+		"subscription-filter": reflect.TypeFor[*svc.SubscriptionFilterResourceOutput](),
+		"metric-filter":       reflect.TypeFor[*svc.MetricFilterResourceOutput](),
+		"resource-policy":     reflect.TypeFor[*svc.ResourcePolicyResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {

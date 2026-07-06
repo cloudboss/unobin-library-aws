@@ -18,7 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Volume is an EBS volume: a block storage device created in one Availability
+// VolumeResource is an EBS volume: a block storage device created in one Availability
 // Zone from a size, a snapshot, or both. The zone, encryption, KMS key,
 // Multi-Attach flag, Outpost, source snapshot, and initialization rate are
 // fixed when the volume is created, so a change to any of them replaces the
@@ -27,7 +27,7 @@ import (
 // the only follow-on work is the settling wait and, at delete time, an optional
 // final snapshot. A nil optional field is never sent: the server applies its own
 // default and fills the computed outputs.
-type Volume struct {
+type VolumeResource struct {
 	AvailabilityZone         string             `ub:"availability-zone"`
 	Encrypted                *bool              `ub:"encrypted"`
 	Iops                     *int64             `ub:"iops"`
@@ -46,12 +46,12 @@ type Volume struct {
 	FinalSnapshot *bool `ub:"final-snapshot"`
 }
 
-// VolumeOutput holds the values EC2 computes for a volume. The id is the
+// VolumeResourceOutput holds the values EC2 computes for a volume. The id is the
 // volume's handle. The create time comes only from a describe, not the
 // create response. The size, type, IOPS, throughput, encryption flag, and the
 // server-resolved KMS key ARN are filled by EC2 when the input omits them, so
 // the settled values come from a describe and differ from an empty input.
-type VolumeOutput struct {
+type VolumeResourceOutput struct {
 	VolumeId   string `ub:"volume-id"`
 	CreateTime string `ub:"create-time"`
 	Size       int64  `ub:"size"`
@@ -62,7 +62,7 @@ type VolumeOutput struct {
 	KmsKeyId   string `ub:"kms-key-id"`
 }
 
-func (r *Volume) SchemaVersion() int { return 1 }
+func (r *VolumeResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when a volume is created. The zone,
 // the encryption flag, the KMS key, the Multi-Attach flag, the Outpost ARN, and
@@ -72,7 +72,7 @@ func (r *Volume) SchemaVersion() int { return 1 }
 // snapshot and leaves no state on the live volume, so changing it later is not
 // applied rather than replacing a volume over a setting with no remaining
 // effect.
-func (r *Volume) ReplaceFields() []string {
+func (r *VolumeResource) ReplaceFields() []string {
 	return []string{
 		"availability-zone",
 		"encrypted",
@@ -94,7 +94,7 @@ func (r *Volume) ReplaceFields() []string {
 // The kms-key-id and outpost-arn fields are ARNs (or, for kms-key-id, an id or
 // alias the server resolves); their well-formedness is left to EC2, which
 // rejects a malformed value, since a regex check is not expressible here.
-func (r Volume) Constraints() []constraint.Constraint {
+func (r VolumeResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtLeastOneOf(r.Size, r.SnapshotId),
 		constraint.When(constraint.Present(r.Type)).
@@ -126,7 +126,7 @@ func (r Volume) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Volume) Create(ctx context.Context, cfg *awsCfg) (*VolumeOutput, error) {
+func (r *VolumeResource) Create(ctx context.Context, cfg *awsCfg) (*VolumeResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -174,11 +174,10 @@ func (r *Volume) Create(ctx context.Context, cfg *awsCfg) (*VolumeOutput, error)
 	return r.read(ctx, client, id)
 }
 
-func (r *Volume) Read(
+func (r *VolumeResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VolumeOutput) (*VolumeOutput,
-	error,
+	prior *VolumeResourceOutput) (*VolumeResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -187,9 +186,9 @@ func (r *Volume) Read(
 	return r.read(ctx, client, prior.VolumeId)
 }
 
-func (r *Volume) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Volume, *VolumeOutput],
-) (*VolumeOutput, error) {
+func (r *VolumeResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VolumeResource, *VolumeResourceOutput],
+) (*VolumeResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -213,7 +212,11 @@ func (r *Volume) Update(
 	return r.read(ctx, client, id)
 }
 
-func (r *Volume) Delete(ctx context.Context, cfg *awsCfg, prior *VolumeOutput) error {
+func (r *VolumeResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *VolumeResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -247,14 +250,14 @@ func (r *Volume) Delete(ctx context.Context, cfg *awsCfg, prior *VolumeOutput) e
 // read fetches the volume by id and returns its computed outputs. A volume's
 // describe record has no ARN or owner, so the output exposes the volume id
 // as the handle.
-func (r *Volume) read(
+func (r *VolumeResource) read(
 	ctx context.Context, client *ec2.Client, id string,
-) (*VolumeOutput, error) {
+) (*VolumeResourceOutput, error) {
 	volume, err := describeVolume(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
-	out := &VolumeOutput{
+	out := &VolumeResourceOutput{
 		VolumeId:   aws.ToString(volume.VolumeId),
 		Size:       int64(aws.ToInt32(volume.Size)),
 		Type:       string(volume.VolumeType),
@@ -272,7 +275,9 @@ func (r *Volume) read(
 // modifyChanged reports whether any field ModifyVolume reconciles -- size, IOPS,
 // throughput, or volume type -- differs from the prior inputs, so Update makes
 // the call only when there is real work.
-func (r *Volume) modifyChanged(prior runtime.Prior[Volume, *VolumeOutput]) bool {
+func (r *VolumeResource) modifyChanged(
+	prior runtime.Prior[VolumeResource, *VolumeResourceOutput],
+) bool {
 	return runtime.Changed(prior.Inputs.Size, r.Size) ||
 		runtime.Changed(prior.Inputs.Iops, r.Iops) ||
 		runtime.Changed(prior.Inputs.Throughput, r.Throughput) ||
@@ -285,7 +290,11 @@ func (r *Volume) modifyChanged(prior runtime.Prior[Volume, *VolumeOutput]) bool 
 // volume type is sent when it changed; switching the type into io1, io2, or gp3
 // makes ModifyVolume default IOPS to 3000 unless an IOPS value is supplied, so a
 // type switch into one of those re-sends the current IOPS to hold it.
-func (r *Volume) modify(ctx context.Context, client *ec2.Client, prior *VolumeOutput) error {
+func (r *VolumeResource) modify(
+	ctx context.Context,
+	client *ec2.Client,
+	prior *VolumeResourceOutput,
+) error {
 	in := &ec2.ModifyVolumeInput{VolumeId: aws.String(prior.VolumeId)}
 	if r.Size != nil {
 		in.Size = ptr.Int32(r.Size)
@@ -311,7 +320,11 @@ func (r *Volume) modify(ctx context.Context, client *ec2.Client, prior *VolumeOu
 
 // createFinalSnapshot takes a snapshot of the volume, tagged from the volume's
 // own tags, and waits for it to complete before the volume is removed.
-func (r *Volume) createFinalSnapshot(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VolumeResource) createFinalSnapshot(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	in := &ec2.CreateSnapshotInput{
 		VolumeId:          aws.String(id),
 		TagSpecifications: tagSpecifications(ec2types.ResourceTypeSnapshot, ptr.Value(r.Tags)),
@@ -337,7 +350,7 @@ func (r *Volume) createFinalSnapshot(ctx context.Context, client *ec2.Client, id
 // waitAvailable polls the volume until it reports state available, the point at
 // which a create has settled. A volume that enters the error state stops the
 // wait, since it will not become available.
-func (r *Volume) waitAvailable(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VolumeResource) waitAvailable(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("volume %s to become available", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		volume, err := describeVolume(ctx, client, id)
@@ -363,7 +376,7 @@ func (r *Volume) waitAvailable(ctx context.Context, client *ec2.Client, id strin
 // usable at that point even though EC2 continues optimizing it in the
 // background, which this wait does not block on. A volume in the error state
 // stops the wait.
-func (r *Volume) waitModified(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VolumeResource) waitModified(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("volume %s modification", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		volume, err := describeVolume(ctx, client, id)
@@ -384,7 +397,7 @@ func (r *Volume) waitModified(ctx context.Context, client *ec2.Client, id string
 // waitDeleted polls the volume until a describe no longer finds it, confirming
 // the delete has propagated. A just-deleted volume settles in about a second, so
 // the poll runs at a one-second interval rather than the slower create pace.
-func (r *Volume) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VolumeResource) waitDeleted(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("volume %s deletion", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		_, err := describeVolume(ctx, client, id)
@@ -403,7 +416,11 @@ func (r *Volume) waitDeleted(ctx context.Context, client *ec2.Client, id string)
 // since a just-created snapshot is briefly not describable; that window maps to
 // runtime.ErrNotFound, which the retry rides out. A snapshot in the error state
 // stops the wait.
-func (r *Volume) waitSnapshotCompleted(ctx context.Context, client *ec2.Client, id string) error {
+func (r *VolumeResource) waitSnapshotCompleted(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	what := fmt.Sprintf("snapshot %s to complete", id)
 	run := func(ctx context.Context) error {
 		return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {

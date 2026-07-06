@@ -15,7 +15,7 @@ import (
 func TestLibraryRegistersMetaPartition(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "partition")
-	assert.Equal(t, reflect.TypeFor[*svc.PartitionOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.PartitionDataSourceOutput](),
 		lib.DataSources["partition"].OutputType())
 }
 
@@ -36,7 +36,7 @@ func TestMetaPartitionSchema(t *testing.T) {
 func TestLibraryRegistersMetaRegion(t *testing.T) {
 	lib := Library()
 	require.Contains(t, lib.DataSources, "region")
-	assert.Equal(t, reflect.TypeFor[*svc.RegionOutput](),
+	assert.Equal(t, reflect.TypeFor[*svc.RegionDataSourceOutput](),
 		lib.DataSources["region"].OutputType())
 }
 

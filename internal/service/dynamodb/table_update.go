@@ -37,8 +37,10 @@ const (
 // delete cannot share a call, a view-type change is rejected on an
 // already-enabled stream, and a warm-throughput index update cannot share a call
 // with a capacity or on-demand change.
-func (r *Table) reconcile(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcile(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	diff := diffGSIs(ptr.Value(prior.Inputs.GlobalSecondaryIndex), ptr.Value(r.GlobalSecondaryIndex))
 	deletes := append(diff.deletes, recreateNames(diff.recreates)...)
@@ -76,7 +78,7 @@ func (r *Table) reconcile(
 // deleteIndexes removes each global secondary index that is no longer desired,
 // one UpdateTable per index, waiting for each to disappear before the next.
 // DynamoDB allows only one online index delete at a time.
-func (r *Table) deleteIndexes(
+func (r *TableResource) deleteIndexes(
 	ctx context.Context, client *dynamodb.Client, names []string,
 ) error {
 	for _, name := range names {
@@ -99,8 +101,10 @@ func (r *Table) deleteIndexes(
 // reconcileTableClass changes the table class when it changed, in its own
 // UpdateTable, since DynamoDB rejects a table-class change combined with any
 // other change.
-func (r *Table) reconcileTableClass(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcileTableClass(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	if !runtime.Changed(prior.Inputs.TableClass, r.TableClass) || r.TableClass == nil {
 		return nil
@@ -121,8 +125,10 @@ func (r *Table) reconcileTableClass(
 // stream, so the stream is disabled and re-enabled with the new view type. When
 // the stream toggle itself changed, the main UpdateTable handles the stream
 // instead and this step is skipped.
-func (r *Table) reconcileStreamViewType(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcileStreamViewType(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	viewChanged := runtime.Changed(prior.Inputs.StreamViewType, r.StreamViewType)
 	enabledChanged := runtime.Changed(prior.Inputs.StreamEnabled, r.StreamEnabled)
@@ -158,10 +164,10 @@ func (r *Table) reconcileStreamViewType(
 // on-demand mode, and they never include warm throughput, which is applied on
 // its own afterward. After the call the table and each index updated here are
 // waited active.
-func (r *Table) mainUpdate(
+func (r *TableResource) mainUpdate(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[Table, *TableOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 	updates []gsiUpdate,
 ) error {
 	in := &dynamodb.UpdateTableInput{TableName: aws.String(r.Name)}
@@ -216,7 +222,7 @@ func (r *Table) mainUpdate(
 // its own, one UpdateTable per index, after the main update. A warm-throughput
 // update cannot share a call with a capacity or on-demand change, so each runs
 // alone and is waited active before the next.
-func (r *Table) updateWarmIndexes(
+func (r *TableResource) updateWarmIndexes(
 	ctx context.Context, client *dynamodb.Client, warm []TableGlobalSecondaryIndex,
 ) error {
 	for _, gsi := range warm {
@@ -244,7 +250,7 @@ func (r *Table) updateWarmIndexes(
 // each sending the full attribute set so a key on a new attribute is defined,
 // waiting for each to become active before the next. DynamoDB allows only one
 // online index create at a time.
-func (r *Table) createIndexes(
+func (r *TableResource) createIndexes(
 	ctx context.Context, client *dynamodb.Client, creates []TableGlobalSecondaryIndex,
 ) error {
 	for _, gsi := range creates {
@@ -267,8 +273,10 @@ func (r *Table) createIndexes(
 
 // reconcileSSE applies the encryption block when it changed, then waits for
 // encryption to settle.
-func (r *Table) reconcileSSE(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcileSSE(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	if !runtime.Changed(prior.Inputs.ServerSideEncryption, r.ServerSideEncryption) {
 		return nil
@@ -278,8 +286,10 @@ func (r *Table) reconcileSSE(
 
 // reconcileTTL applies the time-to-live block when it changed, then waits for
 // the change to settle.
-func (r *Table) reconcileTTL(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcileTTL(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	if !runtime.Changed(prior.Inputs.Ttl, r.Ttl) {
 		return nil
@@ -289,8 +299,10 @@ func (r *Table) reconcileTTL(
 
 // reconcilePITR applies the point-in-time-recovery block when it changed, then
 // waits for the change to settle.
-func (r *Table) reconcilePITR(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcilePITR(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	if !runtime.Changed(prior.Inputs.PointInTimeRecovery, r.PointInTimeRecovery) {
 		return nil
@@ -302,8 +314,10 @@ func (r *Table) reconcilePITR(
 // is set. An unset block is never sent, so DynamoDB's automatic warm throughput
 // is left alone rather than reset, and a decrease the API rejects is left to the
 // API to enforce.
-func (r *Table) reconcileWarmThroughput(
-	ctx context.Context, client *dynamodb.Client, prior runtime.Prior[Table, *TableOutput],
+func (r *TableResource) reconcileWarmThroughput(
+	ctx context.Context,
+	client *dynamodb.Client,
+	prior runtime.Prior[TableResource, *TableResourceOutput],
 ) error {
 	if !runtime.Changed(prior.Inputs.WarmThroughput, r.WarmThroughput) || r.WarmThroughput == nil {
 		return nil
@@ -313,6 +327,6 @@ func (r *Table) reconcileWarmThroughput(
 
 // provisioned reports whether the table is in provisioned billing mode. An unset
 // billing mode is treated as provisioned, the DynamoDB default.
-func (r *Table) provisioned() bool {
+func (r *TableResource) provisioned() bool {
 	return r.BillingMode == nil || *r.BillingMode == billingModeProvisioned
 }

@@ -93,7 +93,7 @@ func TestResourcePolicyValidateInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourcePolicy{
+			r := &ResourcePolicyResource{
 				PolicyDocument: tt.policyDocument,
 				PolicyName:     tt.policyName,
 				ResourceArn:    tt.resourceArn,
@@ -114,7 +114,7 @@ func TestResourcePolicyValidateInputs(t *testing.T) {
 func TestDeleteResourcePolicyInput(t *testing.T) {
 	tests := []struct {
 		name       string
-		prior      *ResourcePolicyOutput
+		prior      *ResourcePolicyResourceOutput
 		wantName   string
 		wantArn    string
 		wantRev    string
@@ -122,12 +122,12 @@ func TestDeleteResourcePolicyInput(t *testing.T) {
 	}{
 		{
 			name:     "account scoped policy",
-			prior:    &ResourcePolicyOutput{PolicyName: aws.String("account-policy")},
+			prior:    &ResourcePolicyResourceOutput{PolicyName: aws.String("account-policy")},
 			wantName: "account-policy",
 		},
 		{
 			name: "resource scoped policy",
-			prior: &ResourcePolicyOutput{
+			prior: &ResourcePolicyResourceOutput{
 				ResourceArn: aws.String("arn:aws:logs:us-east-1:123456789012:log-group:x"),
 				RevisionId:  aws.String("rev-1"),
 			},
@@ -136,7 +136,7 @@ func TestDeleteResourcePolicyInput(t *testing.T) {
 		},
 		{
 			name: "resource scoped policy requires revision",
-			prior: &ResourcePolicyOutput{
+			prior: &ResourcePolicyResourceOutput{
 				ResourceArn: aws.String("arn:aws:logs:us-east-1:123456789012:log-group:x"),
 			},
 			wantErrMsg: "revision-id is required",

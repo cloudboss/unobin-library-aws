@@ -17,35 +17,38 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// GroupPolicy manages an inline policy embedded in an IAM group. The group
+// GroupPolicyResource manages an inline policy embedded in an IAM group. The group
 // name and policy name form the identity, so a change to either makes a
 // different policy and recreates this one. The policy document is updated in
 // place with PutGroupPolicy.
-type GroupPolicy struct {
+type GroupPolicyResource struct {
 	GroupName      string `ub:"group-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-// GroupPolicyOutput holds the identity and the policy document IAM stores.
+// GroupPolicyResourceOutput holds the identity and the policy document IAM stores.
 // The document is URL-decoded and normalized so references see the stored JSON
 // rather than IAM's percent-encoded transport value.
-type GroupPolicyOutput struct {
+type GroupPolicyResourceOutput struct {
 	GroupName      string `ub:"group-name"`
 	PolicyName     string `ub:"policy-name"`
 	PolicyDocument string `ub:"policy-document"`
 }
 
-func (r *GroupPolicy) SchemaVersion() int { return 1 }
+func (r *GroupPolicyResource) SchemaVersion() int { return 1 }
 
-func (r *GroupPolicy) ReplaceFields() []string {
+func (r *GroupPolicyResource) ReplaceFields() []string {
 	return []string{
 		"group-name",
 		"policy-name",
 	}
 }
 
-func (r *GroupPolicy) Create(ctx context.Context, cfg *awsCfg) (*GroupPolicyOutput, error) {
+func (r *GroupPolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*GroupPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -56,22 +59,26 @@ func (r *GroupPolicy) Create(ctx context.Context, cfg *awsCfg) (*GroupPolicyOutp
 	return r.read(ctx, client, true)
 }
 
-func (r *GroupPolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *GroupPolicyOutput,
-) (*GroupPolicyOutput, error) {
+func (r *GroupPolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *GroupPolicyResourceOutput,
+) (*GroupPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return (&GroupPolicy{
+	return (&GroupPolicyResource{
 		GroupName:  prior.GroupName,
 		PolicyName: prior.PolicyName,
 	}).read(ctx, client, false)
 }
 
-func (r *GroupPolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupPolicy, *GroupPolicyOutput],
-) (*GroupPolicyOutput, error) {
+func (r *GroupPolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput],
+) (*GroupPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -89,7 +96,11 @@ func (r *GroupPolicy) Update(
 	return r.read(ctx, client, false)
 }
 
-func (r *GroupPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *GroupPolicyOutput) error {
+func (r *GroupPolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *GroupPolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -107,7 +118,7 @@ func (r *GroupPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *GroupPolic
 	return nil
 }
 
-func (r *GroupPolicy) put(ctx context.Context, client *iam.Client) error {
+func (r *GroupPolicyResource) put(ctx context.Context, client *iam.Client) error {
 	document, err := normalizeIAMPolicyJSON(r.PolicyDocument)
 	if err != nil {
 		return err
@@ -115,7 +126,11 @@ func (r *GroupPolicy) put(ctx context.Context, client *iam.Client) error {
 	return r.putDocument(ctx, client, document)
 }
 
-func (r *GroupPolicy) putDocument(ctx context.Context, client *iam.Client, document string) error {
+func (r *GroupPolicyResource) putDocument(
+	ctx context.Context,
+	client *iam.Client,
+	document string,
+) error {
 	in := &iam.PutGroupPolicyInput{
 		GroupName:      aws.String(r.GroupName),
 		PolicyName:     aws.String(r.PolicyName),
@@ -127,14 +142,14 @@ func (r *GroupPolicy) putDocument(ctx context.Context, client *iam.Client, docum
 	return nil
 }
 
-func groupPolicyDocumentDrifted(observed *GroupPolicyOutput, desired string) bool {
+func groupPolicyDocumentDrifted(observed *GroupPolicyResourceOutput, desired string) bool {
 	return observed != nil && runtime.Changed(observed.PolicyDocument, desired)
 }
 
-func (r *GroupPolicy) read(
+func (r *GroupPolicyResource) read(
 	ctx context.Context, client *iam.Client, created bool,
-) (*GroupPolicyOutput, error) {
-	var out *GroupPolicyOutput
+) (*GroupPolicyResourceOutput, error) {
+	var out *GroupPolicyResourceOutput
 	what := fmt.Sprintf("group policy %s on group %s", r.PolicyName, r.GroupName)
 	err := wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		resp, err := client.GetGroupPolicy(ctx, &iam.GetGroupPolicyInput{
@@ -160,7 +175,7 @@ func (r *GroupPolicy) read(
 		if err != nil {
 			return false, err
 		}
-		out = &GroupPolicyOutput{
+		out = &GroupPolicyResourceOutput{
 			GroupName:      r.outputGroupName(resp),
 			PolicyName:     r.outputPolicyName(resp),
 			PolicyDocument: document,
@@ -173,14 +188,14 @@ func (r *GroupPolicy) read(
 	return out, nil
 }
 
-func (r *GroupPolicy) outputGroupName(resp *iam.GetGroupPolicyOutput) string {
+func (r *GroupPolicyResource) outputGroupName(resp *iam.GetGroupPolicyOutput) string {
 	if resp.GroupName != nil {
 		return aws.ToString(resp.GroupName)
 	}
 	return r.GroupName
 }
 
-func (r *GroupPolicy) outputPolicyName(resp *iam.GetGroupPolicyOutput) string {
+func (r *GroupPolicyResource) outputPolicyName(resp *iam.GetGroupPolicyOutput) string {
 	if resp.PolicyName != nil {
 		return aws.ToString(resp.PolicyName)
 	}

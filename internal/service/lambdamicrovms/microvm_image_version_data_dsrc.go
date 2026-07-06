@@ -8,15 +8,15 @@ import (
 	awslambdamicrovms "github.com/aws/aws-sdk-go-v2/service/lambdamicrovms"
 )
 
-type MicrovmImageVersionData struct {
+type MicrovmImageVersionDataSource struct {
 	ImageIdentifier string `ub:"image-identifier"`
 	ImageVersion    string `ub:"image-version"`
 }
 
-func (r *MicrovmImageVersionData) Read(
+func (r *MicrovmImageVersionDataSource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-) (*MicrovmImageVersionDataOutput, error) {
+) (*MicrovmImageVersionDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err

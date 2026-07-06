@@ -75,19 +75,19 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
-		"role":                    reflect.TypeFor[*svc.RoleOutput](),
-		"group":                   reflect.TypeFor[*svc.GroupOutput](),
-		"user":                    reflect.TypeFor[*svc.UserOutput](),
-		"access-key":              reflect.TypeFor[*svc.AccessKeyOutput](),
-		"policy":                  reflect.TypeFor[*svc.PolicyOutput](),
-		"instance-profile":        reflect.TypeFor[*svc.InstanceProfileOutput](),
-		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderOutput](),
-		"role-policy-attachment":  reflect.TypeFor[*svc.RolePolicyAttachmentOutput](),
-		"group-policy-attachment": reflect.TypeFor[*svc.GroupPolicyAttachmentOutput](),
-		"user-policy-attachment":  reflect.TypeFor[*svc.UserPolicyAttachmentOutput](),
-		"role-policy":             reflect.TypeFor[*svc.RolePolicyOutput](),
-		"group-policy":            reflect.TypeFor[*svc.GroupPolicyOutput](),
-		"user-policy":             reflect.TypeFor[*svc.UserPolicyOutput](),
+		"role":                    reflect.TypeFor[*svc.RoleResourceOutput](),
+		"group":                   reflect.TypeFor[*svc.GroupResourceOutput](),
+		"user":                    reflect.TypeFor[*svc.UserResourceOutput](),
+		"access-key":              reflect.TypeFor[*svc.AccessKeyResourceOutput](),
+		"policy":                  reflect.TypeFor[*svc.PolicyResourceOutput](),
+		"instance-profile":        reflect.TypeFor[*svc.InstanceProfileResourceOutput](),
+		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderResourceOutput](),
+		"role-policy-attachment":  reflect.TypeFor[*svc.RolePolicyAttachmentResourceOutput](),
+		"group-policy-attachment": reflect.TypeFor[*svc.GroupPolicyAttachmentResourceOutput](),
+		"user-policy-attachment":  reflect.TypeFor[*svc.UserPolicyAttachmentResourceOutput](),
+		"role-policy":             reflect.TypeFor[*svc.RolePolicyResourceOutput](),
+		"group-policy":            reflect.TypeFor[*svc.GroupPolicyResourceOutput](),
+		"user-policy":             reflect.TypeFor[*svc.UserPolicyResourceOutput](),
 	}
 	for name, outputType := range resourcesOutputs {
 		t.Run(name, func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 		})
 	}
 	dataSourcesOutputs := map[string]reflect.Type{
-		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderDataOutput](),
+		"openid-connect-provider": reflect.TypeFor[*svc.OpenIDConnectProviderDataSourceOutput](),
 	}
 	for name, outputType := range dataSourcesOutputs {
 		t.Run(name, func(t *testing.T) {

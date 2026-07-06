@@ -10,10 +10,10 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// Subnets looks up every EC2 subnet matching tag filters and generic
+// SubnetsDataSource looks up every EC2 subnet matching tag filters and generic
 // DescribeSubnets filters. Empty matches are successful and return an empty ids
 // list; AWS errors fail the read as ordinary data-source errors.
-type Subnets struct {
+type SubnetsDataSource struct {
 	Tags   *map[string]string `ub:"tags"`
 	Filter *[]SubnetsFilter   `ub:"filter"`
 }
@@ -25,15 +25,18 @@ type SubnetsFilter struct {
 	Values []string `ub:"values"`
 }
 
-// SubnetsOutput holds the matching subnet ids in the order EC2 returns them.
-type SubnetsOutput struct {
+// SubnetsDataSourceOutput holds the matching subnet ids in the order EC2 returns them.
+type SubnetsDataSourceOutput struct {
 	Ids []string `ub:"ids"`
 }
 
 // Read pages DescribeSubnets in full and returns the matching subnet ids in
 // AWS order. A lookup with no filters intentionally asks for all regional
 // subnets, and a lookup with no matches is a successful empty list.
-func (r *Subnets) Read(ctx context.Context, cfg *awsCfg) (*SubnetsOutput, error) {
+func (r *SubnetsDataSource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*SubnetsDataSourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -42,10 +45,10 @@ func (r *Subnets) Read(ctx context.Context, cfg *awsCfg) (*SubnetsOutput, error)
 	if err != nil {
 		return nil, err
 	}
-	return &SubnetsOutput{Ids: ids}, nil
+	return &SubnetsDataSourceOutput{Ids: ids}, nil
 }
 
-func (r *Subnets) findIDs(ctx context.Context, client *ec2.Client) ([]string, error) {
+func (r *SubnetsDataSource) findIDs(ctx context.Context, client *ec2.Client) ([]string, error) {
 	ids := []string{}
 	paginator := ec2.NewDescribeSubnetsPaginator(client, r.describeInput())
 	for paginator.HasMorePages() {
@@ -60,7 +63,7 @@ func (r *Subnets) findIDs(ctx context.Context, client *ec2.Client) ([]string, er
 	return ids, nil
 }
 
-func (r *Subnets) describeInput() *ec2.DescribeSubnetsInput {
+func (r *SubnetsDataSource) describeInput() *ec2.DescribeSubnetsInput {
 	in := &ec2.DescribeSubnetsInput{}
 	filters := r.describeFilters()
 	if len(filters) > 0 {
@@ -69,7 +72,7 @@ func (r *Subnets) describeInput() *ec2.DescribeSubnetsInput {
 	return in
 }
 
-func (r *Subnets) describeFilters() []ec2types.Filter {
+func (r *SubnetsDataSource) describeFilters() []ec2types.Filter {
 	filters := make([]ec2types.Filter, 0, len(ptr.Value(r.Tags))+len(ptr.Value(r.Filter)))
 	for key, value := range ptr.Value(r.Tags) {
 		filters = append(filters, ec2types.Filter{

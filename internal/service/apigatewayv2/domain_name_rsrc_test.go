@@ -14,7 +14,7 @@ import (
 )
 
 func TestDomainNameValidate(t *testing.T) {
-	base := DomainName{
+	base := DomainNameResource{
 		DomainName: "api.example.com",
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc",
@@ -26,7 +26,7 @@ func TestDomainNameValidate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		mutate  func(*DomainName)
+		mutate  func(*DomainNameResource)
 		wantErr string
 	}{
 		{
@@ -34,42 +34,42 @@ func TestDomainNameValidate(t *testing.T) {
 		},
 		{
 			name: "domain name is required",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainName = ""
 			},
 			wantErr: "domain-name must be between 1 and 512 characters",
 		},
 		{
 			name: "one configuration is required",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainNameConfigurations = nil
 			},
 			wantErr: "domain-name-configurations must have exactly one item",
 		},
 		{
 			name: "certificate ARN is checked",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainNameConfigurations[0].CertificateArn = "not-an-arn"
 			},
 			wantErr: "certificate-arn must be a valid ARN",
 		},
 		{
 			name: "endpoint type is checked case-insensitively",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainNameConfigurations[0].EndpointType = "EDGE"
 			},
 			wantErr: "endpoint-type must be REGIONAL",
 		},
 		{
 			name: "security policy is checked case-insensitively",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainNameConfigurations[0].SecurityPolicy = "TLS_1_0"
 			},
 			wantErr: "security-policy must be TLS_1_2",
 		},
 		{
 			name: "ownership verification ARN is checked",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.DomainNameConfigurations[0].OwnershipVerificationCertificateArn =
 					aws.String("bad")
 			},
@@ -77,7 +77,7 @@ func TestDomainNameValidate(t *testing.T) {
 		},
 		{
 			name: "routing mode is checked case-insensitively",
-			mutate: func(r *DomainName) {
+			mutate: func(r *DomainNameResource) {
 				r.RoutingMode = aws.String("bad")
 			},
 			wantErr: "routing-mode must be API_MAPPING_ONLY",
@@ -104,7 +104,7 @@ func TestDomainNameValidate(t *testing.T) {
 }
 
 func TestDomainNameUpdateInput(t *testing.T) {
-	prior := DomainName{
+	prior := DomainNameResource{
 		DomainName: "api.example.com",
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/old",
@@ -117,7 +117,7 @@ func TestDomainNameUpdateInput(t *testing.T) {
 		},
 		RoutingMode: aws.String("ROUTING_RULE_ONLY"),
 	}
-	r := DomainName{
+	r := DomainNameResource{
 		DomainName: "api.example.com",
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/new",
@@ -146,7 +146,7 @@ func TestDomainNameUpdateInput(t *testing.T) {
 }
 
 func TestDomainNameUpdateInputDisablesMutualTLS(t *testing.T) {
-	prior := DomainName{
+	prior := DomainNameResource{
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc",
 			EndpointType:   "REGIONAL",
@@ -156,7 +156,7 @@ func TestDomainNameUpdateInputDisablesMutualTLS(t *testing.T) {
 			TruststoreUri: "s3://bucket/trust.pem",
 		},
 	}
-	r := DomainName{DomainNameConfigurations: prior.DomainNameConfigurations}
+	r := DomainNameResource{DomainNameConfigurations: prior.DomainNameConfigurations}
 
 	in, changed := r.updateDomainNameInput(domainNameUpdatePrior(prior), "api.example.com")
 	require.True(t, changed)
@@ -165,7 +165,7 @@ func TestDomainNameUpdateInputDisablesMutualTLS(t *testing.T) {
 }
 
 func TestDomainNameUpdateInputUnchanged(t *testing.T) {
-	prior := DomainName{
+	prior := DomainNameResource{
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/abc",
 			EndpointType:   "REGIONAL",
@@ -183,7 +183,7 @@ func TestDomainNameUpdateInputUsesObservedDrift(t *testing.T) {
 	cert := "arn:aws:acm:us-east-1:123456789012:certificate/abc"
 	ownership := "arn:aws:acm:us-east-1:123456789012:certificate/ownership-new"
 	oldOwnership := "arn:aws:acm:us-east-1:123456789012:certificate/ownership-old"
-	inputs := DomainName{
+	inputs := DomainNameResource{
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn:                      cert,
 			EndpointType:                        "REGIONAL",
@@ -193,7 +193,7 @@ func TestDomainNameUpdateInputUsesObservedDrift(t *testing.T) {
 		}},
 		RoutingMode: aws.String("API_MAPPING_ONLY"),
 	}
-	observed := &DomainNameOutput{
+	observed := &DomainNameResourceOutput{
 		IpAddressType:                       "dualstack",
 		OwnershipVerificationCertificateArn: oldOwnership,
 		RoutingMode:                         "ROUTING_RULE_ONLY",
@@ -213,14 +213,14 @@ func TestDomainNameUpdateInputUsesObservedDrift(t *testing.T) {
 func TestDomainNameUpdateInputIgnoresUnconfiguredOutputDrift(t *testing.T) {
 	cert := "arn:aws:acm:us-east-1:123456789012:certificate/abc"
 	oldOwnership := "arn:aws:acm:us-east-1:123456789012:certificate/old"
-	inputs := DomainName{
+	inputs := DomainNameResource{
 		DomainNameConfigurations: []DomainNameConfiguration{{
 			CertificateArn: cert,
 			EndpointType:   "REGIONAL",
 			SecurityPolicy: "TLS_1_2",
 		}},
 	}
-	observed := &DomainNameOutput{
+	observed := &DomainNameResourceOutput{
 		ApiGatewayDomainName:                "d-new.execute-api.us-east-1.amazonaws.com",
 		HostedZoneId:                        "Z2FDTNDATAQYW2",
 		IpAddressType:                       "dualstack",
@@ -270,14 +270,20 @@ func TestWaitDomainNameAvailableResetsMissingStreakAfterFound(t *testing.T) {
 	assert.Equal(t, len(responses), calls)
 }
 
-func domainNameUpdatePrior(inputs DomainName) runtime.Prior[DomainName, *DomainNameOutput] {
+func domainNameUpdatePrior(
+	inputs DomainNameResource,
+) runtime.Prior[DomainNameResource, *DomainNameResourceOutput] {
 	return domainNameUpdatePriorObserved(inputs, nil)
 }
 
 func domainNameUpdatePriorObserved(
-	inputs DomainName, observed *DomainNameOutput,
-) runtime.Prior[DomainName, *DomainNameOutput] {
-	return runtime.Prior[DomainName, *DomainNameOutput]{Inputs: inputs, Observed: observed}
+	inputs DomainNameResource,
+	observed *DomainNameResourceOutput,
+) runtime.Prior[DomainNameResource, *DomainNameResourceOutput] {
+	return runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+		Inputs:   inputs,
+		Observed: observed,
+	}
 }
 
 func TestDomainNameUserTags(t *testing.T) {
@@ -293,10 +299,10 @@ func TestDomainNameUserTags(t *testing.T) {
 }
 
 func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
-	r := DomainName{Tags: new(map[string]string{"team": "platform"})}
-	prior := runtime.Prior[DomainName, *DomainNameOutput]{
-		Inputs: DomainName{Tags: new(map[string]string{"team": "platform"})},
-		Observed: &DomainNameOutput{
+	r := DomainNameResource{Tags: new(map[string]string{"team": "platform"})}
+	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+		Inputs: DomainNameResource{Tags: new(map[string]string{"team": "platform"})},
+		Observed: &DomainNameResourceOutput{
 			Tags: map[string]string{"team": "security"},
 		},
 	}
@@ -305,10 +311,10 @@ func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
 }
 
 func TestDomainNameTagsNeedSyncUsesUserTags(t *testing.T) {
-	r := DomainName{Tags: new(map[string]string{"aws:system": "new", "team": "platform"})}
-	prior := runtime.Prior[DomainName, *DomainNameOutput]{
-		Inputs: DomainName{Tags: new(map[string]string{"team": "platform"})},
-		Observed: &DomainNameOutput{
+	r := DomainNameResource{Tags: new(map[string]string{"aws:system": "new", "team": "platform"})}
+	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+		Inputs: DomainNameResource{Tags: new(map[string]string{"team": "platform"})},
+		Observed: &DomainNameResourceOutput{
 			Tags: map[string]string{"team": "platform"},
 		},
 	}
@@ -344,7 +350,7 @@ func TestDomainNameReadOutput(t *testing.T) {
 	}
 
 	out := domainNameOutput("us-east-1", "api.example.com", resp)
-	assert.Equal(t, &DomainNameOutput{
+	assert.Equal(t, &DomainNameResourceOutput{
 		DomainName:                    "api.example.com",
 		Arn:                           "arn:aws:apigateway:us-east-1::/domainnames/api.example.com",
 		ApiGatewayDomainName:          "d-123.execute-api.us-east-1.amazonaws.com",

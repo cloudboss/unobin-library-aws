@@ -35,12 +35,12 @@ const (
 	distributionRandom                = "Random"
 )
 
-// SubscriptionFilter sends events from one CloudWatch Logs log group to a
+// SubscriptionFilterResource sends events from one CloudWatch Logs log group to a
 // Lambda function, Kinesis stream, Firehose stream, or Logs destination. The
 // log group, filter name, and destination are fixed once the filter is made;
 // the pattern, distribution, system fields, role, and transformed-log flag are
 // reconciled in place by PutSubscriptionFilter.
-type SubscriptionFilter struct {
+type SubscriptionFilterResource struct {
 	DestinationArn         string    `ub:"destination-arn"`
 	LogGroupName           string    `ub:"log-group-name"`
 	Name                   string    `ub:"name"`
@@ -52,27 +52,27 @@ type SubscriptionFilter struct {
 	ApplyOnTransformedLogs *bool     `ub:"apply-on-transformed-logs"`
 }
 
-// SubscriptionFilterOutput records the two-part handle plus values the service
+// SubscriptionFilterResourceOutput records the two-part handle plus values the service
 // may fill. The handle is stored so a replacement can delete the prior filter
 // even when the new configuration names a different log group or filter name.
-type SubscriptionFilterOutput struct {
+type SubscriptionFilterResourceOutput struct {
 	LogGroupName           string  `ub:"log-group-name"`
 	Name                   string  `ub:"name"`
 	ApplyOnTransformedLogs bool    `ub:"apply-on-transformed-logs"`
 	RoleArn                *string `ub:"role-arn"`
 }
 
-func (r *SubscriptionFilter) SchemaVersion() int { return 1 }
+func (r *SubscriptionFilterResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs that identify a subscription filter at the
 // API. Changing any of them names a different filter, so the old filter is
 // deleted and a new one is created.
-func (r *SubscriptionFilter) ReplaceFields() []string {
+func (r *SubscriptionFilterResource) ReplaceFields() []string {
 	return []string{"destination-arn", "log-group-name", "name"}
 }
 
 // Defaults gives distribution the API default and marks the system-field list optional.
-func (r SubscriptionFilter) Defaults() []defaults.Default {
+func (r SubscriptionFilterResource) Defaults() []defaults.Default {
 	return []defaults.Default{
 		defaults.Value(r.Distribution, "ByLogStream"),
 	}
@@ -80,7 +80,7 @@ func (r SubscriptionFilter) Defaults() []defaults.Default {
 
 // Constraints declares the enum rules the schema can express. Length and ARN
 // checks run in validate because they need byte counts and ARN parsing.
-func (r SubscriptionFilter) Constraints() []constraint.Constraint {
+func (r SubscriptionFilterResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Distribution)).
 			Require(constraint.OneOf(r.Distribution, "ByLogStream", "Random")).
@@ -95,9 +95,9 @@ func (r SubscriptionFilter) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *SubscriptionFilter) Create(
+func (r *SubscriptionFilterResource) Create(
 	ctx context.Context, cfg *awsCfg,
-) (*SubscriptionFilterOutput, error) {
+) (*SubscriptionFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -108,9 +108,11 @@ func (r *SubscriptionFilter) Create(
 	return r.read(ctx, client, r.key(nil))
 }
 
-func (r *SubscriptionFilter) Read(
-	ctx context.Context, cfg *awsCfg, prior *SubscriptionFilterOutput,
-) (*SubscriptionFilterOutput, error) {
+func (r *SubscriptionFilterResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SubscriptionFilterResourceOutput,
+) (*SubscriptionFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -118,10 +120,10 @@ func (r *SubscriptionFilter) Read(
 	return r.read(ctx, client, r.key(prior))
 }
 
-func (r *SubscriptionFilter) Update(
+func (r *SubscriptionFilterResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[SubscriptionFilter, *SubscriptionFilterOutput],
-) (*SubscriptionFilterOutput, error) {
+	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput],
+) (*SubscriptionFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -134,9 +136,8 @@ func (r *SubscriptionFilter) Update(
 	return r.read(ctx, client, r.key(prior.Outputs))
 }
 
-func (r *SubscriptionFilter) Delete(
-	ctx context.Context, cfg *awsCfg, prior *SubscriptionFilterOutput,
-) error {
+func (r *SubscriptionFilterResource) Delete(
+	ctx context.Context, cfg *awsCfg, prior *SubscriptionFilterResourceOutput) error {
 	// Replacement runs Delete on the desired receiver before Create, so validate the
 	// desired input before deleting the prior filter.
 	if err := r.validate(); err != nil {
@@ -161,7 +162,7 @@ func (r *SubscriptionFilter) Delete(
 	return nil
 }
 
-func (r *SubscriptionFilter) put(
+func (r *SubscriptionFilterResource) put(
 	ctx context.Context, client *cloudwatchlogs.Client,
 ) error {
 	if err := r.validate(); err != nil {
@@ -179,7 +180,7 @@ func (r *SubscriptionFilter) put(
 	return nil
 }
 
-func (r *SubscriptionFilter) putInput() *cloudwatchlogs.PutSubscriptionFilterInput {
+func (r *SubscriptionFilterResource) putInput() *cloudwatchlogs.PutSubscriptionFilterInput {
 	in := &cloudwatchlogs.PutSubscriptionFilterInput{
 		DestinationArn: aws.String(r.DestinationArn),
 		LogGroupName:   aws.String(r.LogGroupName),
@@ -203,9 +204,9 @@ func (r *SubscriptionFilter) putInput() *cloudwatchlogs.PutSubscriptionFilterInp
 	return in
 }
 
-func (r *SubscriptionFilter) read(
+func (r *SubscriptionFilterResource) read(
 	ctx context.Context, client *cloudwatchlogs.Client, key subscriptionFilterKey,
-) (*SubscriptionFilterOutput, error) {
+) (*SubscriptionFilterResourceOutput, error) {
 	var match *cloudwatchlogstypes.SubscriptionFilter
 	pager := cloudwatchlogs.NewDescribeSubscriptionFiltersPaginator(client,
 		&cloudwatchlogs.DescribeSubscriptionFiltersInput{
@@ -233,7 +234,7 @@ func (r *SubscriptionFilter) read(
 	if match == nil {
 		return nil, runtime.ErrNotFound
 	}
-	return &SubscriptionFilterOutput{
+	return &SubscriptionFilterResourceOutput{
 		LogGroupName:           key.LogGroupName,
 		Name:                   key.Name,
 		ApplyOnTransformedLogs: match.ApplyOnTransformedLogs,
@@ -241,13 +242,13 @@ func (r *SubscriptionFilter) read(
 	}, nil
 }
 
-func (r *SubscriptionFilter) shouldPut(
-	prior runtime.Prior[SubscriptionFilter, *SubscriptionFilterOutput],
+func (r *SubscriptionFilterResource) shouldPut(
+	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput],
 ) bool {
 	return r.mutableInputChanged(prior.Inputs) || r.managedOutputDrifted(prior.Observed)
 }
 
-func (r *SubscriptionFilter) mutableInputChanged(prior SubscriptionFilter) bool {
+func (r *SubscriptionFilterResource) mutableInputChanged(prior SubscriptionFilterResource) bool {
 	return runtime.Changed(prior.FilterPattern, r.FilterPattern) ||
 		effectiveDistribution(prior.Distribution) != effectiveDistribution(r.Distribution) ||
 		!sameStringSet(ptr.Value(prior.EmitSystemFields), ptr.Value(r.EmitSystemFields)) ||
@@ -256,7 +257,9 @@ func (r *SubscriptionFilter) mutableInputChanged(prior SubscriptionFilter) bool 
 		runtime.Changed(prior.ApplyOnTransformedLogs, r.ApplyOnTransformedLogs)
 }
 
-func (r *SubscriptionFilter) managedOutputDrifted(observed *SubscriptionFilterOutput) bool {
+func (r *SubscriptionFilterResource) managedOutputDrifted(
+	observed *SubscriptionFilterResourceOutput,
+) bool {
 	if observed == nil {
 		return false
 	}
@@ -270,7 +273,9 @@ func (r *SubscriptionFilter) managedOutputDrifted(observed *SubscriptionFilterOu
 	return false
 }
 
-func (r *SubscriptionFilter) key(prior *SubscriptionFilterOutput) subscriptionFilterKey {
+func (r *SubscriptionFilterResource) key(
+	prior *SubscriptionFilterResourceOutput,
+) subscriptionFilterKey {
 	if prior != nil && prior.LogGroupName != "" && prior.Name != "" {
 		return subscriptionFilterKey{
 			LogGroupName: prior.LogGroupName,
@@ -283,7 +288,7 @@ func (r *SubscriptionFilter) key(prior *SubscriptionFilterOutput) subscriptionFi
 	}
 }
 
-func (r *SubscriptionFilter) validate() error {
+func (r *SubscriptionFilterResource) validate() error {
 	if n := len(r.Name); n < 1 || n > 512 {
 		return fmt.Errorf("name must be 1 to 512 bytes, got %d", n)
 	}

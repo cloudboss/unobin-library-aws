@@ -29,7 +29,7 @@ func TestRoleUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	})
 	cfg := fake.configuration()
 
-	base := Role{
+	base := RoleResource{
 		RoleName:                 "test-role",
 		AssumeRolePolicyDocument: `{"Version":"2012-10-17","Statement":[]}`,
 	}
@@ -38,9 +38,9 @@ func TestRoleUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	priorInputs.MaxSessionDuration = aws.Int64(7200)
 
 	current := base
-	prior := runtime.Prior[Role, *RoleOutput]{
+	prior := runtime.Prior[RoleResource, *RoleResourceOutput]{
 		Inputs: priorInputs,
-		Outputs: &RoleOutput{
+		Outputs: &RoleResourceOutput{
 			Arn:    "arn:aws:iam::123456789012:role/test-role",
 			RoleId: "AROA0123456789EXAMPLE",
 		},

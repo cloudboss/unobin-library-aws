@@ -16,7 +16,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// TopicPolicy manages the access policy attached to an SNS topic. The topic
+// TopicPolicyResource manages the access policy attached to an SNS topic. The topic
 // ARN is the policy's identity; a topic holds a single Policy attribute, so the
 // topic cannot change without replacing the policy, while the document is
 // reconciled in place. Both the write and the read go through the topic's
@@ -24,32 +24,35 @@ import (
 // dedicated topic-policy API. The document is sent verbatim: unobin compares
 // inputs as written, so the policy never needs canonicalizing to avoid a
 // phantom diff against the form SNS echoes back.
-type TopicPolicy struct {
+type TopicPolicyResource struct {
 	Arn    string `ub:"arn"`
 	Policy string `ub:"policy"`
 }
 
-// TopicPolicyOutput holds the topic owner alongside the cloud-side policy. The
+// TopicPolicyResourceOutput holds the topic owner alongside the cloud-side policy. The
 // owner (the topic's account id) is required by Delete to build the default
 // policy's AWS:SourceOwner condition, so it must be a computed output read from
 // prior on Delete. The policy is the form SNS reports back, exposed for
 // reference by anything reading the resolved document.
-type TopicPolicyOutput struct {
+type TopicPolicyResourceOutput struct {
 	Owner  string `ub:"owner"`
 	Policy string `ub:"policy"`
 }
 
-func (r *TopicPolicy) SchemaVersion() int { return 1 }
+func (r *TopicPolicyResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs SNS fixes for the life of the policy. A topic
 // holds a single Policy attribute keyed by its ARN, so re-pointing the policy
 // at a different topic means resetting it here and writing it there. The policy
 // document itself is reconciled in place by Update.
-func (r *TopicPolicy) ReplaceFields() []string {
+func (r *TopicPolicyResource) ReplaceFields() []string {
 	return []string{"arn"}
 }
 
-func (r *TopicPolicy) Create(ctx context.Context, cfg *awsCfg) (*TopicPolicyOutput, error) {
+func (r *TopicPolicyResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*TopicPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -62,9 +65,11 @@ func (r *TopicPolicy) Create(ctx context.Context, cfg *awsCfg) (*TopicPolicyOutp
 	return r.read(ctx, client)
 }
 
-func (r *TopicPolicy) Read(
-	ctx context.Context, cfg *awsCfg, prior *TopicPolicyOutput,
-) (*TopicPolicyOutput, error) {
+func (r *TopicPolicyResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TopicPolicyResourceOutput,
+) (*TopicPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -72,9 +77,11 @@ func (r *TopicPolicy) Read(
 	return r.read(ctx, client)
 }
 
-func (r *TopicPolicy) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicPolicy, *TopicPolicyOutput],
-) (*TopicPolicyOutput, error) {
+func (r *TopicPolicyResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[TopicPolicyResource, *TopicPolicyResourceOutput],
+) (*TopicPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -85,7 +92,11 @@ func (r *TopicPolicy) Update(
 	return r.read(ctx, client)
 }
 
-func (r *TopicPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *TopicPolicyOutput) error {
+func (r *TopicPolicyResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *TopicPolicyResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -119,8 +130,11 @@ func (r *TopicPolicy) Delete(ctx context.Context, cfg *awsCfg, prior *TopicPolic
 // re-reads until every principal in the document has resolved, then returns the
 // settled policy. A policy whose principals are already account ids, ARNs, or
 // "*" -- the default policy and ordinary policies -- passes on the first probe.
-func (r *TopicPolicy) read(ctx context.Context, client *sns.Client) (*TopicPolicyOutput, error) {
-	var out *TopicPolicyOutput
+func (r *TopicPolicyResource) read(
+	ctx context.Context,
+	client *sns.Client,
+) (*TopicPolicyResourceOutput, error) {
+	var out *TopicPolicyResourceOutput
 	probe := func(ctx context.Context) (bool, error) {
 		resp, err := client.GetTopicAttributes(ctx, &sns.GetTopicAttributesInput{
 			TopicArn: aws.String(r.Arn),
@@ -140,7 +154,7 @@ func (r *TopicPolicy) read(ctx context.Context, client *sns.Client) (*TopicPolic
 		if !policyPrincipalsResolved(policy) {
 			return false, nil
 		}
-		out = &TopicPolicyOutput{
+		out = &TopicPolicyResourceOutput{
 			Owner:  resp.Attributes["Owner"],
 			Policy: policy,
 		}
@@ -248,7 +262,7 @@ func isAccountID(s string) bool {
 // over a two-minute window. A policy naming an IAM principal or resource
 // created moments earlier is rejected with that error until the named entity
 // becomes visible, which clears on its own within the propagation window.
-func (r *TopicPolicy) put(ctx context.Context, client *sns.Client, policy string) error {
+func (r *TopicPolicyResource) put(ctx context.Context, client *sns.Client, policy string) error {
 	in := &sns.SetTopicAttributesInput{
 		TopicArn:       aws.String(r.Arn),
 		AttributeName:  aws.String("Policy"),

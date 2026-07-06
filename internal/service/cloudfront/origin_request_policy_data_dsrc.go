@@ -15,79 +15,79 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
 )
 
-// OriginRequestPolicyData resolves one existing CloudFront origin request
+// OriginRequestPolicyDataSource resolves one existing CloudFront origin request
 // policy by exactly one selector: its id, read directly with
 // GetOriginRequestPolicy, or its name, resolved by paging through
 // ListOriginRequestPolicies and stopping at the first exact name match. The
 // final output always comes from GetOriginRequestPolicy. The ARN is composed
 // locally because CloudFront does not return one for an origin request policy
 // read.
-type OriginRequestPolicyData struct {
+type OriginRequestPolicyDataSource struct {
 	Id   *string `ub:"id"`
 	Name *string `ub:"name"`
 }
 
-// OriginRequestPolicyDataOutput holds the selected origin request policy's
+// OriginRequestPolicyDataSourceOutput holds the selected origin request policy's
 // attributes. Arn is a global CloudFront ARN built from the configured
 // partition and account id. The nested config blocks are absent when CloudFront
 // omits them; within them the Quantity members on cookie, header, and
 // query-string lists are ignored and only non-empty Items lists are exposed.
-type OriginRequestPolicyDataOutput struct {
-	Id                 string                                     `ub:"id"`
-	Arn                string                                     `ub:"arn"`
-	Comment            string                                     `ub:"comment"`
-	ETag               string                                     `ub:"etag"`
-	Name               string                                     `ub:"name"`
-	CookiesConfig      *OriginRequestPolicyDataCookiesConfig      `ub:"cookies-config"`
-	HeadersConfig      *OriginRequestPolicyDataHeadersConfig      `ub:"headers-config"`
-	QueryStringsConfig *OriginRequestPolicyDataQueryStringsConfig `ub:"query-strings-config"`
+type OriginRequestPolicyDataSourceOutput struct {
+	Id                 string                                           `ub:"id"`
+	Arn                string                                           `ub:"arn"`
+	Comment            string                                           `ub:"comment"`
+	ETag               string                                           `ub:"etag"`
+	Name               string                                           `ub:"name"`
+	CookiesConfig      *OriginRequestPolicyDataSourceCookiesConfig      `ub:"cookies-config"`
+	HeadersConfig      *OriginRequestPolicyDataSourceHeadersConfig      `ub:"headers-config"`
+	QueryStringsConfig *OriginRequestPolicyDataSourceQueryStringsConfig `ub:"query-strings-config"`
 }
 
-// OriginRequestPolicyDataCookiesConfig describes which cookies CloudFront
+// OriginRequestPolicyDataSourceCookiesConfig describes which cookies CloudFront
 // includes in origin requests.
-type OriginRequestPolicyDataCookiesConfig struct {
-	CookieBehavior string                              `ub:"cookie-behavior"`
-	Cookies        *OriginRequestPolicyDataCookieNames `ub:"cookies"`
+type OriginRequestPolicyDataSourceCookiesConfig struct {
+	CookieBehavior string                                    `ub:"cookie-behavior"`
+	Cookies        *OriginRequestPolicyDataSourceCookieNames `ub:"cookies"`
 }
 
-// OriginRequestPolicyDataCookieNames exposes only the cookie Items list;
+// OriginRequestPolicyDataSourceCookieNames exposes only the cookie Items list;
 // CloudFront's Quantity field is deliberately ignored. Items is returned as a
 // sorted, de-duped slice because the source collection is unordered.
-type OriginRequestPolicyDataCookieNames struct {
+type OriginRequestPolicyDataSourceCookieNames struct {
 	Items []string `ub:"items"`
 }
 
-// OriginRequestPolicyDataHeadersConfig describes which headers CloudFront
+// OriginRequestPolicyDataSourceHeadersConfig describes which headers CloudFront
 // includes in origin requests.
-type OriginRequestPolicyDataHeadersConfig struct {
-	HeaderBehavior string                          `ub:"header-behavior"`
-	Headers        *OriginRequestPolicyDataHeaders `ub:"headers"`
+type OriginRequestPolicyDataSourceHeadersConfig struct {
+	HeaderBehavior string                                `ub:"header-behavior"`
+	Headers        *OriginRequestPolicyDataSourceHeaders `ub:"headers"`
 }
 
-// OriginRequestPolicyDataHeaders exposes only the header Items list;
+// OriginRequestPolicyDataSourceHeaders exposes only the header Items list;
 // CloudFront's Quantity field is deliberately ignored. Items is returned as a
 // sorted, de-duped slice because the source collection is unordered.
-type OriginRequestPolicyDataHeaders struct {
+type OriginRequestPolicyDataSourceHeaders struct {
 	Items []string `ub:"items"`
 }
 
-// OriginRequestPolicyDataQueryStringsConfig describes which query strings
+// OriginRequestPolicyDataSourceQueryStringsConfig describes which query strings
 // CloudFront includes in origin requests.
-type OriginRequestPolicyDataQueryStringsConfig struct {
-	QueryStringBehavior string                                   `ub:"query-string-behavior"`
-	QueryStrings        *OriginRequestPolicyDataQueryStringNames `ub:"query-strings"`
+type OriginRequestPolicyDataSourceQueryStringsConfig struct {
+	QueryStringBehavior string                                         `ub:"query-string-behavior"`
+	QueryStrings        *OriginRequestPolicyDataSourceQueryStringNames `ub:"query-strings"`
 }
 
-// OriginRequestPolicyDataQueryStringNames exposes only the query string Items
+// OriginRequestPolicyDataSourceQueryStringNames exposes only the query string Items
 // list; CloudFront's Quantity field is deliberately ignored. Items is returned
 // as a sorted, de-duped slice because the source collection is unordered.
-type OriginRequestPolicyDataQueryStringNames struct {
+type OriginRequestPolicyDataSourceQueryStringNames struct {
 	Items []string `ub:"items"`
 }
 
 // Constraints declares the lookup selector rule: callers must set exactly one
 // of id or name.
-func (r OriginRequestPolicyData) Constraints() []constraint.Constraint {
+func (r OriginRequestPolicyDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.ExactlyOneOf(r.Id, r.Name),
 	}
@@ -96,9 +96,9 @@ func (r OriginRequestPolicyData) Constraints() []constraint.Constraint {
 // Read resolves the origin request policy and returns its current config. A
 // lookup that finds no policy returns a descriptive data-source error rather
 // than runtime.ErrNotFound.
-func (r *OriginRequestPolicyData) Read(
+func (r *OriginRequestPolicyDataSource) Read(
 	ctx context.Context, cfg *awsCfg,
-) (*OriginRequestPolicyDataOutput, error) {
+) (*OriginRequestPolicyDataSourceOutput, error) {
 	client, sdkCfg, err := newClientConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (r *OriginRequestPolicyData) Read(
 	if err != nil {
 		return nil, err
 	}
-	policy, etag, err := getOriginRequestPolicyData(ctx, client, id)
+	policy, etag, err := getOriginRequestPolicyDataSource(ctx, client, id)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (r *OriginRequestPolicyData) Read(
 		client.Options().Region, accountID, id, etag, policy), nil
 }
 
-func (r *OriginRequestPolicyData) resolveID(
+func (r *OriginRequestPolicyDataSource) resolveID(
 	ctx context.Context,
 	client *cloudfront.Client,
 ) (string, error) {
@@ -132,7 +132,7 @@ func (r *OriginRequestPolicyData) resolveID(
 	return r.findIDByName(ctx, client, *r.Name)
 }
 
-func (r *OriginRequestPolicyData) checkSelector() error {
+func (r *OriginRequestPolicyDataSource) checkSelector() error {
 	switch {
 	case r.Id != nil && r.Name != nil:
 		return errors.New("exactly one of id or name must be supplied")
@@ -143,7 +143,7 @@ func (r *OriginRequestPolicyData) checkSelector() error {
 	}
 }
 
-func (r *OriginRequestPolicyData) findIDByName(
+func (r *OriginRequestPolicyDataSource) findIDByName(
 	ctx context.Context,
 	client *cloudfront.Client,
 	name string,
@@ -185,7 +185,7 @@ func (r *OriginRequestPolicyData) findIDByName(
 	return "", fmt.Errorf("no CloudFront Origin Request Policy named %q found", name)
 }
 
-func getOriginRequestPolicyData(
+func getOriginRequestPolicyDataSource(
 	ctx context.Context,
 	client *cloudfront.Client,
 	id string,
@@ -243,13 +243,13 @@ func originRequestPolicyDataOutput(
 	resolvedID string,
 	etag string,
 	policy *cloudfronttypes.OriginRequestPolicy,
-) *OriginRequestPolicyDataOutput {
+) *OriginRequestPolicyDataSourceOutput {
 	config := policy.OriginRequestPolicyConfig
 	id := aws.ToString(policy.Id)
 	if id == "" {
 		id = resolvedID
 	}
-	return &OriginRequestPolicyDataOutput{
+	return &OriginRequestPolicyDataSourceOutput{
 		Id:                 id,
 		Arn:                originRequestPolicyDataARN(region, accountID, id),
 		Comment:            aws.ToString(config.Comment),
@@ -268,11 +268,11 @@ func originRequestPolicyDataARN(region, accountID, id string) string {
 
 func flattenOriginRequestPolicyCookiesConfig(
 	in *cloudfronttypes.OriginRequestPolicyCookiesConfig,
-) *OriginRequestPolicyDataCookiesConfig {
+) *OriginRequestPolicyDataSourceCookiesConfig {
 	if in == nil {
 		return nil
 	}
-	return &OriginRequestPolicyDataCookiesConfig{
+	return &OriginRequestPolicyDataSourceCookiesConfig{
 		CookieBehavior: string(in.CookieBehavior),
 		Cookies:        flattenOriginRequestPolicyCookieNames(in.Cookies),
 	}
@@ -280,7 +280,7 @@ func flattenOriginRequestPolicyCookiesConfig(
 
 func flattenOriginRequestPolicyCookieNames(
 	in *cloudfronttypes.CookieNames,
-) *OriginRequestPolicyDataCookieNames {
+) *OriginRequestPolicyDataSourceCookieNames {
 	if in == nil {
 		return nil
 	}
@@ -288,16 +288,16 @@ func flattenOriginRequestPolicyCookieNames(
 	if len(items) == 0 {
 		return nil
 	}
-	return &OriginRequestPolicyDataCookieNames{Items: items}
+	return &OriginRequestPolicyDataSourceCookieNames{Items: items}
 }
 
 func flattenOriginRequestPolicyHeadersConfig(
 	in *cloudfronttypes.OriginRequestPolicyHeadersConfig,
-) *OriginRequestPolicyDataHeadersConfig {
+) *OriginRequestPolicyDataSourceHeadersConfig {
 	if in == nil {
 		return nil
 	}
-	return &OriginRequestPolicyDataHeadersConfig{
+	return &OriginRequestPolicyDataSourceHeadersConfig{
 		HeaderBehavior: string(in.HeaderBehavior),
 		Headers:        flattenOriginRequestPolicyHeaders(in.Headers),
 	}
@@ -305,7 +305,7 @@ func flattenOriginRequestPolicyHeadersConfig(
 
 func flattenOriginRequestPolicyHeaders(
 	in *cloudfronttypes.Headers,
-) *OriginRequestPolicyDataHeaders {
+) *OriginRequestPolicyDataSourceHeaders {
 	if in == nil {
 		return nil
 	}
@@ -313,16 +313,16 @@ func flattenOriginRequestPolicyHeaders(
 	if len(items) == 0 {
 		return nil
 	}
-	return &OriginRequestPolicyDataHeaders{Items: items}
+	return &OriginRequestPolicyDataSourceHeaders{Items: items}
 }
 
 func flattenOriginRequestPolicyQueryStringsConfig(
 	in *cloudfronttypes.OriginRequestPolicyQueryStringsConfig,
-) *OriginRequestPolicyDataQueryStringsConfig {
+) *OriginRequestPolicyDataSourceQueryStringsConfig {
 	if in == nil {
 		return nil
 	}
-	return &OriginRequestPolicyDataQueryStringsConfig{
+	return &OriginRequestPolicyDataSourceQueryStringsConfig{
 		QueryStringBehavior: string(in.QueryStringBehavior),
 		QueryStrings:        flattenOriginRequestPolicyQueryStringNames(in.QueryStrings),
 	}
@@ -330,7 +330,7 @@ func flattenOriginRequestPolicyQueryStringsConfig(
 
 func flattenOriginRequestPolicyQueryStringNames(
 	in *cloudfronttypes.QueryStringNames,
-) *OriginRequestPolicyDataQueryStringNames {
+) *OriginRequestPolicyDataSourceQueryStringNames {
 	if in == nil {
 		return nil
 	}
@@ -338,7 +338,7 @@ func flattenOriginRequestPolicyQueryStringNames(
 	if len(items) == 0 {
 		return nil
 	}
-	return &OriginRequestPolicyDataQueryStringNames{Items: items}
+	return &OriginRequestPolicyDataSourceQueryStringNames{Items: items}
 }
 
 func stableOriginRequestPolicyItems(items []string) []string {

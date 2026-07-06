@@ -14,7 +14,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 )
 
-// Integration manages an API Gateway v2 integration: the connection between
+// IntegrationResource manages an API Gateway v2 integration: the connection between
 // an API's routes and the backend that handles their requests, identified by
 // the pair of API id and integration id. The API id, the integration type,
 // and the AWS service action subtype are fixed at create time, so a change to
@@ -54,7 +54,7 @@ import (
 // (1-1024), integration-subtype (1-128), parameter values (1-512), templates
 // (up to 32768), the response-parameters status code range, and the
 // credentials-arn ARN form.
-type Integration struct {
+type IntegrationResource struct {
 	ApiId                       string                          `ub:"api-id"`
 	IntegrationType             string                          `ub:"integration-type"`
 	ConnectionId                *string                         `ub:"connection-id"`
@@ -75,7 +75,7 @@ type Integration struct {
 	TlsConfig                   *IntegrationTlsConfig           `ub:"tls-config"`
 }
 
-// IntegrationOutput holds the integration's identity and its one computed
+// IntegrationResourceOutput holds the integration's identity and its one computed
 // attribute. The integration id and the API id together are the identity
 // handle: Read, Update, and Delete key off them from the prior outputs, so a
 // replace across APIs still deletes the old integration. The API id echoes an
@@ -83,13 +83,13 @@ type Integration struct {
 // so the echo cannot drift. The integration response selection expression is
 // filled by the service for WebSocket non-proxy integrations and is empty
 // otherwise.
-type IntegrationOutput struct {
+type IntegrationResourceOutput struct {
 	ApiId                                  string `ub:"api-id"`
 	IntegrationId                          string `ub:"integration-id"`
 	IntegrationResponseSelectionExpression string `ub:"integration-response-selection-expression"`
 }
 
-func (r *Integration) SchemaVersion() int { return 1 }
+func (r *IntegrationResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs fixed when an integration is created. The
 // API id names the parent API and CloudFormation marks it create-only; the
@@ -97,7 +97,7 @@ func (r *Integration) SchemaVersion() int { return 1 }
 // integration this is, and a different kind is a different integration, so
 // adding, removing, or changing either one replaces it. Every other input is
 // reconciled in place by UpdateIntegration.
-func (r *Integration) ReplaceFields() []string {
+func (r *IntegrationResource) ReplaceFields() []string {
 	return []string{
 		"api-id",
 		"integration-type",
@@ -112,7 +112,7 @@ func (r *Integration) ReplaceFields() []string {
 // form of an AWS_PROXY integration; and the rule that a VPC link connection
 // names its link. Rules that branch on the referenced API's protocol are left
 // to the API.
-func (r Integration) Constraints() []constraint.Constraint {
+func (r IntegrationResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.OneOf(r.IntegrationType,
 			"AWS", "AWS_PROXY", "HTTP", "HTTP_PROXY", "MOCK")).
@@ -149,7 +149,10 @@ func (r Integration) Constraints() []constraint.Constraint {
 // the rest. The service reads back a just-created integration immediately,
 // and the create response is the full integration representation, so the
 // outputs come straight from it with no settling wait.
-func (r *Integration) Create(ctx context.Context, cfg *awsCfg) (*IntegrationOutput, error) {
+func (r *IntegrationResource) Create(
+	ctx context.Context,
+	cfg *awsCfg,
+) (*IntegrationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -190,7 +193,7 @@ func (r *Integration) Create(ctx context.Context, cfg *awsCfg) (*IntegrationOutp
 	if err != nil {
 		return nil, fmt.Errorf("create integration: %w", err)
 	}
-	return &IntegrationOutput{
+	return &IntegrationResourceOutput{
 		ApiId:         r.ApiId,
 		IntegrationId: aws.ToString(resp.IntegrationId),
 		IntegrationResponseSelectionExpression: aws.ToString(
@@ -202,9 +205,11 @@ func (r *Integration) Create(ctx context.Context, cfg *awsCfg) (*IntegrationOutp
 // The service's typed not-found maps to runtime.ErrNotFound whether the
 // integration is gone or the whole API is, since either way this integration
 // no longer exists; a response with no body is an error rather than drift.
-func (r *Integration) Read(
-	ctx context.Context, cfg *awsCfg, prior *IntegrationOutput,
-) (*IntegrationOutput, error) {
+func (r *IntegrationResource) Read(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *IntegrationResourceOutput,
+) (*IntegrationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -222,7 +227,7 @@ func (r *Integration) Read(
 	if resp == nil {
 		return nil, fmt.Errorf("get integration %s: empty response", prior.IntegrationId)
 	}
-	return &IntegrationOutput{
+	return &IntegrationResourceOutput{
 		ApiId:         prior.ApiId,
 		IntegrationId: aws.ToString(resp.IntegrationId),
 		IntegrationResponseSelectionExpression: aws.ToString(
@@ -237,9 +242,11 @@ func (r *Integration) Read(
 // whenever one is configured, because AWS service integrations reject an
 // update that omits it. The update response is the full integration
 // representation, so the outputs come from it directly.
-func (r *Integration) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Integration, *IntegrationOutput],
-) (*IntegrationOutput, error) {
+func (r *IntegrationResource) Update(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput],
+) (*IntegrationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -257,7 +264,7 @@ func (r *Integration) Update(
 	if err != nil {
 		return nil, fmt.Errorf("update integration: %w", err)
 	}
-	return &IntegrationOutput{
+	return &IntegrationResourceOutput{
 		ApiId:         prior.Outputs.ApiId,
 		IntegrationId: aws.ToString(resp.IntegrationId),
 		IntegrationResponseSelectionExpression: aws.ToString(
@@ -273,8 +280,8 @@ func (r *Integration) Update(
 // empty enum and the timeout has no documented clear; the map fields apply
 // their removal sentinels; and a removed tls-config block sends the
 // empty-object clear, a nil member meaning leave unchanged.
-func (r *Integration) updateIntegrationInput(
-	prior runtime.Prior[Integration, *IntegrationOutput],
+func (r *IntegrationResource) updateIntegrationInput(
+	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput],
 ) (*apigatewayv2.UpdateIntegrationInput, bool) {
 	in := &apigatewayv2.UpdateIntegrationInput{
 		ApiId:              aws.String(prior.Outputs.ApiId),
@@ -366,7 +373,11 @@ func (r *Integration) updateIntegrationInput(
 // receiver already describes the new integration, so the identity pair comes
 // from prior. An integration already gone, or whose whole API is gone, counts
 // as deleted.
-func (r *Integration) Delete(ctx context.Context, cfg *awsCfg, prior *IntegrationOutput) error {
+func (r *IntegrationResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *IntegrationResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

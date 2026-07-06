@@ -16,7 +16,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
-// Subnet is an EC2 subnet: an IP range carved out of a VPC in one Availability
+// SubnetResource is an EC2 subnet: an IP range carved out of a VPC in one Availability
 // Zone. The VPC, the zone, the IPv4 and IPv6 ranges, and an Outpost ARN are
 // fixed when the subnet is created, so a change to any of them replaces the
 // subnet; the launch-time options are reconciled in place. CreateSubnet accepts
@@ -26,7 +26,7 @@ import (
 // is AWS's to decide, the default for a new subnet or whatever an earlier
 // apply set. EC2 has no reset call, so restoring a default after an apply set
 // the option means setting the default explicitly.
-type Subnet struct {
+type SubnetResource struct {
 	VpcId              string             `ub:"vpc-id"`
 	AvailabilityZone   *string            `ub:"availability-zone"`
 	AvailabilityZoneId *string            `ub:"availability-zone-id"`
@@ -53,12 +53,12 @@ type Subnet struct {
 	MapCustomerOwnedIpOnLaunch     *bool   `ub:"map-customer-owned-ip-on-launch"`
 }
 
-// SubnetOutput holds the values EC2 computes for a subnet. The ARN and id are
+// SubnetResourceOutput holds the values EC2 computes for a subnet. The ARN and id are
 // the subnet's handles. The owner id is the account that owns it. The zone, the
 // IPv4 CIDR block, and the IPv6 block and its association id are filled by EC2
 // when any of them is left for it to assign, so the settled values come from a
 // describe, not the request.
-type SubnetOutput struct {
+type SubnetResourceOutput struct {
 	Arn                        string `ub:"arn"`
 	Id                         string `ub:"id"`
 	OwnerId                    string `ub:"owner-id"`
@@ -69,7 +69,7 @@ type SubnetOutput struct {
 	Ipv6CidrBlockAssociationId string `ub:"ipv6-cidr-block-association-id"`
 }
 
-func (r *Subnet) SchemaVersion() int { return 1 }
+func (r *SubnetResource) SchemaVersion() int { return 1 }
 
 // ReplaceFields lists the inputs EC2 fixes when a subnet is created. The VPC,
 // the zone, the IPv4 and IPv6 address sources, the IPv6-only flag, and an
@@ -79,7 +79,7 @@ func (r *Subnet) SchemaVersion() int { return 1 }
 // subnet; unobin replaces unconditionally, so the block is listed here as a
 // safe over-approximation. This diverges from Terraform, which updates the
 // block in place when auto-assign was off rather than always replacing.
-func (r *Subnet) ReplaceFields() []string {
+func (r *SubnetResource) ReplaceFields() []string {
 	return []string{
 		"vpc-id",
 		"cidr-block",
@@ -103,7 +103,7 @@ func (r *Subnet) ReplaceFields() []string {
 // an Outpost. The IPv6 range likewise comes from a block or a netmask length
 // paired with an IPAM pool. The launch-time hostname type is one of two values,
 // and a local-network-interface device index is a positive position.
-func (r Subnet) Constraints() []constraint.Constraint {
+func (r SubnetResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.AvailabilityZone, r.AvailabilityZoneId),
 		constraint.ForbiddenWith(r.Ipv4NetmaskLength, r.CidrBlock, r.CustomerOwnedIpv4Pool),
@@ -122,7 +122,7 @@ func (r Subnet) Constraints() []constraint.Constraint {
 	}
 }
 
-func (r *Subnet) Create(ctx context.Context, cfg *awsCfg) (*SubnetOutput, error) {
+func (r *SubnetResource) Create(ctx context.Context, cfg *awsCfg) (*SubnetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -172,11 +172,10 @@ func (r *Subnet) Create(ctx context.Context, cfg *awsCfg) (*SubnetOutput, error)
 	return r.read(ctx, client, id, true)
 }
 
-func (r *Subnet) Read(
+func (r *SubnetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubnetOutput) (*SubnetOutput,
-	error,
+	prior *SubnetResourceOutput) (*SubnetResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -189,9 +188,9 @@ func (r *Subnet) Read(
 // is true the subnet was just made, so a not-found means it has not propagated
 // yet and read waits for it to appear; otherwise a not-found is drift and maps
 // to runtime.ErrNotFound at once.
-func (r *Subnet) read(
+func (r *SubnetResource) read(
 	ctx context.Context, client *ec2.Client, id string, created bool,
-) (*SubnetOutput, error) {
+) (*SubnetResourceOutput, error) {
 	var subnet *ec2types.Subnet
 	err := wait.Until(ctx, fmt.Sprintf("subnet %s", id),
 		func(ctx context.Context) (bool, error) {
@@ -211,7 +210,7 @@ func (r *Subnet) read(
 	if err != nil {
 		return nil, err
 	}
-	out := &SubnetOutput{
+	out := &SubnetResourceOutput{
 		Arn:                aws.ToString(subnet.SubnetArn),
 		Id:                 aws.ToString(subnet.SubnetId),
 		OwnerId:            aws.ToString(subnet.OwnerId),
@@ -232,9 +231,9 @@ func (r *Subnet) read(
 	return out, nil
 }
 
-func (r *Subnet) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[Subnet, *SubnetOutput],
-) (*SubnetOutput, error) {
+func (r *SubnetResource) Update(
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SubnetResource, *SubnetResourceOutput],
+) (*SubnetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -253,7 +252,11 @@ func (r *Subnet) Update(
 	return r.read(ctx, client, id, false)
 }
 
-func (r *Subnet) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetOutput) error {
+func (r *SubnetResource) Delete(
+	ctx context.Context,
+	cfg *awsCfg,
+	prior *SubnetResourceOutput,
+) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -284,7 +287,7 @@ func (r *Subnet) Delete(ctx context.Context, cfg *awsCfg, prior *SubnetOutput) e
 // ones EC2 did not already match are written. The order around the IPv6 CIDR is
 // deliberate: an auto-assign or dns64 disable runs before the block changes, and
 // an enable runs after, so neither is set against a block that is not there yet.
-func (r *Subnet) reconcileOnCreate(
+func (r *SubnetResource) reconcileOnCreate(
 	ctx context.Context, client *ec2.Client, id string, subnet *ec2types.Subnet,
 ) error {
 	if r.AssignIpv6AddressOnCreation != nil &&
@@ -372,8 +375,11 @@ func (r *Subnet) reconcileOnCreate(
 // produces no call at all: not an explicit false for the bools, and not the
 // attribute-less request the device-index and hostname-type fields would
 // otherwise serialize.
-func (r *Subnet) reconcileOnUpdate(
-	ctx context.Context, client *ec2.Client, id string, prior runtime.Prior[Subnet, *SubnetOutput],
+func (r *SubnetResource) reconcileOnUpdate(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+	prior runtime.Prior[SubnetResource, *SubnetResourceOutput],
 ) error {
 	if runtime.Changed(prior.Inputs.AssignIpv6AddressOnCreation, r.AssignIpv6AddressOnCreation) &&
 		r.AssignIpv6AddressOnCreation != nil && !*r.AssignIpv6AddressOnCreation {
@@ -443,7 +449,7 @@ func (r *Subnet) reconcileOnUpdate(
 // waitAvailable polls the subnet until it reports state available and returns
 // the settled description. A subnet that enters a failed state stops the wait
 // with an error, since it will not become available.
-func (r *Subnet) waitAvailable(
+func (r *SubnetResource) waitAvailable(
 	ctx context.Context, client *ec2.Client, id string,
 ) (*ec2types.Subnet, error) {
 	var subnet *ec2types.Subnet
@@ -476,14 +482,14 @@ func (r *Subnet) waitAvailable(
 // computedIpv6Block reports whether EC2 assigns the IPv6 block itself, which it
 // does for an IPv6-only subnet or one drawing from an IPv6 IPAM pool when no
 // explicit block is given. In that case Create must not associate a block.
-func (r *Subnet) computedIpv6Block() bool {
+func (r *SubnetResource) computedIpv6Block() bool {
 	return aws.ToBool(r.Ipv6Native) || r.Ipv6IpamPoolId != nil
 }
 
 // associateIpv6Block associates the desired IPv6 block with the subnet and
 // waits for the association to settle. It first removes any block EC2 already
 // associated, since a subnet holds at most one.
-func (r *Subnet) associateIpv6Block(
+func (r *SubnetResource) associateIpv6Block(
 	ctx context.Context, client *ec2.Client, id string, subnet *ec2types.Subnet,
 ) error {
 	for _, assoc := range subnet.Ipv6CidrBlockAssociationSet {
@@ -506,9 +512,8 @@ func (r *Subnet) associateIpv6Block(
 // reassociateIpv6Block moves the subnet's IPv6 block to the desired value on
 // update, removing the old association and adding the new one. A change that
 // clears the block only removes the old one.
-func (r *Subnet) reassociateIpv6Block(
-	ctx context.Context, client *ec2.Client, id string, prior *SubnetOutput,
-) error {
+func (r *SubnetResource) reassociateIpv6Block(
+	ctx context.Context, client *ec2.Client, id string, prior *SubnetResourceOutput) error {
 	if prior.Ipv6CidrBlockAssociationId != "" {
 		if err := r.disassociateIpv6Block(ctx, client, id,
 			prior.Ipv6CidrBlockAssociationId); err != nil {
@@ -531,7 +536,7 @@ func (r *Subnet) reassociateIpv6Block(
 
 // disassociateIpv6Block removes the IPv6 block association named by assocID and
 // waits for it to clear from the subnet.
-func (r *Subnet) disassociateIpv6Block(
+func (r *SubnetResource) disassociateIpv6Block(
 	ctx context.Context, client *ec2.Client, id, assocID string,
 ) error {
 	_, err := client.DisassociateSubnetCidrBlock(ctx, &ec2.DisassociateSubnetCidrBlockInput{
@@ -556,7 +561,7 @@ func (r *Subnet) disassociateIpv6Block(
 // waitIpv6Associated polls the subnet until the IPv6 block named by assocID
 // reads as associated. A block that reaches a failed state stops the wait with
 // the status message EC2 reports.
-func (r *Subnet) waitIpv6Associated(
+func (r *SubnetResource) waitIpv6Associated(
 	ctx context.Context, client *ec2.Client, id, assocID string,
 ) error {
 	what := fmt.Sprintf("subnet %s ipv6 block %s association", id, assocID)
@@ -591,7 +596,7 @@ func (r *Subnet) waitIpv6Associated(
 // explicitly at create. EC2 can report the subnet available while the block is
 // still associating, so without this wait the post-create read can return an
 // empty IPv6 block and association id.
-func (r *Subnet) waitIpv6Block(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) waitIpv6Block(ctx context.Context, client *ec2.Client, id string) error {
 	what := fmt.Sprintf("subnet %s ipv6 block", id)
 	return wait.Until(ctx, what, func(ctx context.Context) (bool, error) {
 		subnet, err := describeSubnet(ctx, client, id)
@@ -616,7 +621,11 @@ func (r *Subnet) waitIpv6Block(ctx context.Context, client *ec2.Client, id strin
 
 // modifyAssignIpv6 sets whether new network interfaces in the subnet receive an
 // IPv6 address, then waits until a describe reflects the new value.
-func (r *Subnet) modifyAssignIpv6(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyAssignIpv6(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	want := aws.ToBool(r.AssignIpv6AddressOnCreation)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId:                    aws.String(id),
@@ -633,7 +642,11 @@ func (r *Subnet) modifyAssignIpv6(ctx context.Context, client *ec2.Client, id st
 
 // modifyEnableDns64 sets whether the subnet's resolver returns synthetic IPv6
 // addresses for IPv4-only destinations, then waits until it is observed.
-func (r *Subnet) modifyEnableDns64(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyEnableDns64(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	want := aws.ToBool(r.EnableDns64)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId:    aws.String(id),
@@ -648,7 +661,7 @@ func (r *Subnet) modifyEnableDns64(ctx context.Context, client *ec2.Client, id s
 
 // modifyEnableLni sets the device index at which local network interfaces are
 // enabled, then waits until it is observed.
-func (r *Subnet) modifyEnableLni(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyEnableLni(ctx context.Context, client *ec2.Client, id string) error {
 	want := ptr.Int32(r.EnableLniAtDeviceIndex)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId:               aws.String(id),
@@ -665,7 +678,7 @@ func (r *Subnet) modifyEnableLni(ctx context.Context, client *ec2.Client, id str
 
 // modifyDnsAAAA sets whether instance-hostname DNS queries return AAAA records,
 // then waits until it is observed.
-func (r *Subnet) modifyDnsAAAA(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyDnsAAAA(ctx context.Context, client *ec2.Client, id string) error {
 	want := aws.ToBool(r.EnableResourceNameDnsAAAARecordOnLaunch)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId: aws.String(id),
@@ -682,7 +695,7 @@ func (r *Subnet) modifyDnsAAAA(ctx context.Context, client *ec2.Client, id strin
 
 // modifyDnsA sets whether instance-hostname DNS queries return A records, then
 // waits until it is observed.
-func (r *Subnet) modifyDnsA(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyDnsA(ctx context.Context, client *ec2.Client, id string) error {
 	want := aws.ToBool(r.EnableResourceNameDnsARecordOnLaunch)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId: aws.String(id),
@@ -699,7 +712,11 @@ func (r *Subnet) modifyDnsA(ctx context.Context, client *ec2.Client, id string) 
 
 // modifyMapPublicIp sets whether instances launched in the subnet receive a
 // public IPv4 address, then waits until it is observed.
-func (r *Subnet) modifyMapPublicIp(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyMapPublicIp(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	want := aws.ToBool(r.MapPublicIpOnLaunch)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId:            aws.String(id),
@@ -714,7 +731,11 @@ func (r *Subnet) modifyMapPublicIp(ctx context.Context, client *ec2.Client, id s
 
 // modifyHostnameType sets the launch-time hostname type, then waits until it is
 // observed.
-func (r *Subnet) modifyHostnameType(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyHostnameType(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	want := aws.ToString(r.PrivateDnsHostnameTypeOnLaunch)
 	_, err := client.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
 		SubnetId:                       aws.String(id),
@@ -730,7 +751,11 @@ func (r *Subnet) modifyHostnameType(ctx context.Context, client *ec2.Client, id 
 // modifyOutpostPair sets the customer-owned IPv4 pool and its map-on-launch
 // toggle together, the one attribute pair EC2 accepts in a single call, then
 // waits until both are observed.
-func (r *Subnet) modifyOutpostPair(ctx context.Context, client *ec2.Client, id string) error {
+func (r *SubnetResource) modifyOutpostPair(
+	ctx context.Context,
+	client *ec2.Client,
+	id string,
+) error {
 	wantPool := aws.ToString(r.CustomerOwnedIpv4Pool)
 	wantMap := aws.ToBool(r.MapCustomerOwnedIpOnLaunch)
 	in := &ec2.ModifySubnetAttributeInput{
@@ -755,7 +780,7 @@ func (r *Subnet) modifyOutpostPair(ctx context.Context, client *ec2.Client, id s
 
 // waitAttribute polls the subnet until matched reports the modified attribute
 // has taken effect, so a later read does not race the modify's propagation.
-func (r *Subnet) waitAttribute(
+func (r *SubnetResource) waitAttribute(
 	ctx context.Context, client *ec2.Client, id, attr string,
 	matched func(*ec2types.Subnet) bool,
 ) error {

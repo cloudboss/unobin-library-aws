@@ -63,7 +63,7 @@ func TestLibraryRegistersSSMLocalKinds(t *testing.T) {
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
-		"parameter": reflect.TypeFor[*svc.ParameterOutput](),
+		"parameter": reflect.TypeFor[*svc.ParameterResourceOutput](),
 	}
 	for name, outputType := range resourceOutputs {
 		t.Run("resource/"+name, func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestLibraryRegistersSSMLocalKinds(t *testing.T) {
 		})
 	}
 	dataSourceOutputs := map[string]reflect.Type{
-		"parameter": reflect.TypeFor[*svc.ParameterDataOutput](),
+		"parameter": reflect.TypeFor[*svc.ParameterDataSourceOutput](),
 	}
 	for name, outputType := range dataSourceOutputs {
 		t.Run("data-source/"+name, func(t *testing.T) {
