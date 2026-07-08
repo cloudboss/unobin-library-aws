@@ -5,18 +5,18 @@ factory: {
     '''
 
   imports: {
-    std:                'github.com/cloudboss/unobin-library-std'
-    aws-cloudwatchlogs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs'
-    aws-iam:            'github.com/cloudboss/unobin-library-aws//service/iam'
-    aws-lambdamicrovms: 'github.com/cloudboss/unobin-library-aws//service/lambdamicrovms'
-    aws-s3:             'github.com/cloudboss/unobin-library-aws//service/s3'
+    std:            'github.com/cloudboss/unobin-library-std'
+    cloudwatchlogs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs'
+    iam:            'github.com/cloudboss/unobin-library-aws//service/iam'
+    lambdamicrovms: 'github.com/cloudboss/unobin-library-aws//service/lambdamicrovms'
+    s3:             'github.com/cloudboss/unobin-library-aws//service/s3'
   }
 
   library-configs: {
-    aws-cloudwatchlogs: input.aws-config
-    aws-iam:            input.aws-config
-    aws-lambdamicrovms: input.aws-config
-    aws-s3:             input.aws-config
+    cloudwatchlogs: input.aws-config
+    iam:            input.aws-config
+    lambdamicrovms: input.aws-config
+    s3:             input.aws-config
   }
 
   inputs: {
@@ -94,7 +94,7 @@ factory: {
   }
 
   data-sources: {
-    managed-microvm-images: aws-lambdamicrovms.managed-microvm-images {}
+    managed-microvm-images: lambdamicrovms.managed-microvm-images {}
   }
 
   resources: {
@@ -103,7 +103,7 @@ factory: {
       source-dir:       input.app-source-dir
       create-directory: true
     }
-    artifact-bucket: aws-s3.bucket {
+    artifact-bucket: s3.bucket {
       bucket:           local.artifact-bucket
       empty-on-destroy: true
       public-access-block: {
@@ -114,7 +114,7 @@ factory: {
       }
       tags: local.tags
     }
-    artifact-object: aws-s3.object {
+    artifact-object: s3.object {
       bucket:           resource.artifact-bucket.bucket
       key:              local.artifact-key
       body-path:        input.artifact-zip-path
@@ -123,12 +123,12 @@ factory: {
       purge-on-destroy: true
       tags:             local.tags
     }
-    microvm-log-group: aws-cloudwatchlogs.log-group {
+    microvm-log-group: cloudwatchlogs.log-group {
       name:              local.log-group-name
       retention-in-days: 7
       tags:              local.tags
     }
-    build-role: aws-iam.role {
+    build-role: iam.role {
       role-name: $'{{ local.name-prefix }}-microvm-build'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
@@ -136,7 +136,7 @@ factory: {
         '''
       tags: local.tags
     }
-    build-policy: aws-iam.policy {
+    build-policy: iam.policy {
       policy-name: $'{{ local.name-prefix }}-microvm-build'
       policy-document: $'''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:
@@ -146,12 +146,12 @@ factory: {
         '''
       tags: local.tags
     }
-    build-policy-attachment: aws-iam.role-policy-attachment {
+    build-policy-attachment: iam.role-policy-attachment {
       @depends-on: [resource.build-role]
       role-name:   $'{{ local.name-prefix }}-microvm-build'
       policy-arn:  resource.build-policy.arn
     }
-    execution-role: aws-iam.role {
+    execution-role: iam.role {
       role-name: $'{{ local.name-prefix }}-microvm-exec'
       assume-role-policy-document: '''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
@@ -159,7 +159,7 @@ factory: {
         '''
       tags: local.tags
     }
-    execution-policy: aws-iam.policy {
+    execution-policy: iam.policy {
       policy-name: $'{{ local.name-prefix }}-microvm-exec'
       policy-document: $'''\-
         {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"logs:
@@ -168,12 +168,12 @@ factory: {
         '''
       tags: local.tags
     }
-    execution-policy-attachment: aws-iam.role-policy-attachment {
+    execution-policy-attachment: iam.role-policy-attachment {
       @depends-on: [resource.execution-role]
       role-name:   $'{{ local.name-prefix }}-microvm-exec'
       policy-arn:  resource.execution-policy.arn
     }
-    microvm-image: aws-lambdamicrovms.microvm-image {
+    microvm-image: lambdamicrovms.microvm-image {
       @depends-on:          [resource.build-policy-attachment, resource.microvm-log-group]
       name:                 $'{{ local.name-prefix }}-microvm-http'
       base-image-arn:       data-source.managed-microvm-images.items[0].image-arn
@@ -188,7 +188,7 @@ factory: {
   }
 
   actions: {
-    run-microvm: aws-lambdamicrovms.run-microvm {
+    run-microvm: lambdamicrovms.run-microvm {
       @depends-on:        [resource.execution-policy-attachment]
       @trigger:           'always'
       execution-role-arn: resource.execution-role.arn
@@ -200,7 +200,7 @@ factory: {
       logging:                     { cloud-watch: { log-group: local.log-group-name } }
       maximum-duration-in-seconds: input.microvm-maximum-duration-in-seconds
     }
-    microvm-auth-token: aws-lambdamicrovms.create-microvm-auth-token {
+    microvm-auth-token: lambdamicrovms.create-microvm-auth-token {
       microvm-identifier:    action.run-microvm.microvm-id
       expiration-in-minutes: 10
       allowed-ports:         [{ port: input.microvm-port }]
@@ -256,7 +256,7 @@ factory: {
       }
       timeout: input.http-timeout
     }
-    terminate-microvm: aws-lambdamicrovms.terminate-microvm {
+    terminate-microvm: lambdamicrovms.terminate-microvm {
       @trigger:           $'{{ action.microvm-request.duration }}:{{ action.run-microvm.microvm-id }}'
       microvm-identifier: action.run-microvm.microvm-id
     }
