@@ -1,9 +1,9 @@
 factory: {
   description: '''>-
-    Manages a CloudWatch metric alarm watching an EC2 CPU metric. The threshold comes from
-    an input so the update pass changes it in place through PutMetricAlarm, exercising
-    create, the in-place update, and destroy. The alarm needs no real instance: with no data
-    it simply reports insufficient data, which is enough to create, read, and delete it.
+    Manages a CloudWatch metric alarm and dashboard. The update changes the alarm threshold,
+    dashboard body, and dashboard tags in place. The alarm needs no real instance: with no
+    data it simply reports insufficient data, which is enough to create, read, update, and
+    delete it alongside the dashboard.
     '''
 
   imports: { aws-cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
@@ -19,6 +19,28 @@ factory: {
       type:        number
       default:     80
       description: 'Alarm threshold in percent; the update pass changes it'
+    }
+    dashboard-body: {
+      type: opaque
+      default: {
+        widgets: [{
+          type:       'text'
+          x:          0
+          y:          0
+          width:      6
+          height:     3
+          properties: { markdown: 'initial' }
+        }]
+      }
+    }
+    dashboard-tags: {
+      type: map(string)
+      default: {
+        empty-create: ''
+        empty-update: 'set'
+        env:          'initial'
+        remove:       'yes'
+      }
     }
   }
 
@@ -37,7 +59,15 @@ factory: {
       dimensions:          { InstanceId: 'i-0123456789abcdef0' }
       tags:                { unobin: 'cloudwatch-it' }
     }
+    cloudwatch-dashboard-it: aws-cloudwatch.dashboard {
+      name: 'unobin-it-dashboard'
+      body: @core.to-json(input.dashboard-body)
+      tags: input.dashboard-tags
+    }
   }
 
-  outputs: { alarm-arn: { value: resource.cloudwatch-metric-alarm-it.arn } }
+  outputs: {
+    alarm-arn:     { value: resource.cloudwatch-metric-alarm-it.arn }
+    dashboard-arn: { value: resource.cloudwatch-dashboard-it.arn }
+  }
 }

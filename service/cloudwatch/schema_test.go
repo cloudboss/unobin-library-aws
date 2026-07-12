@@ -18,6 +18,7 @@ import (
 func TestLibraryRegistersCloudwatch(t *testing.T) {
 	lib := Library()
 	resources := map[string]reflect.Type{
+		"dashboard":    reflect.TypeFor[*svc.DashboardResourceOutput](),
 		"metric-alarm": reflect.TypeFor[*svc.MetricAlarmResourceOutput](),
 	}
 	for key, outputType := range resources {
@@ -35,6 +36,25 @@ func TestCloudwatchSchemas(t *testing.T) {
 	schema := readLibrarySchema(t)
 
 	resources := map[string]*runtime.TypeSchema{
+		"dashboard": {
+			Inputs: map[string]typecheck.Type{
+				"body": typecheck.TString(),
+				"name": typecheck.TString(),
+				"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+			},
+			Outputs: map[string]typecheck.Type{
+				"arn":  typecheck.TString(),
+				"name": typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(input.tags) <= 50)",
+					Message: "tags holds at most 50 entries",
+				},
+			},
+		},
 		"metric-alarm": {
 			Inputs: map[string]typecheck.Type{
 				"actions-enabled":                      typecheck.TOptional(typecheck.TBoolean()),

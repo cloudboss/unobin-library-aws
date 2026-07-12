@@ -1,6 +1,23 @@
 stack: {
   factory: {
-    inputs: { threshold: 90 }
+    inputs: {
+      threshold: 90
+      dashboard-body: {
+        widgets: [{
+          type:       'text'
+          x:          0
+          y:          0
+          width:      12
+          height:     3
+          properties: { markdown: 'updated' }
+        }]
+      }
+      dashboard-tags: {
+        empty-create: ''
+        empty-update: ''
+        env:          'updated'
+      }
+    }
   }
 
   state: local {
