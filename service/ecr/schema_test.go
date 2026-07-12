@@ -1,6 +1,7 @@
 package ecr
 
 import (
+	"maps"
 	"reflect"
 	"testing"
 
@@ -24,6 +25,15 @@ func TestLibraryRegistersEcr(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, lib.Resources, key)
 			assert.Equal(t, outputType, lib.Resources[key].OutputType())
+		})
+	}
+	dataSources := map[string]reflect.Type{
+		"image": reflect.TypeFor[*svc.ImageDataSourceOutput](),
+	}
+	for key, outputType := range dataSources {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, lib.DataSources, key)
+			assert.Equal(t, outputType, lib.DataSources[key].OutputType())
 		})
 	}
 }
@@ -104,6 +114,148 @@ func TestEcrSchemas(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
 			assertTypeSchemaEqual(t, want, schema.Resources[key])
+		})
+	}
+
+	dataSources := map[string]*runtime.TypeSchema{
+		"image": {
+			Inputs: map[string]typecheck.Type{
+				"image-digest":    typecheck.TOptional(typecheck.TString()),
+				"image-tag":       typecheck.TOptional(typecheck.TString()),
+				"most-recent":     typecheck.TOptional(typecheck.TBoolean()),
+				"registry-id":     typecheck.TOptional(typecheck.TString()),
+				"repository-name": typecheck.TString(),
+			},
+			Outputs: map[string]typecheck.Type{
+				"image-digest":        typecheck.TString(),
+				"image-pushed-at":     typecheck.TInteger(),
+				"image-size-in-bytes": typecheck.TInteger(),
+				"image-tags":          typecheck.TList(typecheck.TString()),
+				"image-uri":           typecheck.TString(),
+				"registry-id":         typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "at-least-one-of",
+					Fields: []string{
+						"input.image-digest",
+						"input.image-tag",
+						"input.most-recent",
+					},
+				},
+				{
+					Kind: "forbidden-with",
+					Fields: []string{
+						"input.most-recent",
+						"input.image-digest",
+						"input.image-tag",
+					},
+				},
+				{
+					Kind:    "predicate",
+					When:    "(input.registry-id != null)",
+					Require: "(@core.length(input.registry-id) >= 1)",
+					Message: "registry-id must not be empty",
+				},
+			},
+		},
+	}
+	for key, want := range dataSources {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.DataSources, key)
+			assertTypeSchemaEqual(t, want, schema.DataSources[key])
+		})
+	}
+}
+
+func TestImageDataSourceDerivedConstraints(t *testing.T) {
+	schema := readLibrarySchema(t)
+	imageSchema := schema.DataSources["image"]
+	require.NotNil(t, imageSchema)
+	entries, parseErrors := lang.ParseSpecs(imageSchema.Constraints)
+	require.Zero(t, parseErrors.Len(), parseErrors.Err())
+
+	cases := []struct {
+		name       string
+		values     map[string]any
+		wantErrors int
+	}{
+		{
+			name:       "rejects no selector",
+			values:     map[string]any{"repository-name": "repo"},
+			wantErrors: 1,
+		},
+		{
+			name:   "accepts digest",
+			values: map[string]any{"repository-name": "repo", "image-digest": "sha256:digest"},
+		},
+		{
+			name:   "accepts tag",
+			values: map[string]any{"repository-name": "repo", "image-tag": "release"},
+		},
+		{
+			name: "accepts digest and tag",
+			values: map[string]any{
+				"repository-name": "repo",
+				"image-digest":    "sha256:digest",
+				"image-tag":       "release",
+			},
+		},
+		{
+			name: "accepts false most recent alone",
+			values: map[string]any{
+				"repository-name": "repo",
+				"most-recent":     false,
+			},
+		},
+		{
+			name: "rejects false most recent with digest",
+			values: map[string]any{
+				"repository-name": "repo",
+				"most-recent":     false,
+				"image-digest":    "sha256:digest",
+			},
+			wantErrors: 1,
+		},
+		{
+			name: "rejects most recent with tag",
+			values: map[string]any{
+				"repository-name": "repo",
+				"most-recent":     true,
+				"image-tag":       "release",
+			},
+			wantErrors: 1,
+		},
+		{
+			name: "rejects empty registry id",
+			values: map[string]any{
+				"repository-name": "repo",
+				"image-tag":       "release",
+				"registry-id":     "",
+			},
+			wantErrors: 1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			values := map[string]any{
+				"image-digest": nil,
+				"image-tag":    nil,
+				"most-recent":  nil,
+				"registry-id":  nil,
+			}
+			maps.Copy(values, tc.values)
+			eval := func(expr lang.Expr, _ []lang.EachBinding) (any, error) {
+				return runtime.Eval(expr, &runtime.EvalContext{Inputs: values})
+			}
+			errs := lang.CheckConstraintEntries(
+				entries,
+				values,
+				eval,
+				lang.DisplayNodeRelative,
+			)
+			assert.Equal(t, tc.wantErrors, errs.Len(), errs.Err())
 		})
 	}
 }

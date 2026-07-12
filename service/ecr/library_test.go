@@ -57,7 +57,9 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	require.Equal(t, []string{
 		"repository",
 	}, sortedKeys(lib.Resources))
-	require.Empty(t, sortedKeys(lib.DataSources))
+	require.Equal(t, []string{
+		"image",
+	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
@@ -66,6 +68,15 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	for name, outputType := range resourceOutputs {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, outputType, lib.Resources[name].OutputType())
+		})
+	}
+
+	dataSourceOutputs := map[string]reflect.Type{
+		"image": reflect.TypeFor[*svc.ImageDataSourceOutput](),
+	}
+	for name, outputType := range dataSourceOutputs {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, outputType, lib.DataSources[name].OutputType())
 		})
 	}
 }
@@ -94,6 +105,8 @@ func TestReadECRServiceSchema(t *testing.T) {
 	require.Equal(t, []string{
 		"repository",
 	}, sortedKeys(schema.Resources))
-	require.Empty(t, sortedKeys(schema.DataSources))
+	require.Equal(t, []string{
+		"image",
+	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

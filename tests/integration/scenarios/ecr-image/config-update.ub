@@ -1,0 +1,18 @@
+stack: {
+  factory: {
+    inputs: {
+      scan-on-push:         true
+      repository-tag-value: 'updated'
+      image-lookups: {
+        tagged: { image-tag: 'first' }
+        newest: { most-recent: true }
+      }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

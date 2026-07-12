@@ -1,0 +1,84 @@
+factory: {
+  description: '''>-
+    Manages an ECR repository and reads two images seeded after its first apply: one by tag and
+    one by newest push time. The update pass enables the lookups and changes repository scanning
+    and tags. Force delete removes the seeded images with the repository during destroy.
+    '''
+
+  imports: {
+    aws-ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr'
+  }
+
+  library-configs: {
+    aws-ecr: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    scan-on-push: {
+      type:        boolean
+      default:     false
+      description: 'Whether new images are scanned when pushed'
+    }
+    repository-tag-value: {
+      type:        string
+      default:     'initial'
+      description: 'Marker tag updated on the second pass'
+    }
+    image-lookups: {
+      type: map(
+        object(
+          {
+            image-digest: optional(string)
+            image-tag:    optional(string)
+            most-recent:  optional(boolean)
+          },
+        ),
+      )
+      default:     {}
+      description: 'Image selectors enabled after the repository has fixture images'
+    }
+  }
+
+  resources: {
+    repository-it: aws-ecr.repository {
+      name:                 'unobin-it-ecr-image'
+      scan-on-push:         input.scan-on-push
+      image-tag-mutability: 'MUTABLE'
+      force-delete:         true
+      tags:                 { unobin: input.repository-tag-value }
+    }
+  }
+
+  data-sources: {
+    images: aws-ecr.image {
+      @for-each:       input.image-lookups
+      repository-name: 'unobin-it-ecr-image'
+      image-digest:    @each.value.image-digest
+      image-tag:       @each.value.image-tag
+      most-recent:     @each.value.most-recent
+    }
+  }
+
+  outputs: {
+    repository-name: { value: resource.repository-it.name }
+    tagged-input: {
+      value: if @core.length(input.image-lookups) == 0
+        then ''
+        else data-source.images['tagged'].image-tag
+    }
+    tagged-repository: {
+      value: if @core.length(input.image-lookups) == 0
+        then ''
+        else data-source.images['tagged'].repository-name
+    }
+    newest-input: {
+      value: if @core.length(input.image-lookups) == 0
+        then false
+        else data-source.images['newest'].most-recent
+    }
+  }
+}

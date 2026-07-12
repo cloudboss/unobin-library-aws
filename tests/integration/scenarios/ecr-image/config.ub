@@ -1,0 +1,15 @@
+stack: {
+  factory: {
+    inputs: {
+      scan-on-push:         false
+      repository-tag-value: 'initial'
+      image-lookups:        {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}
