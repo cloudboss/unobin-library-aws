@@ -6,6 +6,7 @@ factory: {
 
   imports: {
     std:            'github.com/cloudboss/unobin-library-std'
+    meta:           'github.com/cloudboss/unobin-library-aws//meta'
     cloudwatchlogs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs'
     iam:            'github.com/cloudboss/unobin-library-aws//service/iam'
     lambdamicrovms: 'github.com/cloudboss/unobin-library-aws//service/lambdamicrovms'
@@ -13,6 +14,7 @@ factory: {
   }
 
   library-configs: {
+    meta:           input.aws-config
     cloudwatchlogs: input.aws-config
     iam:            input.aws-config
     lambdamicrovms: input.aws-config
@@ -95,6 +97,7 @@ factory: {
 
   data-sources: {
     managed-microvm-images: lambdamicrovms.managed-microvm-images {}
+    region: meta.region {}
   }
 
   resources: {
@@ -195,7 +198,14 @@ factory: {
       image-identifier:   resource.microvm-image.image-arn
       image-version:      resource.microvm-image.latest-active-image-version
       ingress-network-connectors: [
-        'arn:aws:lambda:us-east-1:aws:network-connector:aws-network-connector:ALL_INGRESS',
+        $'''\-
+          arn:{{ data-source.region.partition }}:lambda:{{ data-source.region.region }}:
+          aws:network-connector:aws-network-connector:HTTP_INGRESS
+          ''',
+        $'''\-
+          arn:{{ data-source.region.partition }}:lambda:{{ data-source.region.region }}:
+          aws:network-connector:aws-network-connector:SHELL_INGRESS
+          ''',
       ]
       logging:                     { cloud-watch: { log-group: local.log-group-name } }
       maximum-duration-in-seconds: input.microvm-maximum-duration-in-seconds
