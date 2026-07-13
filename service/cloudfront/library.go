@@ -18,12 +18,21 @@ type dataSourcePtr[T, Out any] interface {
 	runtime.TypedDataSource[Out, *awscfg.Configuration]
 }
 
+type actionPtr[T, Out any] interface {
+	*T
+	runtime.TypedAction[Out, *awscfg.Configuration]
+}
+
 func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistration {
 	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT]()
 }
 
 func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRegistration {
 	return runtime.MakeDataSource[T, Out, *awscfg.Configuration, PT]()
+}
+
+func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
+	return runtime.MakeAction[T, Out, *awscfg.Configuration, PT]()
 }
 
 func Library() *runtime.Library {
@@ -44,6 +53,10 @@ func Library() *runtime.Library {
 			"cache-policy": makeDataSource[svc.CachePolicyDataSource, *svc.CachePolicyDataSourceOutput](),
 			"origin-request-policy": makeDataSource[
 				svc.OriginRequestPolicyDataSource, *svc.OriginRequestPolicyDataSourceOutput](),
+		},
+		Actions: map[string]runtime.ActionRegistration{
+			"create-invalidation": makeAction[
+				svc.CreateInvalidationAction, *svc.CreateInvalidationActionOutput](),
 		},
 	}
 }

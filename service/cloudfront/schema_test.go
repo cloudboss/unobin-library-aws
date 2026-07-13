@@ -41,6 +41,16 @@ func TestLibraryRegistersCloudfront(t *testing.T) {
 			assert.Equal(t, outputType, lib.DataSources[key].OutputType())
 		})
 	}
+
+	actions := map[string]reflect.Type{
+		"create-invalidation": reflect.TypeFor[*svc.CreateInvalidationActionOutput](),
+	}
+	for key, outputType := range actions {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, lib.Actions, key)
+			assert.Equal(t, outputType, lib.Actions[key].OutputType())
+		})
+	}
 }
 
 // TestCloudfrontSchemas asserts the whole derived TypeSchema for each CloudFront
@@ -545,6 +555,48 @@ func TestCloudfrontSchemas(t *testing.T) {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.DataSources, key)
 			assertTypeSchemaEqual(t, want, schema.DataSources[key])
+		})
+	}
+
+	actions := map[string]*runtime.TypeSchema{
+		"create-invalidation": {
+			Inputs: map[string]typecheck.Type{
+				"caller-reference": typecheck.TOptional(typecheck.TString()),
+				"distribution-id":  typecheck.TString(),
+				"paths":            typecheck.TList(typecheck.TString()),
+			},
+			Outputs: map[string]typecheck.Type{
+				"id":     typecheck.TString(),
+				"status": typecheck.TString(),
+			},
+			Constraints: []lang.ConstraintSpec{
+				{
+					Kind: "predicate",
+					When: "true",
+					Require: "(@core.length(input.paths) >= 1) && " +
+						"(@core.length(input.paths) <= 3000)",
+					Message: "paths must contain between 1 and 3000 values",
+				},
+				{
+					Kind:    "predicate",
+					When:    "true",
+					Require: "(@core.length(@each.value) >= 1)",
+					Message: "paths values must not be empty",
+					ForEach: "input.paths",
+				},
+				{
+					Kind:    "predicate",
+					When:    "(input.caller-reference != null)",
+					Require: "(@core.length(input.caller-reference) <= 128)",
+					Message: "caller-reference must contain at most 128 characters",
+				},
+			},
+		},
+	}
+	for key, want := range actions {
+		t.Run(key, func(t *testing.T) {
+			require.Contains(t, schema.Actions, key)
+			assertTypeSchemaEqual(t, want, schema.Actions[key])
 		})
 	}
 }

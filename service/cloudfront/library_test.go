@@ -64,7 +64,9 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 		"cache-policy",
 		"origin-request-policy",
 	}, sortedKeys(lib.DataSources))
-	require.Empty(t, sortedKeys(lib.Actions))
+	require.Equal(t, []string{
+		"create-invalidation",
+	}, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
 		"origin-access-control":   reflect.TypeFor[*svc.OriginAccessControlResourceOutput](),
@@ -85,6 +87,15 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	for name, outputType := range dataSourceOutputs {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, outputType, lib.DataSources[name].OutputType())
+		})
+	}
+
+	actionOutputs := map[string]reflect.Type{
+		"create-invalidation": reflect.TypeFor[*svc.CreateInvalidationActionOutput](),
+	}
+	for name, outputType := range actionOutputs {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, outputType, lib.Actions[name].OutputType())
 		})
 	}
 }
@@ -120,5 +131,7 @@ func TestReadCloudFrontServiceSchema(t *testing.T) {
 		"cache-policy",
 		"origin-request-policy",
 	}, sortedKeys(schema.DataSources))
-	require.Empty(t, sortedKeys(schema.Actions))
+	require.Equal(t, []string{
+		"create-invalidation",
+	}, sortedKeys(schema.Actions))
 }

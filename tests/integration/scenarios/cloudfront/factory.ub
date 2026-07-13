@@ -102,6 +102,13 @@ factory: {
     }
   }
 
+  actions: {
+    cloudfront-create-invalidation-it: aws-cloudfront.create-invalidation {
+      distribution-id: resource.cloudfront-distribution-it.id
+      paths:           ['/', '/index.html', '/*']
+    }
+  }
+
   outputs: {
     distribution-id:          { value: resource.cloudfront-distribution-it.id }
     distribution-domain-name: { value: resource.cloudfront-distribution-it.domain-name }
@@ -111,5 +118,7 @@ factory: {
     origin-request-policy-arn: {
       value: data-source.cloudfront-origin-request-policy-cors-s3.arn
     }
+    invalidation-id:     { value: action.cloudfront-create-invalidation-it.id }
+    invalidation-status: { value: action.cloudfront-create-invalidation-it.status }
   }
 }
