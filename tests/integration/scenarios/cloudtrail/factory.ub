@@ -1,0 +1,155 @@
+factory: {
+  description: '''>-
+    Manages a CloudTrail trail and its S3 destination. The update changes direct
+    trail settings, stops logging, switches from standard to advanced selectors,
+    changes Insights categories, clears event aggregation, and reconciles tags.
+    '''
+
+  imports: {
+    aws-cloudtrail: 'github.com/cloudboss/unobin-library-aws//service/cloudtrail'
+    aws-s3:         'github.com/cloudboss/unobin-library-aws//service/s3'
+    aws-sts:        'github.com/cloudboss/unobin-library-aws//service/sts'
+  }
+
+  library-configs: {
+    aws-cloudtrail: input.aws-config
+    aws-s3:         input.aws-config
+    aws-sts:        input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    enable-logging:             { type: boolean, default: true }
+    enable-log-file-validation: { type: boolean, default: false }
+    s3-key-prefix:              { type: string, default: 'initial' }
+    event-selectors: {
+      type: optional(
+        list(
+          object(
+            {
+              data-resources: optional(
+                list(
+                  object(
+                    {
+                      type:   string
+                      values: optional(list(string))
+                    },
+                  ),
+                ),
+              )
+              exclude-management-event-sources: optional(list(string))
+              include-management-events:        optional(boolean)
+              read-write-type:                  optional(string)
+            },
+          ),
+        ),
+      )
+    }
+    advanced-event-selectors: {
+      type: optional(
+        list(
+          object(
+            {
+              name: optional(string)
+              field-selectors: list(
+                object(
+                  {
+                    field:           string
+                    equals:          optional(list(string))
+                    not-equals:      optional(list(string))
+                    starts-with:     optional(list(string))
+                    not-starts-with: optional(list(string))
+                    ends-with:       optional(list(string))
+                    not-ends-with:   optional(list(string))
+                  },
+                ),
+              )
+            },
+          ),
+        ),
+      )
+    }
+    insight-selectors: {
+      type: list(
+        object(
+          {
+            insight-type:     string
+            event-categories: optional(list(string))
+          },
+        ),
+      )
+    }
+    aggregation-configurations: {
+      type: list(
+        object(
+          {
+            event-category: string
+            templates:      list(string)
+          },
+        ),
+      )
+    }
+    trail-tags: { type: map(string) }
+  }
+
+  data-sources: {
+    caller: aws-sts.caller-identity {}
+  }
+
+  resources: {
+    logs: aws-s3.bucket {
+      bucket:           'unobin-it-cloudtrail-logs'
+      empty-on-destroy: true
+      tags:             { unobin: 'cloudtrail-it' }
+    }
+    logs-policy: aws-s3.bucket-policy {
+      bucket: resource.logs.bucket
+      policy: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Sid:       'CloudTrailAcl'
+              Effect:    'Allow'
+              Principal: { Service: 'cloudtrail.amazonaws.com' }
+              Action:    's3:GetBucketAcl'
+              Resource:  resource.logs.arn
+            },
+            {
+              Sid:       'CloudTrailWrite'
+              Effect:    'Allow'
+              Principal: { Service: 'cloudtrail.amazonaws.com' }
+              Action:    's3:PutObject'
+              Resource:  $'{{ resource.logs.arn }}/{{ input.s3-key-prefix }}/AWSLogs/{{ data-source.caller.account }}/*'
+
+              Condition: {
+                StringEquals: { 's3:x-amz-acl': 'bucket-owner-full-control' }
+              }
+            },
+          ]
+        },
+      )
+    }
+    trail: aws-cloudtrail.trail {
+      @depends-on:                   [resource.logs-policy]
+      name:                          'unobin-it-cloudtrail'
+      s3-bucket-name:                resource.logs.bucket
+      s3-key-prefix:                 input.s3-key-prefix
+      enable-logging:                input.enable-logging
+      enable-log-file-validation:    input.enable-log-file-validation
+      include-global-service-events: true
+      event-selectors:               input.event-selectors
+      advanced-event-selectors:      input.advanced-event-selectors
+      insight-selectors:             input.insight-selectors
+      aggregation-configurations:    input.aggregation-configurations
+      tags:                          input.trail-tags
+    }
+  }
+
+  outputs: {
+    trail-arn: { value: resource.trail.arn }
+  }
+}

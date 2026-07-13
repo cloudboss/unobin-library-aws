@@ -1,0 +1,37 @@
+stack: {
+  factory: {
+    inputs: {
+      event-selectors: [
+        {
+          include-management-events: true
+          read-write-type:           'All'
+          data-resources: [
+            {
+              type:   'AWS::S3::Object'
+              values: ['arn:aws:s3:::unobin-it-cloudtrail-logs/']
+            },
+          ]
+        },
+      ]
+      insight-selectors: [
+        {
+          insight-type:     'ApiErrorRateInsight'
+          event-categories: ['Management', 'Data']
+        },
+      ]
+      aggregation-configurations: [
+        {
+          event-category: 'Data'
+          templates:      ['API_ACTIVITY', 'RESOURCE_ACCESS']
+        },
+      ]
+      trail-tags: { state: 'initial', remove: 'yes' }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

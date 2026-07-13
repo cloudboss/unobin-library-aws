@@ -1,0 +1,32 @@
+stack: {
+  factory: {
+    inputs: {
+      enable-logging:             false
+      enable-log-file-validation: true
+      s3-key-prefix:              'updated'
+      advanced-event-selectors: [
+        {
+          name: 'data-events'
+          field-selectors: [
+            { field: 'eventCategory', equals: ['Data'] },
+            { field: 'resources.type', equals: ['AWS::S3::Object'] },
+          ]
+        },
+      ]
+      insight-selectors: [
+        {
+          insight-type:     'ApiErrorRateInsight'
+          event-categories: ['Data']
+        },
+      ]
+      aggregation-configurations: []
+      trail-tags:                 { state: 'updated', added: 'yes' }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}
