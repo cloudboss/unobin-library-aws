@@ -1,0 +1,18 @@
+stack: {
+  factory: {
+    inputs: {
+      throughput-mode: 'elastic'
+      file-system-tags: {
+        Name:  'unobin-it-efs'
+        state: 'updated'
+        added: 'yes'
+      }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

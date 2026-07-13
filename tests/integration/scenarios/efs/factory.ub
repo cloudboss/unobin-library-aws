@@ -1,0 +1,38 @@
+factory: {
+  description: '''>-
+    Manages an EFS file system. The update changes throughput mode and reconciles tags
+    in place, while the verifier reads EFS directly after create, update, and destroy.
+    '''
+
+  imports: { aws-efs: 'github.com/cloudboss/unobin-library-aws//service/efs' }
+
+  library-configs: { aws-efs: input.aws-config }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    throughput-mode: { type: string, default: 'bursting' }
+    file-system-tags: {
+      type: map(string)
+      default: {
+        Name:   'unobin-it-efs'
+        state:  'initial'
+        remove: 'yes'
+      }
+    }
+  }
+
+  resources: {
+    file-system: aws-efs.file-system {
+      throughput-mode: input.throughput-mode
+      tags:            input.file-system-tags
+    }
+  }
+
+  outputs: {
+    file-system-id: { value: resource.file-system.file-system-id }
+    dns-name:       { value: resource.file-system.dns-name }
+  }
+}
