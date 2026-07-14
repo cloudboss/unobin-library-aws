@@ -1,0 +1,97 @@
+factory: {
+  description: '''>-
+    Manages two ElastiCache subnet groups in one VPC. The update changes the primary group's
+    description, subnet set, and tags while clearing every user tag from the second group.
+    '''
+
+  imports: {
+    aws-ec2:         'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-elasticache: 'github.com/cloudboss/unobin-library-aws//service/elasticache'
+  }
+
+  library-configs: {
+    aws-ec2:         input.aws-config
+    aws-elasticache: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: {
+      type:    string
+      default: 'initial elasticache subnet group'
+    }
+    subnet-set: {
+      type:    integer
+      default: 0
+    }
+    primary-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+    clear-tags: {
+      type:    map(string)
+      default: { clear: 'yes' }
+    }
+  }
+
+  data-sources: {
+    availability-zones: aws-ec2.availability-zones {
+      state: 'available'
+    }
+  }
+
+  locals: {
+    primary-subnet-ids: if input.subnet-set == 0
+      then [resource.subnet-a.id, resource.subnet-b.id]
+      else [resource.subnet-a.id, resource.subnet-c.id]
+  }
+
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.72.0.0/16'
+    }
+    subnet-a: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.72.1.0/24'
+      availability-zone: data-source.availability-zones.names[0]
+      tags:              { unobin: 'elasticache-it-a' }
+    }
+    subnet-b: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.72.2.0/24'
+      availability-zone: data-source.availability-zones.names[1]
+      tags:              { unobin: 'elasticache-it-b' }
+    }
+    subnet-c: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.72.3.0/24'
+      availability-zone: data-source.availability-zones.names[1]
+      tags:              { unobin: 'elasticache-it-c' }
+    }
+    primary: aws-elasticache.subnet-group {
+      name:        'UNOBIN-IT-CACHE-PRIMARY'
+      description: input.description
+      subnet-ids:  local.primary-subnet-ids
+      tags:        input.primary-tags
+    }
+    clear: aws-elasticache.subnet-group {
+      name:        'UNOBIN-IT-CACHE-CLEAR'
+      description: 'tag clearing coverage'
+      subnet-ids:  [resource.subnet-a.id, resource.subnet-b.id]
+      tags:        input.clear-tags
+    }
+  }
+
+  outputs: {
+    primary-name: { value: resource.primary.name }
+    primary-arn:  { value: resource.primary.arn }
+    clear-name:   { value: resource.clear.name }
+  }
+}

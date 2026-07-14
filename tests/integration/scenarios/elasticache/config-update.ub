@@ -1,0 +1,20 @@
+stack: {
+  factory: {
+    inputs: {
+      description: 'updated elasticache subnet group'
+      subnet-set:  1
+      primary-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+      clear-tags: {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}
