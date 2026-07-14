@@ -12,15 +12,18 @@ import (
 	svc "github.com/cloudboss/unobin-library-aws/internal/service/efs"
 )
 
-func TestLibraryRegistersFileSystem(t *testing.T) {
+func TestLibraryRegistersResources(t *testing.T) {
 	lib := Library()
 	require.Equal(t, "aws-efs", lib.Name)
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
-	require.Len(t, lib.Resources, 1)
+	require.Len(t, lib.Resources, 2)
 	require.Contains(t, lib.Resources, "file-system")
 	assert.Equal(t, reflect.TypeFor[*svc.FileSystemResourceOutput](),
 		lib.Resources["file-system"].OutputType())
+	require.Contains(t, lib.Resources, "mount-target")
+	assert.Equal(t, reflect.TypeFor[*svc.MountTargetResourceOutput](),
+		lib.Resources["mount-target"].OutputType())
 	assert.Empty(t, lib.DataSources)
 	assert.Empty(t, lib.Actions)
 }

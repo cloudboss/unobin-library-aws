@@ -1,7 +1,8 @@
 stack: {
   factory: {
     inputs: {
-      throughput-mode: 'elastic'
+      throughput-mode:            'elastic'
+      use-updated-security-group: true
       file-system-tags: {
         Name:  'unobin-it-efs'
         state: 'updated'

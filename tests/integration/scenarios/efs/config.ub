@@ -1,5 +1,7 @@
 stack: {
-  factory: {}
+  factory: {
+    inputs: { use-updated-security-group: false }
+  }
 
   state: local {
     path: '.unobin/state'

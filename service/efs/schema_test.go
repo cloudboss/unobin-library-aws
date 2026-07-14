@@ -133,6 +133,39 @@ func TestFileSystemSchema(t *testing.T) {
 	}
 }
 
+func TestMountTargetSchema(t *testing.T) {
+	schema := readEFSSchema(t)
+	require.Contains(t, schema.Resources, "mount-target")
+	mountTarget := schema.Resources["mount-target"]
+
+	assert.Equal(t, map[string]typecheck.Type{
+		"file-system-id":  typecheck.TString(),
+		"subnet-id":       typecheck.TString(),
+		"ip-address":      typecheck.TOptional(typecheck.TString()),
+		"ip-address-type": typecheck.TOptional(typecheck.TString()),
+		"ipv6-address":    typecheck.TOptional(typecheck.TString()),
+		"security-groups": typecheck.TOptional(typecheck.TList(typecheck.TString())),
+	}, mountTarget.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"mount-target-id":        typecheck.TString(),
+		"availability-zone-id":   typecheck.TString(),
+		"availability-zone-name": typecheck.TString(),
+		"ip-address":             typecheck.TString(),
+		"ip-address-type":        typecheck.TString(),
+		"ipv6-address":           typecheck.TString(),
+		"mount-target-dns-name":  typecheck.TString(),
+		"network-interface-id":   typecheck.TString(),
+		"owner-id":               typecheck.TString(),
+		"security-groups":        typecheck.TList(typecheck.TString()),
+	}, mountTarget.Outputs)
+	assert.Empty(t, mountTarget.SensitiveInputs)
+	assert.Empty(t, mountTarget.SensitiveOutputs)
+	assert.Empty(t, mountTarget.Defaults)
+	require.Len(t, mountTarget.Constraints, 1)
+	assert.Equal(t, "ip-address-type must be IPV4_ONLY, IPV6_ONLY, or DUAL_STACK",
+		mountTarget.Constraints[0].Message)
+}
+
 func readEFSSchema(t *testing.T) *runtime.LibrarySchema {
 	t.Helper()
 	moduleRoot := goModuleRoot(t, "")

@@ -27,6 +27,10 @@ func Library() *runtime.Library {
 				svc.FileSystemResource,
 				*svc.FileSystemResourceOutput,
 			](),
+			"mount-target": makeResource[
+				svc.MountTargetResource,
+				*svc.MountTargetResourceOutput,
+			](),
 		},
 	}
 }

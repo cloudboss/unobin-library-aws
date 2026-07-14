@@ -1,19 +1,27 @@
 factory: {
   description: '''>-
-    Manages an EFS file system. The update changes throughput mode and reconciles tags
-    in place, while the verifier reads EFS directly after create, update, and destroy.
+    Manages an EFS file system and one mount target in a dedicated VPC and subnet. The
+    update changes throughput mode and switches the mount target's security group,
+    while the verifier reads EFS and EC2 directly after create, update, and destroy.
     '''
 
-  imports: { aws-efs: 'github.com/cloudboss/unobin-library-aws//service/efs' }
+  imports: {
+    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-efs: 'github.com/cloudboss/unobin-library-aws//service/efs'
+  }
 
-  library-configs: { aws-efs: input.aws-config }
+  library-configs: {
+    aws-ec2: input.aws-config
+    aws-efs: input.aws-config
+  }
 
   inputs: {
     aws-config: {
       type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
-    throughput-mode: { type: string, default: 'bursting' }
+    throughput-mode:            { type: string, default: 'bursting' }
+    use-updated-security-group: { type: boolean, default: false }
     file-system-tags: {
       type: map(string)
       default: {
@@ -25,14 +33,44 @@ factory: {
   }
 
   resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.64.0.0/16'
+    }
+    subnet: aws-ec2.subnet {
+      vpc-id:     resource.vpc.vpc-id
+      cidr-block: '10.64.1.0/24'
+      tags:       { unobin: 'efs-it' }
+    }
+    mount-target-security-group-initial: aws-ec2.security-group {
+      name:        'unobin-it-efs-mount-initial'
+      description: 'initial EFS mount target integration test security group'
+      vpc-id:      resource.vpc.vpc-id
+      tags:        { unobin: 'efs-it' }
+    }
+    mount-target-security-group-updated: aws-ec2.security-group {
+      name:        'unobin-it-efs-mount-updated'
+      description: 'updated EFS mount target integration test security group'
+      vpc-id:      resource.vpc.vpc-id
+      tags:        { unobin: 'efs-it' }
+    }
     file-system: aws-efs.file-system {
       throughput-mode: input.throughput-mode
       tags:            input.file-system-tags
     }
+    mount-target: aws-efs.mount-target {
+      file-system-id: resource.file-system.file-system-id
+      subnet-id:      resource.subnet.id
+      security-groups: if input.use-updated-security-group
+        then [resource.mount-target-security-group-updated.id]
+        else [resource.mount-target-security-group-initial.id]
+    }
   }
 
   outputs: {
-    file-system-id: { value: resource.file-system.file-system-id }
-    dns-name:       { value: resource.file-system.dns-name }
+    file-system-id:  { value: resource.file-system.file-system-id }
+    dns-name:        { value: resource.file-system.dns-name }
+    mount-target-id: { value: resource.mount-target.mount-target-id }
+    mount-dns-name:  { value: resource.mount-target.mount-target-dns-name }
+    security-groups: { value: resource.mount-target.security-groups }
   }
 }
