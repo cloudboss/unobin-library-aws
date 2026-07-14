@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages an EFS file system and one mount target in a dedicated VPC and subnet. The
-    update changes throughput mode and switches the mount target's security group,
-    while the verifier reads EFS and EC2 directly after create, update, and destroy.
+    Manages an EFS file system, access point, and mount target in a dedicated VPC and subnet.
+    The update changes throughput mode, access point tags, and the mount target's security
+    group, while the verifier reads EFS and EC2 directly after create, update, and destroy.
     '''
 
   imports: {
@@ -26,6 +26,14 @@ factory: {
       type: map(string)
       default: {
         Name:   'unobin-it-efs'
+        state:  'initial'
+        remove: 'yes'
+      }
+    }
+    access-point-tags: {
+      type: map(string)
+      default: {
+        Name:   'unobin-it-efs-access-point'
         state:  'initial'
         remove: 'yes'
       }
@@ -57,6 +65,10 @@ factory: {
       throughput-mode: input.throughput-mode
       tags:            input.file-system-tags
     }
+    access-point: aws-efs.access-point {
+      file-system-id: resource.file-system.file-system-id
+      tags:           input.access-point-tags
+    }
     mount-target: aws-efs.mount-target {
       file-system-id: resource.file-system.file-system-id
       subnet-id:      resource.subnet.id
@@ -67,10 +79,12 @@ factory: {
   }
 
   outputs: {
-    file-system-id:  { value: resource.file-system.file-system-id }
-    dns-name:        { value: resource.file-system.dns-name }
-    mount-target-id: { value: resource.mount-target.mount-target-id }
-    mount-dns-name:  { value: resource.mount-target.mount-target-dns-name }
-    security-groups: { value: resource.mount-target.security-groups }
+    file-system-id:   { value: resource.file-system.file-system-id }
+    dns-name:         { value: resource.file-system.dns-name }
+    access-point-id:  { value: resource.access-point.access-point-id }
+    access-point-arn: { value: resource.access-point.arn }
+    mount-target-id:  { value: resource.mount-target.mount-target-id }
+    mount-dns-name:   { value: resource.mount-target.mount-target-dns-name }
+    security-groups:  { value: resource.mount-target.security-groups }
   }
 }

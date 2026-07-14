@@ -1,6 +1,13 @@
 stack: {
   factory: {
-    inputs: { use-updated-security-group: false }
+    inputs: {
+      use-updated-security-group: false
+      access-point-tags: {
+        Name:   'unobin-it-efs-access-point'
+        state:  'initial'
+        remove: 'yes'
+      }
+    }
   }
 
   state: local {

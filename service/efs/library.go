@@ -23,6 +23,10 @@ func Library() *runtime.Library {
 		Description:   "AWS EFS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"access-point": makeResource[
+				svc.AccessPointResource,
+				*svc.AccessPointResourceOutput,
+			](),
 			"file-system": makeResource[
 				svc.FileSystemResource,
 				*svc.FileSystemResourceOutput,

@@ -8,6 +8,11 @@ stack: {
         state: 'updated'
         added: 'yes'
       }
+      access-point-tags: {
+        Name:  'unobin-it-efs-access-point'
+        state: 'updated'
+        added: 'yes'
+      }
     }
   }
 

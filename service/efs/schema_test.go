@@ -10,9 +10,64 @@ import (
 	"github.com/cloudboss/unobin/pkg/typecheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	svc "github.com/cloudboss/unobin-library-aws/internal/service/efs"
 )
 
 const unobinModulePath = "github.com/cloudboss/unobin"
+
+func TestAccessPointSchema(t *testing.T) {
+	schema := readEFSSchema(t)
+	require.Contains(t, schema.Resources, "access-point")
+	accessPoint := schema.Resources["access-point"]
+
+	assert.Equal(t, map[string]typecheck.Type{
+		"file-system-id": typecheck.TString(),
+		"client-token":   typecheck.TOptional(typecheck.TString()),
+		"posix-user": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+			{Name: "uid", Type: typecheck.TInteger()},
+			{Name: "gid", Type: typecheck.TInteger()},
+			{
+				Name: "secondary-gids", Type: typecheck.TList(typecheck.TInteger()),
+				Optional: true,
+			},
+		})),
+		"root-directory": typecheck.TOptional(typecheck.TObject([]typecheck.ObjectField{
+			{Name: "path", Type: typecheck.TString(), Optional: true},
+			{
+				Name: "creation-info",
+				Type: typecheck.TObject([]typecheck.ObjectField{
+					{Name: "owner-uid", Type: typecheck.TInteger()},
+					{Name: "owner-gid", Type: typecheck.TInteger()},
+					{Name: "permissions", Type: typecheck.TString()},
+				}),
+				Optional: true,
+			},
+		})),
+		"tags": typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+	}, accessPoint.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"access-point-id": typecheck.TString(),
+		"arn":             typecheck.TString(),
+		"owner-id":        typecheck.TString(),
+	}, accessPoint.Outputs)
+	assert.Empty(t, accessPoint.SensitiveInputs)
+	assert.Empty(t, accessPoint.SensitiveOutputs)
+	assert.Empty(t, accessPoint.Defaults)
+
+	messages := make(map[string]bool, len(accessPoint.Constraints))
+	for _, item := range accessPoint.Constraints {
+		messages[item.Message] = true
+	}
+	for _, message := range []string{
+		"client-token must contain 1 to 64 ASCII characters",
+	} {
+		assert.True(t, messages[message], "missing constraint %q", message)
+	}
+	assert.Equal(t, []string{
+		"file-system-id", "client-token", "posix-user", "root-directory",
+	}, (&svc.AccessPointResource{}).ReplaceFields())
+}
 
 func TestFileSystemSchema(t *testing.T) {
 	schema := readEFSSchema(t)

@@ -17,7 +17,10 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.Equal(t, "aws-efs", lib.Name)
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
-	require.Len(t, lib.Resources, 2)
+	require.Len(t, lib.Resources, 3)
+	require.Contains(t, lib.Resources, "access-point")
+	assert.Equal(t, reflect.TypeFor[*svc.AccessPointResourceOutput](),
+		lib.Resources["access-point"].OutputType())
 	require.Contains(t, lib.Resources, "file-system")
 	assert.Equal(t, reflect.TypeFor[*svc.FileSystemResourceOutput](),
 		lib.Resources["file-system"].OutputType())

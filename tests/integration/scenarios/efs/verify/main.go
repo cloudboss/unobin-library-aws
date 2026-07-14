@@ -20,6 +20,7 @@ import (
 
 const (
 	fileSystemName           = "unobin-it-efs"
+	accessPointName          = "unobin-it-efs-access-point"
 	initialSecurityGroupName = "unobin-it-efs-mount-initial"
 	updatedSecurityGroupName = "unobin-it-efs-mount-updated"
 	fileSystemVPCCIDR        = "10.64.0.0/16"
@@ -46,12 +47,16 @@ func run() error {
 			efstypes.ThroughputModeBursting, initialSecurityGroupName,
 			map[string]string{
 				"Name": fileSystemName, "state": "initial", "remove": "yes",
+			}, map[string]string{
+				"Name": accessPointName, "state": "initial", "remove": "yes",
 			})
 	case "updated":
 		return verifyPresent(ctx, efsClient, ec2Client,
 			efstypes.ThroughputModeElastic, updatedSecurityGroupName,
 			map[string]string{
 				"Name": fileSystemName, "state": "updated", "added": "yes",
+			}, map[string]string{
+				"Name": accessPointName, "state": "updated", "added": "yes",
 			})
 	case "destroyed":
 		return verifyDestroyed(ctx, efsClient, ec2Client)
@@ -66,7 +71,8 @@ func verifyPresent(
 	ec2Client *ec2.Client,
 	wantMode efstypes.ThroughputMode,
 	wantSecurityGroupName string,
-	wantTags map[string]string,
+	wantFileSystemTags map[string]string,
+	wantAccessPointTags map[string]string,
 ) error {
 	fileSystem, tags, err := findFileSystem(ctx, efsClient)
 	if err != nil {
@@ -82,8 +88,12 @@ func verifyPresent(
 		return fmt.Errorf("throughput mode is %s, want %s",
 			fileSystem.ThroughputMode, wantMode)
 	}
-	if !maps.Equal(tags, wantTags) {
-		return fmt.Errorf("file system tags are %#v, want %#v", tags, wantTags)
+	if !maps.Equal(tags, wantFileSystemTags) {
+		return fmt.Errorf("file system tags are %#v, want %#v", tags, wantFileSystemTags)
+	}
+	if err := verifyAccessPoint(
+		ctx, efsClient, fileSystem, wantAccessPointTags); err != nil {
+		return err
 	}
 	if err := verifyMountTarget(
 		ctx, efsClient, ec2Client, fileSystem, wantSecurityGroupName); err != nil {
@@ -99,6 +109,14 @@ func verifyDestroyed(
 	efsClient *efs.Client,
 	ec2Client *ec2.Client,
 ) error {
+	accessPoint, _, err := findAccessPoint(ctx, efsClient, "")
+	if err != nil {
+		return err
+	}
+	if accessPoint != nil {
+		return fmt.Errorf("access point %s still exists",
+			aws.ToString(accessPoint.AccessPointId))
+	}
 	fileSystem, _, err := findFileSystem(ctx, efsClient)
 	if err != nil {
 		return err
@@ -123,6 +141,41 @@ func verifyDestroyed(
 		return fmt.Errorf("VPC %s still exists", aws.ToString(vpc.VpcId))
 	}
 	fmt.Printf("ok: EFS file system tagged Name=%s is gone\n", fileSystemName)
+	return nil
+}
+
+func verifyAccessPoint(
+	ctx context.Context,
+	client *efs.Client,
+	fileSystem *efstypes.FileSystemDescription,
+	wantTags map[string]string,
+) error {
+	fileSystemID := aws.ToString(fileSystem.FileSystemId)
+	accessPoint, tags, err := findAccessPoint(ctx, client, fileSystemID)
+	if err != nil {
+		return err
+	}
+	if accessPoint == nil {
+		return fmt.Errorf("access point tagged Name=%s not found", accessPointName)
+	}
+	if accessPoint.LifeCycleState != efstypes.LifeCycleStateAvailable {
+		return fmt.Errorf("access point state is %s, want available",
+			accessPoint.LifeCycleState)
+	}
+	if aws.ToString(accessPoint.FileSystemId) != fileSystemID {
+		return fmt.Errorf("access point file system is %s, want %s",
+			aws.ToString(accessPoint.FileSystemId), fileSystemID)
+	}
+	if aws.ToString(accessPoint.AccessPointId) == "" ||
+		aws.ToString(accessPoint.AccessPointArn) == "" ||
+		aws.ToString(accessPoint.OwnerId) == "" {
+		return errors.New("access point is missing an identity value")
+	}
+	if !maps.Equal(tags, wantTags) {
+		return fmt.Errorf("access point tags are %#v, want %#v", tags, wantTags)
+	}
+	fmt.Printf("ok: EFS access point %s is available\n",
+		aws.ToString(accessPoint.AccessPointId))
 	return nil
 }
 
@@ -278,24 +331,67 @@ func findFileSystem(
 	return nil, nil, nil
 }
 
+func findAccessPoint(
+	ctx context.Context,
+	client *efs.Client,
+	fileSystemID string,
+) (*efstypes.AccessPointDescription, map[string]string, error) {
+	in := &efs.DescribeAccessPointsInput{}
+	if fileSystemID != "" {
+		in.FileSystemId = aws.String(fileSystemID)
+	}
+	pager := efs.NewDescribeAccessPointsPaginator(client, in)
+	var found *efstypes.AccessPointDescription
+	var foundTags map[string]string
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("describe access points: %w", err)
+		}
+		for i := range page.AccessPoints {
+			if page.AccessPoints[i].LifeCycleState == efstypes.LifeCycleStateDeleted {
+				continue
+			}
+			tags, err := readTags(ctx, client,
+				aws.ToString(page.AccessPoints[i].AccessPointId))
+			if err != nil {
+				return nil, nil, err
+			}
+			if tags["Name"] != accessPointName {
+				continue
+			}
+			if found != nil {
+				return nil, nil, fmt.Errorf(
+					"found multiple access points tagged Name=%s", accessPointName)
+			}
+			found = &page.AccessPoints[i]
+			foundTags = tags
+		}
+	}
+	return found, foundTags, nil
+}
+
 func readTags(
 	ctx context.Context,
 	client *efs.Client,
 	fileSystemID string,
 ) (map[string]string, error) {
-	resp, err := client.ListTagsForResource(ctx, &efs.ListTagsForResourceInput{
+	tags := map[string]string{}
+	pager := efs.NewListTagsForResourcePaginator(client, &efs.ListTagsForResourceInput{
 		ResourceId: aws.String(fileSystemID),
 	})
-	if err != nil {
-		return nil, fmt.Errorf("list tags for file system %s: %w", fileSystemID, err)
-	}
-	tags := map[string]string{}
-	for _, tag := range resp.Tags {
-		key := aws.ToString(tag.Key)
-		if strings.HasPrefix(key, "aws:") {
-			continue
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list tags for EFS resource %s: %w", fileSystemID, err)
 		}
-		tags[key] = aws.ToString(tag.Value)
+		for _, tag := range page.Tags {
+			key := aws.ToString(tag.Key)
+			if strings.HasPrefix(key, "aws:") {
+				continue
+			}
+			tags[key] = aws.ToString(tag.Value)
+		}
 	}
 	return tags, nil
 }
