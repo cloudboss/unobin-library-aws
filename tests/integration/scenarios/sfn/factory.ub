@@ -1,0 +1,64 @@
+factory: {
+  description: '''>-
+    Manages a Step Functions state machine and its trusted IAM role. The definition,
+    tracing setting, and tag value come from inputs so the update pass changes them
+    in place.
+    '''
+
+  imports: {
+    aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn'
+  }
+
+  library-configs: {
+    aws-iam: input.aws-config
+    aws-sfn: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    definition: {
+      type: string
+      default: '''\-
+        {"StartAt":"Initial","States":{"Initial":{"Type":"Pass","Result":"initial","End":true}}}
+        '''
+      description: 'Amazon States Language definition'
+    }
+    tracing-enabled: {
+      type:        boolean
+      default:     true
+      description: 'Whether X-Ray tracing is enabled'
+    }
+    tag-value: {
+      type:        string
+      default:     'initial'
+      description: 'State machine integration tag value'
+    }
+  }
+
+  resources: {
+    iam-role-it: aws-iam.role {
+      role-name: 'unobin-it-sfn-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"states.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    state-machine-it: aws-sfn.state-machine {
+      name:       'unobin-it-state-machine'
+      definition: input.definition
+      role-arn:   resource.iam-role-it.arn
+      type:       'STANDARD'
+      tracing-configuration: { enabled: input.tracing-enabled }
+      tags: { unobin: input.tag-value }
+    }
+  }
+
+  outputs: {
+    state-machine-arn: { value: resource.state-machine-it.arn }
+    revision-id:      { value: resource.state-machine-it.revision-id }
+  }
+}

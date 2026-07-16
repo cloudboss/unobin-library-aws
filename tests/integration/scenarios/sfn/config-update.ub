@@ -1,0 +1,17 @@
+stack: {
+  factory: {
+    inputs: {
+      definition: '''\-
+        {"StartAt":"Updated","States":{"Updated":{"Type":"Pass","Result":"updated","End":true}}}
+        '''
+      tracing-enabled: false
+      tag-value:       'updated'
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}
