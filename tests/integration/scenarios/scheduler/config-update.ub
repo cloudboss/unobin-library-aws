@@ -1,0 +1,17 @@
+stack: {
+  factory: {
+    inputs: {
+      description:         ''
+      schedule-expression: 'rate(2 days)'
+      state:               'DISABLED'
+      payload:             '{"version":"updated"}'
+      retry-attempts:      0
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

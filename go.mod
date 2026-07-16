@@ -28,6 +28,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/rds v1.118.2
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.62.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
+	github.com/aws/aws-sdk-go-v2/service/scheduler v1.18.7
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.7
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/sns v1.39.17

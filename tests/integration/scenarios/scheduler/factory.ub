@@ -1,0 +1,96 @@
+factory: {
+  description: '''>-
+    Manages an EventBridge Scheduler schedule, its SQS target, and the IAM role
+    Scheduler assumes. The update pass changes the expression, state, target
+    input, retry attempts, and description while preserving the schedule ARN.
+    '''
+
+  imports: {
+    aws-iam:       'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler'
+    aws-sqs:       'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
+
+  library-configs: {
+    aws-iam:       input.aws-config
+    aws-scheduler: input.aws-config
+    aws-sqs:       input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: {
+      type:        string
+      default:     'initial scheduler integration schedule'
+      description: 'Schedule description'
+    }
+    schedule-expression: {
+      type:        string
+      default:     'rate(1 day)'
+      description: 'Schedule expression'
+    }
+    state: {
+      type:        string
+      default:     'ENABLED'
+      description: 'Whether the schedule is enabled'
+    }
+    payload: {
+      type:        string
+      default:     '{"version":"initial"}'
+      description: 'Message sent to the target queue'
+    }
+    retry-attempts: {
+      type:        integer
+      default:     3
+      description: 'Maximum target delivery retry attempts'
+    }
+  }
+
+  resources: {
+    target-queue-it: aws-sqs.queue {
+      name: 'unobin-it-scheduler-queue'
+      tags: { unobin: 'scheduler-it' }
+    }
+    scheduler-role-it: aws-iam.role {
+      role-name: 'unobin-it-scheduler-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"scheduler.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    scheduler-role-policy-it: aws-iam.role-policy {
+      role-name:   resource.scheduler-role-it.role-name
+      policy-name: 'unobin-it-scheduler-send'
+      policy-document: $'''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":
+        "sqs:SendMessage","Resource":"{{ resource.target-queue-it.arn }}"}]}
+        '''
+    }
+    schedule-it: aws-scheduler.schedule {
+      @depends-on:             [resource.scheduler-role-policy-it]
+      name:                    'unobin-it-schedule'
+      action-after-completion: 'NONE'
+      description:             input.description
+      flexible-time-window:    { mode: 'OFF' }
+      schedule-expression:     input.schedule-expression
+      state:                   input.state
+      target: {
+        arn:      resource.target-queue-it.arn
+        role-arn: resource.scheduler-role-it.arn
+        input:    input.payload
+        retry-policy: {
+          maximum-event-age-in-seconds: 3600
+          maximum-retry-attempts:       input.retry-attempts
+        }
+      }
+    }
+  }
+
+  outputs: {
+    schedule-arn: { value: resource.schedule-it.arn }
+    queue-arn:    { value: resource.target-queue-it.arn }
+  }
+}
