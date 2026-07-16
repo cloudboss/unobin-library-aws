@@ -23,6 +23,10 @@ func Library() *runtime.Library {
 		Description:   "AWS ElastiCache library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"replication-group": makeResource[
+				svc.ReplicationGroupResource,
+				*svc.ReplicationGroupResourceOutput,
+			](),
 			"subnet-group": makeResource[
 				svc.SubnetGroupResource,
 				*svc.SubnetGroupResourceOutput,

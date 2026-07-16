@@ -9,6 +9,13 @@ stack: {
         keep:   '1'
       }
       clear-tags: {}
+      replication-description: 'updated elasticache replication group'
+      replication-count:       2
+      replication-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
     }
   }
 

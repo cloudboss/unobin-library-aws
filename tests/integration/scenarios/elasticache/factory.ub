@@ -1,7 +1,7 @@
 factory: {
   description: '''>-
-    Manages two ElastiCache subnet groups in one VPC. The update changes the primary group's
-    description, subnet set, and tags while clearing every user tag from the second group.
+    Manages two ElastiCache subnet groups and one replication group in a VPC. The update changes
+    subnet membership, descriptions, tags, and the replication group's total cluster count.
     '''
 
   imports: {
@@ -39,6 +39,22 @@ factory: {
       type:    map(string)
       default: { clear: 'yes' }
     }
+    replication-description: {
+      type:    string
+      default: 'initial elasticache replication group'
+    }
+    replication-count: {
+      type:    integer
+      default: 1
+    }
+    replication-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
   }
 
   data-sources: {
@@ -48,7 +64,7 @@ factory: {
   }
 
   locals: {
-    primary-subnet-ids: if input.subnet-set == 0
+    clear-subnet-ids: if input.subnet-set == 0
       then [resource.subnet-a.id, resource.subnet-b.id]
       else [resource.subnet-a.id, resource.subnet-c.id]
   }
@@ -76,22 +92,32 @@ factory: {
       tags:              { unobin: 'elasticache-it-c' }
     }
     primary: aws-elasticache.subnet-group {
-      name:        'UNOBIN-IT-CACHE-PRIMARY'
+      name:        'unobin-it-cache-primary'
       description: input.description
-      subnet-ids:  local.primary-subnet-ids
+      subnet-ids:  [resource.subnet-a.id, resource.subnet-b.id]
       tags:        input.primary-tags
     }
     clear: aws-elasticache.subnet-group {
       name:        'UNOBIN-IT-CACHE-CLEAR'
       description: 'tag clearing coverage'
-      subnet-ids:  [resource.subnet-a.id, resource.subnet-b.id]
+      subnet-ids:  local.clear-subnet-ids
       tags:        input.clear-tags
+    }
+    replication: aws-elasticache.replication-group {
+      replication-group-id: 'UNOBIN-IT-CACHE-RG'
+      description:          input.replication-description
+      node-type:            'cache.t3.micro'
+      num-cache-clusters:   input.replication-count
+      subnet-group-name:    resource.primary.name
+      tags:                 input.replication-tags
     }
   }
 
   outputs: {
-    primary-name: { value: resource.primary.name }
-    primary-arn:  { value: resource.primary.arn }
-    clear-name:   { value: resource.clear.name }
+    primary-name:    { value: resource.primary.name }
+    primary-arn:     { value: resource.primary.arn }
+    clear-name:      { value: resource.clear.name }
+    replication-id:  { value: resource.replication.replication-group-id }
+    replication-arn: { value: resource.replication.arn }
   }
 }

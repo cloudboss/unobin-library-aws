@@ -139,6 +139,8 @@ func (r *SubnetGroupResource) Delete(
 }
 
 type subnetGroupClient interface {
+	elasticacheTagClient
+
 	CreateCacheSubnetGroup(
 		context.Context,
 		*elasticache.CreateCacheSubnetGroupInput,
@@ -159,6 +161,9 @@ type subnetGroupClient interface {
 		*elasticache.DeleteCacheSubnetGroupInput,
 		...func(*elasticache.Options),
 	) (*elasticache.DeleteCacheSubnetGroupOutput, error)
+}
+
+type elasticacheTagClient interface {
 	ListTagsForResource(
 		context.Context,
 		*elasticache.ListTagsForResourceInput,
@@ -315,7 +320,7 @@ func subnetGroupIdentity(name string, prior *SubnetGroupResourceOutput) string {
 
 func syncSubnetGroupTags(
 	ctx context.Context,
-	client subnetGroupClient,
+	client elasticacheTagClient,
 	arn string,
 	desired map[string]string,
 	retryOptions ...retry.Option,
@@ -364,7 +369,7 @@ func syncSubnetGroupTags(
 
 func addSubnetGroupTags(
 	ctx context.Context,
-	client subnetGroupClient,
+	client elasticacheTagClient,
 	arn string,
 	tags map[string]string,
 	retryOptions ...retry.Option,
