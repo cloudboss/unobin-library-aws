@@ -10,6 +10,9 @@ stack: {
         keep:   '1'
       }
       clear-tags: {}
+      client-name:                    'unobin-it-user-pool-client-updated'
+      client-auth-session-validity:   10
+      client-enable-token-revocation: true
     }
   }
 

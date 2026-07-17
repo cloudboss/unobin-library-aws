@@ -22,6 +22,8 @@ const (
 	primaryInitialName = "unobin-it-user-pool-initial"
 	primaryUpdatedName = "unobin-it-user-pool-updated"
 	clearPoolName      = "unobin-it-user-pool-clear"
+	clientInitialName  = "unobin-it-user-pool-client-initial"
+	clientUpdatedName  = "unobin-it-user-pool-client-updated"
 )
 
 type verifierClient interface {
@@ -30,6 +32,11 @@ type verifierClient interface {
 		*cognitoidentityprovider.DescribeUserPoolInput,
 		...func(*cognitoidentityprovider.Options),
 	) (*cognitoidentityprovider.DescribeUserPoolOutput, error)
+	DescribeUserPoolClient(
+		context.Context,
+		*cognitoidentityprovider.DescribeUserPoolClientInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.DescribeUserPoolClientOutput, error)
 	GetUserPoolMfaConfig(
 		context.Context,
 		*cognitoidentityprovider.GetUserPoolMfaConfigInput,
@@ -45,6 +52,11 @@ type verifierClient interface {
 		*cognitoidentityprovider.ListUserPoolsInput,
 		...func(*cognitoidentityprovider.Options),
 	) (*cognitoidentityprovider.ListUserPoolsOutput, error)
+	ListUserPoolClients(
+		context.Context,
+		*cognitoidentityprovider.ListUserPoolClientsInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.ListUserPoolClientsOutput, error)
 }
 
 type expectedPool struct {
@@ -60,15 +72,34 @@ type observedPool struct {
 	creationDate time.Time
 }
 
+type expectedClient struct {
+	name                  string
+	authSessionValidity   int32
+	enableTokenRevocation bool
+}
+
+type observedClient struct {
+	poolID string
+	id     string
+	secret string
+}
+
 type recordedPools struct {
-	Primary poolIdentity `json:"primary"`
-	Clear   poolIdentity `json:"clear"`
+	Primary poolIdentity   `json:"primary"`
+	Clear   poolIdentity   `json:"clear"`
+	Client  clientIdentity `json:"client"`
 }
 
 type poolIdentity struct {
 	ID           string `json:"id"`
 	ARN          string `json:"arn"`
 	CreationDate string `json:"creation_date"`
+}
+
+type clientIdentity struct {
+	PoolID string `json:"pool_id"`
+	ID     string `json:"id"`
+	Secret string `json:"secret"`
 }
 
 func main() {
@@ -120,9 +151,18 @@ func verifyApplied(ctx context.Context, client verifierClient) error {
 	if err != nil {
 		return err
 	}
+	clientOutput, err := verifyClientPresent(ctx, client, primary.id, expectedClient{
+		name:                  clientInitialName,
+		authSessionValidity:   5,
+		enableTokenRevocation: false,
+	})
+	if err != nil {
+		return err
+	}
 	return writeRecordedPools(recordedPools{
 		Primary: identityFromObserved(primary),
 		Clear:   identityFromObserved(clear),
+		Client:  clientIdentityFromObserved(clientOutput),
 	})
 }
 
@@ -145,6 +185,17 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 	if err := verifyIdentity("primary", primary, recorded.Primary); err != nil {
 		return err
 	}
+	clientOutput, err := verifyClientPresent(ctx, client, primary.id, expectedClient{
+		name:                  clientUpdatedName,
+		authSessionValidity:   10,
+		enableTokenRevocation: true,
+	})
+	if err != nil {
+		return err
+	}
+	if err := verifyClientIdentity(clientOutput, recorded.Client); err != nil {
+		return err
+	}
 	clear, err := verifyPresent(ctx, client, expectedPool{
 		name:                 clearPoolName,
 		tier:                 cognitotypes.UserPoolTierTypeEssentials,
@@ -155,6 +206,77 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 		return err
 	}
 	return verifyIdentity("clear", clear, recorded.Clear)
+}
+
+func verifyClientPresent(
+	ctx context.Context,
+	client verifierClient,
+	poolID string,
+	expected expectedClient,
+) (observedClient, error) {
+	id, err := findUserPoolClientID(ctx, client, poolID, expected.name)
+	if err != nil {
+		return observedClient{}, err
+	}
+	output, err := client.DescribeUserPoolClient(
+		ctx,
+		&cognitoidentityprovider.DescribeUserPoolClientInput{
+			UserPoolId: aws.String(poolID),
+			ClientId:   aws.String(id),
+		},
+	)
+	if err != nil {
+		return observedClient{}, fmt.Errorf("describe user pool client %s: %w", expected.name, err)
+	}
+	if output == nil || output.UserPoolClient == nil {
+		return observedClient{}, fmt.Errorf("user pool client %s returned no details", expected.name)
+	}
+	details := output.UserPoolClient
+	if aws.ToString(details.UserPoolId) != poolID {
+		return observedClient{}, fmt.Errorf(
+			"user pool client %s pool ID is %q, want %q",
+			expected.name,
+			aws.ToString(details.UserPoolId),
+			poolID,
+		)
+	}
+	if aws.ToString(details.ClientId) != id {
+		return observedClient{}, fmt.Errorf(
+			"user pool client %s ID is %q, want %q",
+			expected.name,
+			aws.ToString(details.ClientId),
+			id,
+		)
+	}
+	if aws.ToString(details.ClientName) != expected.name {
+		return observedClient{}, fmt.Errorf(
+			"user pool client name is %q, want %q",
+			aws.ToString(details.ClientName),
+			expected.name,
+		)
+	}
+	secret := aws.ToString(details.ClientSecret)
+	if secret == "" {
+		return observedClient{}, fmt.Errorf("user pool client %s has no secret", expected.name)
+	}
+	if aws.ToInt32(details.AuthSessionValidity) != expected.authSessionValidity {
+		return observedClient{}, fmt.Errorf(
+			"user pool client %s auth-session-validity is %d, want %d",
+			expected.name,
+			aws.ToInt32(details.AuthSessionValidity),
+			expected.authSessionValidity,
+		)
+	}
+	if aws.ToBool(details.EnableTokenRevocation) != expected.enableTokenRevocation {
+		return observedClient{}, fmt.Errorf(
+			"user pool client %s enable-token-revocation is %t, want %t",
+			expected.name,
+			aws.ToBool(details.EnableTokenRevocation),
+			expected.enableTokenRevocation,
+		)
+	}
+	fmt.Printf("ok: user pool client %s matches the expected configuration\n", expected.name)
+	return observedClient{poolID: poolID, id: id, secret: secret}, nil
 }
 
 func verifyPresent(
@@ -325,6 +447,37 @@ func findUserPoolID(
 	return "", fmt.Errorf("user pool %s was not found", name)
 }
 
+func findUserPoolClientID(
+	ctx context.Context,
+	client verifierClient,
+	poolID string,
+	name string,
+) (string, error) {
+	paginator := cognitoidentityprovider.NewListUserPoolClientsPaginator(
+		client,
+		&cognitoidentityprovider.ListUserPoolClientsInput{
+			UserPoolId: aws.String(poolID),
+			MaxResults: aws.Int32(60),
+		},
+	)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return "", fmt.Errorf("list user pool clients for %s: %w", poolID, err)
+		}
+		for _, item := range page.UserPoolClients {
+			if aws.ToString(item.ClientName) == name {
+				id := aws.ToString(item.ClientId)
+				if id == "" {
+					return "", fmt.Errorf("user pool client %s has no ID", name)
+				}
+				return id, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("user pool client %s was not found", name)
+}
+
 func verifyDestroyed(ctx context.Context, client verifierClient) error {
 	recorded, err := readRecordedPools()
 	if err != nil {
@@ -348,8 +501,61 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 			return fmt.Errorf("describe destroyed %s user pool: %w", name, err)
 		}
 	}
-	fmt.Println("ok: Cognito user pools are gone")
+	if err := verifyClientDestroyed(ctx, client, recorded.Client); err != nil {
+		return err
+	}
+	fmt.Println("ok: Cognito user pools and client are gone")
 	return nil
+}
+
+func verifyClientDestroyed(
+	ctx context.Context,
+	client verifierClient,
+	identity clientIdentity,
+) error {
+	_, err := client.DescribeUserPoolClient(
+		ctx,
+		&cognitoidentityprovider.DescribeUserPoolClientInput{
+			UserPoolId: aws.String(identity.PoolID),
+			ClientId:   aws.String(identity.ID),
+		},
+	)
+	var notFound *cognitotypes.ResourceNotFoundException
+	if !errors.As(err, &notFound) {
+		if err == nil {
+			return fmt.Errorf("user pool client %s still exists", identity.ID)
+		}
+		return fmt.Errorf("describe destroyed user pool client %s: %w", identity.ID, err)
+	}
+	var token *string
+	for {
+		output, err := client.ListUserPoolClients(
+			ctx,
+			&cognitoidentityprovider.ListUserPoolClientsInput{
+				UserPoolId: aws.String(identity.PoolID),
+				MaxResults: aws.Int32(60),
+				NextToken:  token,
+			},
+		)
+		if errors.As(err, &notFound) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("list destroyed user pool clients: %w", err)
+		}
+		if output == nil {
+			return fmt.Errorf("list destroyed user pool clients returned no result")
+		}
+		for _, item := range output.UserPoolClients {
+			if aws.ToString(item.ClientId) == identity.ID {
+				return fmt.Errorf("user pool client %s is still listed", identity.ID)
+			}
+		}
+		if aws.ToString(output.NextToken) == "" {
+			return nil
+		}
+		token = output.NextToken
+	}
 }
 
 func identityFromObserved(pool observedPool) poolIdentity {
@@ -360,10 +566,22 @@ func identityFromObserved(pool observedPool) poolIdentity {
 	}
 }
 
+func clientIdentityFromObserved(client observedClient) clientIdentity {
+	return clientIdentity{PoolID: client.poolID, ID: client.id, Secret: client.secret}
+}
+
 func verifyIdentity(name string, observed observedPool, expected poolIdentity) error {
 	actual := identityFromObserved(observed)
 	if actual != expected {
 		return fmt.Errorf("%s user pool identity is %+v, want %+v", name, actual, expected)
+	}
+	return nil
+}
+
+func verifyClientIdentity(observed observedClient, expected clientIdentity) error {
+	actual := clientIdentityFromObserved(observed)
+	if actual != expected {
+		return fmt.Errorf("user pool client identity is %+v, want %+v", actual, expected)
 	}
 	return nil
 }

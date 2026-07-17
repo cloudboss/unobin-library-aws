@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages two Cognito user pools. The update changes the primary pool name,
-    tier, administrative sign-up setting, and tags in place, and clears all
-    managed tags from the second pool.
+    Manages two Cognito user pools and one app client. The update changes the
+    primary pool and app client in place, and clears all managed tags from the
+    second pool.
     '''
 
   imports: {
@@ -42,6 +42,18 @@ factory: {
       type:    map(string)
       default: { clear: 'yes' }
     }
+    client-name: {
+      type:    string
+      default: 'unobin-it-user-pool-client-initial'
+    }
+    client-auth-session-validity: {
+      type:    integer
+      default: 5
+    }
+    client-enable-token-revocation: {
+      type:    boolean
+      default: false
+    }
   }
 
   resources: {
@@ -57,6 +69,13 @@ factory: {
       name: 'unobin-it-user-pool-clear'
       tags: input.clear-tags
     }
+    primary-client: aws-cognitoidp.user-pool-client {
+      user-pool-id:            resource.primary.user-pool-id
+      name:                    input.client-name
+      generate-secret:         true
+      auth-session-validity:   input.client-auth-session-validity
+      enable-token-revocation: input.client-enable-token-revocation
+    }
   }
 
   outputs: {
@@ -66,5 +85,8 @@ factory: {
     clear-id:       { value: resource.clear.user-pool-id }
     clear-arn:      { value: resource.clear.arn }
     clear-tier:     { value: resource.clear.user-pool-tier-actual }
+    client-id:     { value: resource.primary-client.id }
+    client-name:   { value: resource.primary-client.name }
+    client-secret: { value: resource.primary-client.client-secret }
   }
 }

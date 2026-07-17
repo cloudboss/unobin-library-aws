@@ -13,17 +13,20 @@ import (
 	awscognitoidp "github.com/cloudboss/unobin-library-aws/service/cognitoidp"
 )
 
-func TestLibraryRegistersUserPoolResource(t *testing.T) {
+func TestLibraryRegistersResources(t *testing.T) {
 	library := awscognitoidp.Library()
 	require.NotNil(t, library)
 	assert.Equal(t, "aws-cognitoidp", library.Name)
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 1)
+	require.Len(t, library.Resources, 2)
 	require.Contains(t, library.Resources, "user-pool")
 	assert.Equal(t, reflect.TypeFor[*svc.UserPoolResourceOutput](),
 		library.Resources["user-pool"].OutputType())
+	require.Contains(t, library.Resources, "user-pool-client")
+	assert.Equal(t, reflect.TypeFor[*svc.UserPoolClientResourceOutput](),
+		library.Resources["user-pool-client"].OutputType())
 	assert.Empty(t, library.DataSources)
 	assert.Empty(t, library.Actions)
 }

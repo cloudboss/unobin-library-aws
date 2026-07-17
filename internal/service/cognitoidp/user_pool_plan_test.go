@@ -3,6 +3,7 @@ package cognitoidp
 import (
 	"context"
 	"fmt"
+	"maps"
 	"testing"
 
 	"github.com/cloudboss/unobin/pkg/encrypters"
@@ -15,6 +16,8 @@ import (
 )
 
 type userPoolPlanProbe UserPoolResource
+
+type userPoolClientPlanProbe UserPoolClientResource
 
 func (*userPoolPlanProbe) SchemaVersion() int { return 1 }
 
@@ -54,6 +57,152 @@ func (*userPoolPlanProbe) EquivalentInput(
 		UserPoolResource(prior),
 		UserPoolResource(current),
 	)
+}
+
+func (*userPoolClientPlanProbe) SchemaVersion() int { return 1 }
+
+func (*userPoolClientPlanProbe) Create(context.Context, any) (map[string]any, error) {
+	return map[string]any{"id": "new-id", "name": "client-name"}, nil
+}
+
+func (*userPoolClientPlanProbe) Read(
+	_ context.Context,
+	_ any,
+	prior map[string]any,
+) (map[string]any, error) {
+	return prior, nil
+}
+
+func (*userPoolClientPlanProbe) Update(
+	_ context.Context,
+	_ any,
+	prior runtime.Prior[userPoolClientPlanProbe, map[string]any],
+) (map[string]any, error) {
+	return prior.Outputs, nil
+}
+
+func (*userPoolClientPlanProbe) Delete(context.Context, any, map[string]any) error {
+	return nil
+}
+
+func (*userPoolClientPlanProbe) ReplaceFields() []string {
+	return (&UserPoolClientResource{}).ReplaceFields()
+}
+
+func (*userPoolClientPlanProbe) EquivalentInput(
+	field string,
+	prior userPoolClientPlanProbe,
+	current userPoolClientPlanProbe,
+) bool {
+	return (&UserPoolClientResource{}).EquivalentInput(
+		field,
+		UserPoolClientResource(prior),
+		UserPoolClientResource(current),
+	)
+}
+
+func TestUserPoolClientGenerateSecretPlans(t *testing.T) {
+	tests := []struct {
+		name     string
+		prior    map[string]any
+		current  string
+		decision runtime.Decision
+		triggers []string
+	}{
+		{
+			name:     "omitted to false is no-op",
+			prior:    map[string]any{},
+			current:  "generate-secret: false",
+			decision: runtime.DecisionNoOp,
+		},
+		{
+			name:     "false to omitted is no-op",
+			prior:    map[string]any{"generate-secret": false},
+			decision: runtime.DecisionNoOp,
+		},
+		{
+			name:     "false to true replaces",
+			prior:    map[string]any{"generate-secret": false},
+			current:  "generate-secret: true",
+			decision: runtime.DecisionReplace,
+			triggers: []string{"generate-secret"},
+		},
+		{
+			name:     "true to false replaces",
+			prior:    map[string]any{"generate-secret": true},
+			current:  "generate-secret: false",
+			decision: runtime.DecisionReplace,
+			triggers: []string{"generate-secret"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step := planUserPoolClientChange(t, tt.prior, tt.current)
+			assert.Equal(t, tt.decision, step.Decision)
+			assert.Equal(t, tt.triggers, step.ReplaceTriggers)
+		})
+	}
+}
+
+func planUserPoolClientChange(
+	t *testing.T,
+	prior map[string]any,
+	current string,
+) *runtime.PlanStep {
+	t.Helper()
+	source := fmt.Sprintf(`factory: {
+  resources: {
+    client: aws-cognitoidp.user-pool-client {
+      user-pool-id: 'us-east-1_example'
+      %s
+    }
+  }
+}`, current)
+	parsed, err := syntax.ParseSource("factory.ub", []byte(source))
+	require.NoError(t, err)
+	require.NotNil(t, parsed.Factory)
+	body := parsed.Factory.Body
+	libraries := map[string]*runtime.Library{
+		"aws-cognitoidp": {
+			Name: "aws-cognitoidp",
+			Resources: map[string]runtime.ResourceRegistration{
+				"user-pool-client": runtime.MakeResource[
+					userPoolClientPlanProbe,
+					map[string]any,
+					any,
+				](),
+			},
+		},
+	}
+	store, err := local.NewStore(t.TempDir(), "factory", "stack", encrypters.Noop{})
+	require.NoError(t, err)
+	factory := state.FactoryInfo{Name: "factory", Version: "v0", ContentRevision: "test"}
+	snapshot := state.NewSnapshot(factory, store.Stack())
+	inputs := map[string]any{"user-pool-id": "us-east-1_example"}
+	maps.Copy(inputs, prior)
+	snapshot.Entries = []*state.Entry{{
+		Address:       "resource.client",
+		Type:          state.EntryLeaf,
+		Category:      "resource",
+		Binding:       &state.Binding{Alias: "aws-cognitoidp", Export: "user-pool-client"},
+		SchemaVersion: 1,
+		Inputs:        inputs,
+		Outputs:       map[string]any{"id": "client-id", "name": "client-name"},
+	}}
+	revision, err := store.Write(snapshot)
+	require.NoError(t, err)
+	require.NoError(t, store.SetCurrent(revision))
+	executor := &runtime.Executor{
+		DAG:          runtime.BuildSyntaxDAG(body, libraries),
+		SyntaxSource: &body,
+		Libraries:    libraries,
+		Store:        store,
+		Factory:      factory,
+	}
+	plan, err := executor.Plan(context.Background())
+	require.NoError(t, err)
+	require.Len(t, plan.Steps, 1)
+	return plan.Steps[0]
 }
 
 func TestUserPoolUnorderedCollectionPlans(t *testing.T) {

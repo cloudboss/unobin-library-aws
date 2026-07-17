@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	testPrimaryID = "us-east-1_primary"
-	testClearID   = "us-east-1_clear"
+	testPrimaryID    = "us-east-1_primary"
+	testClearID      = "us-east-1_clear"
+	testClientID     = "client-id"
+	testClientSecret = "client-secret"
 )
 
 var testCreationDate = time.Date(2026, time.July, 16, 12, 0, 0, 0, time.UTC)
@@ -29,6 +31,9 @@ func TestVerifyAppliedRecordsUserPoolIdentities(t *testing.T) {
 		false,
 		map[string]string{"change": "old", "keep": "1", "remove": "yes"},
 		map[string]string{"clear": "yes"},
+		clientInitialName,
+		5,
+		false,
 	)
 
 	err := verifyApplied(context.Background(), client)
@@ -49,6 +54,9 @@ func TestVerifyUpdatedAcceptsInPlaceChangesAndTagClear(t *testing.T) {
 		true,
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"aws:retained": "service-owned"},
+		clientUpdatedName,
+		10,
+		true,
 	)
 
 	err := verifyUpdated(context.Background(), client)
@@ -66,6 +74,9 @@ func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 		true,
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{},
+		clientUpdatedName,
+		10,
+		true,
 	)
 
 	err := verifyUpdated(context.Background(), client)
@@ -86,6 +97,16 @@ func TestVerifyDestroyedAcceptsTypedNotFound(t *testing.T) {
 				Message: aws.String("clear is gone"),
 			},
 		},
+		describeClientErrors: map[string]error{
+			testClientID: &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("client is gone"),
+			},
+		},
+		listClientErrors: map[string]error{
+			testPrimaryID: &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("pool is gone"),
+			},
+		},
 	}
 
 	err := verifyDestroyed(context.Background(), client)
@@ -101,6 +122,16 @@ func TestVerifyDestroyedRejectsUnrelatedError(t *testing.T) {
 			testPrimaryID: errors.New("access denied"),
 			testClearID: &cognitotypes.ResourceNotFoundException{
 				Message: aws.String("clear is gone"),
+			},
+		},
+		describeClientErrors: map[string]error{
+			testClientID: &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("client is gone"),
+			},
+		},
+		listClientErrors: map[string]error{
+			testPrimaryID: &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("pool is gone"),
 			},
 		},
 	}
@@ -144,11 +175,15 @@ func TestManagedTagsExcludesAWSKeys(t *testing.T) {
 }
 
 type fakeVerifierClient struct {
-	listPages       map[string]*cognitoidentityprovider.ListUserPoolsOutput
-	describeOutputs map[string]*cognitoidentityprovider.DescribeUserPoolOutput
-	describeErrors  map[string]error
-	mfaOutputs      map[string]*cognitoidentityprovider.GetUserPoolMfaConfigOutput
-	tagOutputs      map[string]*cognitoidentityprovider.ListTagsForResourceOutput
+	listPages             map[string]*cognitoidentityprovider.ListUserPoolsOutput
+	describeOutputs       map[string]*cognitoidentityprovider.DescribeUserPoolOutput
+	describeErrors        map[string]error
+	mfaOutputs            map[string]*cognitoidentityprovider.GetUserPoolMfaConfigOutput
+	tagOutputs            map[string]*cognitoidentityprovider.ListTagsForResourceOutput
+	listClientPages       map[string]*cognitoidentityprovider.ListUserPoolClientsOutput
+	listClientErrors      map[string]error
+	describeClientOutputs map[string]*cognitoidentityprovider.DescribeUserPoolClientOutput
+	describeClientErrors  map[string]error
 }
 
 func (c *fakeVerifierClient) DescribeUserPool(
@@ -187,6 +222,29 @@ func (c *fakeVerifierClient) ListUserPools(
 	return c.listPages[aws.ToString(input.NextToken)], nil
 }
 
+func (c *fakeVerifierClient) ListUserPoolClients(
+	_ context.Context,
+	input *cognitoidentityprovider.ListUserPoolClientsInput,
+	_ ...func(*cognitoidentityprovider.Options),
+) (*cognitoidentityprovider.ListUserPoolClientsOutput, error) {
+	if err := c.listClientErrors[aws.ToString(input.UserPoolId)]; err != nil {
+		return nil, err
+	}
+	return c.listClientPages[aws.ToString(input.NextToken)], nil
+}
+
+func (c *fakeVerifierClient) DescribeUserPoolClient(
+	_ context.Context,
+	input *cognitoidentityprovider.DescribeUserPoolClientInput,
+	_ ...func(*cognitoidentityprovider.Options),
+) (*cognitoidentityprovider.DescribeUserPoolClientOutput, error) {
+	id := aws.ToString(input.ClientId)
+	if err := c.describeClientErrors[id]; err != nil {
+		return nil, err
+	}
+	return c.describeClientOutputs[id], nil
+}
+
 func updatedVerifierClient(
 	primaryName string,
 	primaryID string,
@@ -194,6 +252,9 @@ func updatedVerifierClient(
 	allowAdminCreateOnly bool,
 	primaryTags map[string]string,
 	clearTags map[string]string,
+	clientName string,
+	authSessionValidity int32,
+	enableTokenRevocation bool,
 ) *fakeVerifierClient {
 	primaryARN := userPoolARN(primaryID)
 	clearARN := userPoolARN(testClearID)
@@ -227,6 +288,25 @@ func updatedVerifierClient(
 		tagOutputs: map[string]*cognitoidentityprovider.ListTagsForResourceOutput{
 			primaryARN: {Tags: primaryTags},
 			clearARN:   {Tags: clearTags},
+		},
+		listClientPages: map[string]*cognitoidentityprovider.ListUserPoolClientsOutput{
+			"": {UserPoolClients: []cognitotypes.UserPoolClientDescription{{
+				ClientId:   aws.String(testClientID),
+				ClientName: aws.String(clientName),
+				UserPoolId: aws.String(primaryID),
+			}}},
+		},
+		describeClientOutputs: map[string]*cognitoidentityprovider.DescribeUserPoolClientOutput{
+			testClientID: {
+				UserPoolClient: &cognitotypes.UserPoolClientType{
+					AuthSessionValidity:   aws.Int32(authSessionValidity),
+					ClientId:              aws.String(testClientID),
+					ClientName:            aws.String(clientName),
+					ClientSecret:          aws.String(testClientSecret),
+					EnableTokenRevocation: aws.Bool(enableTokenRevocation),
+					UserPoolId:            aws.String(primaryID),
+				},
+			},
 		},
 	}
 }
@@ -262,6 +342,11 @@ func expectedRecordedPools(primaryID string) recordedPools {
 		},
 		Clear: poolIdentity{
 			ID: testClearID, ARN: userPoolARN(testClearID), CreationDate: creationDate,
+		},
+		Client: clientIdentity{
+			PoolID: testPrimaryID,
+			ID:     testClientID,
+			Secret: testClientSecret,
 		},
 	}
 }

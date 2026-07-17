@@ -19,7 +19,7 @@ const unobinModulePath = "github.com/cloudboss/unobin"
 
 func TestUserPoolSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 1)
+	require.Len(t, schema.Resources, 2)
 	require.Contains(t, schema.Resources, "user-pool")
 	got := schema.Resources["user-pool"]
 
@@ -126,6 +126,128 @@ func TestUserPoolSchema(t *testing.T) {
 	)
 }
 
+func TestUserPoolClientSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 2)
+	require.Contains(t, schema.Resources, "user-pool-client")
+	got := schema.Resources["user-pool-client"]
+
+	units := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "access-token", Type: typecheck.TString(), Optional: true},
+		{Name: "id-token", Type: typecheck.TString(), Optional: true},
+		{Name: "refresh-token", Type: typecheck.TString(), Optional: true},
+	})
+	analytics := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "application-arn", Type: typecheck.TString(), Optional: true},
+		{Name: "application-id", Type: typecheck.TString(), Optional: true},
+		{Name: "external-id", Type: typecheck.TString(), Optional: true},
+		{Name: "role-arn", Type: typecheck.TString(), Optional: true},
+		{Name: "user-data-shared", Type: typecheck.TBoolean(), Optional: true},
+	})
+	rotation := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "feature", Type: typecheck.TString()},
+		{Name: "retry-grace-period-seconds", Type: typecheck.TInteger(), Optional: true},
+	})
+	stringList := optional(typecheck.TList(typecheck.TString()))
+	assert.Equal(t, map[string]typecheck.Type{
+		"user-pool-id":                                  typecheck.TString(),
+		"name":                                          optional(typecheck.TString()),
+		"generate-secret":                               optional(typecheck.TBoolean()),
+		"access-token-validity":                         optional(typecheck.TInteger()),
+		"id-token-validity":                             optional(typecheck.TInteger()),
+		"refresh-token-validity":                        optional(typecheck.TInteger()),
+		"auth-session-validity":                         optional(typecheck.TInteger()),
+		"token-validity-units":                          optional(units),
+		"allowed-oauth-flows":                           stringList,
+		"allowed-oauth-scopes":                          stringList,
+		"callback-urls":                                 stringList,
+		"logout-urls":                                   stringList,
+		"explicit-auth-flows":                           stringList,
+		"read-attributes":                               stringList,
+		"write-attributes":                              stringList,
+		"supported-identity-providers":                  stringList,
+		"allowed-oauth-flows-user-pool-client":          optional(typecheck.TBoolean()),
+		"enable-propagate-additional-user-context-data": optional(typecheck.TBoolean()),
+		"enable-token-revocation":                       optional(typecheck.TBoolean()),
+		"default-redirect-uri":                          optional(typecheck.TString()),
+		"prevent-user-existence-errors":                 optional(typecheck.TString()),
+		"analytics-configuration":                       optional(analytics),
+		"refresh-token-rotation":                        optional(rotation),
+	}, got.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"id":            typecheck.TString(),
+		"name":          typecheck.TString(),
+		"client-secret": optional(typecheck.TString()),
+	}, got.Outputs)
+	assert.Empty(t, got.SensitiveInputs)
+	assert.Equal(t, []string{"client-secret"}, got.SensitiveOutputs)
+	assert.Empty(t, got.Defaults)
+
+	messages := make(map[string]lang.ConstraintSpec, len(got.Constraints))
+	for _, value := range got.Constraints {
+		messages[value.Message] = value
+	}
+	expectedMessages := []string{
+		"user-pool-id must contain at least 1 character",
+		"user-pool-id must contain at most 55 characters",
+		"name must contain at least 1 character",
+		"name must contain at most 128 characters",
+		"access-token-validity must be between 1 and 86400",
+		"id-token-validity must be between 1 and 86400",
+		"refresh-token-validity must be between 1 and 315360000",
+		"auth-session-validity must be between 3 and 15",
+		"access-token unit is invalid",
+		"id-token unit is invalid",
+		"refresh-token unit is invalid",
+		"allowed-oauth-flows holds at most 3 entries",
+		"allowed-oauth-flows contains an invalid value",
+		"allowed-oauth-scopes holds at most 50 entries",
+		"allowed-oauth-scopes entries must contain 1 to 256 characters",
+		"callback-urls holds at most 100 entries",
+		"callback-urls entries must contain 1 to 1024 characters",
+		"logout-urls holds at most 100 entries",
+		"logout-urls entries must contain 1 to 1024 characters",
+		"explicit-auth-flows contains an invalid value",
+		"read-attributes entries must contain 1 to 2048 characters",
+		"write-attributes entries must contain 1 to 2048 characters",
+		"supported-identity-providers entries must contain 1 to 32 characters",
+		"OAuth settings require allowed-oauth-flows-user-pool-client true",
+		"propagated user context data requires generate-secret true",
+		"prevent-user-existence-errors must be LEGACY or ENABLED",
+		"refresh-token-rotation feature must be ENABLED or DISABLED",
+		"refresh-token-rotation grace must be between 0 and 60",
+		"analytics-configuration requires an ARN or application triplet",
+		"analytics application-arn conflicts with the application triplet",
+		"analytics application triplet fields must be set together",
+		"analytics application-arn must contain 20 to 2048 characters",
+		"analytics role-arn must contain 20 to 2048 characters",
+		"analytics external-id must contain at most 131072 characters",
+	}
+	require.Len(t, got.Constraints, len(expectedMessages))
+	for _, message := range expectedMessages {
+		assert.Contains(t, messages, message)
+	}
+	assert.Equal(t, lang.ConstraintSpec{
+		Kind: "forbidden-with",
+		Fields: []string{
+			"input.analytics-configuration.application-arn",
+			"input.analytics-configuration.application-id",
+			"input.analytics-configuration.external-id",
+			"input.analytics-configuration.role-arn",
+		},
+		Message: "analytics application-arn conflicts with the application triplet",
+	}, messages["analytics application-arn conflicts with the application triplet"])
+	assert.Equal(t, lang.ConstraintSpec{
+		Kind: "required-together",
+		Fields: []string{
+			"input.analytics-configuration.application-id",
+			"input.analytics-configuration.external-id",
+			"input.analytics-configuration.role-arn",
+		},
+		Message: "analytics application triplet fields must be set together",
+	}, messages["analytics application triplet fields must be set together"])
+}
+
 func TestUserPoolReplacementFields(t *testing.T) {
 	resource := &svc.UserPoolResource{}
 	assert.Equal(t, []string{
@@ -133,6 +255,26 @@ func TestUserPoolReplacementFields(t *testing.T) {
 		"username-attributes",
 		"username-configuration",
 	}, resource.ReplaceFields())
+}
+
+func TestUserPoolClientReplacementAndEquivalence(t *testing.T) {
+	resource := &svc.UserPoolClientResource{}
+	assert.Equal(t, []string{"user-pool-id", "generate-secret"}, resource.ReplaceFields())
+	assert.True(t, resource.EquivalentInput(
+		"generate-secret",
+		svc.UserPoolClientResource{},
+		svc.UserPoolClientResource{GenerateSecret: new(bool)},
+	))
+	assert.False(t, resource.EquivalentInput(
+		"generate-secret",
+		svc.UserPoolClientResource{},
+		svc.UserPoolClientResource{GenerateSecret: new(true)},
+	))
+	assert.False(t, resource.EquivalentInput(
+		"name",
+		svc.UserPoolClientResource{},
+		svc.UserPoolClientResource{},
+	))
 }
 
 func expectedUserPoolInputs() map[string]typecheck.Type {

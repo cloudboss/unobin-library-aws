@@ -34,11 +34,20 @@ func retryUserPool(
 	clock userPoolClock,
 	call func(context.Context) error,
 ) error {
+	return retryUserPoolWhen(ctx, clock, isUserPoolRetryable, call)
+}
+
+func retryUserPoolWhen(
+	ctx context.Context,
+	clock userPoolClock,
+	retryable func(error) bool,
+	call func(context.Context) error,
+) error {
 	deadline := clock.Now().Add(userPoolRetryTimeout)
 	delay := 500 * time.Millisecond
 	for {
 		err := call(ctx)
-		if err == nil || !isUserPoolRetryable(err) {
+		if err == nil || !retryable(err) {
 			return err
 		}
 		remaining := deadline.Sub(clock.Now())
