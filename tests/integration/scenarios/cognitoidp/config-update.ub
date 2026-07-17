@@ -1,0 +1,21 @@
+stack: {
+  factory: {
+    inputs: {
+      primary-name:                'unobin-it-user-pool-updated'
+      primary-tier:               'PLUS'
+      allow-admin-create-user-only: true
+      primary-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+      clear-tags: {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

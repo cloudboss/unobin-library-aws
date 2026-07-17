@@ -1,0 +1,70 @@
+factory: {
+  description: '''>-
+    Manages two Cognito user pools. The update changes the primary pool name,
+    tier, administrative sign-up setting, and tags in place, and clears all
+    managed tags from the second pool.
+    '''
+
+  imports: {
+    aws-cognitoidp: 'github.com/cloudboss/unobin-library-aws//service/cognitoidp'
+  }
+
+  library-configs: {
+    aws-cognitoidp: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    primary-name: {
+      type:    string
+      default: 'unobin-it-user-pool-initial'
+    }
+    primary-tier: {
+      type:    string
+      default: 'ESSENTIALS'
+    }
+    allow-admin-create-user-only: {
+      type:    boolean
+      default: false
+    }
+    primary-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+    clear-tags: {
+      type:    map(string)
+      default: { clear: 'yes' }
+    }
+  }
+
+  resources: {
+    primary: aws-cognitoidp.user-pool {
+      name:           input.primary-name
+      user-pool-tier: input.primary-tier
+      admin-create-user-config: {
+        allow-admin-create-user-only: input.allow-admin-create-user-only
+      }
+      tags: input.primary-tags
+    }
+    clear: aws-cognitoidp.user-pool {
+      name: 'unobin-it-user-pool-clear'
+      tags: input.clear-tags
+    }
+  }
+
+  outputs: {
+    primary-id:     { value: resource.primary.user-pool-id }
+    primary-arn:    { value: resource.primary.arn }
+    primary-tier:   { value: resource.primary.user-pool-tier-actual }
+    clear-id:       { value: resource.clear.user-pool-id }
+    clear-arn:      { value: resource.clear.arn }
+    clear-tier:     { value: resource.clear.user-pool-tier-actual }
+  }
+}
