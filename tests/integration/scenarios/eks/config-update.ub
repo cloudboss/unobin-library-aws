@@ -1,0 +1,17 @@
+stack: {
+  factory: {
+    inputs: {
+      cluster-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

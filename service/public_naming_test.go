@@ -18,6 +18,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/service/ecr"
 	"github.com/cloudboss/unobin-library-aws/service/ecs"
+	"github.com/cloudboss/unobin-library-aws/service/eks"
 	"github.com/cloudboss/unobin-library-aws/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/service/eventbridge"
 	"github.com/cloudboss/unobin-library-aws/service/iam"
@@ -116,6 +117,7 @@ func libraries() map[string]*runtime.Library {
 		"ec2":            ec2.Library(),
 		"ecr":            ecr.Library(),
 		"ecs":            ecs.Library(),
+		"eks":            eks.Library(),
 		"elbv2":          elbv2.Library(),
 		"eventbridge":    eventbridge.Library(),
 		"iam":            iam.Library(),

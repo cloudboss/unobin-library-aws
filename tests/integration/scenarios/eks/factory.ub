@@ -1,0 +1,93 @@
+factory: {
+  description: '''>-
+    Manages an EKS cluster with its IAM role, policy attachment, VPC, and two
+    availability-zone subnets. The update changes only cluster tags so the
+    scenario runs against the default Ministack backend while remaining usable
+    against AWS.
+    '''
+
+  imports: {
+    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks'
+    aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam'
+  }
+
+  library-configs: {
+    aws-ec2: input.aws-config
+    aws-eks: input.aws-config
+    aws-iam: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    cluster-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+  }
+
+  data-sources: {
+    availability-zones: aws-ec2.availability-zones {
+      state: 'available'
+    }
+  }
+
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.92.0.0/16'
+    }
+    subnet-a: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.92.1.0/24'
+      availability-zone: data-source.availability-zones.names[0]
+      tags:              { unobin: 'eks-it' }
+    }
+    subnet-b: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.92.2.0/24'
+      availability-zone: data-source.availability-zones.names[1]
+      tags:              { unobin: 'eks-it' }
+    }
+    cluster-role: aws-iam.role {
+      role-name: 'unobin-it-eks-cluster'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"eks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    cluster-role-policy: aws-iam.role-policy-attachment {
+      role-name:  resource.cluster-role.role-name
+      policy-arn: 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+    }
+    cluster: aws-eks.cluster {
+      name:     'unobin-it-eks-cluster'
+      role-arn: resource.cluster-role.arn
+      vpc-config: {
+        subnet-ids:              [resource.subnet-a.id, resource.subnet-b.id]
+        endpoint-private-access: false
+        endpoint-public-access:  true
+      }
+      tags: input.cluster-tags
+    }
+  }
+
+  outputs: {
+    cluster-name:       { value: resource.cluster.name }
+    cluster-arn:        { value: resource.cluster.arn }
+    endpoint:           { value: resource.cluster.endpoint }
+    platform-version:   { value: resource.cluster.platform-version }
+    status:             { value: resource.cluster.status }
+    version:            { value: resource.cluster.version-actual }
+    vpc-id:             { value: resource.cluster.vpc-id }
+    subnet-a-id:        { value: resource.subnet-a.id }
+    subnet-b-id:        { value: resource.subnet-b.id }
+    role-arn:           { value: resource.cluster-role.arn }
+  }
+}
