@@ -1,0 +1,1 @@
+Pinned Ministack omits the AWS-computed Web ACL LabelNamespace and does not reconcile description updates, so this scenario runs live only.

@@ -32,6 +32,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/service/sqs"
 	"github.com/cloudboss/unobin-library-aws/service/ssm"
 	"github.com/cloudboss/unobin-library-aws/service/sts"
+	"github.com/cloudboss/unobin-library-aws/service/wafv2"
 )
 
 func TestPublicKindNames(t *testing.T) {
@@ -129,5 +130,6 @@ func libraries() map[string]*runtime.Library {
 		"sqs":            sqs.Library(),
 		"ssm":            ssm.Library(),
 		"sts":            sts.Library(),
+		"wafv2":          wafv2.Library(),
 	}
 }

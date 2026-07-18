@@ -1,0 +1,20 @@
+stack: {
+  factory: {
+    inputs: {
+      description:   'updated'
+      search-string: '/updated'
+      tags: {
+        unobin: 'wafv2-it'
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

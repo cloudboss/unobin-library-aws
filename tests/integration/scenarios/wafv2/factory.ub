@@ -1,0 +1,78 @@
+factory: {
+  description: '''>-
+    Manages one regional WAFv2 web ACL. The description, URI path byte match,
+    and tags come from inputs so the update pass changes them in place.
+    '''
+
+  imports: {
+    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+  }
+
+  library-configs: {
+    aws-wafv2: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: {
+      type:    string
+      default: 'initial'
+    }
+    search-string: {
+      type:    string
+      default: '/initial'
+    }
+    tags: {
+      type: map(string)
+      default: {
+        unobin: 'wafv2-it'
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+  }
+
+  resources: {
+    web-acl-it: aws-wafv2.web-acl {
+      name:           'unobin-it-wafv2'
+      scope:          'REGIONAL'
+      description:    input.description
+      default-action: { allow: {} }
+      visibility-config: {
+        cloudwatch-metrics-enabled: true
+        metric-name:                'unobin-it-wafv2'
+        sampled-requests-enabled:   true
+      }
+      rules: [
+        {
+          action:   { count: {} }
+          name:     'uri-path-count'
+          priority: 0
+          statement: {
+            byte-match-statement: {
+              field-to-match:        { uri-path: {} }
+              positional-constraint: 'EXACTLY'
+              search-string:         input.search-string
+              text-transformations:  [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: true
+            metric-name:                'unobin-it-wafv2-rule'
+            sampled-requests-enabled:   true
+          }
+        },
+      ]
+      tags: input.tags
+    }
+  }
+
+  outputs: {
+    web-acl-id:  { value: resource.web-acl-it.id }
+    web-acl-arn: { value: resource.web-acl-it.arn }
+  }
+}
