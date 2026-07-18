@@ -8,6 +8,7 @@ import (
 	"time"
 
 	awstypes "github.com/aws/aws-sdk-go-v2/service/wafv2/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,13 +37,63 @@ func TestWebACLAssociationUnavailablePredicate(t *testing.T) {
 	}
 }
 
+func TestWebACLAssociationRetryablePredicate(t *testing.T) {
+	tests := map[string]struct {
+		err  error
+		want bool
+	}{
+		"wrapped typed unavailable": {
+			err: fmt.Errorf(
+				"request attempts exhausted: %w",
+				&awstypes.WAFUnavailableEntityException{},
+			),
+			want: true,
+		},
+		"wrapped throttling exception": {
+			err:  wrappedWebACLAssociationAPIError("ThrottlingException", "UnknownError"),
+			want: true,
+		},
+		"wrapped unknown rate exceeded": {
+			err:  wrappedWebACLAssociationAPIError("UnknownError", "Rate exceeded"),
+			want: true,
+		},
+		"throttling code near miss": {
+			err: wrappedWebACLAssociationAPIError("Throttling", "Rate exceeded"),
+		},
+		"unknown message case mismatch": {
+			err: wrappedWebACLAssociationAPIError("UnknownError", "rate exceeded"),
+		},
+		"unknown unrelated message": {
+			err: wrappedWebACLAssociationAPIError("UnknownError", "UnknownError"),
+		},
+		"plain rate exceeded message": {
+			err: errors.New("Rate exceeded"),
+		},
+		"nil": {},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isWebACLAssociationRetryable(tt.err))
+		})
+	}
+}
+
 func TestRetryWebACLAssociationUsesProviderCadence(t *testing.T) {
 	clock := &instantAssociationClock{}
 	attempts := 0
+	transientErrors := []error{
+		&awstypes.WAFUnavailableEntityException{},
+		wrappedWebACLAssociationAPIError("ThrottlingException", "UnknownError"),
+		wrappedWebACLAssociationAPIError("UnknownError", "Rate exceeded"),
+		&awstypes.WAFUnavailableEntityException{},
+		wrappedWebACLAssociationAPIError("ThrottlingException", "Rate exceeded"),
+		wrappedWebACLAssociationAPIError("UnknownError", "request Rate exceeded quota"),
+		&awstypes.WAFUnavailableEntityException{},
+	}
 	err := retryWebACLAssociation(context.Background(), clock, func(context.Context) error {
 		attempts++
-		if attempts < 8 {
-			return &awstypes.WAFUnavailableEntityException{}
+		if attempts <= len(transientErrors) {
+			return transientErrors[attempts-1]
 		}
 		return nil
 	})
@@ -63,7 +114,7 @@ func TestRetryWebACLAssociationUsesProviderCadence(t *testing.T) {
 func TestRetryWebACLAssociationStopsAtTenMinutes(t *testing.T) {
 	clock := &instantAssociationClock{}
 	attempts := 0
-	sentinel := &awstypes.WAFUnavailableEntityException{}
+	sentinel := wrappedWebACLAssociationAPIError("ThrottlingException", "UnknownError")
 	err := retryWebACLAssociation(context.Background(), clock, func(context.Context) error {
 		attempts++
 		return sentinel
@@ -94,6 +145,17 @@ func TestRetryWebACLAssociationStopsImmediatelyForOtherErrors(t *testing.T) {
 	assert.Same(t, sentinel, err)
 	assert.Equal(t, 1, attempts)
 	assert.Empty(t, clock.sleeps)
+}
+
+func wrappedWebACLAssociationAPIError(code, message string) error {
+	return fmt.Errorf("request attempts exhausted: %w", &smithy.OperationError{
+		ServiceID:     "WAFV2",
+		OperationName: "AssociateWebACL",
+		Err: &smithy.GenericAPIError{
+			Code:    code,
+			Message: message,
+		},
+	})
 }
 
 func TestRetryWebACLAssociationHonorsCancellation(t *testing.T) {

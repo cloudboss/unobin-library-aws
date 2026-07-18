@@ -47,14 +47,19 @@ func TestWebACLAssociationCreateAssociatesThenConfirms(t *testing.T) {
 	assert.Equal(t, []string{"associate", "get"}, client.calls)
 }
 
-func TestWebACLAssociationCreateRetriesUnavailableThenConfirms(t *testing.T) {
+func TestWebACLAssociationCreateRetriesAPIThrottlesThenConfirms(t *testing.T) {
 	resource := validWebACLAssociationResource()
 	attempts := 0
 	client := &fakeWebACLAssociationClient{
 		associateFn: func(*awssvc.AssociateWebACLInput) error {
 			attempts++
-			if attempts < 3 {
-				return &awstypes.WAFUnavailableEntityException{}
+			switch attempts {
+			case 1:
+				return wrappedWebACLAssociationAPIError(
+					"ThrottlingException", "UnknownError",
+				)
+			case 2:
+				return wrappedWebACLAssociationAPIError("UnknownError", "Rate exceeded")
 			}
 			return nil
 		},

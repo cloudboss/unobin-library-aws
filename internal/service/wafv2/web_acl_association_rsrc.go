@@ -2,13 +2,16 @@ package wafv2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsarn "github.com/aws/aws-sdk-go-v2/aws/arn"
 	awssvc "github.com/aws/aws-sdk-go-v2/service/wafv2"
+	"github.com/aws/smithy-go"
 	"github.com/cloudboss/unobin/pkg/runtime"
 )
 
@@ -215,7 +218,7 @@ func retryWebACLAssociation(
 	delay := 500 * time.Millisecond
 	for {
 		err := call(ctx)
-		if err == nil || !isWebACLUnavailable(err) {
+		if err == nil || !isWebACLAssociationRetryable(err) {
 			return err
 		}
 		remaining := deadline.Sub(clock.Now())
@@ -230,6 +233,21 @@ func retryWebACLAssociation(
 		}
 		delay = min(delay*2, 10*time.Second)
 	}
+}
+
+func isWebACLAssociationRetryable(err error) bool {
+	if isWebACLUnavailable(err) {
+		return true
+	}
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.ErrorCode() == "ThrottlingException" {
+		return true
+	}
+	return apiErr.ErrorCode() == "UnknownError" &&
+		strings.Contains(apiErr.ErrorMessage(), "Rate exceeded")
 }
 
 func (systemWebACLAssociationClock) Now() time.Time {
