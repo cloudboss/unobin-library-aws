@@ -15,7 +15,8 @@ import (
 
 func TestWebACLSchemaTopLevelContract(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Equal(t, []string{"web-acl"}, typeSchemaKeys(schema.Resources))
+	require.Equal(t, []string{"web-acl", "web-acl-association"},
+		typeSchemaKeys(schema.Resources))
 	require.Empty(t, schema.DataSources)
 	require.Empty(t, schema.Actions)
 	got := schema.Resources["web-acl"]
@@ -50,6 +51,25 @@ func TestWebACLSchemaTopLevelContract(t *testing.T) {
 	assert.Empty(t, got.SensitiveOutputs)
 	assert.Equal(t, []string{"name", "scope", "application-config"},
 		(&svc.WebACLResource{}).ReplaceFields())
+}
+
+func TestWebACLAssociationSchemaContract(t *testing.T) {
+	resource := readLibrarySchema(t).Resources["web-acl-association"]
+	require.NotNil(t, resource)
+
+	assert.Equal(t, []string{"resource-arn", "web-acl-arn"}, typeKeys(resource.Inputs))
+	assert.Equal(t, []string{"resource-arn", "web-acl-arn"}, typeKeys(resource.Outputs))
+	for name, value := range resource.Inputs {
+		assert.Equal(t, typecheck.String, value.Kind, "input.%s", name)
+	}
+	for name, value := range resource.Outputs {
+		assert.Equal(t, typecheck.String, value.Kind, "output.%s", name)
+	}
+	assert.Empty(t, resource.SensitiveInputs)
+	assert.Empty(t, resource.SensitiveOutputs)
+	assert.Equal(t, []string{"resource-arn", "web-acl-arn"},
+		(&svc.WebACLAssociationResource{}).ReplaceFields())
+	assert.Equal(t, 1, (&svc.WebACLAssociationResource{}).SchemaVersion())
 }
 
 func TestWebACLSchemaContainsNoUnknownOrOpaqueTypes(t *testing.T) {

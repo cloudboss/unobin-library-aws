@@ -3,6 +3,8 @@ stack: {
     inputs: {
       description:   'updated'
       search-string: '/updated'
+      replace-resource-association: true
+      replace-web-acl-association:  true
       tags: {
         unobin: 'wafv2-it'
         add:    'yes'

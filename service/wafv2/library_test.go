@@ -20,19 +20,35 @@ import (
 
 const unobinModulePath = "github.com/cloudboss/unobin"
 
-func TestLibraryRegistersWebACLResource(t *testing.T) {
+func TestLibraryRegistersResources(t *testing.T) {
 	library := awswafv2.Library()
 	require.NotNil(t, library)
 	assert.Equal(t, "aws-wafv2", library.Name)
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Equal(t, []string{"web-acl"}, registrationKeys(library.Resources))
-	registration := library.Resources["web-acl"]
-	assert.Equal(t, reflect.TypeFor[*svc.WebACLResource](),
-		reflect.TypeOf(registration.NewReceiver()))
-	assert.Equal(t, reflect.TypeFor[*svc.WebACLResourceOutput](),
-		registration.OutputType())
+	require.Equal(t, []string{"web-acl", "web-acl-association"},
+		registrationKeys(library.Resources))
+	tests := map[string]struct {
+		receiver reflect.Type
+		output   reflect.Type
+	}{
+		"web-acl": {
+			receiver: reflect.TypeFor[*svc.WebACLResource](),
+			output:   reflect.TypeFor[*svc.WebACLResourceOutput](),
+		},
+		"web-acl-association": {
+			receiver: reflect.TypeFor[*svc.WebACLAssociationResource](),
+			output:   reflect.TypeFor[*svc.WebACLAssociationResourceOutput](),
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			registration := library.Resources[name]
+			assert.Equal(t, tt.receiver, reflect.TypeOf(registration.NewReceiver()))
+			assert.Equal(t, tt.output, registration.OutputType())
+		})
+	}
 	assert.Empty(t, library.DataSources)
 	assert.Empty(t, library.Actions)
 }

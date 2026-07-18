@@ -1,15 +1,18 @@
 factory: {
   description: '''>-
-    Manages one regional WAFv2 web ACL. The description, URI path byte match,
-    and tags come from inputs so the update pass changes them in place.
+    Manages regional WAFv2 web ACLs and associations to Cognito user pools. The
+    update changes one ACL in place, replaces each association identity field,
+    and repairs an out-of-band reassociation introduced by the verifier.
     '''
 
   imports: {
-    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+    aws-cognitoidp: 'github.com/cloudboss/unobin-library-aws//service/cognitoidp'
+    aws-wafv2:     'github.com/cloudboss/unobin-library-aws//service/wafv2'
   }
 
   library-configs: {
-    aws-wafv2: input.aws-config
+    aws-cognitoidp: input.aws-config
+    aws-wafv2:     input.aws-config
   }
 
   inputs: {
@@ -33,6 +36,14 @@ factory: {
         keep:   '1'
         remove: 'yes'
       }
+    }
+    replace-resource-association: {
+      type:    boolean
+      default: false
+    }
+    replace-web-acl-association: {
+      type:    boolean
+      default: false
     }
   }
 
@@ -69,10 +80,50 @@ factory: {
       ]
       tags: input.tags
     }
+    replacement-web-acl: aws-wafv2.web-acl {
+      name:           'unobin-it-wafv2-replacement'
+      scope:          'REGIONAL'
+      description:    'association replacement target'
+      default-action: { allow: {} }
+      visibility-config: {
+        cloudwatch-metrics-enabled: true
+        metric-name:                'unobin-it-wafv2-replacement'
+        sampled-requests-enabled:   true
+      }
+    }
+    association-resource-old: aws-cognitoidp.user-pool {
+      name: 'unobin-it-wafv2-association-resource-old'
+    }
+    association-resource-new: aws-cognitoidp.user-pool {
+      name: 'unobin-it-wafv2-association-resource-new'
+    }
+    association-web-acl-target: aws-cognitoidp.user-pool {
+      name: 'unobin-it-wafv2-association-web-acl'
+    }
+    association-drift-target: aws-cognitoidp.user-pool {
+      name: 'unobin-it-wafv2-association-drift'
+    }
+    resource-replacement: aws-wafv2.web-acl-association {
+      resource-arn: if input.replace-resource-association
+        then resource.association-resource-new.arn
+        else resource.association-resource-old.arn
+      web-acl-arn: resource.web-acl-it.arn
+    }
+    web-acl-replacement: aws-wafv2.web-acl-association {
+      resource-arn: resource.association-web-acl-target.arn
+      web-acl-arn: if input.replace-web-acl-association
+        then resource.replacement-web-acl.arn
+        else resource.web-acl-it.arn
+    }
+    drift-repair: aws-wafv2.web-acl-association {
+      resource-arn: resource.association-drift-target.arn
+      web-acl-arn:   resource.web-acl-it.arn
+    }
   }
 
   outputs: {
-    web-acl-id:  { value: resource.web-acl-it.id }
-    web-acl-arn: { value: resource.web-acl-it.arn }
+    web-acl-id:              { value: resource.web-acl-it.id }
+    web-acl-arn:             { value: resource.web-acl-it.arn }
+    replacement-web-acl-arn: { value: resource.replacement-web-acl.arn }
   }
 }

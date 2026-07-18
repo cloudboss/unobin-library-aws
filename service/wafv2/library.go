@@ -24,6 +24,10 @@ func Library() *runtime.Library {
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"web-acl": makeResource[svc.WebACLResource, *svc.WebACLResourceOutput](),
+			"web-acl-association": makeResource[
+				svc.WebACLAssociationResource,
+				*svc.WebACLAssociationResourceOutput,
+			](),
 		},
 	}
 }

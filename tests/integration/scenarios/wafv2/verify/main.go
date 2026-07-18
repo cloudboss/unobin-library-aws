@@ -13,16 +13,22 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/wafv2"
 	"github.com/aws/aws-sdk-go-v2/service/wafv2/types"
 )
 
 const (
-	webACLName       = "unobin-it-wafv2"
-	ruleName         = "uri-path-count"
-	webACLMetricName = "unobin-it-wafv2"
-	ruleMetricName   = "unobin-it-wafv2-rule"
-	recordFileName   = "web-acl-identity.json"
+	webACLName            = "unobin-it-wafv2"
+	replacementWebACLName = "unobin-it-wafv2-replacement"
+	resourceOldPoolName   = "unobin-it-wafv2-association-resource-old"
+	resourceNewPoolName   = "unobin-it-wafv2-association-resource-new"
+	webACLTargetPoolName  = "unobin-it-wafv2-association-web-acl"
+	driftTargetPoolName   = "unobin-it-wafv2-association-drift"
+	ruleName              = "uri-path-count"
+	webACLMetricName      = "unobin-it-wafv2"
+	ruleMetricName        = "unobin-it-wafv2-rule"
+	recordFileName        = "web-acl-identity.json"
 )
 
 type webACLIdentity struct {
@@ -30,12 +36,31 @@ type webACLIdentity struct {
 	ARN string `json:"arn"`
 }
 
+type scenarioIdentity struct {
+	WebACL            webACLIdentity `json:"web-acl"`
+	ReplacementWebACL webACLIdentity `json:"replacement-web-acl"`
+	ResourceOldARN    string         `json:"resource-old-arn"`
+	ResourceNewARN    string         `json:"resource-new-arn"`
+	WebACLTargetARN   string         `json:"web-acl-target-arn"`
+	DriftTargetARN    string         `json:"drift-target-arn"`
+}
+
 type verifierClient interface {
+	AssociateWebACL(
+		context.Context,
+		*wafv2.AssociateWebACLInput,
+		...func(*wafv2.Options),
+	) (*wafv2.AssociateWebACLOutput, error)
 	GetWebACL(
 		context.Context,
 		*wafv2.GetWebACLInput,
 		...func(*wafv2.Options),
 	) (*wafv2.GetWebACLOutput, error)
+	GetWebACLForResource(
+		context.Context,
+		*wafv2.GetWebACLForResourceInput,
+		...func(*wafv2.Options),
+	) (*wafv2.GetWebACLForResourceOutput, error)
 	ListTagsForResource(
 		context.Context,
 		*wafv2.ListTagsForResourceInput,
@@ -46,6 +71,19 @@ type verifierClient interface {
 		*wafv2.ListWebACLsInput,
 		...func(*wafv2.Options),
 	) (*wafv2.ListWebACLsOutput, error)
+}
+
+type cognitoVerifierClient interface {
+	DescribeUserPool(
+		context.Context,
+		*cognitoidentityprovider.DescribeUserPoolInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.DescribeUserPoolOutput, error)
+	ListUserPools(
+		context.Context,
+		*cognitoidentityprovider.ListUserPoolsInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.ListUserPoolsOutput, error)
 }
 
 func main() {
@@ -71,20 +109,26 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load aws config: %w", err)
 	}
-	client := wafv2.NewFromConfig(configuration)
+	wafClient := wafv2.NewFromConfig(configuration)
+	cognitoClient := cognitoidentityprovider.NewFromConfig(configuration)
 
 	switch mode {
 	case "applied":
-		return verifyApplied(ctx, client, buildDir)
+		return verifyApplied(ctx, wafClient, cognitoClient, buildDir)
 	case "updated":
-		return verifyUpdated(ctx, client, buildDir)
+		return verifyUpdated(ctx, wafClient, buildDir)
 	default:
-		return verifyDestroyed(ctx, client, buildDir)
+		return verifyDestroyed(ctx, wafClient, buildDir)
 	}
 }
 
-func verifyApplied(ctx context.Context, client verifierClient, buildDir string) error {
-	identity, err := findWebACL(ctx, client)
+func verifyApplied(
+	ctx context.Context,
+	client verifierClient,
+	cognitoClient cognitoVerifierClient,
+	buildDir string,
+) error {
+	webACL, err := findWebACL(ctx, client, webACLName)
 	if err != nil {
 		return err
 	}
@@ -94,13 +138,38 @@ func verifyApplied(ctx context.Context, client verifierClient, buildDir string) 
 		"remove": "yes",
 		"unobin": "wafv2-it",
 	}
-	if err := verifyPresent(ctx, client, identity, "initial", "/initial", wantTags); err != nil {
+	if err := verifyPresent(ctx, client, webACL, "initial", "/initial", wantTags); err != nil {
+		return err
+	}
+	replacement, err := findWebACL(ctx, client, replacementWebACLName)
+	if err != nil {
+		return err
+	}
+	identity, err := findScenarioIdentity(ctx, cognitoClient, webACL, replacement)
+	if err != nil {
+		return err
+	}
+	if err := verifyAssociation(ctx, client, identity.ResourceOldARN, webACL.ARN); err != nil {
+		return err
+	}
+	if err := verifyNoAssociation(ctx, client, identity.ResourceNewARN); err != nil {
+		return err
+	}
+	if err := verifyAssociation(ctx, client, identity.WebACLTargetARN, webACL.ARN); err != nil {
+		return err
+	}
+	if err := verifyAssociation(ctx, client, identity.DriftTargetARN, webACL.ARN); err != nil {
 		return err
 	}
 	if err := writeIdentity(buildDir, identity); err != nil {
 		return err
 	}
-	fmt.Printf("ok: web ACL %s matches the applied configuration\n", webACLName)
+	if err := createAssociationDrift(
+		ctx, client, identity.DriftTargetARN, replacement.ARN,
+	); err != nil {
+		return err
+	}
+	fmt.Printf("ok: WAFv2 ACLs and associations match the applied configuration\n")
 	return nil
 }
 
@@ -109,15 +178,22 @@ func verifyUpdated(ctx context.Context, client verifierClient, buildDir string) 
 	if err != nil {
 		return err
 	}
-	identity, err := findWebACL(ctx, client)
+	webACL, err := findWebACL(ctx, client, webACLName)
 	if err != nil {
 		return err
 	}
-	if identity != wantIdentity {
+	if webACL != wantIdentity.WebACL {
 		return fmt.Errorf(
 			"web ACL identity is id %q arn %q, want id %q arn %q",
-			identity.ID, identity.ARN, wantIdentity.ID, wantIdentity.ARN,
+			webACL.ID, webACL.ARN, wantIdentity.WebACL.ID, wantIdentity.WebACL.ARN,
 		)
+	}
+	replacement, err := findWebACL(ctx, client, replacementWebACLName)
+	if err != nil {
+		return err
+	}
+	if replacement != wantIdentity.ReplacementWebACL {
+		return fmt.Errorf("replacement web ACL identity changed")
 	}
 	wantTags := map[string]string{
 		"add":    "yes",
@@ -125,10 +201,28 @@ func verifyUpdated(ctx context.Context, client verifierClient, buildDir string) 
 		"keep":   "1",
 		"unobin": "wafv2-it",
 	}
-	if err := verifyPresent(ctx, client, identity, "updated", "/updated", wantTags); err != nil {
+	if err := verifyPresent(ctx, client, webACL, "updated", "/updated", wantTags); err != nil {
 		return err
 	}
-	fmt.Printf("ok: web ACL %s matches the updated configuration\n", webACLName)
+	if err := verifyNoAssociation(ctx, client, wantIdentity.ResourceOldARN); err != nil {
+		return err
+	}
+	if err := verifyAssociation(
+		ctx, client, wantIdentity.ResourceNewARN, webACL.ARN,
+	); err != nil {
+		return err
+	}
+	if err := verifyAssociation(
+		ctx, client, wantIdentity.WebACLTargetARN, replacement.ARN,
+	); err != nil {
+		return err
+	}
+	if err := verifyAssociation(
+		ctx, client, wantIdentity.DriftTargetARN, webACL.ARN,
+	); err != nil {
+		return err
+	}
+	fmt.Printf("ok: WAFv2 ACLs and associations match the updated configuration\n")
 	return nil
 }
 
@@ -137,23 +231,34 @@ func verifyDestroyed(ctx context.Context, client verifierClient, buildDir string
 	if err != nil {
 		return err
 	}
-	_, err = client.GetWebACL(ctx, &wafv2.GetWebACLInput{
-		Id:    aws.String(identity.ID),
-		Name:  aws.String(webACLName),
-		Scope: types.ScopeRegional,
-	})
-	if err == nil {
-		return fmt.Errorf("web ACL %s still exists", webACLName)
+	if err := verifyWebACLDestroyed(ctx, client, webACLName, identity.WebACL); err != nil {
+		return err
 	}
-	var notFound *types.WAFNonexistentItemException
-	if !errors.As(err, &notFound) {
-		return fmt.Errorf("get destroyed web ACL %s: %w", webACLName, err)
+	if err := verifyWebACLDestroyed(
+		ctx, client, replacementWebACLName, identity.ReplacementWebACL,
+	); err != nil {
+		return err
 	}
-	fmt.Printf("ok: web ACL %s is gone\n", webACLName)
+	resourceARNs := []string{
+		identity.ResourceOldARN,
+		identity.ResourceNewARN,
+		identity.WebACLTargetARN,
+		identity.DriftTargetARN,
+	}
+	for _, resourceARN := range resourceARNs {
+		if err := verifyNoAssociation(ctx, client, resourceARN); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("ok: WAFv2 ACLs and associations are gone\n")
 	return nil
 }
 
-func findWebACL(ctx context.Context, client verifierClient) (webACLIdentity, error) {
+func findWebACL(
+	ctx context.Context,
+	client verifierClient,
+	name string,
+) (webACLIdentity, error) {
 	var marker *string
 	for {
 		output, err := client.ListWebACLs(ctx, &wafv2.ListWebACLsInput{
@@ -164,7 +269,7 @@ func findWebACL(ctx context.Context, client verifierClient) (webACLIdentity, err
 			return webACLIdentity{}, fmt.Errorf("list REGIONAL web ACLs: %w", err)
 		}
 		for _, summary := range output.WebACLs {
-			if aws.ToString(summary.Name) != webACLName {
+			if aws.ToString(summary.Name) != name {
 				continue
 			}
 			identity := webACLIdentity{
@@ -173,7 +278,7 @@ func findWebACL(ctx context.Context, client verifierClient) (webACLIdentity, err
 			}
 			if identity.ID == "" || identity.ARN == "" {
 				return webACLIdentity{}, fmt.Errorf(
-					"web ACL %s list identity is incomplete", webACLName,
+					"web ACL %s list identity is incomplete", name,
 				)
 			}
 			return identity, nil
@@ -184,8 +289,164 @@ func findWebACL(ctx context.Context, client verifierClient) (webACLIdentity, err
 		marker = output.NextMarker
 	}
 	return webACLIdentity{}, fmt.Errorf(
-		"web ACL %s was not found in REGIONAL scope", webACLName,
+		"web ACL %s was not found in REGIONAL scope", name,
 	)
+}
+
+func findScenarioIdentity(
+	ctx context.Context,
+	client cognitoVerifierClient,
+	webACL webACLIdentity,
+	replacement webACLIdentity,
+) (scenarioIdentity, error) {
+	identity := scenarioIdentity{
+		WebACL:            webACL,
+		ReplacementWebACL: replacement,
+	}
+	pools := []struct {
+		name string
+		arn  *string
+	}{
+		{name: resourceOldPoolName, arn: &identity.ResourceOldARN},
+		{name: resourceNewPoolName, arn: &identity.ResourceNewARN},
+		{name: webACLTargetPoolName, arn: &identity.WebACLTargetARN},
+		{name: driftTargetPoolName, arn: &identity.DriftTargetARN},
+	}
+	for _, pool := range pools {
+		arn, err := findUserPoolARN(ctx, client, pool.name)
+		if err != nil {
+			return scenarioIdentity{}, err
+		}
+		*pool.arn = arn
+	}
+	return identity, nil
+}
+
+func findUserPoolARN(
+	ctx context.Context,
+	client cognitoVerifierClient,
+	name string,
+) (string, error) {
+	var token *string
+	for {
+		output, err := client.ListUserPools(ctx, &cognitoidentityprovider.ListUserPoolsInput{
+			MaxResults: aws.Int32(60),
+			NextToken:  token,
+		})
+		if err != nil {
+			return "", fmt.Errorf("list Cognito user pools: %w", err)
+		}
+		for _, pool := range output.UserPools {
+			if aws.ToString(pool.Name) != name {
+				continue
+			}
+			id := aws.ToString(pool.Id)
+			if id == "" {
+				return "", fmt.Errorf("Cognito user pool %s has no ID", name)
+			}
+			described, err := client.DescribeUserPool(
+				ctx,
+				&cognitoidentityprovider.DescribeUserPoolInput{UserPoolId: aws.String(id)},
+			)
+			if err != nil {
+				return "", fmt.Errorf("describe Cognito user pool %s: %w", name, err)
+			}
+			if described.UserPool == nil || aws.ToString(described.UserPool.Arn) == "" {
+				return "", fmt.Errorf("Cognito user pool %s has no ARN", name)
+			}
+			return aws.ToString(described.UserPool.Arn), nil
+		}
+		if output.NextToken == nil || aws.ToString(output.NextToken) == "" {
+			return "", fmt.Errorf("Cognito user pool %s was not found", name)
+		}
+		token = output.NextToken
+	}
+}
+
+func verifyAssociation(
+	ctx context.Context,
+	client verifierClient,
+	resourceARN string,
+	wantWebACLARN string,
+) error {
+	output, err := client.GetWebACLForResource(ctx, &wafv2.GetWebACLForResourceInput{
+		ResourceArn: aws.String(resourceARN),
+	})
+	if err != nil {
+		return fmt.Errorf("get web ACL for resource %s: %w", resourceARN, err)
+	}
+	if output == nil || output.WebACL == nil {
+		return fmt.Errorf("resource %s has no web ACL association", resourceARN)
+	}
+	got := aws.ToString(output.WebACL.ARN)
+	if got != wantWebACLARN {
+		return fmt.Errorf(
+			"resource %s is associated with %q, want %q",
+			resourceARN, got, wantWebACLARN,
+		)
+	}
+	return nil
+}
+
+func verifyNoAssociation(
+	ctx context.Context,
+	client verifierClient,
+	resourceARN string,
+) error {
+	output, err := client.GetWebACLForResource(ctx, &wafv2.GetWebACLForResourceInput{
+		ResourceArn: aws.String(resourceARN),
+	})
+	if err != nil {
+		var notFound *types.WAFNonexistentItemException
+		if errors.As(err, &notFound) {
+			return nil
+		}
+		return fmt.Errorf("get web ACL for resource %s: %w", resourceARN, err)
+	}
+	if output == nil || output.WebACL == nil {
+		return nil
+	}
+	return fmt.Errorf(
+		"resource %s remains associated with web ACL %q",
+		resourceARN, aws.ToString(output.WebACL.ARN),
+	)
+}
+
+func createAssociationDrift(
+	ctx context.Context,
+	client verifierClient,
+	resourceARN string,
+	webACLARN string,
+) error {
+	_, err := client.AssociateWebACL(ctx, &wafv2.AssociateWebACLInput{
+		ResourceArn: aws.String(resourceARN),
+		WebACLArn:   aws.String(webACLARN),
+	})
+	if err != nil {
+		return fmt.Errorf("create association drift: %w", err)
+	}
+	return verifyAssociation(ctx, client, resourceARN, webACLARN)
+}
+
+func verifyWebACLDestroyed(
+	ctx context.Context,
+	client verifierClient,
+	name string,
+	identity webACLIdentity,
+) error {
+	_, err := client.GetWebACL(ctx, &wafv2.GetWebACLInput{
+		Id:    aws.String(identity.ID),
+		Name:  aws.String(name),
+		Scope: types.ScopeRegional,
+	})
+	if err == nil {
+		return fmt.Errorf("web ACL %s still exists", name)
+	}
+	var notFound *types.WAFNonexistentItemException
+	if !errors.As(err, &notFound) {
+		return fmt.Errorf("get destroyed web ACL %s: %w", name, err)
+	}
+	return nil
 }
 
 func verifyPresent(
@@ -407,28 +668,31 @@ func equalTags(got map[string]string, want map[string]string) bool {
 	return true
 }
 
-func writeIdentity(buildDir string, identity webACLIdentity) error {
+func writeIdentity(buildDir string, identity scenarioIdentity) error {
 	data, err := json.Marshal(identity)
 	if err != nil {
-		return fmt.Errorf("encode web ACL identity: %w", err)
+		return fmt.Errorf("encode WAFv2 scenario identity: %w", err)
 	}
 	if err := os.WriteFile(identityPath(buildDir), data, 0o600); err != nil {
-		return fmt.Errorf("record web ACL identity: %w", err)
+		return fmt.Errorf("record WAFv2 scenario identity: %w", err)
 	}
 	return nil
 }
 
-func readIdentity(buildDir string) (webACLIdentity, error) {
+func readIdentity(buildDir string) (scenarioIdentity, error) {
 	data, err := os.ReadFile(identityPath(buildDir))
 	if err != nil {
-		return webACLIdentity{}, fmt.Errorf("read web ACL identity: %w", err)
+		return scenarioIdentity{}, fmt.Errorf("read WAFv2 scenario identity: %w", err)
 	}
-	var identity webACLIdentity
+	var identity scenarioIdentity
 	if err := json.Unmarshal(data, &identity); err != nil {
-		return webACLIdentity{}, fmt.Errorf("decode web ACL identity: %w", err)
+		return scenarioIdentity{}, fmt.Errorf("decode WAFv2 scenario identity: %w", err)
 	}
-	if identity.ID == "" || identity.ARN == "" {
-		return webACLIdentity{}, errors.New("recorded web ACL identity is incomplete")
+	if identity.WebACL.ID == "" || identity.WebACL.ARN == "" ||
+		identity.ReplacementWebACL.ID == "" || identity.ReplacementWebACL.ARN == "" ||
+		identity.ResourceOldARN == "" || identity.ResourceNewARN == "" ||
+		identity.WebACLTargetARN == "" || identity.DriftTargetARN == "" {
+		return scenarioIdentity{}, errors.New("recorded WAFv2 scenario identity is incomplete")
 	}
 	return identity, nil
 }
