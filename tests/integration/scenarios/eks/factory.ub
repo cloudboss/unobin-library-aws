@@ -1,21 +1,23 @@
 factory: {
   description: '''>-
-    Manages an EKS cluster and zero-capacity managed node group with their IAM roles, policy
-    attachments, VPC, and two availability-zone subnets. The update changes both cluster and
-    node-group tags so the scenario runs against the default Ministack backend while remaining
-    usable against AWS.
+    Manages an EKS cluster, zero-capacity managed node group, and VPC CNI add-on with their IAM
+    roles, policy attachments, VPC, and two availability-zone subnets. The update changes only
+    tags so the scenario runs against the default Ministack backend while remaining usable
+    against AWS.
     '''
 
   imports: {
     aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
     aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks'
     aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
   }
 
   library-configs: {
     aws-ec2: input.aws-config
     aws-eks: input.aws-config
     aws-iam: input.aws-config
+    aws-meta: input.aws-config
   }
 
   inputs: {
@@ -39,9 +41,18 @@ factory: {
         remove: 'yes'
       }
     }
+    addon-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
   }
 
   data-sources: {
+    partition: aws-meta.partition {}
     availability-zones: aws-ec2.availability-zones {
       state: 'available'
     }
@@ -80,7 +91,9 @@ factory: {
     }
     cluster-role-policy: aws-iam.role-policy-attachment {
       role-name:  resource.cluster-role.role-name
-      policy-arn: 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+      policy-arn: $'''\-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSClusterPolicy
+        '''
     }
     cluster: aws-eks.cluster {
       @depends-on: [resource.cluster-role-policy]
@@ -110,15 +123,19 @@ factory: {
     }
     node-worker-policy: aws-iam.role-policy-attachment {
       role-name:  resource.node-role.role-name
-      policy-arn: 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+      policy-arn: $'''\-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        '''
     }
     node-ecr-policy: aws-iam.role-policy-attachment {
       role-name:  resource.node-role.role-name
-      policy-arn: 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+      policy-arn: $'''\-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        '''
     }
     node-cni-policy: aws-iam.role-policy-attachment {
       role-name:  resource.node-role.role-name
-      policy-arn: 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
+      policy-arn: $'arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKS_CNI_Policy'
     }
     node-group: aws-eks.node-group {
       @depends-on: [
@@ -137,6 +154,13 @@ factory: {
       }
       tags: input.node-group-tags
     }
+    addon: aws-eks.addon {
+      @depends-on: [resource.cluster]
+      cluster-name: resource.cluster.name
+      addon-name:   'vpc-cni'
+      resolve-conflicts-on-create: 'OVERWRITE'
+      tags:         input.addon-tags
+    }
   }
 
   outputs: {
@@ -154,5 +178,9 @@ factory: {
     node-group-arn:    { value: resource.node-group.arn }
     node-group-status: { value: resource.node-group.status }
     node-role-arn:     { value: resource.node-role.arn }
+    addon-name:        { value: resource.addon.addon-name }
+    addon-arn:         { value: resource.addon.arn }
+    addon-version:     { value: resource.addon.addon-version }
+    addon-status:      { value: resource.addon.status }
   }
 }

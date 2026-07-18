@@ -21,6 +21,7 @@ import (
 const (
 	clusterName   = "unobin-it-eks-cluster"
 	nodeGroupName = "unobin-it-eks-workers"
+	addonName     = "vpc-cni"
 )
 
 type verifierClient interface {
@@ -28,6 +29,8 @@ type verifierClient interface {
 		...func(*eks.Options)) (*eks.DescribeClusterOutput, error)
 	DescribeNodegroup(context.Context, *eks.DescribeNodegroupInput,
 		...func(*eks.Options)) (*eks.DescribeNodegroupOutput, error)
+	DescribeAddon(context.Context, *eks.DescribeAddonInput,
+		...func(*eks.Options)) (*eks.DescribeAddonOutput, error)
 	ListTagsForResource(context.Context, *eks.ListTagsForResourceInput,
 		...func(*eks.Options)) (*eks.ListTagsForResourceOutput, error)
 }
@@ -37,6 +40,8 @@ type clusterIdentity struct {
 	CreatedAt          string `json:"created_at"`
 	NodeGroupARN       string `json:"node_group_arn"`
 	NodeGroupCreatedAt string `json:"node_group_created_at"`
+	AddonARN           string `json:"addon_arn"`
+	AddonCreatedAt     string `json:"addon_created_at"`
 }
 
 func main() {
@@ -66,7 +71,7 @@ func run() error {
 
 func verifyApplied(ctx context.Context, client verifierClient) error {
 	initialTags := map[string]string{"change": "old", "keep": "1", "remove": "yes"}
-	identity, err := verifyPresent(ctx, client, initialTags, initialTags)
+	identity, err := verifyPresent(ctx, client, initialTags, initialTags, initialTags)
 	if err != nil {
 		return err
 	}
@@ -83,6 +88,7 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 		client,
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 	)
 	if err != nil {
 		return err
@@ -94,6 +100,13 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 }
 
 func verifyDestroyed(ctx context.Context, client verifierClient) error {
+	addon, err := findAddon(ctx, client)
+	if err != nil {
+		return err
+	}
+	if addon != nil {
+		return fmt.Errorf("add-on %s still exists", addonName)
+	}
 	nodeGroup, err := findNodeGroup(ctx, client)
 	if err != nil {
 		return err
@@ -116,6 +129,7 @@ func verifyPresent(
 	client verifierClient,
 	expectedClusterTags map[string]string,
 	expectedNodeGroupTags map[string]string,
+	expectedAddonTags map[string]string,
 ) (clusterIdentity, error) {
 	cluster, err := findCluster(ctx, client)
 	if err != nil {
@@ -194,11 +208,45 @@ func verifyPresent(
 	); err != nil {
 		return clusterIdentity{}, err
 	}
+	addon, err := findAddon(ctx, client)
+	if err != nil {
+		return clusterIdentity{}, err
+	}
+	if addon == nil {
+		return clusterIdentity{}, fmt.Errorf("add-on %s not found", addonName)
+	}
+	if aws.ToString(addon.ClusterName) != clusterName {
+		return clusterIdentity{}, fmt.Errorf(
+			"add-on cluster is %q", aws.ToString(addon.ClusterName),
+		)
+	}
+	if aws.ToString(addon.AddonName) != addonName {
+		return clusterIdentity{}, fmt.Errorf(
+			"add-on name is %q", aws.ToString(addon.AddonName),
+		)
+	}
+	if addon.Status != ekstypes.AddonStatusActive {
+		return clusterIdentity{}, fmt.Errorf(
+			"add-on status is %s, want ACTIVE", addon.Status,
+		)
+	}
+	addonARN := aws.ToString(addon.AddonArn)
+	if addonARN == "" {
+		return clusterIdentity{}, errors.New("add-on ARN is empty")
+	}
+	if addon.CreatedAt == nil || addon.CreatedAt.IsZero() {
+		return clusterIdentity{}, errors.New("add-on creation time is empty")
+	}
+	if err := verifyTags(ctx, client, "add-on", addonARN, expectedAddonTags); err != nil {
+		return clusterIdentity{}, err
+	}
 	return clusterIdentity{
 		ARN:                arn,
 		CreatedAt:          cluster.CreatedAt.UTC().Format(time.RFC3339Nano),
 		NodeGroupARN:       nodeGroupARN,
 		NodeGroupCreatedAt: nodeGroup.CreatedAt.UTC().Format(time.RFC3339Nano),
+		AddonARN:           addonARN,
+		AddonCreatedAt:     addon.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}, nil
 }
 
@@ -266,6 +314,27 @@ func findNodeGroup(
 	return output.Nodegroup, nil
 }
 
+func findAddon(
+	ctx context.Context,
+	client verifierClient,
+) (*ekstypes.Addon, error) {
+	output, err := client.DescribeAddon(ctx, &eks.DescribeAddonInput{
+		ClusterName: aws.String(clusterName),
+		AddonName:   aws.String(addonName),
+	})
+	if err != nil {
+		var notFound *ekstypes.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("describe EKS add-on: %w", err)
+	}
+	if output == nil {
+		return nil, nil
+	}
+	return output.Addon, nil
+}
+
 func verifyTags(
 	ctx context.Context,
 	client verifierClient,
@@ -315,7 +384,8 @@ func readIdentity() (clusterIdentity, error) {
 		return clusterIdentity{}, fmt.Errorf("decode cluster identity: %w", err)
 	}
 	if identity.ARN == "" || identity.CreatedAt == "" ||
-		identity.NodeGroupARN == "" || identity.NodeGroupCreatedAt == "" {
+		identity.NodeGroupARN == "" || identity.NodeGroupCreatedAt == "" ||
+		identity.AddonARN == "" || identity.AddonCreatedAt == "" {
 		return clusterIdentity{}, errors.New("recorded cluster identity is incomplete")
 	}
 	return identity, nil

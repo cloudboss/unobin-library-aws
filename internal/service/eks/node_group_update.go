@@ -38,7 +38,7 @@ func (r NodeGroupResource) updateNodeGroup(
 		prior.Inputs, clusterName, nodeGroupName, "",
 	)
 	if versionNeeded {
-		token, err := nodeGroupClientRequestToken()
+		token, err := eksClientRequestToken()
 		if err != nil {
 			return nil, err
 		}
@@ -60,7 +60,7 @@ func (r NodeGroupResource) updateNodeGroup(
 		prior.Inputs, clusterName, nodeGroupName, "",
 	)
 	if configNeeded {
-		token, err := nodeGroupClientRequestToken()
+		token, err := eksClientRequestToken()
 		if err != nil {
 			return nil, err
 		}

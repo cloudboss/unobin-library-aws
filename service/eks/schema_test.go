@@ -12,7 +12,7 @@ import (
 
 func TestClusterSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 2)
+	require.Len(t, schema.Resources, 3)
 	cluster := schema.Resources["cluster"]
 	require.NotNil(t, cluster)
 
@@ -36,7 +36,7 @@ func TestClusterSchema(t *testing.T) {
 
 func TestNodeGroupSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 2)
+	require.Len(t, schema.Resources, 3)
 	nodeGroup := schema.Resources["node-group"]
 	require.NotNil(t, nodeGroup)
 
@@ -59,6 +59,41 @@ func TestNodeGroupSchema(t *testing.T) {
 	assert.Empty(t, nodeGroup.SensitiveInputs)
 	assert.Empty(t, nodeGroup.SensitiveOutputs)
 	assert.Len(t, nodeGroup.Defaults, 2)
+}
+
+func TestAddonSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 3)
+	addon := schema.Resources["addon"]
+	require.NotNil(t, addon)
+
+	assert.Equal(t, typecheck.TString(), addon.Inputs["cluster-name"])
+	assert.Equal(t, typecheck.TString(), addon.Inputs["addon-name"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
+		addon.Inputs["addon-version"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
+		addon.Inputs["configuration-values"])
+	assert.Equal(t, typecheck.TBoolean(), addon.Inputs["preserve"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		addon.Inputs["tags"])
+	assert.Equal(t, typecheck.TString(), addon.Outputs["cluster-name"])
+	assert.Equal(t, typecheck.TString(), addon.Outputs["addon-name"])
+	assert.Equal(t, typecheck.TString(), addon.Outputs["arn"])
+	assert.Equal(t, typecheck.TString(), addon.Outputs["addon-version"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
+		addon.Outputs["namespace"])
+	assert.NotContains(t, addon.Outputs, "addon-version-actual")
+	assert.NotContains(t, addon.Outputs, "namespace-actual")
+	assert.Empty(t, addon.SensitiveInputs)
+	assert.Empty(t, addon.SensitiveOutputs)
+	assert.Len(t, addon.Defaults, 1)
+}
+
+func TestAddonReplacementFields(t *testing.T) {
+	resource := &svc.AddonResource{}
+	assert.Equal(t, []string{
+		"cluster-name", "addon-name", "namespace-config",
+	}, resource.ReplaceFields())
 }
 
 func TestClusterReplacementFields(t *testing.T) {

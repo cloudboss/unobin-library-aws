@@ -11,6 +11,11 @@ stack: {
         change: 'new'
         keep:   '1'
       }
+      addon-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
     }
   }
 

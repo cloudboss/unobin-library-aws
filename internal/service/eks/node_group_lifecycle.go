@@ -19,7 +19,7 @@ func (r NodeGroupResource) createNodeGroup(
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err
 	}
-	token, err := nodeGroupClientRequestToken()
+	token, err := eksClientRequestToken()
 	if err != nil {
 		return nil, err
 	}

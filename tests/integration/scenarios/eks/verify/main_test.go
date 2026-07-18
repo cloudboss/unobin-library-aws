@@ -15,12 +15,16 @@ import (
 
 var scenarioCreatedAt = time.Date(2026, time.July, 17, 12, 30, 0, 0, time.UTC)
 
+func TestScenarioUsesVPCCNIAddon(t *testing.T) {
+	assert.Equal(t, "vpc-cni", addonName)
+}
+
 func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) {
 	t.Setenv("VERIFY_BUILD_DIR", t.TempDir())
 	initialTags := map[string]string{
 		"change": "old", "keep": "1", "remove": "yes",
 	}
-	applied := scenarioClient(initialTags, initialTags)
+	applied := scenarioClient(initialTags, initialTags, initialTags)
 	require.NoError(t, verifyApplied(context.Background(), applied))
 
 	updated := scenarioClient(map[string]string{
@@ -29,8 +33,22 @@ func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) 
 	}, map[string]string{
 		"add": "yes", "change": "new", "keep": "1",
 		"aws:node-group": "service",
+	}, map[string]string{
+		"add": "yes", "change": "new", "keep": "1",
+		"aws:addon": "service",
 	})
 	require.NoError(t, verifyUpdated(context.Background(), updated))
+}
+
+func TestVerifyAppliedAllowsEmptyAddonVersion(t *testing.T) {
+	t.Setenv("VERIFY_BUILD_DIR", t.TempDir())
+	initialTags := map[string]string{
+		"change": "old", "keep": "1", "remove": "yes",
+	}
+	client := scenarioClient(initialTags, initialTags, initialTags)
+	client.addon.AddonVersion = nil
+
+	require.NoError(t, verifyApplied(context.Background(), client))
 }
 
 func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
@@ -40,8 +58,11 @@ func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 		CreatedAt:          scenarioCreatedAt.Format(time.RFC3339Nano),
 		NodeGroupARN:       "arn:node-group",
 		NodeGroupCreatedAt: scenarioCreatedAt.Format(time.RFC3339Nano),
+		AddonARN:           "arn:addon",
+		AddonCreatedAt:     scenarioCreatedAt.Format(time.RFC3339Nano),
 	}))
 	client := scenarioClient(
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 	)
@@ -77,9 +98,18 @@ func TestVerifyDestroyedPropagatesUnrelatedError(t *testing.T) {
 type fakeVerifierClient struct {
 	cluster        *ekstypes.Cluster
 	nodeGroup      *ekstypes.Nodegroup
+	addon          *ekstypes.Addon
 	describeError  error
 	nodeGroupError error
 	tagsByARN      map[string]map[string]string
+}
+
+func (c *fakeVerifierClient) DescribeAddon(
+	context.Context,
+	*eks.DescribeAddonInput,
+	...func(*eks.Options),
+) (*eks.DescribeAddonOutput, error) {
+	return &eks.DescribeAddonOutput{Addon: c.addon}, nil
 }
 
 func (c *fakeVerifierClient) DescribeNodegroup(
@@ -117,13 +147,16 @@ func (c *fakeVerifierClient) ListTagsForResource(
 func scenarioClient(
 	clusterTags map[string]string,
 	nodeGroupTags map[string]string,
+	addonTags map[string]string,
 ) *fakeVerifierClient {
 	clusterARN := "arn:aws:eks:us-east-1:123456789012:cluster/example"
 	nodeGroupARN := "arn:aws:eks:us-east-1:123456789012:nodegroup/example/workers/id"
+	addonARN := "arn:aws:eks:us-east-1:123456789012:addon/example/vpc-cni/id"
 	return &fakeVerifierClient{
 		tagsByARN: map[string]map[string]string{
 			clusterARN:   clusterTags,
 			nodeGroupARN: nodeGroupTags,
+			addonARN:     addonTags,
 		},
 		cluster: &ekstypes.Cluster{
 			Name:            aws.String(clusterName),
@@ -145,6 +178,14 @@ func scenarioClient(
 			},
 			Status:  ekstypes.NodegroupStatusActive,
 			Subnets: []string{"subnet-a", "subnet-b"},
+		},
+		addon: &ekstypes.Addon{
+			AddonArn:     aws.String(addonARN),
+			AddonName:    aws.String(addonName),
+			AddonVersion: aws.String("v1.12.0-eksbuild.1"),
+			ClusterName:  aws.String(clusterName),
+			CreatedAt:    &scenarioCreatedAt,
+			Status:       ekstypes.AddonStatusActive,
 		},
 	}
 }

@@ -1,9 +1,6 @@
 package eks
 
 import (
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
 	"maps"
 	"reflect"
 	"slices"
@@ -316,24 +313,4 @@ func copyBoolPointer(value *bool) *bool {
 		return nil
 	}
 	return aws.Bool(*value)
-}
-
-func nodeGroupClientRequestToken() (string, error) {
-	var random [16]byte
-	if _, err := rand.Read(random[:]); err != nil {
-		return "", fmt.Errorf("generate client request token: %w", err)
-	}
-	random[6] = (random[6] & 0x0f) | 0x40
-	random[8] = (random[8] & 0x3f) | 0x80
-	var token [36]byte
-	hex.Encode(token[0:8], random[0:4])
-	token[8] = '-'
-	hex.Encode(token[9:13], random[4:6])
-	token[13] = '-'
-	hex.Encode(token[14:18], random[6:8])
-	token[18] = '-'
-	hex.Encode(token[19:23], random[8:10])
-	token[23] = '-'
-	hex.Encode(token[24:36], random[10:16])
-	return string(token[:]), nil
 }
