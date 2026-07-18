@@ -1,0 +1,19 @@
+stack: {
+  factory: {
+    inputs: {
+      shard-count:      2
+      retention-period: 72
+      tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

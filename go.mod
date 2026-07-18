@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
-	github.com/aws/aws-sdk-go-v2 v1.42.0
+	github.com/aws/aws-sdk-go-v2 v1.42.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.18
 	github.com/aws/aws-sdk-go-v2/service/acm v1.38.3
 	github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.34.4
@@ -24,6 +24,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.54.12
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.25
 	github.com/aws/aws-sdk-go-v2/service/iam v1.53.10
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.45.1
 	github.com/aws/aws-sdk-go-v2/service/kms v1.52.0
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.90.1
 	github.com/aws/aws-sdk-go-v2/service/lambdamicrovms v1.0.0
@@ -39,7 +40,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
 	github.com/aws/aws-sdk-go-v2/service/wafv2 v1.73.0
-	github.com/aws/smithy-go v1.27.1
+	github.com/aws/smithy-go v1.27.3
 	github.com/cloudboss/unobin v0.10.1
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73
 	github.com/hashicorp/awspolicyequivalence v1.7.0
@@ -49,11 +50,11 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.10 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.14 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.17 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.24 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.15 // indirect

@@ -1,0 +1,49 @@
+factory: {
+  description: '''>-
+    Manages a Kinesis data stream. The update changes shard count, retention, and tags in place.
+    '''
+
+  imports: { aws-kinesis: 'github.com/cloudboss/unobin-library-aws//service/kinesis' }
+
+  library-configs: { aws-kinesis: input.aws-config }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    shard-count: {
+      type:    integer
+      default: 1
+    }
+    retention-period: {
+      type:    integer
+      default: 48
+    }
+    tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+  }
+
+  resources: {
+    stream: aws-kinesis.stream {
+      name:                'unobin-it-kinesis-stream'
+      shard-count:         input.shard-count
+      retention-period:    input.retention-period
+      shard-level-metrics: ['IncomingBytes']
+      tags:                input.tags
+    }
+  }
+
+  outputs: {
+    arn:              { value: resource.stream.arn }
+    name:             { value: resource.stream.name }
+    open-shard-count: { value: resource.stream.open-shard-count }
+    status:           { value: resource.stream.stream-status }
+  }
+}
