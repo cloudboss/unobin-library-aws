@@ -19,17 +19,20 @@ import (
 
 const unobinModulePath = "github.com/cloudboss/unobin"
 
-func TestLibraryRegistersClusterResource(t *testing.T) {
+func TestLibraryRegistersResources(t *testing.T) {
 	library := awseks.Library()
 	require.NotNil(t, library)
 	assert.Equal(t, "aws-eks", library.Name)
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 1)
+	require.Len(t, library.Resources, 2)
 	require.Contains(t, library.Resources, "cluster")
 	assert.Equal(t, reflect.TypeFor[*svc.ClusterResourceOutput](),
 		library.Resources["cluster"].OutputType())
+	require.Contains(t, library.Resources, "node-group")
+	assert.Equal(t, reflect.TypeFor[*svc.NodeGroupResourceOutput](),
+		library.Resources["node-group"].OutputType())
 	assert.Empty(t, library.DataSources)
 	assert.Empty(t, library.Actions)
 }

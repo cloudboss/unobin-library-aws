@@ -53,6 +53,33 @@ func TestClusterCreateInputConvertsOptionalBlocksAndTags(t *testing.T) {
 	assertLogging(t, input.Logging, []ekstypes.LogType{ekstypes.LogTypeApi, ekstypes.LogTypeAudit})
 }
 
+func TestClusterLoggingOmitsEmptySetups(t *testing.T) {
+	all := []ekstypes.LogType{
+		ekstypes.LogTypeApi,
+		ekstypes.LogTypeAudit,
+		ekstypes.LogTypeAuthenticator,
+		ekstypes.LogTypeControllerManager,
+		ekstypes.LogTypeScheduler,
+	}
+	tests := []struct {
+		name    string
+		enabled []string
+		want    []ekstypes.LogType
+	}{
+		{name: "zero enabled"},
+		{name: "partial enabled", enabled: []string{"api", "audit"},
+			want: all[:2]},
+		{name: "all enabled", enabled: []string{
+			"api", "audit", "authenticator", "controllerManager", "scheduler",
+		}, want: all},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertLogging(t, clusterLogging(tt.enabled), tt.want)
+		})
+	}
+}
+
 func TestClusterAutoModeInputDisablesRemovedBlocks(t *testing.T) {
 	resource := validClusterResource()
 
@@ -77,21 +104,34 @@ func TestClusterRemoteNetworkUpdateRemovalSendsEmptyArrays(t *testing.T) {
 func assertLogging(t *testing.T, logging *ekstypes.Logging, enabled []ekstypes.LogType) {
 	t.Helper()
 	require.NotNil(t, logging)
-	require.Len(t, logging.ClusterLogging, 2)
-	assert.True(t, aws.ToBool(logging.ClusterLogging[0].Enabled))
-	assert.Equal(t, enabled, logging.ClusterLogging[0].Types)
-	assert.False(t, aws.ToBool(logging.ClusterLogging[1].Enabled))
-	wantDisabled := []ekstypes.LogType{
+	all := []ekstypes.LogType{
 		ekstypes.LogTypeApi,
 		ekstypes.LogTypeAudit,
 		ekstypes.LogTypeAuthenticator,
 		ekstypes.LogTypeControllerManager,
 		ekstypes.LogTypeScheduler,
 	}
-	if len(enabled) > 0 {
-		wantDisabled = wantDisabled[len(enabled):]
+	enabledSet := make(map[ekstypes.LogType]bool, len(enabled))
+	for _, logType := range enabled {
+		enabledSet[logType] = true
 	}
-	assert.Equal(t, wantDisabled, logging.ClusterLogging[1].Types)
+	var disabled []ekstypes.LogType
+	for _, logType := range all {
+		if !enabledSet[logType] {
+			disabled = append(disabled, logType)
+		}
+	}
+	var want []ekstypes.LogSetup
+	if len(enabled) > 0 {
+		want = append(want, ekstypes.LogSetup{Enabled: aws.Bool(true), Types: enabled})
+	}
+	if len(disabled) > 0 {
+		want = append(want, ekstypes.LogSetup{Enabled: aws.Bool(false), Types: disabled})
+	}
+	assert.Equal(t, want, logging.ClusterLogging)
+	for _, setup := range logging.ClusterLogging {
+		assert.NotEmpty(t, setup.Types)
+	}
 }
 
 func fullClusterResource() *ClusterResource {

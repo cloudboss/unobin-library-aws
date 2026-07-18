@@ -15,15 +15,20 @@ import (
 
 var scenarioCreatedAt = time.Date(2026, time.July, 17, 12, 30, 0, 0, time.UTC)
 
-func TestVerifyAppliedAndUpdatedKeepClusterIdentity(t *testing.T) {
+func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) {
 	t.Setenv("VERIFY_BUILD_DIR", t.TempDir())
-	applied := scenarioClient(map[string]string{
+	initialTags := map[string]string{
 		"change": "old", "keep": "1", "remove": "yes",
-	})
+	}
+	applied := scenarioClient(initialTags, initialTags)
 	require.NoError(t, verifyApplied(context.Background(), applied))
 
 	updated := scenarioClient(map[string]string{
-		"add": "yes", "change": "new", "keep": "1", "aws:retained": "service",
+		"add": "yes", "change": "new", "keep": "1",
+		"aws:cluster": "service",
+	}, map[string]string{
+		"add": "yes", "change": "new", "keep": "1",
+		"aws:node-group": "service",
 	})
 	require.NoError(t, verifyUpdated(context.Background(), updated))
 }
@@ -31,12 +36,15 @@ func TestVerifyAppliedAndUpdatedKeepClusterIdentity(t *testing.T) {
 func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 	t.Setenv("VERIFY_BUILD_DIR", t.TempDir())
 	require.NoError(t, writeIdentity(clusterIdentity{
-		ARN:       "arn:aws:eks:us-east-1:123456789012:cluster/original",
-		CreatedAt: scenarioCreatedAt.Format(time.RFC3339Nano),
+		ARN:                "arn:aws:eks:us-east-1:123456789012:cluster/original",
+		CreatedAt:          scenarioCreatedAt.Format(time.RFC3339Nano),
+		NodeGroupARN:       "arn:node-group",
+		NodeGroupCreatedAt: scenarioCreatedAt.Format(time.RFC3339Nano),
 	}))
-	client := scenarioClient(map[string]string{
-		"add": "yes", "change": "new", "keep": "1",
-	})
+	client := scenarioClient(
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
+	)
 
 	err := verifyUpdated(context.Background(), client)
 
@@ -67,9 +75,22 @@ func TestVerifyDestroyedPropagatesUnrelatedError(t *testing.T) {
 }
 
 type fakeVerifierClient struct {
-	cluster       *ekstypes.Cluster
-	describeError error
-	tags          map[string]string
+	cluster        *ekstypes.Cluster
+	nodeGroup      *ekstypes.Nodegroup
+	describeError  error
+	nodeGroupError error
+	tagsByARN      map[string]map[string]string
+}
+
+func (c *fakeVerifierClient) DescribeNodegroup(
+	context.Context,
+	*eks.DescribeNodegroupInput,
+	...func(*eks.Options),
+) (*eks.DescribeNodegroupOutput, error) {
+	if c.nodeGroupError != nil {
+		return nil, c.nodeGroupError
+	}
+	return &eks.DescribeNodegroupOutput{Nodegroup: c.nodeGroup}, nil
 }
 
 func (c *fakeVerifierClient) DescribeCluster(
@@ -84,24 +105,46 @@ func (c *fakeVerifierClient) DescribeCluster(
 }
 
 func (c *fakeVerifierClient) ListTagsForResource(
-	context.Context,
-	*eks.ListTagsForResourceInput,
-	...func(*eks.Options),
+	_ context.Context,
+	input *eks.ListTagsForResourceInput,
+	_ ...func(*eks.Options),
 ) (*eks.ListTagsForResourceOutput, error) {
-	return &eks.ListTagsForResourceOutput{Tags: c.tags}, nil
+	return &eks.ListTagsForResourceOutput{
+		Tags: c.tagsByARN[aws.ToString(input.ResourceArn)],
+	}, nil
 }
 
-func scenarioClient(tags map[string]string) *fakeVerifierClient {
+func scenarioClient(
+	clusterTags map[string]string,
+	nodeGroupTags map[string]string,
+) *fakeVerifierClient {
+	clusterARN := "arn:aws:eks:us-east-1:123456789012:cluster/example"
+	nodeGroupARN := "arn:aws:eks:us-east-1:123456789012:nodegroup/example/workers/id"
 	return &fakeVerifierClient{
-		tags: tags,
+		tagsByARN: map[string]map[string]string{
+			clusterARN:   clusterTags,
+			nodeGroupARN: nodeGroupTags,
+		},
 		cluster: &ekstypes.Cluster{
 			Name:            aws.String(clusterName),
-			Arn:             aws.String("arn:aws:eks:us-east-1:123456789012:cluster/example"),
+			Arn:             aws.String(clusterARN),
 			CreatedAt:       &scenarioCreatedAt,
 			Endpoint:        aws.String("https://cluster.example"),
 			PlatformVersion: aws.String("eks.1"),
 			Status:          ekstypes.ClusterStatusActive,
 			Version:         aws.String("1.33"),
+		},
+		nodeGroup: &ekstypes.Nodegroup{
+			ClusterName:   aws.String(clusterName),
+			CreatedAt:     &scenarioCreatedAt,
+			NodegroupArn:  aws.String(nodeGroupARN),
+			NodegroupName: aws.String(nodeGroupName),
+			NodeRole:      aws.String("arn:aws:iam::123456789012:role/node"),
+			ScalingConfig: &ekstypes.NodegroupScalingConfig{
+				DesiredSize: aws.Int32(0), MinSize: aws.Int32(0), MaxSize: aws.Int32(1),
+			},
+			Status:  ekstypes.NodegroupStatusActive,
+			Subnets: []string{"subnet-a", "subnet-b"},
 		},
 	}
 }

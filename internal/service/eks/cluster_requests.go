@@ -72,10 +72,18 @@ func clusterLogging(enabled []string) *ekstypes.Logging {
 			disabledTypes = append(disabledTypes, logType)
 		}
 	}
-	return &ekstypes.Logging{ClusterLogging: []ekstypes.LogSetup{
-		{Enabled: aws.Bool(true), Types: enabledTypes},
-		{Enabled: aws.Bool(false), Types: disabledTypes},
-	}}
+	setups := make([]ekstypes.LogSetup, 0, 2)
+	if len(enabledTypes) > 0 {
+		setups = append(setups, ekstypes.LogSetup{
+			Enabled: aws.Bool(true), Types: enabledTypes,
+		})
+	}
+	if len(disabledTypes) > 0 {
+		setups = append(setups, ekstypes.LogSetup{
+			Enabled: aws.Bool(false), Types: disabledTypes,
+		})
+	}
+	return &ekstypes.Logging{ClusterLogging: setups}
 }
 
 func remoteNetworkInput(

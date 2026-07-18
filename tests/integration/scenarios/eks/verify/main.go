@@ -18,18 +18,25 @@ import (
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 )
 
-const clusterName = "unobin-it-eks-cluster"
+const (
+	clusterName   = "unobin-it-eks-cluster"
+	nodeGroupName = "unobin-it-eks-workers"
+)
 
 type verifierClient interface {
 	DescribeCluster(context.Context, *eks.DescribeClusterInput,
 		...func(*eks.Options)) (*eks.DescribeClusterOutput, error)
+	DescribeNodegroup(context.Context, *eks.DescribeNodegroupInput,
+		...func(*eks.Options)) (*eks.DescribeNodegroupOutput, error)
 	ListTagsForResource(context.Context, *eks.ListTagsForResourceInput,
 		...func(*eks.Options)) (*eks.ListTagsForResourceOutput, error)
 }
 
 type clusterIdentity struct {
-	ARN       string `json:"arn"`
-	CreatedAt string `json:"created_at"`
+	ARN                string `json:"arn"`
+	CreatedAt          string `json:"created_at"`
+	NodeGroupARN       string `json:"node_group_arn"`
+	NodeGroupCreatedAt string `json:"node_group_created_at"`
 }
 
 func main() {
@@ -58,9 +65,8 @@ func run() error {
 }
 
 func verifyApplied(ctx context.Context, client verifierClient) error {
-	identity, err := verifyPresent(ctx, client, map[string]string{
-		"change": "old", "keep": "1", "remove": "yes",
-	})
+	initialTags := map[string]string{"change": "old", "keep": "1", "remove": "yes"}
+	identity, err := verifyPresent(ctx, client, initialTags, initialTags)
 	if err != nil {
 		return err
 	}
@@ -72,9 +78,12 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 	if err != nil {
 		return err
 	}
-	current, err := verifyPresent(ctx, client, map[string]string{
-		"add": "yes", "change": "new", "keep": "1",
-	})
+	current, err := verifyPresent(
+		ctx,
+		client,
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
+	)
 	if err != nil {
 		return err
 	}
@@ -85,6 +94,13 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 }
 
 func verifyDestroyed(ctx context.Context, client verifierClient) error {
+	nodeGroup, err := findNodeGroup(ctx, client)
+	if err != nil {
+		return err
+	}
+	if nodeGroup != nil {
+		return fmt.Errorf("node group %s still exists", nodeGroupName)
+	}
 	cluster, err := findCluster(ctx, client)
 	if err != nil {
 		return err
@@ -98,7 +114,8 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 func verifyPresent(
 	ctx context.Context,
 	client verifierClient,
-	expectedTags map[string]string,
+	expectedClusterTags map[string]string,
+	expectedNodeGroupTags map[string]string,
 ) (clusterIdentity, error) {
 	cluster, err := findCluster(ctx, client)
 	if err != nil {
@@ -129,12 +146,76 @@ func verifyPresent(
 			return clusterIdentity{}, fmt.Errorf("cluster %s is empty", field)
 		}
 	}
-	if err := verifyTags(ctx, client, arn, expectedTags); err != nil {
+	if err := verifyTags(ctx, client, "cluster", arn, expectedClusterTags); err != nil {
+		return clusterIdentity{}, err
+	}
+	nodeGroup, err := findNodeGroup(ctx, client)
+	if err != nil {
+		return clusterIdentity{}, err
+	}
+	if nodeGroup == nil {
+		return clusterIdentity{}, fmt.Errorf("node group %s not found", nodeGroupName)
+	}
+	if aws.ToString(nodeGroup.ClusterName) != clusterName {
+		return clusterIdentity{}, fmt.Errorf(
+			"node group cluster is %q", aws.ToString(nodeGroup.ClusterName),
+		)
+	}
+	if aws.ToString(nodeGroup.NodegroupName) != nodeGroupName {
+		return clusterIdentity{}, fmt.Errorf(
+			"node group name is %q", aws.ToString(nodeGroup.NodegroupName),
+		)
+	}
+	if nodeGroup.Status != ekstypes.NodegroupStatusActive {
+		return clusterIdentity{}, fmt.Errorf(
+			"node group status is %s, want ACTIVE", nodeGroup.Status,
+		)
+	}
+	nodeGroupARN := aws.ToString(nodeGroup.NodegroupArn)
+	if nodeGroupARN == "" {
+		return clusterIdentity{}, errors.New("node group ARN is empty")
+	}
+	if nodeGroup.CreatedAt == nil || nodeGroup.CreatedAt.IsZero() {
+		return clusterIdentity{}, errors.New("node group creation time is empty")
+	}
+	if aws.ToString(nodeGroup.NodeRole) == "" {
+		return clusterIdentity{}, errors.New("node group role is empty")
+	}
+	if len(nodeGroup.Subnets) != 2 {
+		return clusterIdentity{}, fmt.Errorf(
+			"node group has %d subnets, want 2", len(nodeGroup.Subnets),
+		)
+	}
+	if err := verifyNodeGroupScaling(nodeGroup.ScalingConfig); err != nil {
+		return clusterIdentity{}, err
+	}
+	if err := verifyTags(
+		ctx, client, "node group", nodeGroupARN, expectedNodeGroupTags,
+	); err != nil {
 		return clusterIdentity{}, err
 	}
 	return clusterIdentity{
-		ARN: arn, CreatedAt: cluster.CreatedAt.UTC().Format(time.RFC3339Nano),
+		ARN:                arn,
+		CreatedAt:          cluster.CreatedAt.UTC().Format(time.RFC3339Nano),
+		NodeGroupARN:       nodeGroupARN,
+		NodeGroupCreatedAt: nodeGroup.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}, nil
+}
+
+func verifyNodeGroupScaling(config *ekstypes.NodegroupScalingConfig) error {
+	if config == nil {
+		return errors.New("node group scaling configuration is empty")
+	}
+	if aws.ToInt32(config.DesiredSize) != 0 || aws.ToInt32(config.MinSize) != 0 ||
+		aws.ToInt32(config.MaxSize) != 1 {
+		return fmt.Errorf(
+			"node group scaling is desired=%d min=%d max=%d, want 0/0/1",
+			aws.ToInt32(config.DesiredSize),
+			aws.ToInt32(config.MinSize),
+			aws.ToInt32(config.MaxSize),
+		)
+	}
+	return nil
 }
 
 func findCluster(
@@ -164,9 +245,31 @@ func findCluster(
 	return output.Cluster, nil
 }
 
+func findNodeGroup(
+	ctx context.Context,
+	client verifierClient,
+) (*ekstypes.Nodegroup, error) {
+	output, err := client.DescribeNodegroup(ctx, &eks.DescribeNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String(nodeGroupName),
+	})
+	if err != nil {
+		var notFound *ekstypes.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("describe EKS node group: %w", err)
+	}
+	if output == nil {
+		return nil, nil
+	}
+	return output.Nodegroup, nil
+}
+
 func verifyTags(
 	ctx context.Context,
 	client verifierClient,
+	resource string,
 	arn string,
 	expected map[string]string,
 ) error {
@@ -174,7 +277,7 @@ func verifyTags(
 		ResourceArn: aws.String(arn),
 	})
 	if err != nil {
-		return fmt.Errorf("list EKS cluster tags: %w", err)
+		return fmt.Errorf("list EKS %s tags: %w", resource, err)
 	}
 	actual := map[string]string{}
 	if output != nil {
@@ -186,7 +289,7 @@ func verifyTags(
 		}
 	}
 	if !maps.Equal(actual, expected) {
-		return fmt.Errorf("cluster tags are %v, want %v", actual, expected)
+		return fmt.Errorf("%s tags are %v, want %v", resource, actual, expected)
 	}
 	return nil
 }
@@ -211,7 +314,8 @@ func readIdentity() (clusterIdentity, error) {
 	if err := json.Unmarshal(encoded, &identity); err != nil {
 		return clusterIdentity{}, fmt.Errorf("decode cluster identity: %w", err)
 	}
-	if identity.ARN == "" || identity.CreatedAt == "" {
+	if identity.ARN == "" || identity.CreatedAt == "" ||
+		identity.NodeGroupARN == "" || identity.NodeGroupCreatedAt == "" {
 		return clusterIdentity{}, errors.New("recorded cluster identity is incomplete")
 	}
 	return identity, nil

@@ -6,6 +6,11 @@ stack: {
         change: 'new'
         keep:   '1'
       }
+      node-group-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
     }
   }
 

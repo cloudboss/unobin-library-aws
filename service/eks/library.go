@@ -23,7 +23,8 @@ func Library() *runtime.Library {
 		Description:   "AWS EKS library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"cluster": makeResource[svc.ClusterResource, *svc.ClusterResourceOutput](),
+			"cluster":    makeResource[svc.ClusterResource, *svc.ClusterResourceOutput](),
+			"node-group": makeResource[svc.NodeGroupResource, *svc.NodeGroupResourceOutput](),
 		},
 	}
 }

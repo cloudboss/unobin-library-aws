@@ -12,7 +12,7 @@ import (
 
 func TestClusterSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 1)
+	require.Len(t, schema.Resources, 2)
 	cluster := schema.Resources["cluster"]
 	require.NotNil(t, cluster)
 
@@ -34,9 +34,53 @@ func TestClusterSchema(t *testing.T) {
 	assert.Len(t, cluster.Defaults, 3)
 }
 
+func TestNodeGroupSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 2)
+	nodeGroup := schema.Resources["node-group"]
+	require.NotNil(t, nodeGroup)
+
+	assert.Equal(t, typecheck.TString(), nodeGroup.Inputs["cluster-name"])
+	assert.Equal(t, typecheck.TString(), nodeGroup.Inputs["node-group-name"])
+	assert.Equal(t, typecheck.TString(), nodeGroup.Inputs["node-role-arn"])
+	assert.Equal(t, typecheck.TList(typecheck.TString()), nodeGroup.Inputs["subnet-ids"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
+		nodeGroup.Inputs["launch-template-version"])
+	assert.Equal(t, typecheck.TBoolean(), nodeGroup.Inputs["force-update-version"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		nodeGroup.Inputs["tags"])
+	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["cluster-name"])
+	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["node-group-name"])
+	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["arn"])
+	assert.Equal(t, typecheck.TList(typecheck.TString()),
+		nodeGroup.Outputs["auto-scaling-group-names"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
+		nodeGroup.Outputs["remote-access-security-group-id"])
+	assert.Empty(t, nodeGroup.SensitiveInputs)
+	assert.Empty(t, nodeGroup.SensitiveOutputs)
+	assert.Len(t, nodeGroup.Defaults, 2)
+}
+
 func TestClusterReplacementFields(t *testing.T) {
 	resource := &svc.ClusterResource{}
 	assert.Equal(t, []string{
 		"name", "role-arn", "bootstrap-self-managed-addons", "outpost-config",
+	}, resource.ReplaceFields())
+}
+
+func TestNodeGroupReplacementFields(t *testing.T) {
+	resource := &svc.NodeGroupResource{}
+	assert.Equal(t, []string{
+		"cluster-name",
+		"node-group-name",
+		"node-role-arn",
+		"subnet-ids",
+		"ami-type",
+		"capacity-type",
+		"disk-size",
+		"instance-types",
+		"remote-access",
+		"launch-template-id",
+		"launch-template-name",
 	}, resource.ReplaceFields())
 }
