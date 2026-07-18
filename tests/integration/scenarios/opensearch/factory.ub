@@ -1,0 +1,104 @@
+factory: {
+  description: '''>-
+    Manages two OpenSearch domains. The update increases the primary domain's
+    instance count while retaining its EBS settings, reconciles its tags, and
+    clears all managed tags from the second domain.
+    '''
+
+  imports: {
+    aws-opensearch: 'github.com/cloudboss/unobin-library-aws//service/opensearch'
+  }
+
+  library-configs: {
+    aws-opensearch: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    primary-instance-count: {
+      type:    integer
+      default: 1
+    }
+    primary-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
+    clear-tags: {
+      type:    map(string)
+      default: { clear: 'yes' }
+    }
+  }
+
+  resources: {
+    primary: aws-opensearch.domain {
+      domain-name:    'unobin-it-opensearch-primary'
+      engine-version: 'OpenSearch_2.13'
+      cluster-config: {
+        cold-storage-options:          null
+        dedicated-master-count:        null
+        dedicated-master-enabled:      false
+        dedicated-master-type:         null
+        instance-count:                input.primary-instance-count
+        instance-type:                 't3.small.search'
+        multi-az-with-standby-enabled: null
+        node-options:                  null
+        warm-count:                    2
+        warm-enabled:                  null
+        warm-type:                     null
+        zone-awareness-config:         null
+        zone-awareness-enabled:        null
+      }
+      ebs-options: {
+        ebs-enabled: true
+        volume-type: 'gp3'
+        volume-size: 10
+        iops:        3000
+        throughput:  125
+      }
+      tags: input.primary-tags
+    }
+    clear: aws-opensearch.domain {
+      domain-name:    'unobin-it-opensearch-clear'
+      engine-version: 'OpenSearch_2.13'
+      cluster-config: {
+        cold-storage-options:          null
+        dedicated-master-count:        null
+        dedicated-master-enabled:      false
+        dedicated-master-type:         null
+        instance-count:                1
+        instance-type:                 't3.small.search'
+        multi-az-with-standby-enabled: null
+        node-options:                  null
+        warm-count:                    2
+        warm-enabled:                  null
+        warm-type:                     null
+        zone-awareness-config:         null
+        zone-awareness-enabled:        null
+      }
+      ebs-options: {
+        ebs-enabled: true
+        volume-type: 'gp3'
+        volume-size: 10
+        iops:        3000
+        throughput:  125
+      }
+      tags: input.clear-tags
+    }
+  }
+
+  outputs: {
+    primary-domain-name: { value: resource.primary.domain-name }
+    primary-domain-id:   { value: resource.primary.domain-id }
+    primary-arn:         { value: resource.primary.arn }
+    clear-domain-name:   { value: resource.clear.domain-name }
+    clear-domain-id:     { value: resource.clear.domain-id }
+    clear-arn:           { value: resource.clear.arn }
+  }
+}

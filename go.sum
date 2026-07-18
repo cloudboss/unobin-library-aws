@@ -68,6 +68,8 @@ github.com/aws/aws-sdk-go-v2/service/lambda v1.90.1 h1:odCeJgHXfQoXEWQUIzPkKvsJT
 github.com/aws/aws-sdk-go-v2/service/lambda v1.90.1/go.mod h1:NbtJVztitG7JkuoI4GSrDUlsB32zeXqKBvXj6bUxcMo=
 github.com/aws/aws-sdk-go-v2/service/lambdamicrovms v1.0.0 h1:qa/AtKpemXSA3j2Dd0Kbn0ca28DzovHGcAJw/BWG5MY=
 github.com/aws/aws-sdk-go-v2/service/lambdamicrovms v1.0.0/go.mod h1:BFBNLB3qFLgK+nid2Y6Wp2sXz4wj4Fv7WAFYPxUisHM=
+github.com/aws/aws-sdk-go-v2/service/opensearch v1.72.0 h1:pP0nsBNqqvJ2+xTMM0NjrZ/gGP03NTeMCTTCich0Nas=
+github.com/aws/aws-sdk-go-v2/service/opensearch v1.72.0/go.mod h1:pZl7CQeOUcOJUFJRx9HxyGL+dsrOuPc72jHQNSw6AiQ=
 github.com/aws/aws-sdk-go-v2/service/rds v1.118.2 h1:pkEeQneYFpTAnGhyqSbyp/DlCPPJTGt0GkWahlLYzMA=
 github.com/aws/aws-sdk-go-v2/service/rds v1.118.2/go.mod h1:7gS+cGrKF0mH253QHFlStmx79ws+DlNk+04ZRfmw3U0=
 github.com/aws/aws-sdk-go-v2/service/route53 v1.62.7 h1:twRRMmtSITnt/rrp+D7UDLzE5pKMZe759aalkUdN+OY=
@@ -109,6 +111,8 @@ github.com/go-viper/mapstructure/v2 v2.5.0 h1:vM5IJoUAy3d7zRSVtIwQgBj7BiWtMPfmPE
 github.com/go-viper/mapstructure/v2 v2.5.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73 h1:LXhjywNxHsex3qFY2p2iOaHK4nFvdqVp9T9QLdZfpjQ=
 github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73/go.mod h1:AsbUhwFfdK9ipM8G0i8WVHS0IesKck6M0M9NcuMQTJ8=
+github.com/hashicorp/awspolicyequivalence v1.7.0 h1:HxwPEw2/31BqQa73PinGciTfG2uJ/ATelvDG8X1gScU=
+github.com/hashicorp/awspolicyequivalence v1.7.0/go.mod h1:+oCTxQEYt+GcRalqrqTCBcJf100SQYiWQ4aENNYxYe0=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
@@ -116,6 +120,8 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
+github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
+github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

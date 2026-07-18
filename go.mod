@@ -27,6 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kms v1.52.0
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.90.1
 	github.com/aws/aws-sdk-go-v2/service/lambdamicrovms v1.0.0
+	github.com/aws/aws-sdk-go-v2/service/opensearch v1.72.0
 	github.com/aws/aws-sdk-go-v2/service/rds v1.118.2
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.62.7
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
@@ -41,6 +42,7 @@ require (
 	github.com/aws/smithy-go v1.27.1
 	github.com/cloudboss/unobin v0.10.1
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73
+	github.com/hashicorp/awspolicyequivalence v1.7.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.56.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -65,6 +67,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	golang.org/x/crypto v0.53.0 // indirect

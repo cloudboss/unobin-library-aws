@@ -1,0 +1,19 @@
+stack: {
+  factory: {
+    inputs: {
+      primary-instance-count: 2
+      primary-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
+      clear-tags: {}
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}
