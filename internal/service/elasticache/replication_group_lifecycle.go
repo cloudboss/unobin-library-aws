@@ -208,7 +208,7 @@ func replicationGroupOutput(
 			group.GlobalReplicationGroupInfo.GlobalReplicationGroupId)
 	}
 	if cluster != nil {
-		out.EngineVersionActual = aws.ToString(cluster.EngineVersion)
+		out.EngineVersion = aws.ToString(cluster.EngineVersion)
 		if cluster.CacheParameterGroup != nil {
 			out.ParameterGroupName = aws.ToString(
 				cluster.CacheParameterGroup.CacheParameterGroupName)

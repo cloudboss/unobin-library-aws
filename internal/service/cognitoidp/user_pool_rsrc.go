@@ -268,7 +268,7 @@ func (r *UserPoolResource) read(
 		Domain:                 aws.ToString(pool.Domain),
 		CustomDomain:           aws.ToString(pool.CustomDomain),
 		EstimatedNumberOfUsers: int64(pool.EstimatedNumberOfUsers),
-		UserPoolTierActual:     string(pool.UserPoolTier),
+		UserPoolTier:           string(pool.UserPoolTier),
 	}
 	if pool.CreationDate != nil {
 		out.CreationDate = pool.CreationDate.UTC().Format(time.RFC3339)

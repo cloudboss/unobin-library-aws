@@ -243,7 +243,7 @@ func TestRdsSchemas(t *testing.T) {
 					"arn":                    typecheck.TString(),
 					"ca-cert-identifier":     typecheck.TString(),
 					"endpoint":               typecheck.TString(),
-					"engine-version-actual":  typecheck.TString(),
+					"engine-version":         typecheck.TString(),
 					"hosted-zone-id":         typecheck.TString(),
 					"latest-restorable-time": typecheck.TString(),
 					"listener-endpoint": typecheck.TOptional(
@@ -535,7 +535,7 @@ func TestRdsSchemas(t *testing.T) {
 					"cluster-members":           typecheck.TList(typecheck.TString()),
 					"cluster-resource-id":       typecheck.TString(),
 					"endpoint":                  typecheck.TString(),
-					"engine-version-actual":     typecheck.TString(),
+					"engine-version":            typecheck.TString(),
 					"global-cluster-identifier": typecheck.TString(),
 					"hosted-zone-id":            typecheck.TString(),
 					"master-user-secret": typecheck.TOptional(
@@ -683,7 +683,7 @@ func TestRdsSchemas(t *testing.T) {
 					"db-parameter-group-name":      typecheck.TString(),
 					"dbi-resource-id":              typecheck.TString(),
 					"endpoint":                     typecheck.TString(),
-					"engine-version-actual":        typecheck.TString(),
+					"engine-version":               typecheck.TString(),
 					"kms-key-id":                   typecheck.TString(),
 					"network-type":                 typecheck.TString(),
 					"port":                         typecheck.TInteger(),

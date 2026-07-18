@@ -117,10 +117,10 @@ func (r *ReplicationGroupResource) validateUpdateTransitions(
 		}
 	}
 	if runtime.Changed(prior.Inputs.EngineVersion, r.EngineVersion) &&
-		r.EngineVersion != nil && observed != nil && observed.EngineVersionActual != "" &&
-		compareEngineVersions(*r.EngineVersion, observed.EngineVersionActual) < 0 {
+		r.EngineVersion != nil && observed != nil && observed.EngineVersion != "" &&
+		compareEngineVersions(*r.EngineVersion, observed.EngineVersion) < 0 {
 		return fmt.Errorf("engine-version downgrade from %s to %s requires replacement",
-			observed.EngineVersionActual, *r.EngineVersion)
+			observed.EngineVersion, *r.EngineVersion)
 	}
 	if runtime.Changed(prior.Inputs.ClusterMode, r.ClusterMode) && r.ClusterMode != nil {
 		priorMode := "disabled"
@@ -136,10 +136,10 @@ func (r *ReplicationGroupResource) validateUpdateTransitions(
 	}
 	if runtime.Changed(prior.Inputs.TransitEncryptionEnabled,
 		r.TransitEncryptionEnabled) {
-		if observed != nil && observed.EngineVersionActual != "" &&
-			compareEngineVersions(observed.EngineVersionActual, "7.0.5") < 0 {
+		if observed != nil && observed.EngineVersion != "" &&
+			compareEngineVersions(observed.EngineVersion, "7.0.5") < 0 {
 			return fmt.Errorf("changing transit-encryption-enabled on engine version %s "+
-				"requires replacement", observed.EngineVersionActual)
+				"requires replacement", observed.EngineVersion)
 		}
 		if r.TransitEncryptionEnabled &&
 			(r.TransitEncryptionMode == nil || *r.TransitEncryptionMode != "preferred") {
@@ -364,7 +364,7 @@ func (r *ReplicationGroupResource) needsSlowLogEnginePreupgrade(
 	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
 	observed *ReplicationGroupResourceOutput,
 ) bool {
-	if r.EngineVersion == nil || observed == nil || observed.EngineVersionActual == "" ||
+	if r.EngineVersion == nil || observed == nil || observed.EngineVersion == "" ||
 		!runtime.Changed(prior.Inputs.EngineVersion, r.EngineVersion) ||
 		!runtime.Changed(prior.Inputs.LogDeliveryConfiguration,
 			r.LogDeliveryConfiguration) {
@@ -377,7 +377,7 @@ func (r *ReplicationGroupResource) needsSlowLogEnginePreupgrade(
 	if priorSlow || !desiredSlow {
 		return false
 	}
-	return !engineSupportsSlowLog(prior.Inputs.Engine, observed.EngineVersionActual) &&
+	return !engineSupportsSlowLog(prior.Inputs.Engine, observed.EngineVersion) &&
 		engineSupportsSlowLog(r.Engine, *r.EngineVersion)
 }
 

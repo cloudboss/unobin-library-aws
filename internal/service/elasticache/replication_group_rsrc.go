@@ -106,7 +106,7 @@ type ReplicationGroupResource struct {
 type ReplicationGroupResourceOutput struct {
 	Arn                          string   `ub:"arn"`
 	ReplicationGroupID           string   `ub:"replication-group-id"`
-	EngineVersionActual          string   `ub:"engine-version-actual"`
+	EngineVersion                string   `ub:"engine-version"`
 	ClusterEnabled               bool     `ub:"cluster-enabled"`
 	Port                         int64    `ub:"port"`
 	ConfigurationEndpointAddress string   `ub:"configuration-endpoint-address"`

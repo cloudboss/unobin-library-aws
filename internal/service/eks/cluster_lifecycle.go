@@ -88,7 +88,7 @@ func clusterOutput(cluster *ekstypes.Cluster) *ClusterResourceOutput {
 		Endpoint:        aws.ToString(cluster.Endpoint),
 		PlatformVersion: aws.ToString(cluster.PlatformVersion),
 		Status:          string(cluster.Status),
-		VersionActual:   aws.ToString(cluster.Version),
+		Version:         aws.ToString(cluster.Version),
 	}
 	if cluster.CertificateAuthority != nil {
 		output.CertificateAuthorityData = aws.ToString(cluster.CertificateAuthority.Data)
@@ -100,8 +100,8 @@ func clusterOutput(cluster *ekstypes.Cluster) *ClusterResourceOutput {
 		output.OIDCIssuer = copyStringPointer(cluster.Identity.Oidc.Issuer)
 	}
 	if network := cluster.KubernetesNetworkConfig; network != nil {
-		output.IPFamilyActual = string(network.IpFamily)
-		output.ServiceIPv4CIDRActual = aws.ToString(network.ServiceIpv4Cidr)
+		output.IpFamily = string(network.IpFamily)
+		output.ServiceIpv4Cidr = aws.ToString(network.ServiceIpv4Cidr)
 		output.ServiceIPv6CIDR = copyStringPointer(network.ServiceIpv6Cidr)
 	}
 	if vpc := cluster.ResourcesVpcConfig; vpc != nil {

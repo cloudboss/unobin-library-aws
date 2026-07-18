@@ -23,12 +23,23 @@ func TestClusterSchema(t *testing.T) {
 		cluster.Inputs["force-update-version"])
 	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		cluster.Inputs["tags"])
-	assert.Equal(t, typecheck.TString(), cluster.Outputs["name"])
-	assert.Equal(t, typecheck.TString(), cluster.Outputs["arn"])
-	assert.Equal(t, typecheck.TOptional(typecheck.TString()), cluster.Outputs["cluster-id"])
-	assert.Equal(t, typecheck.TOptional(typecheck.TString()), cluster.Outputs["oidc-issuer"])
-	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
-		cluster.Outputs["service-ipv6-cidr"])
+	assert.Equal(t, map[string]typecheck.Type{
+		"name":                       typecheck.TString(),
+		"arn":                        typecheck.TString(),
+		"certificate-authority-data": typecheck.TString(),
+		"cluster-id":                 typecheck.TOptional(typecheck.TString()),
+		"created-at":                 typecheck.TString(),
+		"endpoint":                   typecheck.TString(),
+		"oidc-issuer":                typecheck.TOptional(typecheck.TString()),
+		"platform-version":           typecheck.TString(),
+		"status":                     typecheck.TString(),
+		"version":                    typecheck.TString(),
+		"ip-family":                  typecheck.TString(),
+		"service-ipv4-cidr":          typecheck.TString(),
+		"service-ipv6-cidr":          typecheck.TOptional(typecheck.TString()),
+		"cluster-security-group-id":  typecheck.TString(),
+		"vpc-id":                     typecheck.TString(),
+	}, cluster.Outputs)
 	assert.Empty(t, cluster.SensitiveInputs)
 	assert.Empty(t, cluster.SensitiveOutputs)
 	assert.Len(t, cluster.Defaults, 3)
@@ -49,13 +60,26 @@ func TestNodeGroupSchema(t *testing.T) {
 	assert.Equal(t, typecheck.TBoolean(), nodeGroup.Inputs["force-update-version"])
 	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		nodeGroup.Inputs["tags"])
-	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["cluster-name"])
-	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["node-group-name"])
-	assert.Equal(t, typecheck.TString(), nodeGroup.Outputs["arn"])
-	assert.Equal(t, typecheck.TList(typecheck.TString()),
-		nodeGroup.Outputs["auto-scaling-group-names"])
-	assert.Equal(t, typecheck.TOptional(typecheck.TString()),
-		nodeGroup.Outputs["remote-access-security-group-id"])
+	assert.Equal(t, map[string]typecheck.Type{
+		"cluster-name":                    typecheck.TString(),
+		"node-group-name":                 typecheck.TString(),
+		"arn":                             typecheck.TString(),
+		"status":                          typecheck.TString(),
+		"auto-scaling-group-names":        typecheck.TList(typecheck.TString()),
+		"remote-access-security-group-id": typecheck.TOptional(typecheck.TString()),
+		"ami-type":                        typecheck.TString(),
+		"capacity-type":                   typecheck.TString(),
+		"disk-size":                       typecheck.TOptional(typecheck.TInteger()),
+		"instance-types":                  typecheck.TList(typecheck.TString()),
+		"launch-template-id":              typecheck.TOptional(typecheck.TString()),
+		"launch-template-name":            typecheck.TOptional(typecheck.TString()),
+		"launch-template-version":         typecheck.TOptional(typecheck.TString()),
+		"node-repair-config":              nodeGroup.Inputs["node-repair-config"],
+		"release-version":                 typecheck.TString(),
+		"update-config":                   nodeGroup.Inputs["update-config"],
+		"version":                         typecheck.TString(),
+		"warm-pool-config":                nodeGroup.Inputs["warm-pool-config"],
+	}, nodeGroup.Outputs)
 	assert.Empty(t, nodeGroup.SensitiveInputs)
 	assert.Empty(t, nodeGroup.SensitiveOutputs)
 	assert.Len(t, nodeGroup.Defaults, 2)

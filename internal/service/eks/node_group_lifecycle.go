@@ -116,24 +116,24 @@ func nodeGroupNames(output *NodeGroupResourceOutput) (string, string, error) {
 
 func nodeGroupOutput(group *ekstypes.Nodegroup) *NodeGroupResourceOutput {
 	output := &NodeGroupResourceOutput{
-		AMITypeActual:          string(group.AmiType),
-		ARN:                    aws.ToString(group.NodegroupArn),
-		CapacityTypeActual:     string(group.CapacityType),
-		ClusterName:            aws.ToString(group.ClusterName),
-		DiskSizeActual:         nodeGroupInt64Pointer(group.DiskSize),
-		InstanceTypesActual:    slices.Clone(group.InstanceTypes),
-		NodeGroupName:          aws.ToString(group.NodegroupName),
-		NodeRepairConfigActual: nodeGroupRepairOutput(group.NodeRepairConfig),
-		ReleaseVersionActual:   aws.ToString(group.ReleaseVersion),
-		Status:                 string(group.Status),
-		UpdateConfigActual:     nodeGroupUpdateConfigOutput(group.UpdateConfig),
-		VersionActual:          aws.ToString(group.Version),
-		WarmPoolConfigActual:   nodeGroupWarmPoolOutput(group.WarmPoolConfig),
+		AmiType:          string(group.AmiType),
+		ARN:              aws.ToString(group.NodegroupArn),
+		CapacityType:     string(group.CapacityType),
+		ClusterName:      aws.ToString(group.ClusterName),
+		DiskSize:         nodeGroupInt64Pointer(group.DiskSize),
+		InstanceTypes:    slices.Clone(group.InstanceTypes),
+		NodeGroupName:    aws.ToString(group.NodegroupName),
+		NodeRepairConfig: nodeGroupRepairOutput(group.NodeRepairConfig),
+		ReleaseVersion:   aws.ToString(group.ReleaseVersion),
+		Status:           string(group.Status),
+		UpdateConfig:     nodeGroupUpdateConfigOutput(group.UpdateConfig),
+		Version:          aws.ToString(group.Version),
+		WarmPoolConfig:   nodeGroupWarmPoolOutput(group.WarmPoolConfig),
 	}
 	if group.LaunchTemplate != nil {
-		output.LaunchTemplateIDActual = copyStringPointer(group.LaunchTemplate.Id)
-		output.LaunchTemplateNameActual = copyStringPointer(group.LaunchTemplate.Name)
-		output.LaunchTemplateVersionActual = copyStringPointer(group.LaunchTemplate.Version)
+		output.LaunchTemplateId = copyStringPointer(group.LaunchTemplate.Id)
+		output.LaunchTemplateName = copyStringPointer(group.LaunchTemplate.Name)
+		output.LaunchTemplateVersion = copyStringPointer(group.LaunchTemplate.Version)
 	}
 	if group.Resources != nil {
 		output.AutoScalingGroupNames = make(

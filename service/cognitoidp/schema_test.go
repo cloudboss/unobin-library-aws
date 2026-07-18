@@ -35,7 +35,7 @@ func TestUserPoolSchema(t *testing.T) {
 		"provider-name":             typecheck.TString(),
 		"provider-url":              typecheck.TString(),
 		"user-pool-id":              typecheck.TString(),
-		"user-pool-tier-actual":     typecheck.TString(),
+		"user-pool-tier":            typecheck.TString(),
 	}, got.Outputs)
 	assert.Empty(t, got.SensitiveInputs)
 	assert.Empty(t, got.SensitiveOutputs)

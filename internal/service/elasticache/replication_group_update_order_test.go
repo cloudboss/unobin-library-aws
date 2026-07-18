@@ -246,7 +246,7 @@ func TestReplicationGroupSlowLogUpgradeRunsFirst(t *testing.T) {
 		},
 	}
 	prior := testReplicationGroupPrior(*priorInputs)
-	prior.Observed.EngineVersionActual = "5.0.6"
+	prior.Observed.EngineVersion = "5.0.6"
 	client := newFakeReplicationGroupClient()
 	client.modifyErrors = []error{
 		&elasticachetypes.InvalidParameterCombinationException{
@@ -345,7 +345,7 @@ func testReplicationGroupPrior(
 	outputs := &ReplicationGroupResourceOutput{
 		Arn:                  testReplicationGroupArn,
 		ReplicationGroupID:   testReplicationGroupID,
-		EngineVersionActual:  "7.1.0",
+		EngineVersion:        "7.1.0",
 		NumCacheClusters:     1,
 		NumNodeGroups:        1,
 		ReplicasPerNodeGroup: 0,

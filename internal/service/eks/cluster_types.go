@@ -35,9 +35,9 @@ type ClusterResourceOutput struct {
 	OIDCIssuer               *string `ub:"oidc-issuer"`
 	PlatformVersion          string  `ub:"platform-version"`
 	Status                   string  `ub:"status"`
-	VersionActual            string  `ub:"version-actual"`
-	IPFamilyActual           string  `ub:"ip-family-actual"`
-	ServiceIPv4CIDRActual    string  `ub:"service-ipv4-cidr-actual"`
+	Version                  string  `ub:"version"`
+	IpFamily                 string  `ub:"ip-family"`
+	ServiceIpv4Cidr          string  `ub:"service-ipv4-cidr"`
 	ServiceIPv6CIDR          *string `ub:"service-ipv6-cidr"`
 	ClusterSecurityGroupID   string  `ub:"cluster-security-group-id"`
 	VPCID                    string  `ub:"vpc-id"`

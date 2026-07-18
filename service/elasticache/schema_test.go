@@ -146,7 +146,7 @@ func TestReplicationGroupSchema(t *testing.T) {
 		"arn":                            typecheck.TString(),
 		"cluster-enabled":                typecheck.TBoolean(),
 		"configuration-endpoint-address": typecheck.TString(),
-		"engine-version-actual":          typecheck.TString(),
+		"engine-version":                 typecheck.TString(),
 		"global-replication-group-id":    typecheck.TString(),
 		"member-clusters":                typecheck.TList(typecheck.TString()),
 		"num-cache-clusters":             typecheck.TInteger(),

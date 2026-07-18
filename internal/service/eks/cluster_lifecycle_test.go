@@ -49,7 +49,7 @@ func TestClusterCreateRetriesWaitsAndReadsFinalState(t *testing.T) {
 	assert.Equal(t, "certificate", output.CertificateAuthorityData)
 	assert.Equal(t, "2026-07-17T12:30:00Z", output.CreatedAt)
 	assert.Equal(t, "https://issuer.example", aws.ToString(output.OIDCIssuer))
-	assert.Equal(t, "10.0.0.0/16", output.ServiceIPv4CIDRActual)
+	assert.Equal(t, "10.0.0.0/16", output.ServiceIpv4Cidr)
 	assert.Equal(t, "sg-cluster", output.ClusterSecurityGroupID)
 	assert.Equal(t, "vpc-123", output.VPCID)
 }

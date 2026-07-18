@@ -81,10 +81,10 @@ factory: {
   outputs: {
     primary-id:     { value: resource.primary.user-pool-id }
     primary-arn:    { value: resource.primary.arn }
-    primary-tier:   { value: resource.primary.user-pool-tier-actual }
+    primary-tier:   { value: resource.primary.user-pool-tier }
     clear-id:       { value: resource.clear.user-pool-id }
     clear-arn:      { value: resource.clear.arn }
-    clear-tier:     { value: resource.clear.user-pool-tier-actual }
+    clear-tier:     { value: resource.clear.user-pool-tier }
     client-id:     { value: resource.primary-client.id }
     client-name:   { value: resource.primary-client.name }
     client-secret: { value: resource.primary-client.client-secret }

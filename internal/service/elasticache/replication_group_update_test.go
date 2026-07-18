@@ -126,7 +126,7 @@ func TestReplicationGroupValidateUpdateTransitions(t *testing.T) {
 			prior := runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput]{
 				Inputs: *priorInputs,
 			}
-			observed := &ReplicationGroupResourceOutput{EngineVersionActual: tt.actual}
+			observed := &ReplicationGroupResourceOutput{EngineVersion: tt.actual}
 
 			err := current.validateUpdateTransitions(prior, observed)
 

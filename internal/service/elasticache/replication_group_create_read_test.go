@@ -183,7 +183,7 @@ func TestReplicationGroupReadUsesFinalAvailableObservation(t *testing.T) {
 	assert.Equal(t, "final.example.test", out.PrimaryEndpointAddress)
 	assert.Equal(t, "reader.example.test", out.ReaderEndpointAddress)
 	assert.Equal(t, int64(6379), out.Port)
-	assert.Equal(t, "7.1.0", out.EngineVersionActual)
+	assert.Equal(t, "7.1.0", out.EngineVersion)
 	assert.Equal(t, "default.redis7", out.ParameterGroupName)
 	require.Len(t, client.describeClusterInputs, 1)
 	assert.True(t, aws.ToBool(client.describeClusterInputs[0].ShowCacheNodeInfo))

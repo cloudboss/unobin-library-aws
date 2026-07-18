@@ -189,7 +189,7 @@ type InstanceResourceOutput struct {
 	Port                 int64                     `ub:"port"`
 	HostedZoneId         string                    `ub:"hosted-zone-id"`
 	Status               string                    `ub:"status"`
-	EngineVersionActual  string                    `ub:"engine-version-actual"`
+	EngineVersion        string                    `ub:"engine-version"`
 	CaCertIdentifier     string                    `ub:"ca-cert-identifier"`
 	LatestRestorableTime string                    `ub:"latest-restorable-time"`
 	MasterUserSecret     *InstanceMasterUserSecret `ub:"master-user-secret"`
@@ -1448,18 +1448,18 @@ func (r *InstanceResource) read(
 	}
 	endpoint, address, hostedZone, port := flattenEndpoint(inst.Endpoint)
 	out := &InstanceResourceOutput{
-		Arn:                 aws.ToString(inst.DBInstanceArn),
-		ResourceId:          aws.ToString(inst.DbiResourceId),
-		Endpoint:            endpoint,
-		Address:             address,
-		Port:                port,
-		HostedZoneId:        hostedZone,
-		Status:              aws.ToString(inst.DBInstanceStatus),
-		EngineVersionActual: aws.ToString(inst.EngineVersion),
-		CaCertIdentifier:    aws.ToString(inst.CACertificateIdentifier),
-		MasterUserSecret:    flattenMasterUserSecret(inst.MasterUserSecret),
-		ListenerEndpoint:    flattenListenerEndpoint(inst.ListenerEndpoint),
-		Replicas:            inst.ReadReplicaDBInstanceIdentifiers,
+		Arn:              aws.ToString(inst.DBInstanceArn),
+		ResourceId:       aws.ToString(inst.DbiResourceId),
+		Endpoint:         endpoint,
+		Address:          address,
+		Port:             port,
+		HostedZoneId:     hostedZone,
+		Status:           aws.ToString(inst.DBInstanceStatus),
+		EngineVersion:    aws.ToString(inst.EngineVersion),
+		CaCertIdentifier: aws.ToString(inst.CACertificateIdentifier),
+		MasterUserSecret: flattenMasterUserSecret(inst.MasterUserSecret),
+		ListenerEndpoint: flattenListenerEndpoint(inst.ListenerEndpoint),
+		Replicas:         inst.ReadReplicaDBInstanceIdentifiers,
 	}
 	if inst.LatestRestorableTime != nil {
 		out.LatestRestorableTime = inst.LatestRestorableTime.Format(time.RFC3339)

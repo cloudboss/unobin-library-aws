@@ -178,5 +178,5 @@ type UserPoolResourceOutput struct {
 	Domain                 string `ub:"domain"`
 	CustomDomain           string `ub:"custom-domain"`
 	EstimatedNumberOfUsers int64  `ub:"estimated-number-of-users"`
-	UserPoolTierActual     string `ub:"user-pool-tier-actual"`
+	UserPoolTier           string `ub:"user-pool-tier"`
 }

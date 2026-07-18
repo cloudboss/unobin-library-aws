@@ -163,7 +163,7 @@ type ClusterResource struct {
 // live in. The port is the listening port RDS settled on. The resource id is the
 // stable id used to find the cluster's global membership. The members are the
 // instance identifiers that have joined the cluster. The master user secret is
-// present only when the password is managed by RDS. The actual engine version is
+// present only when the password is managed by RDS. The engine version is
 // the version RDS resolved from a partial one. The global cluster identifier is
 // the global database the cluster belongs to, empty when it belongs to none.
 type ClusterResourceOutput struct {
@@ -175,7 +175,7 @@ type ClusterResourceOutput struct {
 	ClusterResourceId       string                   `ub:"cluster-resource-id"`
 	ClusterMembers          []string                 `ub:"cluster-members"`
 	MasterUserSecret        *ClusterMasterUserSecret `ub:"master-user-secret"`
-	EngineVersionActual     string                   `ub:"engine-version-actual"`
+	EngineVersion           string                   `ub:"engine-version"`
 	GlobalClusterIdentifier string                   `ub:"global-cluster-identifier"`
 }
 
@@ -669,15 +669,15 @@ func (r *ClusterResource) read(
 		return nil, err
 	}
 	out := &ClusterResourceOutput{
-		Arn:                 aws.ToString(cluster.DBClusterArn),
-		Endpoint:            aws.ToString(cluster.Endpoint),
-		ReaderEndpoint:      aws.ToString(cluster.ReaderEndpoint),
-		HostedZoneId:        aws.ToString(cluster.HostedZoneId),
-		Port:                int64(aws.ToInt32(cluster.Port)),
-		ClusterResourceId:   aws.ToString(cluster.DbClusterResourceId),
-		ClusterMembers:      clusterMembers(cluster),
-		MasterUserSecret:    clusterMasterUserSecret(cluster.MasterUserSecret),
-		EngineVersionActual: aws.ToString(cluster.EngineVersion),
+		Arn:               aws.ToString(cluster.DBClusterArn),
+		Endpoint:          aws.ToString(cluster.Endpoint),
+		ReaderEndpoint:    aws.ToString(cluster.ReaderEndpoint),
+		HostedZoneId:      aws.ToString(cluster.HostedZoneId),
+		Port:              int64(aws.ToInt32(cluster.Port)),
+		ClusterResourceId: aws.ToString(cluster.DbClusterResourceId),
+		ClusterMembers:    clusterMembers(cluster),
+		MasterUserSecret:  clusterMasterUserSecret(cluster.MasterUserSecret),
+		EngineVersion:     aws.ToString(cluster.EngineVersion),
 	}
 	id, err := r.readGlobalMembership(ctx, client, out.Arn, cluster)
 	if err != nil {

@@ -36,9 +36,9 @@ func TestNodeGroupCreateWaitsAndReadsFinalState(t *testing.T) {
 	assert.Equal(t, "arn:node-group", output.ARN)
 	assert.Equal(t, []string{"asg-a", "asg-b"}, output.AutoScalingGroupNames)
 	assert.Equal(t, "sg-remote", aws.ToString(output.RemoteAccessSecurityGroupID))
-	assert.Equal(t, "lt-123", aws.ToString(output.LaunchTemplateIDActual))
-	assert.True(t, aws.ToBool(output.NodeRepairConfigActual.Enabled))
-	assert.True(t, aws.ToBool(output.WarmPoolConfigActual.Enabled))
+	assert.Equal(t, "lt-123", aws.ToString(output.LaunchTemplateId))
+	assert.True(t, aws.ToBool(output.NodeRepairConfig.Enabled))
+	assert.True(t, aws.ToBool(output.WarmPoolConfig.Enabled))
 }
 
 func TestNodeGroupCreateRejectsMalformedResponses(t *testing.T) {
@@ -318,20 +318,20 @@ func TestNodeGroupUpdateRejectsMalformedConfigResults(t *testing.T) {
 func TestNodeGroupOutputExposesEffectiveCloudValues(t *testing.T) {
 	output := nodeGroupOutput(completeSDKNodeGroup())
 
-	assert.Equal(t, "AL2023_x86_64_STANDARD", output.AMITypeActual)
-	assert.Equal(t, "ON_DEMAND", output.CapacityTypeActual)
-	assert.Equal(t, int64(40), *output.DiskSizeActual)
-	assert.Equal(t, []string{"m7i.large"}, output.InstanceTypesActual)
-	assert.Equal(t, "lt-123", aws.ToString(output.LaunchTemplateIDActual))
-	assert.Equal(t, "workers", aws.ToString(output.LaunchTemplateNameActual))
-	assert.Equal(t, "7", aws.ToString(output.LaunchTemplateVersionActual))
-	assert.Equal(t, int64(2), *output.NodeRepairConfigActual.ParallelCount)
-	assert.Equal(t, "1.33.1-20260101", output.ReleaseVersionActual)
-	assert.Equal(t, int64(1), *output.UpdateConfigActual.MaxUnavailable)
-	assert.Equal(t, "MINIMAL", aws.ToString(output.UpdateConfigActual.Strategy))
-	assert.Equal(t, "1.33", output.VersionActual)
-	assert.Equal(t, int64(1), *output.WarmPoolConfigActual.MinSize)
-	assert.Equal(t, "RUNNING", aws.ToString(output.WarmPoolConfigActual.PoolState))
+	assert.Equal(t, "AL2023_x86_64_STANDARD", output.AmiType)
+	assert.Equal(t, "ON_DEMAND", output.CapacityType)
+	assert.Equal(t, int64(40), *output.DiskSize)
+	assert.Equal(t, []string{"m7i.large"}, output.InstanceTypes)
+	assert.Equal(t, "lt-123", aws.ToString(output.LaunchTemplateId))
+	assert.Equal(t, "workers", aws.ToString(output.LaunchTemplateName))
+	assert.Equal(t, "7", aws.ToString(output.LaunchTemplateVersion))
+	assert.Equal(t, int64(2), *output.NodeRepairConfig.ParallelCount)
+	assert.Equal(t, "1.33.1-20260101", output.ReleaseVersion)
+	assert.Equal(t, int64(1), *output.UpdateConfig.MaxUnavailable)
+	assert.Equal(t, "MINIMAL", aws.ToString(output.UpdateConfig.Strategy))
+	assert.Equal(t, "1.33", output.Version)
+	assert.Equal(t, int64(1), *output.WarmPoolConfig.MinSize)
+	assert.Equal(t, "RUNNING", aws.ToString(output.WarmPoolConfig.PoolState))
 }
 
 func TestNodeGroupUpdateRequiresPriorIdentityAndTagARN(t *testing.T) {

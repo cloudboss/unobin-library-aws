@@ -169,7 +169,7 @@ factory: {
     endpoint:          { value: resource.cluster.endpoint }
     platform-version:  { value: resource.cluster.platform-version }
     status:            { value: resource.cluster.status }
-    version:           { value: resource.cluster.version-actual }
+    version:           { value: resource.cluster.version }
     vpc-id:            { value: resource.cluster.vpc-id }
     subnet-a-id:       { value: resource.subnet-a.id }
     subnet-b-id:       { value: resource.subnet-b.id }

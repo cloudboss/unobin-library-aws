@@ -34,18 +34,18 @@ type NodeGroupResourceOutput struct {
 	Status                      string                     `ub:"status"`
 	AutoScalingGroupNames       []string                   `ub:"auto-scaling-group-names"`
 	RemoteAccessSecurityGroupID *string                    `ub:"remote-access-security-group-id"`
-	AMITypeActual               string                     `ub:"ami-type-actual"`
-	CapacityTypeActual          string                     `ub:"capacity-type-actual"`
-	DiskSizeActual              *int64                     `ub:"disk-size-actual"`
-	InstanceTypesActual         []string                   `ub:"instance-types-actual"`
-	LaunchTemplateIDActual      *string                    `ub:"launch-template-id-actual"`
-	LaunchTemplateNameActual    *string                    `ub:"launch-template-name-actual"`
-	LaunchTemplateVersionActual *string                    `ub:"launch-template-version-actual"`
-	NodeRepairConfigActual      *NodeGroupNodeRepairConfig `ub:"node-repair-config-actual"`
-	ReleaseVersionActual        string                     `ub:"release-version-actual"`
-	UpdateConfigActual          *NodeGroupUpdateConfig     `ub:"update-config-actual"`
-	VersionActual               string                     `ub:"version-actual"`
-	WarmPoolConfigActual        *NodeGroupWarmPoolConfig   `ub:"warm-pool-config-actual"`
+	AmiType                     string                     `ub:"ami-type"`
+	CapacityType                string                     `ub:"capacity-type"`
+	DiskSize                    *int64                     `ub:"disk-size"`
+	InstanceTypes               []string                   `ub:"instance-types"`
+	LaunchTemplateId            *string                    `ub:"launch-template-id"`
+	LaunchTemplateName          *string                    `ub:"launch-template-name"`
+	LaunchTemplateVersion       *string                    `ub:"launch-template-version"`
+	NodeRepairConfig            *NodeGroupNodeRepairConfig `ub:"node-repair-config"`
+	ReleaseVersion              string                     `ub:"release-version"`
+	UpdateConfig                *NodeGroupUpdateConfig     `ub:"update-config"`
+	Version                     string                     `ub:"version"`
+	WarmPoolConfig              *NodeGroupWarmPoolConfig   `ub:"warm-pool-config"`
 }
 
 type NodeGroupScalingConfig struct {

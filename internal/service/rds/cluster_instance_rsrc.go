@@ -191,7 +191,7 @@ type ClusterInstanceResourceOutput struct {
 	KmsKeyId                   string `ub:"kms-key-id"`
 	StorageEncrypted           bool   `ub:"storage-encrypted"`
 	NetworkType                string `ub:"network-type"`
-	EngineVersionActual        string `ub:"engine-version-actual"`
+	EngineVersion              string `ub:"engine-version"`
 	AvailabilityZone           string `ub:"availability-zone"`
 	CACertificateIdentifier    string `ub:"ca-cert-identifier"`
 	DBParameterGroupName       string `ub:"db-parameter-group-name"`
@@ -383,7 +383,7 @@ func (r *ClusterInstanceResource) read(
 		KmsKeyId:                   aws.ToString(inst.KmsKeyId),
 		StorageEncrypted:           aws.ToBool(inst.StorageEncrypted),
 		NetworkType:                aws.ToString(inst.NetworkType),
-		EngineVersionActual:        aws.ToString(inst.EngineVersion),
+		EngineVersion:              aws.ToString(inst.EngineVersion),
 		AvailabilityZone:           aws.ToString(inst.AvailabilityZone),
 		CACertificateIdentifier:    aws.ToString(inst.CACertificateIdentifier),
 		PreferredBackupWindow:      aws.ToString(inst.PreferredBackupWindow),
