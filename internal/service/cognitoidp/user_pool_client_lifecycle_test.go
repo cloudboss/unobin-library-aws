@@ -217,7 +217,117 @@ func TestUserPoolClientCreateWithoutSecret(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Nil(t, output.ClientSecret)
-	assert.False(t, client.createInputs[0].GenerateSecret)
+	require.Len(t, client.createInputs, 1)
+	input := client.createInputs[0]
+	assert.False(t, input.GenerateSecret)
+	assert.Nil(t, input.TokenValidityUnits)
+	assert.Nil(t, input.AllowedOAuthFlows)
+	assert.Nil(t, input.AllowedOAuthScopes)
+	assert.Nil(t, input.CallbackURLs)
+	assert.Nil(t, input.LogoutURLs)
+	assert.Nil(t, input.ExplicitAuthFlows)
+	assert.Nil(t, input.ReadAttributes)
+	assert.Nil(t, input.WriteAttributes)
+	assert.Nil(t, input.SupportedIdentityProviders)
+}
+
+func TestUserPoolClientCreateSendsCompleteConfiguration(t *testing.T) {
+	resource := completeUserPoolClientResource()
+	client := &fakeUserPoolClientAPI{createOutputs: []*cognitoidentityprovider.
+		CreateUserPoolClientOutput{{
+		UserPoolClient: userPoolClientResult(resource.UserPoolID, "client-id", "new-name"),
+	}}}
+
+	_, err := resource.create(context.Background(), client, bytes.NewReader(nil))
+
+	require.NoError(t, err)
+	require.Len(t, client.createInputs, 1)
+	assert.Equal(t, completeUserPoolClientCreateInput(), client.createInputs[0])
+}
+
+func completeUserPoolClientCreateInput() *cognitoidentityprovider.CreateUserPoolClientInput {
+	return &cognitoidentityprovider.CreateUserPoolClientInput{
+		UserPoolId:           aws.String("us-east-1_example"),
+		ClientName:           aws.String("new-name"),
+		GenerateSecret:       true,
+		AccessTokenValidity:  aws.Int32(30),
+		IdTokenValidity:      aws.Int32(45),
+		RefreshTokenValidity: 24,
+		AuthSessionValidity:  aws.Int32(10),
+		AllowedOAuthFlows:    []cognitotypes.OAuthFlowType{"code"},
+		AllowedOAuthScopes:   []string{"openid", "email"},
+		CallbackURLs:         []string{"https://example.com/callback"},
+		LogoutURLs:           []string{"https://example.com/logout"},
+		ExplicitAuthFlows: []cognitotypes.ExplicitAuthFlowsType{
+			"ALLOW_USER_SRP_AUTH",
+		},
+		ReadAttributes:                           []string{"email"},
+		WriteAttributes:                          []string{"name"},
+		SupportedIdentityProviders:               []string{"COGNITO"},
+		AllowedOAuthFlowsUserPoolClient:          true,
+		EnablePropagateAdditionalUserContextData: aws.Bool(true),
+		EnableTokenRevocation:                    aws.Bool(true),
+		DefaultRedirectURI:                       aws.String("https://example.com/callback"),
+		PreventUserExistenceErrors:               cognitotypes.PreventUserExistenceErrorTypesEnabled,
+		TokenValidityUnits: &cognitotypes.TokenValidityUnitsType{
+			AccessToken:  cognitotypes.TimeUnitsTypeMinutes,
+			IdToken:      cognitotypes.TimeUnitsTypeMinutes,
+			RefreshToken: cognitotypes.TimeUnitsTypeHours,
+		},
+		AnalyticsConfiguration: &cognitotypes.AnalyticsConfigurationType{
+			ApplicationArn: aws.String(
+				"arn:aws:mobiletargeting:us-east-1:123456789012:apps/example",
+			),
+			UserDataShared: true,
+		},
+		RefreshTokenRotation: &cognitotypes.RefreshTokenRotationType{
+			Feature:                 cognitotypes.FeatureTypeEnabled,
+			RetryGracePeriodSeconds: aws.Int32(30),
+		},
+	}
+}
+
+func TestUserPoolClientCreateDistinguishesNilAndEmptyCollections(t *testing.T) {
+	name := "public-client"
+	resource := UserPoolClientResource{
+		UserPoolID:                      "us-east-1_example",
+		Name:                            &name,
+		AllowedOAuthFlows:               ptrSlice(),
+		AllowedOAuthScopes:              ptrSlice(),
+		CallbackURLs:                    ptrSlice(),
+		LogoutURLs:                      ptrSlice(),
+		ExplicitAuthFlows:               ptrSlice(),
+		ReadAttributes:                  ptrSlice(),
+		WriteAttributes:                 ptrSlice(),
+		SupportedIdentityProviders:      ptrSlice(),
+		AllowedOAuthFlowsUserPoolClient: aws.Bool(false),
+	}
+	client := &fakeUserPoolClientAPI{createOutputs: []*cognitoidentityprovider.
+		CreateUserPoolClientOutput{{
+		UserPoolClient: userPoolClientResult(resource.UserPoolID, "client-id", name),
+	}}}
+
+	_, err := resource.create(context.Background(), client, bytes.NewReader(nil))
+
+	require.NoError(t, err)
+	require.Len(t, client.createInputs, 1)
+	input := client.createInputs[0]
+	assert.NotNil(t, input.AllowedOAuthFlows)
+	assert.Empty(t, input.AllowedOAuthFlows)
+	assert.NotNil(t, input.AllowedOAuthScopes)
+	assert.Empty(t, input.AllowedOAuthScopes)
+	assert.NotNil(t, input.CallbackURLs)
+	assert.Empty(t, input.CallbackURLs)
+	assert.NotNil(t, input.LogoutURLs)
+	assert.Empty(t, input.LogoutURLs)
+	assert.NotNil(t, input.ExplicitAuthFlows)
+	assert.Empty(t, input.ExplicitAuthFlows)
+	assert.NotNil(t, input.ReadAttributes)
+	assert.Empty(t, input.ReadAttributes)
+	assert.NotNil(t, input.WriteAttributes)
+	assert.Empty(t, input.WriteAttributes)
+	assert.NotNil(t, input.SupportedIdentityProviders)
+	assert.Empty(t, input.SupportedIdentityProviders)
 }
 
 func TestUserPoolClientCreateErrors(t *testing.T) {
