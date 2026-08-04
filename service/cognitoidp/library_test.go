@@ -20,10 +20,13 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 2)
+	require.Len(t, library.Resources, 3)
 	require.Contains(t, library.Resources, "user-pool")
 	assert.Equal(t, reflect.TypeFor[*svc.UserPoolResourceOutput](),
 		library.Resources["user-pool"].OutputType())
+	require.Contains(t, library.Resources, "user-pool-domain")
+	assert.Equal(t, reflect.TypeFor[*svc.UserPoolDomainResourceOutput](),
+		library.Resources["user-pool-domain"].OutputType())
 	require.Contains(t, library.Resources, "user-pool-client")
 	assert.Equal(t, reflect.TypeFor[*svc.UserPoolClientResourceOutput](),
 		library.Resources["user-pool-client"].OutputType())

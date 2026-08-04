@@ -54,6 +54,10 @@ factory: {
       type:    boolean
       default: false
     }
+    domain-managed-login-version: {
+      type:    integer
+      default: 1
+    }
   }
 
   resources: {
@@ -76,6 +80,11 @@ factory: {
       auth-session-validity:   input.client-auth-session-validity
       enable-token-revocation: input.client-enable-token-revocation
     }
+    primary-domain: aws-cognitoidp.user-pool-domain {
+      domain:                'unobin-it-user-pool-domain'
+      user-pool-id:          resource.primary.user-pool-id
+      managed-login-version: input.domain-managed-login-version
+    }
   }
 
   outputs: {
@@ -88,5 +97,7 @@ factory: {
     client-id:     { value: resource.primary-client.id }
     client-name:   { value: resource.primary-client.name }
     client-secret: { value: resource.primary-client.client-secret }
+    domain:        { value: resource.primary-domain.domain }
+    domain-pool-id: { value: resource.primary-domain.user-pool-id }
   }
 }

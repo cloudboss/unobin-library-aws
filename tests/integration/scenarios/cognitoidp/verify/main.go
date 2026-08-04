@@ -24,9 +24,15 @@ const (
 	clearPoolName      = "unobin-it-user-pool-clear"
 	clientInitialName  = "unobin-it-user-pool-client-initial"
 	clientUpdatedName  = "unobin-it-user-pool-client-updated"
+	domainName         = "unobin-it-user-pool-domain"
 )
 
 type verifierClient interface {
+	DescribeUserPoolDomain(
+		context.Context,
+		*cognitoidentityprovider.DescribeUserPoolDomainInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.DescribeUserPoolDomainOutput, error)
 	DescribeUserPool(
 		context.Context,
 		*cognitoidentityprovider.DescribeUserPoolInput,
@@ -84,10 +90,16 @@ type observedClient struct {
 	secret string
 }
 
+type observedDomain struct {
+	domain string
+	poolID string
+}
+
 type recordedPools struct {
 	Primary poolIdentity   `json:"primary"`
 	Clear   poolIdentity   `json:"clear"`
 	Client  clientIdentity `json:"client"`
+	Domain  domainIdentity `json:"domain"`
 }
 
 type poolIdentity struct {
@@ -100,6 +112,11 @@ type clientIdentity struct {
 	PoolID string `json:"pool_id"`
 	ID     string `json:"id"`
 	Secret string `json:"secret"`
+}
+
+type domainIdentity struct {
+	Domain string `json:"domain"`
+	PoolID string `json:"pool_id"`
 }
 
 func main() {
@@ -159,10 +176,15 @@ func verifyApplied(ctx context.Context, client verifierClient) error {
 	if err != nil {
 		return err
 	}
+	domain, err := verifyDomainPresent(ctx, client, primary.id, 1)
+	if err != nil {
+		return err
+	}
 	return writeRecordedPools(recordedPools{
 		Primary: identityFromObserved(primary),
 		Clear:   identityFromObserved(clear),
 		Client:  clientIdentityFromObserved(clientOutput),
+		Domain:  domainIdentityFromObserved(domain),
 	})
 }
 
@@ -196,6 +218,13 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 	if err := verifyClientIdentity(clientOutput, recorded.Client); err != nil {
 		return err
 	}
+	domain, err := verifyDomainPresent(ctx, client, primary.id, 2)
+	if err != nil {
+		return err
+	}
+	if err := verifyDomainIdentity(domain, recorded.Domain); err != nil {
+		return err
+	}
 	clear, err := verifyPresent(ctx, client, expectedPool{
 		name:                 clearPoolName,
 		tier:                 cognitotypes.UserPoolTierTypeEssentials,
@@ -206,6 +235,54 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 		return err
 	}
 	return verifyIdentity("clear", clear, recorded.Clear)
+}
+
+func verifyDomainPresent(
+	ctx context.Context,
+	client verifierClient,
+	poolID string,
+	managedLoginVersion int32,
+) (observedDomain, error) {
+	output, err := client.DescribeUserPoolDomain(
+		ctx,
+		&cognitoidentityprovider.DescribeUserPoolDomainInput{Domain: aws.String(domainName)},
+	)
+	if err != nil {
+		return observedDomain{}, fmt.Errorf("describe user pool domain %s: %w", domainName, err)
+	}
+	if output == nil || output.DomainDescription == nil {
+		return observedDomain{}, fmt.Errorf("user pool domain %s returned no details", domainName)
+	}
+	details := output.DomainDescription
+	if aws.ToString(details.Domain) != domainName {
+		return observedDomain{}, fmt.Errorf(
+			"user pool domain is %q, want %q",
+			aws.ToString(details.Domain),
+			domainName,
+		)
+	}
+	if aws.ToString(details.UserPoolId) != poolID {
+		return observedDomain{}, fmt.Errorf(
+			"user pool domain pool ID is %q, want %q",
+			aws.ToString(details.UserPoolId),
+			poolID,
+		)
+	}
+	if details.Status != cognitotypes.DomainStatusTypeActive {
+		return observedDomain{}, fmt.Errorf(
+			"user pool domain status is %q, want ACTIVE",
+			details.Status,
+		)
+	}
+	if aws.ToInt32(details.ManagedLoginVersion) != managedLoginVersion {
+		return observedDomain{}, fmt.Errorf(
+			"user pool domain managed-login-version is %d, want %d",
+			aws.ToInt32(details.ManagedLoginVersion),
+			managedLoginVersion,
+		)
+	}
+	fmt.Printf("ok: user pool domain %s matches the expected configuration\n", domainName)
+	return observedDomain{domain: domainName, poolID: poolID}, nil
 }
 
 func verifyClientPresent(
@@ -504,8 +581,35 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 	if err := verifyClientDestroyed(ctx, client, recorded.Client); err != nil {
 		return err
 	}
+	if err := verifyDomainDestroyed(ctx, client, recorded.Domain); err != nil {
+		return err
+	}
 	fmt.Println("ok: Cognito user pools and client are gone")
 	return nil
+}
+
+func verifyDomainDestroyed(
+	ctx context.Context,
+	client verifierClient,
+	identity domainIdentity,
+) error {
+	output, err := client.DescribeUserPoolDomain(
+		ctx,
+		&cognitoidentityprovider.DescribeUserPoolDomainInput{Domain: aws.String(identity.Domain)},
+	)
+	var notFound *cognitotypes.ResourceNotFoundException
+	if errors.As(err, &notFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("describe destroyed user pool domain %s: %w", identity.Domain, err)
+	}
+	if output == nil ||
+		output.DomainDescription == nil ||
+		output.DomainDescription.Status == "" {
+		return nil
+	}
+	return fmt.Errorf("user pool domain %s still exists", identity.Domain)
 }
 
 func verifyClientDestroyed(
@@ -570,6 +674,10 @@ func clientIdentityFromObserved(client observedClient) clientIdentity {
 	return clientIdentity{PoolID: client.poolID, ID: client.id, Secret: client.secret}
 }
 
+func domainIdentityFromObserved(domain observedDomain) domainIdentity {
+	return domainIdentity{Domain: domain.domain, PoolID: domain.poolID}
+}
+
 func verifyIdentity(name string, observed observedPool, expected poolIdentity) error {
 	actual := identityFromObserved(observed)
 	if actual != expected {
@@ -582,6 +690,14 @@ func verifyClientIdentity(observed observedClient, expected clientIdentity) erro
 	actual := clientIdentityFromObserved(observed)
 	if actual != expected {
 		return fmt.Errorf("user pool client identity is %+v, want %+v", actual, expected)
+	}
+	return nil
+}
+
+func verifyDomainIdentity(observed observedDomain, expected domainIdentity) error {
+	actual := domainIdentityFromObserved(observed)
+	if actual != expected {
+		return fmt.Errorf("user pool domain identity is %+v, want %+v", actual, expected)
 	}
 	return nil
 }

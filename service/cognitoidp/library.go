@@ -24,6 +24,10 @@ func Library() *runtime.Library {
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"user-pool": makeResource[svc.UserPoolResource, *svc.UserPoolResourceOutput](),
+			"user-pool-domain": makeResource[
+				svc.UserPoolDomainResource,
+				*svc.UserPoolDomainResourceOutput,
+			](),
 			"user-pool-client": makeResource[
 				svc.UserPoolClientResource,
 				*svc.UserPoolClientResourceOutput,

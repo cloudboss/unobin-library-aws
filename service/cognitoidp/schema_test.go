@@ -19,7 +19,7 @@ const unobinModulePath = "github.com/cloudboss/unobin"
 
 func TestUserPoolSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 2)
+	require.Len(t, schema.Resources, 3)
 	require.Contains(t, schema.Resources, "user-pool")
 	got := schema.Resources["user-pool"]
 
@@ -128,7 +128,7 @@ func TestUserPoolSchema(t *testing.T) {
 
 func TestUserPoolClientSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 2)
+	require.Len(t, schema.Resources, 3)
 	require.Contains(t, schema.Resources, "user-pool-client")
 	got := schema.Resources["user-pool-client"]
 
@@ -248,6 +248,62 @@ func TestUserPoolClientSchema(t *testing.T) {
 	}, messages["analytics application triplet fields must be set together"])
 }
 
+func TestUserPoolDomainSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 3)
+	require.Contains(t, schema.Resources, "user-pool-domain")
+	got := schema.Resources["user-pool-domain"]
+
+	custom := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "certificate-arn", Type: typecheck.TString(), Optional: true},
+		{Name: "security-policy", Type: typecheck.TString(), Optional: true},
+	})
+	failover := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "primary-route53-health-check-id", Type: typecheck.TString()},
+		{Name: "secondary-region", Type: typecheck.TString()},
+	})
+	routing := typecheck.TObject([]typecheck.ObjectField{
+		{Name: "failover", Type: failover, Optional: true},
+	})
+	assert.Equal(t, map[string]typecheck.Type{
+		"domain":                typecheck.TString(),
+		"user-pool-id":          typecheck.TString(),
+		"custom-domain-config":  optional(custom),
+		"managed-login-version": optional(typecheck.TInteger()),
+		"routing":               optional(routing),
+	}, got.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"domain":                          typecheck.TString(),
+		"user-pool-id":                    typecheck.TString(),
+		"custom-domain-config":            optional(custom),
+		"managed-login-version":           optional(typecheck.TInteger()),
+		"routing":                         optional(routing),
+		"aws-account-id":                  optional(typecheck.TString()),
+		"cloudfront-distribution":         optional(typecheck.TString()),
+		"cloudfront-distribution-zone-id": typecheck.TString(),
+		"s3-bucket":                       optional(typecheck.TString()),
+		"version":                         optional(typecheck.TString()),
+	}, got.Outputs)
+	assert.Empty(t, got.SensitiveInputs)
+	assert.Empty(t, got.SensitiveOutputs)
+	assert.Empty(t, got.Defaults)
+
+	messages := make(map[string]lang.ConstraintSpec, len(got.Constraints))
+	for _, value := range got.Constraints {
+		messages[value.Message] = value
+	}
+	expectedMessages := []string{
+		"domain must contain 1 to 63 characters",
+		"user-pool-id must contain at least 1 character",
+		"managed-login-version must be 1 or 2",
+		"custom-domain-config.security-policy is invalid",
+	}
+	require.Len(t, got.Constraints, len(expectedMessages))
+	for _, message := range expectedMessages {
+		assert.Contains(t, messages, message)
+	}
+}
+
 func TestUserPoolReplacementFields(t *testing.T) {
 	resource := &svc.UserPoolResource{}
 	assert.Equal(t, []string{
@@ -255,6 +311,11 @@ func TestUserPoolReplacementFields(t *testing.T) {
 		"username-attributes",
 		"username-configuration",
 	}, resource.ReplaceFields())
+}
+
+func TestUserPoolDomainReplacementFields(t *testing.T) {
+	resource := &svc.UserPoolDomainResource{}
+	assert.Equal(t, []string{"domain", "user-pool-id"}, resource.ReplaceFields())
 }
 
 func TestUserPoolClientReplacementAndEquivalence(t *testing.T) {

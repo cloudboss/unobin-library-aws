@@ -13,6 +13,7 @@ stack: {
       client-name:                    'unobin-it-user-pool-client-updated'
       client-auth-session-validity:   10
       client-enable-token-revocation: true
+      domain-managed-login-version:   2
     }
   }
 

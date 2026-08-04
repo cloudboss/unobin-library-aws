@@ -102,6 +102,11 @@ func TestVerifyDestroyedAcceptsTypedNotFound(t *testing.T) {
 				Message: aws.String("client is gone"),
 			},
 		},
+		describeDomainErrors: map[string]error{
+			domainName: &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("domain is gone"),
+			},
+		},
 		listClientErrors: map[string]error{
 			testPrimaryID: &cognitotypes.ResourceNotFoundException{
 				Message: aws.String("pool is gone"),
@@ -112,6 +117,73 @@ func TestVerifyDestroyedAcceptsTypedNotFound(t *testing.T) {
 	err := verifyDestroyed(context.Background(), client)
 
 	require.NoError(t, err)
+}
+
+func TestVerifyDomainDestroyedAcceptsEmptySuccessfulDescriptions(t *testing.T) {
+	tests := []struct {
+		name   string
+		output *cognitoidentityprovider.DescribeUserPoolDomainOutput
+	}{
+		{name: "nil output"},
+		{
+			name:   "nil description",
+			output: &cognitoidentityprovider.DescribeUserPoolDomainOutput{},
+		},
+		{
+			name: "empty status",
+			output: &cognitoidentityprovider.DescribeUserPoolDomainOutput{
+				DomainDescription: &cognitotypes.DomainDescriptionType{
+					Domain: aws.String(domainName),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := &fakeVerifierClient{
+				describeDomainOutputs: map[string]*cognitoidentityprovider.DescribeUserPoolDomainOutput{
+					domainName: tt.output,
+				},
+			}
+
+			err := verifyDomainDestroyed(context.Background(), client, domainIdentity{
+				Domain: domainName,
+			})
+
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestVerifyDomainDestroyedRejectsUnrelatedError(t *testing.T) {
+	client := &fakeVerifierClient{
+		describeDomainErrors: map[string]error{
+			domainName: errors.New("access denied"),
+		},
+	}
+
+	err := verifyDomainDestroyed(context.Background(), client, domainIdentity{
+		Domain: domainName,
+	})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "describe destroyed user pool domain")
+	assert.ErrorContains(t, err, "access denied")
+}
+
+func TestVerifyDomainDestroyedRejectsActiveDescription(t *testing.T) {
+	client := &fakeVerifierClient{
+		describeDomainOutputs: map[string]*cognitoidentityprovider.DescribeUserPoolDomainOutput{
+			domainName: userPoolDomainOutput(testPrimaryID, 2),
+		},
+	}
+
+	err := verifyDomainDestroyed(context.Background(), client, domainIdentity{
+		Domain: domainName,
+	})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "user pool domain unobin-it-user-pool-domain still exists")
 }
 
 func TestVerifyDestroyedRejectsUnrelatedError(t *testing.T) {
@@ -182,8 +254,22 @@ type fakeVerifierClient struct {
 	tagOutputs            map[string]*cognitoidentityprovider.ListTagsForResourceOutput
 	listClientPages       map[string]*cognitoidentityprovider.ListUserPoolClientsOutput
 	listClientErrors      map[string]error
+	describeDomainOutputs map[string]*cognitoidentityprovider.DescribeUserPoolDomainOutput
+	describeDomainErrors  map[string]error
 	describeClientOutputs map[string]*cognitoidentityprovider.DescribeUserPoolClientOutput
 	describeClientErrors  map[string]error
+}
+
+func (c *fakeVerifierClient) DescribeUserPoolDomain(
+	_ context.Context,
+	input *cognitoidentityprovider.DescribeUserPoolDomainInput,
+	_ ...func(*cognitoidentityprovider.Options),
+) (*cognitoidentityprovider.DescribeUserPoolDomainOutput, error) {
+	domain := aws.ToString(input.Domain)
+	if err := c.describeDomainErrors[domain]; err != nil {
+		return nil, err
+	}
+	return c.describeDomainOutputs[domain], nil
 }
 
 func (c *fakeVerifierClient) DescribeUserPool(
@@ -308,7 +394,17 @@ func updatedVerifierClient(
 				},
 			},
 		},
+		describeDomainOutputs: map[string]*cognitoidentityprovider.DescribeUserPoolDomainOutput{
+			domainName: userPoolDomainOutput(primaryID, managedLoginForName(primaryName)),
+		},
 	}
+}
+
+func managedLoginForName(primaryName string) int32 {
+	if primaryName == primaryUpdatedName {
+		return 2
+	}
+	return 1
 }
 
 func userPoolOutput(
@@ -347,6 +443,24 @@ func expectedRecordedPools(primaryID string) recordedPools {
 			PoolID: testPrimaryID,
 			ID:     testClientID,
 			Secret: testClientSecret,
+		},
+		Domain: domainIdentity{
+			Domain: domainName,
+			PoolID: testPrimaryID,
+		},
+	}
+}
+
+func userPoolDomainOutput(
+	poolID string,
+	managedLoginVersion int32,
+) *cognitoidentityprovider.DescribeUserPoolDomainOutput {
+	return &cognitoidentityprovider.DescribeUserPoolDomainOutput{
+		DomainDescription: &cognitotypes.DomainDescriptionType{
+			Domain:              aws.String(domainName),
+			ManagedLoginVersion: aws.Int32(managedLoginVersion),
+			Status:              cognitotypes.DomainStatusTypeActive,
+			UserPoolId:          aws.String(poolID),
 		},
 	}
 }
