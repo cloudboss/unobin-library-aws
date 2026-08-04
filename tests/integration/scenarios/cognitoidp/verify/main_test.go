@@ -18,6 +18,7 @@ const (
 	testClearID      = "us-east-1_clear"
 	testClientID     = "client-id"
 	testClientSecret = "client-secret"
+	testUserSub      = "user-sub"
 )
 
 var testCreationDate = time.Date(2026, time.July, 16, 12, 0, 0, 0, time.UTC)
@@ -34,6 +35,8 @@ func TestVerifyAppliedRecordsUserPoolIdentities(t *testing.T) {
 		clientInitialName,
 		5,
 		false,
+		false,
+		map[string]string{"middle_name": "Remove Me", "name": "Initial User"},
 	)
 
 	err := verifyApplied(context.Background(), client)
@@ -57,6 +60,8 @@ func TestVerifyUpdatedAcceptsInPlaceChangesAndTagClear(t *testing.T) {
 		clientUpdatedName,
 		10,
 		true,
+		true,
+		map[string]string{"name": "Updated User"},
 	)
 
 	err := verifyUpdated(context.Background(), client)
@@ -77,6 +82,8 @@ func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 		clientUpdatedName,
 		10,
 		true,
+		true,
+		map[string]string{"name": "Updated User"},
 	)
 
 	err := verifyUpdated(context.Background(), client)
@@ -105,6 +112,11 @@ func TestVerifyDestroyedAcceptsTypedNotFound(t *testing.T) {
 		describeDomainErrors: map[string]error{
 			domainName: &cognitotypes.ResourceNotFoundException{
 				Message: aws.String("domain is gone"),
+			},
+		},
+		getUserErrors: map[string]error{
+			userKey(testPrimaryID, userName): &cognitotypes.UserNotFoundException{
+				Message: aws.String("user is gone"),
 			},
 		},
 		listClientErrors: map[string]error{
@@ -201,6 +213,11 @@ func TestVerifyDestroyedRejectsUnrelatedError(t *testing.T) {
 				Message: aws.String("client is gone"),
 			},
 		},
+		getUserErrors: map[string]error{
+			userKey(testPrimaryID, userName): &cognitotypes.ResourceNotFoundException{
+				Message: aws.String("pool is gone"),
+			},
+		},
 		listClientErrors: map[string]error{
 			testPrimaryID: &cognitotypes.ResourceNotFoundException{
 				Message: aws.String("pool is gone"),
@@ -258,6 +275,8 @@ type fakeVerifierClient struct {
 	describeDomainErrors  map[string]error
 	describeClientOutputs map[string]*cognitoidentityprovider.DescribeUserPoolClientOutput
 	describeClientErrors  map[string]error
+	getUserOutputs        map[string]*cognitoidentityprovider.AdminGetUserOutput
+	getUserErrors         map[string]error
 }
 
 func (c *fakeVerifierClient) DescribeUserPoolDomain(
@@ -331,6 +350,18 @@ func (c *fakeVerifierClient) DescribeUserPoolClient(
 	return c.describeClientOutputs[id], nil
 }
 
+func (c *fakeVerifierClient) AdminGetUser(
+	_ context.Context,
+	input *cognitoidentityprovider.AdminGetUserInput,
+	_ ...func(*cognitoidentityprovider.Options),
+) (*cognitoidentityprovider.AdminGetUserOutput, error) {
+	key := userKey(aws.ToString(input.UserPoolId), aws.ToString(input.Username))
+	if err := c.getUserErrors[key]; err != nil {
+		return nil, err
+	}
+	return c.getUserOutputs[key], nil
+}
+
 func updatedVerifierClient(
 	primaryName string,
 	primaryID string,
@@ -341,6 +372,8 @@ func updatedVerifierClient(
 	clientName string,
 	authSessionValidity int32,
 	enableTokenRevocation bool,
+	userEnabled bool,
+	userAttrs map[string]string,
 ) *fakeVerifierClient {
 	primaryARN := userPoolARN(primaryID)
 	clearARN := userPoolARN(testClearID)
@@ -397,6 +430,31 @@ func updatedVerifierClient(
 		describeDomainOutputs: map[string]*cognitoidentityprovider.DescribeUserPoolDomainOutput{
 			domainName: userPoolDomainOutput(primaryID, managedLoginForName(primaryName)),
 		},
+		getUserOutputs: map[string]*cognitoidentityprovider.AdminGetUserOutput{
+			userKey(primaryID, userName): userOutput(userName, userEnabled, userAttrs),
+		},
+	}
+}
+
+func userOutput(
+	username string,
+	enabled bool,
+	attributes map[string]string,
+) *cognitoidentityprovider.AdminGetUserOutput {
+	userAttributes := make([]cognitotypes.AttributeType, 0, len(attributes)+1)
+	userAttributes = append(userAttributes, cognitotypes.AttributeType{
+		Name: aws.String("sub"), Value: aws.String(testUserSub),
+	})
+	for name, value := range attributes {
+		userAttributes = append(userAttributes, cognitotypes.AttributeType{
+			Name: aws.String(name), Value: aws.String(value),
+		})
+	}
+	return &cognitoidentityprovider.AdminGetUserOutput{
+		Enabled:        enabled,
+		UserAttributes: userAttributes,
+		Username:       aws.String(username),
+		UserStatus:     cognitotypes.UserStatusTypeForceChangePassword,
 	}
 }
 
@@ -440,13 +498,18 @@ func expectedRecordedPools(primaryID string) recordedPools {
 			ID: testClearID, ARN: userPoolARN(testClearID), CreationDate: creationDate,
 		},
 		Client: clientIdentity{
-			PoolID: testPrimaryID,
+			PoolID: primaryID,
 			ID:     testClientID,
 			Secret: testClientSecret,
 		},
 		Domain: domainIdentity{
 			Domain: domainName,
-			PoolID: testPrimaryID,
+			PoolID: primaryID,
+		},
+		User: userIdentity{
+			PoolID:   primaryID,
+			Username: userName,
+			Sub:      testUserSub,
 		},
 	}
 }
@@ -463,6 +526,10 @@ func userPoolDomainOutput(
 			UserPoolId:          aws.String(poolID),
 		},
 	}
+}
+
+func userKey(poolID string, username string) string {
+	return poolID + "/" + username
 }
 
 func userPoolARN(id string) string {

@@ -19,7 +19,7 @@ const unobinModulePath = "github.com/cloudboss/unobin"
 
 func TestUserPoolSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	require.Contains(t, schema.Resources, "user-pool")
 	got := schema.Resources["user-pool"]
 
@@ -128,7 +128,7 @@ func TestUserPoolSchema(t *testing.T) {
 
 func TestUserPoolClientSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	require.Contains(t, schema.Resources, "user-pool-client")
 	got := schema.Resources["user-pool-client"]
 
@@ -250,7 +250,7 @@ func TestUserPoolClientSchema(t *testing.T) {
 
 func TestUserPoolDomainSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	require.Contains(t, schema.Resources, "user-pool-domain")
 	got := schema.Resources["user-pool-domain"]
 
@@ -304,6 +304,60 @@ func TestUserPoolDomainSchema(t *testing.T) {
 	}
 }
 
+func TestUserSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 4)
+	require.Contains(t, schema.Resources, "user")
+	got := schema.Resources["user"]
+
+	assert.Equal(t, map[string]typecheck.Type{
+		"user-pool-id":             typecheck.TString(),
+		"username":                 typecheck.TString(),
+		"attributes":               optional(typecheck.TMap(typecheck.TString())),
+		"client-metadata":          optional(typecheck.TMap(typecheck.TString())),
+		"validation-data":          optional(typecheck.TMap(typecheck.TString())),
+		"desired-delivery-mediums": optional(typecheck.TList(typecheck.TString())),
+		"enabled":                  optional(typecheck.TBoolean()),
+		"force-alias-creation":     optional(typecheck.TBoolean()),
+		"message-action":           optional(typecheck.TString()),
+		"temporary-password":       optional(typecheck.TString()),
+		"password":                 optional(typecheck.TString()),
+	}, got.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"attributes":            typecheck.TMap(typecheck.TString()),
+		"creation-date":         typecheck.TString(),
+		"last-modified-date":    typecheck.TString(),
+		"enabled":               typecheck.TBoolean(),
+		"mfa-setting-list":      typecheck.TList(typecheck.TString()),
+		"preferred-mfa-setting": typecheck.TString(),
+		"status":                typecheck.TString(),
+		"sub":                   typecheck.TString(),
+		"user-pool-id":          typecheck.TString(),
+		"username":              typecheck.TString(),
+	}, got.Outputs)
+	assert.Equal(t, []string{"password", "temporary-password"}, got.SensitiveInputs)
+	assert.Empty(t, got.SensitiveOutputs)
+	assert.Empty(t, got.Defaults)
+
+	messages := make(map[string]lang.ConstraintSpec, len(got.Constraints))
+	for _, value := range got.Constraints {
+		messages[value.Message] = value
+	}
+	expectedMessages := []string{
+		"user-pool-id must contain at least 1 character",
+		"username must contain 1 to 128 characters",
+		"password must contain 6 to 256 characters",
+		"temporary-password must contain 6 to 256 characters",
+		"password conflicts with temporary-password",
+		"desired-delivery-mediums values must be EMAIL or SMS",
+		"message-action must be RESEND or SUPPRESS",
+	}
+	require.Len(t, got.Constraints, len(expectedMessages))
+	for _, message := range expectedMessages {
+		assert.Contains(t, messages, message)
+	}
+}
+
 func TestUserPoolReplacementFields(t *testing.T) {
 	resource := &svc.UserPoolResource{}
 	assert.Equal(t, []string{
@@ -336,6 +390,11 @@ func TestUserPoolClientReplacementAndEquivalence(t *testing.T) {
 		svc.UserPoolClientResource{},
 		svc.UserPoolClientResource{},
 	))
+}
+
+func TestUserReplacementFields(t *testing.T) {
+	resource := &svc.UserResource{}
+	assert.Equal(t, []string{"user-pool-id", "username"}, resource.ReplaceFields())
 }
 
 func expectedUserPoolInputs() map[string]typecheck.Type {

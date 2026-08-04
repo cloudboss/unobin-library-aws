@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages two Cognito user pools and one app client. The update changes the
-    primary pool and app client in place, and clears all managed tags from the
-    second pool.
+    Manages two Cognito user pools, one app client, one domain, and one user.
+    The update changes the primary pool, app client, domain, and user in place,
+    and clears all managed tags from the second pool.
     '''
 
   imports: {
@@ -58,6 +58,17 @@ factory: {
       type:    integer
       default: 1
     }
+    user-enabled: {
+      type:    boolean
+      default: false
+    }
+    user-attributes: {
+      type: map(string)
+      default: {
+        'middle_name': 'Remove Me'
+        name:        'Initial User'
+      }
+    }
   }
 
   resources: {
@@ -85,6 +96,14 @@ factory: {
       user-pool-id:          resource.primary.user-pool-id
       managed-login-version: input.domain-managed-login-version
     }
+    primary-user: aws-cognitoidp.user {
+      user-pool-id:       resource.primary.user-pool-id
+      username:           'unobin-it-user'
+      attributes:         input.user-attributes
+      enabled:            input.user-enabled
+      temporary-password: 'TempPass123!'
+      message-action:     'SUPPRESS'
+    }
   }
 
   outputs: {
@@ -99,5 +118,8 @@ factory: {
     client-secret: { value: resource.primary-client.client-secret }
     domain:        { value: resource.primary-domain.domain }
     domain-pool-id: { value: resource.primary-domain.user-pool-id }
+    user-username: { value: resource.primary-user.username }
+    user-status:   { value: resource.primary-user.status }
+    user-sub:      { value: resource.primary-user.sub }
   }
 }

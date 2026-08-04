@@ -25,6 +25,7 @@ const (
 	clientInitialName  = "unobin-it-user-pool-client-initial"
 	clientUpdatedName  = "unobin-it-user-pool-client-updated"
 	domainName         = "unobin-it-user-pool-domain"
+	userName           = "unobin-it-user"
 )
 
 type verifierClient interface {
@@ -43,6 +44,11 @@ type verifierClient interface {
 		*cognitoidentityprovider.DescribeUserPoolClientInput,
 		...func(*cognitoidentityprovider.Options),
 	) (*cognitoidentityprovider.DescribeUserPoolClientOutput, error)
+	AdminGetUser(
+		context.Context,
+		*cognitoidentityprovider.AdminGetUserInput,
+		...func(*cognitoidentityprovider.Options),
+	) (*cognitoidentityprovider.AdminGetUserOutput, error)
 	GetUserPoolMfaConfig(
 		context.Context,
 		*cognitoidentityprovider.GetUserPoolMfaConfigInput,
@@ -95,11 +101,26 @@ type observedDomain struct {
 	poolID string
 }
 
+type expectedUser struct {
+	username         string
+	enabled          bool
+	status           cognitotypes.UserStatusType
+	attributes       map[string]string
+	absentAttributes []string
+}
+
+type observedUser struct {
+	poolID   string
+	username string
+	sub      string
+}
+
 type recordedPools struct {
 	Primary poolIdentity   `json:"primary"`
 	Clear   poolIdentity   `json:"clear"`
 	Client  clientIdentity `json:"client"`
 	Domain  domainIdentity `json:"domain"`
+	User    userIdentity   `json:"user"`
 }
 
 type poolIdentity struct {
@@ -117,6 +138,12 @@ type clientIdentity struct {
 type domainIdentity struct {
 	Domain string `json:"domain"`
 	PoolID string `json:"pool_id"`
+}
+
+type userIdentity struct {
+	PoolID   string `json:"pool_id"`
+	Username string `json:"username"`
+	Sub      string `json:"sub"`
 }
 
 func main() {
@@ -180,11 +207,24 @@ func verifyApplied(ctx context.Context, client verifierClient) error {
 	if err != nil {
 		return err
 	}
+	userOutput, err := verifyUserPresent(ctx, client, primary.id, expectedUser{
+		username: userName,
+		enabled:  false,
+		status:   cognitotypes.UserStatusTypeForceChangePassword,
+		attributes: map[string]string{
+			"middle_name": "Remove Me",
+			"name":        "Initial User",
+		},
+	})
+	if err != nil {
+		return err
+	}
 	return writeRecordedPools(recordedPools{
 		Primary: identityFromObserved(primary),
 		Clear:   identityFromObserved(clear),
 		Client:  clientIdentityFromObserved(clientOutput),
 		Domain:  domainIdentityFromObserved(domain),
+		User:    userIdentityFromObserved(userOutput),
 	})
 }
 
@@ -223,6 +263,21 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 		return err
 	}
 	if err := verifyDomainIdentity(domain, recorded.Domain); err != nil {
+		return err
+	}
+	userOutput, err := verifyUserPresent(ctx, client, primary.id, expectedUser{
+		username: userName,
+		enabled:  true,
+		status:   cognitotypes.UserStatusTypeForceChangePassword,
+		attributes: map[string]string{
+			"name": "Updated User",
+		},
+		absentAttributes: []string{"middle_name"},
+	})
+	if err != nil {
+		return err
+	}
+	if err := verifyUserIdentity(userOutput, recorded.User); err != nil {
 		return err
 	}
 	clear, err := verifyPresent(ctx, client, expectedPool{
@@ -354,6 +409,77 @@ func verifyClientPresent(
 	}
 	fmt.Printf("ok: user pool client %s matches the expected configuration\n", expected.name)
 	return observedClient{poolID: poolID, id: id, secret: secret}, nil
+}
+
+func verifyUserPresent(
+	ctx context.Context,
+	client verifierClient,
+	poolID string,
+	expected expectedUser,
+) (observedUser, error) {
+	output, err := client.AdminGetUser(
+		ctx,
+		&cognitoidentityprovider.AdminGetUserInput{
+			UserPoolId: aws.String(poolID),
+			Username:   aws.String(expected.username),
+		},
+	)
+	if err != nil {
+		return observedUser{}, fmt.Errorf("get user %s: %w", expected.username, err)
+	}
+	if output == nil {
+		return observedUser{}, fmt.Errorf("user %s returned no details", expected.username)
+	}
+	if aws.ToString(output.Username) != expected.username {
+		return observedUser{}, fmt.Errorf(
+			"user username is %q, want %q",
+			aws.ToString(output.Username),
+			expected.username,
+		)
+	}
+	if output.Enabled != expected.enabled {
+		return observedUser{}, fmt.Errorf(
+			"user %s enabled is %t, want %t",
+			expected.username,
+			output.Enabled,
+			expected.enabled,
+		)
+	}
+	if output.UserStatus != expected.status {
+		return observedUser{}, fmt.Errorf(
+			"user %s status is %q, want %q",
+			expected.username,
+			output.UserStatus,
+			expected.status,
+		)
+	}
+	attributes := userAttributes(output.UserAttributes)
+	sub := attributes["sub"]
+	if sub == "" {
+		return observedUser{}, fmt.Errorf("user %s has no sub attribute", expected.username)
+	}
+	for name, expectedValue := range expected.attributes {
+		if actual := attributes[name]; actual != expectedValue {
+			return observedUser{}, fmt.Errorf(
+				"user %s attribute %s is %q, want %q",
+				expected.username,
+				name,
+				actual,
+				expectedValue,
+			)
+		}
+	}
+	for _, name := range expected.absentAttributes {
+		if _, ok := attributes[name]; ok {
+			return observedUser{}, fmt.Errorf(
+				"user %s attribute %s is still present",
+				expected.username,
+				name,
+			)
+		}
+	}
+	fmt.Printf("ok: user %s matches the expected configuration\n", expected.username)
+	return observedUser{poolID: poolID, username: expected.username, sub: sub}, nil
 }
 
 func verifyPresent(
@@ -560,6 +686,9 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 	if err != nil {
 		return err
 	}
+	if err := verifyUserDestroyed(ctx, client, recorded.User); err != nil {
+		return err
+	}
 	for name, identity := range map[string]poolIdentity{
 		"primary": recorded.Primary,
 		"clear":   recorded.Clear,
@@ -584,7 +713,7 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 	if err := verifyDomainDestroyed(ctx, client, recorded.Domain); err != nil {
 		return err
 	}
-	fmt.Println("ok: Cognito user pools and client are gone")
+	fmt.Println("ok: Cognito user pools, client, domain, and user are gone")
 	return nil
 }
 
@@ -610,6 +739,27 @@ func verifyDomainDestroyed(
 		return nil
 	}
 	return fmt.Errorf("user pool domain %s still exists", identity.Domain)
+}
+
+func verifyUserDestroyed(
+	ctx context.Context,
+	client verifierClient,
+	identity userIdentity,
+) error {
+	_, err := client.AdminGetUser(
+		ctx,
+		&cognitoidentityprovider.AdminGetUserInput{
+			UserPoolId: aws.String(identity.PoolID),
+			Username:   aws.String(identity.Username),
+		},
+	)
+	if err == nil {
+		return fmt.Errorf("user %s still exists", identity.Username)
+	}
+	if !isUserNotFound(err) {
+		return fmt.Errorf("get destroyed user %s: %w", identity.Username, err)
+	}
+	return nil
 }
 
 func verifyClientDestroyed(
@@ -678,6 +828,10 @@ func domainIdentityFromObserved(domain observedDomain) domainIdentity {
 	return domainIdentity{Domain: domain.domain, PoolID: domain.poolID}
 }
 
+func userIdentityFromObserved(user observedUser) userIdentity {
+	return userIdentity{PoolID: user.poolID, Username: user.username, Sub: user.sub}
+}
+
 func verifyIdentity(name string, observed observedPool, expected poolIdentity) error {
 	actual := identityFromObserved(observed)
 	if actual != expected {
@@ -700,6 +854,28 @@ func verifyDomainIdentity(observed observedDomain, expected domainIdentity) erro
 		return fmt.Errorf("user pool domain identity is %+v, want %+v", actual, expected)
 	}
 	return nil
+}
+
+func verifyUserIdentity(observed observedUser, expected userIdentity) error {
+	actual := userIdentityFromObserved(observed)
+	if actual != expected {
+		return fmt.Errorf("user identity is %+v, want %+v", actual, expected)
+	}
+	return nil
+}
+
+func userAttributes(attributes []cognitotypes.AttributeType) map[string]string {
+	result := make(map[string]string, len(attributes))
+	for _, attribute := range attributes {
+		result[aws.ToString(attribute.Name)] = aws.ToString(attribute.Value)
+	}
+	return result
+}
+
+func isUserNotFound(err error) bool {
+	var userNotFound *cognitotypes.UserNotFoundException
+	var resourceNotFound *cognitotypes.ResourceNotFoundException
+	return errors.As(err, &userNotFound) || errors.As(err, &resourceNotFound)
 }
 
 func writeRecordedPools(pools recordedPools) error {

@@ -14,6 +14,10 @@ stack: {
       client-auth-session-validity:   10
       client-enable-token-revocation: true
       domain-managed-login-version:   2
+      user-enabled:                   true
+      user-attributes: {
+        name: 'Updated User'
+      }
     }
   }
 

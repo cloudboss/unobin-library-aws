@@ -23,6 +23,7 @@ func Library() *runtime.Library {
 		Description:   "AWS Cognito Identity Provider library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"user":      makeResource[svc.UserResource, *svc.UserResourceOutput](),
 			"user-pool": makeResource[svc.UserPoolResource, *svc.UserPoolResourceOutput](),
 			"user-pool-domain": makeResource[
 				svc.UserPoolDomainResource,
