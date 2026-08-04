@@ -6,12 +6,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
-	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/stretchr/testify/assert"
@@ -229,27 +230,22 @@ func TestAccessKeySESSMTPPasswordV4(t *testing.T) {
 }
 
 func TestEncryptAccessKeyValuesWithPgpKey(t *testing.T) {
-	if _, err := exec.LookPath("gpg"); err != nil {
-		t.Skip("gpg is not installed")
-	}
-	home := t.TempDir()
-	require.NoError(t, os.Chmod(home, 0o700))
-	runTestGPG(t, home, nil,
-		"--pinentry-mode", "loopback",
-		"--passphrase", "",
-		"--quick-generate-key", "Unobin Test <unobin@example.com>", "rsa2048", "encrypt", "1d")
-	publicKey := runTestGPG(t, home, nil, "--export")
-	encodedKey := base64.StdEncoding.EncodeToString(publicKey)
-	entity, err := parseAccessKeyPGPKey(publicKey)
+	entity, err := openpgp.NewEntity(
+		"Unobin Test", "", "unobin@example.com", &packet.Config{RSABits: 2048})
 	require.NoError(t, err)
-	fingerprint := fmt.Sprintf("%x", entity.PrimaryKey.Fingerprint)
+	var publicKey bytes.Buffer
+	require.NoError(t, entity.Serialize(&publicKey))
+	encodedKey := base64.StdEncoding.EncodeToString(publicKey.Bytes())
+	parsed, err := parseAccessKeyPGPKey(publicKey.Bytes())
+	require.NoError(t, err)
+	fingerprint := fmt.Sprintf("%x", parsed.PrimaryKey.Fingerprint)
 
 	encrypted, err := encryptAccessKeyValues(
 		context.Background(), encodedKey, "created-secret", "smtp-password")
 	require.NoError(t, err)
 	assert.Equal(t, fingerprint, encrypted.KeyFingerprint)
-	assert.Equal(t, "created-secret", decryptTestGPG(t, home, encrypted.Secret))
-	assert.Equal(t, "smtp-password", decryptTestGPG(t, home, encrypted.SesSmtpPasswordV4))
+	assert.Equal(t, "created-secret", decryptTestPGP(t, entity, encrypted.Secret))
+	assert.Equal(t, "smtp-password", decryptTestPGP(t, entity, encrypted.SesSmtpPasswordV4))
 }
 
 func createAccessKeyResponseXML(
@@ -314,24 +310,14 @@ func noSuchEntityResponseXML() string {
 </ErrorResponse>`
 }
 
-func decryptTestGPG(t *testing.T, home string, encoded string) string {
+func decryptTestPGP(t *testing.T, entity *openpgp.Entity, encoded string) string {
 	t.Helper()
 	ciphertext, err := base64.StdEncoding.DecodeString(encoded)
 	require.NoError(t, err)
-	out := runTestGPG(t, home, ciphertext, "--decrypt")
-	return string(out)
-}
-
-func runTestGPG(t *testing.T, home string, stdin []byte, args ...string) []byte {
-	t.Helper()
-	baseArgs := []string{"--homedir", home, "--batch", "--yes", "--no-tty"}
-	cmd := exec.Command("gpg", append(baseArgs, args...)...)
-	cmd.Stdin = bytes.NewReader(stdin)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("gpg %v: %v: %s", args, err, strings.TrimSpace(stderr.String()))
-	}
-	return out
+	message, err := openpgp.ReadMessage(
+		bytes.NewReader(ciphertext), openpgp.EntityList{entity}, nil, nil)
+	require.NoError(t, err)
+	plaintext, err := io.ReadAll(message.UnverifiedBody)
+	require.NoError(t, err)
+	return string(plaintext)
 }
