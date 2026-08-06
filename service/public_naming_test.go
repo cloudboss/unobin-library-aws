@@ -14,6 +14,7 @@ import (
 	"github.com/cloudboss/unobin-library-aws/service/cloudfront"
 	"github.com/cloudboss/unobin-library-aws/service/cloudwatch"
 	"github.com/cloudboss/unobin-library-aws/service/cloudwatchlogs"
+	"github.com/cloudboss/unobin-library-aws/service/dsql"
 	"github.com/cloudboss/unobin-library-aws/service/dynamodb"
 	"github.com/cloudboss/unobin-library-aws/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/service/ecr"
@@ -114,6 +115,7 @@ func libraries() map[string]*runtime.Library {
 		"cloudwatch":     cloudwatch.Library(),
 		"cloudwatchlogs": cloudwatchlogs.Library(),
 		"dynamodb":       dynamodb.Library(),
+		"dsql":           dsql.Library(),
 		"ec2":            ec2.Library(),
 		"ecr":            ecr.Library(),
 		"ecs":            ecs.Library(),

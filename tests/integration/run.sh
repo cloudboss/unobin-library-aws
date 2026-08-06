@@ -58,20 +58,6 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 UNOBIN_VERSION="${UNOBIN_VERSION:?UNOBIN_VERSION is required}"
 SCENARIOS_DIR="${SCRIPT_DIR}/scenarios"
 
-if [ "${TIER}" = "emulator" ]; then
-    LOCALSTACK_ENDPOINT="${LOCALSTACK_ENDPOINT:-http://localhost:4566}"
-    MINISTACK_ENDPOINT="${MINISTACK_ENDPOINT:-http://localhost:4567}"
-    for endpoint in "${LOCALSTACK_ENDPOINT}" "${MINISTACK_ENDPOINT}"; do
-        if ! healthcheck "${endpoint}/_localstack/health"; then
-            echo "emulator is not reachable at ${endpoint}" >&2
-            exit 2
-        fi
-    done
-    export AWS_ACCESS_KEY_ID=test
-    export AWS_SECRET_ACCESS_KEY=test
-    export AWS_REGION=us-east-1
-fi
-
 # Populate the scenario list via positional parameters. Iterate every directory
 # under scenarios/ that contains a factory.ub unless SCENARIO is defined.
 SELECT="${SCENARIO:-}"
@@ -94,8 +80,13 @@ if [ ${#} -eq 0 ]; then
     exit 2
 fi
 
-go install github.com/cloudboss/unobin/cmd/unobin@${UNOBIN_VERSION}
-UNOBIN=${GOPATH}/bin/unobin
+if [ "${TIER}" = "emulator" ]; then
+    LOCALSTACK_ENDPOINT="${LOCALSTACK_ENDPOINT:-http://localhost:4566}"
+    MINISTACK_ENDPOINT="${MINISTACK_ENDPOINT:-http://localhost:4567}"
+    export AWS_ACCESS_KEY_ID=test
+    export AWS_SECRET_ACCESS_KEY=test
+    export AWS_REGION=us-east-1
+fi
 
 # The work directory lives under _output so it survives the test
 # container, which mounts the repo and removes itself on exit. A clean
@@ -116,6 +107,8 @@ trap cleanup EXIT
 FAILED=""
 RUN_COMPLETE=""
 COUNT=0
+EMULATOR_CHECKED=""
+UNOBIN=""
 for sdir in "${@}"; do
     COUNT=$((COUNT + 1))
     name=$(basename "${sdir}")
@@ -124,6 +117,19 @@ for sdir in "${@}"; do
     if [ -f "${sdir}/.skip-${TIER}" ]; then
         echo "==> skip ${TIER}/${name} ($(cat "${sdir}/.skip-${TIER}"))"
         continue
+    fi
+    if [ "${TIER}" = "emulator" ] && [ -z "${EMULATOR_CHECKED}" ]; then
+        for endpoint in "${LOCALSTACK_ENDPOINT}" "${MINISTACK_ENDPOINT}"; do
+            if ! healthcheck "${endpoint}/_localstack/health"; then
+                echo "emulator is not reachable at ${endpoint}" >&2
+                exit 2
+            fi
+        done
+        EMULATOR_CHECKED="true"
+    fi
+    if [ -z "${UNOBIN}" ]; then
+        go install github.com/cloudboss/unobin/cmd/unobin@${UNOBIN_VERSION}
+        UNOBIN=${GOPATH}/bin/unobin
     fi
     # Each scenario picks its emulator: ministack unless a .backend file pins
     # it to localstack. The endpoint is exported per scenario so one run

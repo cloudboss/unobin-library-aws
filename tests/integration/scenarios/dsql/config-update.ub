@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    inputs: {
+      deletion-protection-enabled: false
+      phase:                       'updated'
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

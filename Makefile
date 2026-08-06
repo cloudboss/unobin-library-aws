@@ -117,20 +117,27 @@ test-integration-live: | $(DIR_OUT)/xdg-cache/
 		-e AWS_DEFAULT_REGION \
 		$(CTR_IMAGE_GO) sh -c './tests/integration/run.sh live'
 
-test-integration-emulator: emulators-up | $(DIR_OUT)/xdg-cache/
-	@docker run --rm \
-		--network $(NETWORK) \
-		-v $(DIR_ROOT):/code:z \
-		-v $(DIR_ROOT)/$(DIR_OUT)/xdg-cache:/.cache:z \
-		-u $(UID):$(GID) \
-		-w /code \
-		-e GOPATH=/code/$(DIR_OUT)/go \
-		-e GOCACHE=/code/$(DIR_OUT)/gocache \
-		-e UNOBIN_VERSION=$(UNOBIN_VERSION) \
-		-e SCENARIO \
-		-e LOCALSTACK_ENDPOINT=http://$(LOCALSTACK_NAME):4566 \
-		-e MINISTACK_ENDPOINT=http://$(MINISTACK_NAME):4566 \
-		$(CTR_IMAGE_GO) sh -c './tests/integration/run.sh emulator' \
-		; RC=$${?}; \
+test-integration-emulator: | $(DIR_OUT)/xdg-cache/
+	@if [ -n "$(SCENARIO)" ] && \
+		[ -f "$(DIR_ROOT)/tests/integration/scenarios/$(SCENARIO)/.skip-emulator" ]; then \
+		UNOBIN_VERSION=$(UNOBIN_VERSION) SCENARIO="$(SCENARIO)" \
+			./tests/integration/run.sh emulator; \
+	else \
+		$(MAKE) emulators-up || exit $${?}; \
+		docker run --rm \
+			--network $(NETWORK) \
+			-v $(DIR_ROOT):/code:z \
+			-v $(DIR_ROOT)/$(DIR_OUT)/xdg-cache:/.cache:z \
+			-u $(UID):$(GID) \
+			-w /code \
+			-e GOPATH=/code/$(DIR_OUT)/go \
+			-e GOCACHE=/code/$(DIR_OUT)/gocache \
+			-e UNOBIN_VERSION=$(UNOBIN_VERSION) \
+			-e SCENARIO \
+			-e LOCALSTACK_ENDPOINT=http://$(LOCALSTACK_NAME):4566 \
+			-e MINISTACK_ENDPOINT=http://$(MINISTACK_NAME):4566 \
+			$(CTR_IMAGE_GO) sh -c './tests/integration/run.sh emulator'; \
+		RC=$${?}; \
 		$(MAKE) emulators-down; \
-		exit $${RC}
+		exit $${RC}; \
+	fi

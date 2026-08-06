@@ -1,0 +1,50 @@
+factory: {
+  description: '''>-
+    Manages an Aurora DSQL cluster using the AWS-owned KMS key by default. The
+    deletion protection flag and tags come from inputs so the update pass
+    changes them in place through UpdateCluster and tag sync, exercising create,
+    read, update, destroy, the create wait, and the endpoint service lookup.
+    '''
+
+  imports: { aws-dsql: 'github.com/cloudboss/unobin-library-aws//service/dsql' }
+
+  library-configs: { aws-dsql: input.aws-config }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    deletion-protection-enabled: {
+      type:        boolean
+      default:     true
+      description: 'Whether deletion protection is enabled'
+    }
+    phase: {
+      type:        string
+      default:     'applied'
+      description: 'Scenario phase tag value; the update pass changes it'
+    }
+  }
+
+  locals: {
+    tags: { unobin: 'dsql-it', phase: input.phase }
+  }
+
+  resources: {
+    dsql-cluster-it: aws-dsql.cluster {
+      deletion-protection-enabled: input.deletion-protection-enabled
+      force-destroy:               true
+      tags:                        local.tags
+    }
+  }
+
+  outputs: {
+    cluster-arn:                 { value: resource.dsql-cluster-it.arn }
+    cluster-identifier:          { value: resource.dsql-cluster-it.identifier }
+    vpc-endpoint-service-name:   { value: resource.dsql-cluster-it.vpc-endpoint-service-name }
+    deletion-protection-enabled: { value: resource.dsql-cluster-it.deletion-protection-enabled }
+    encryption-type:   { value: resource.dsql-cluster-it.encryption-details.encryption-type }
+    encryption-status: { value: resource.dsql-cluster-it.encryption-details.encryption-status }
+  }
+}

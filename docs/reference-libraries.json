@@ -71,6 +71,13 @@
       "alias": "aws-dynamodb"
     },
     {
+      "title": "DSQL",
+      "slug": "dsql",
+      "package": "service/dsql",
+      "module": "github.com/cloudboss/unobin-library-aws//service/dsql",
+      "alias": "aws-dsql"
+    },
+    {
       "title": "EC2",
       "slug": "ec2",
       "package": "service/ec2",
