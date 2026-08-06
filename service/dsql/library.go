@@ -23,7 +23,14 @@ func Library() *runtime.Library {
 		Description:   "AWS DSQL library for Unobin.",
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"cluster": makeResource[svc.ClusterResource, *svc.ClusterResourceOutput](),
+			"cluster": makeResource[
+				svc.ClusterResource,
+				*svc.ClusterResourceOutput,
+			](),
+			"cluster-peering": makeResource[
+				svc.ClusterPeeringResource,
+				*svc.ClusterPeeringResourceOutput,
+			](),
 		},
 	}
 }

@@ -19,17 +19,20 @@ import (
 
 const unobinModulePath = "github.com/cloudboss/unobin"
 
-func TestLibraryRegistersClusterResource(t *testing.T) {
+func TestLibraryRegistersDSQLResources(t *testing.T) {
 	library := awsdsql.Library()
 	require.NotNil(t, library)
 	assert.Equal(t, "aws-dsql", library.Name)
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 1)
+	require.Len(t, library.Resources, 2)
 	require.Contains(t, library.Resources, "cluster")
+	require.Contains(t, library.Resources, "cluster-peering")
 	assert.Equal(t, reflect.TypeFor[*svc.ClusterResourceOutput](),
 		library.Resources["cluster"].OutputType())
+	assert.Equal(t, reflect.TypeFor[*svc.ClusterPeeringResourceOutput](),
+		library.Resources["cluster-peering"].OutputType())
 	assert.Empty(t, library.DataSources)
 	assert.Empty(t, library.Actions)
 }

@@ -1,19 +1,29 @@
 factory: {
   description: '''>-
-    Manages an Aurora DSQL cluster using the AWS-owned KMS key by default. The
-    deletion protection flag and tags come from inputs so the update pass
-    changes them in place through UpdateCluster and tag sync, exercising create,
-    read, update, destroy, the create wait, and the endpoint service lookup.
+    Manages paired Aurora DSQL clusters and bidirectional cluster peering. The
+    deletion protection flag and tags come from inputs so the update pass keeps
+    peering stable while changing cluster fields in place through UpdateCluster
+    and tag sync.
     '''
 
-  imports: { aws-dsql: 'github.com/cloudboss/unobin-library-aws//service/dsql' }
+  imports: {
+    aws-dsql:      'github.com/cloudboss/unobin-library-aws//service/dsql'
+    aws-dsql-peer: 'github.com/cloudboss/unobin-library-aws//service/dsql'
+  }
 
-  library-configs: { aws-dsql: input.aws-config }
+  library-configs: {
+    aws-dsql:      input.aws-config
+    aws-dsql-peer: input.peer-aws-config
+  }
 
   inputs: {
     aws-config: {
       type:    library-config('github.com/cloudboss/unobin-library-aws//config')
-      default: {}
+      default: { region: 'us-east-1' }
+    }
+    peer-aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: { region: 'us-west-2' }
     }
     deletion-protection-enabled: {
       type:        boolean
@@ -25,6 +35,11 @@ factory: {
       default:     'applied'
       description: 'Scenario phase tag value; the update pass changes it'
     }
+    witness-region: {
+      type:        string
+      default:     'us-east-2'
+      description: 'Witness region shared by the paired DSQL clusters'
+    }
   }
 
   locals: {
@@ -35,15 +50,36 @@ factory: {
     dsql-cluster-it: aws-dsql.cluster {
       deletion-protection-enabled: input.deletion-protection-enabled
       force-destroy:               true
+      multi-region-properties:      { witness-region: input.witness-region }
       tags:                        local.tags
+    }
+    dsql-peer-cluster-it: aws-dsql-peer.cluster {
+      deletion-protection-enabled: input.deletion-protection-enabled
+      force-destroy:               true
+      multi-region-properties:      { witness-region: input.witness-region }
+      tags:                        local.tags
+    }
+    dsql-cluster-peering-it: aws-dsql.cluster-peering {
+      identifier:     resource.dsql-cluster-it.identifier
+      clusters:       [resource.dsql-peer-cluster-it.arn]
+      witness-region: input.witness-region
+    }
+    dsql-peer-cluster-peering-it: aws-dsql-peer.cluster-peering {
+      identifier:     resource.dsql-peer-cluster-it.identifier
+      clusters:       [resource.dsql-cluster-it.arn]
+      witness-region: input.witness-region
     }
   }
 
   outputs: {
-    cluster-arn:                 { value: resource.dsql-cluster-it.arn }
-    cluster-identifier:          { value: resource.dsql-cluster-it.identifier }
-    vpc-endpoint-service-name:   { value: resource.dsql-cluster-it.vpc-endpoint-service-name }
-    deletion-protection-enabled: { value: resource.dsql-cluster-it.deletion-protection-enabled }
+    cluster-arn:                  { value: resource.dsql-cluster-it.arn }
+    cluster-identifier:           { value: resource.dsql-cluster-it.identifier }
+    peer-cluster-arn:             { value: resource.dsql-peer-cluster-it.arn }
+    peer-cluster-identifier:      { value: resource.dsql-peer-cluster-it.identifier }
+    cluster-peering-clusters:     { value: resource.dsql-cluster-peering-it.clusters }
+    peer-cluster-peering-clusters: { value: resource.dsql-peer-cluster-peering-it.clusters }
+    vpc-endpoint-service-name:    { value: resource.dsql-cluster-it.vpc-endpoint-service-name }
+    deletion-protection-enabled:  { value: resource.dsql-cluster-it.deletion-protection-enabled }
     encryption-type:   { value: resource.dsql-cluster-it.encryption-details.encryption-type }
     encryption-status: { value: resource.dsql-cluster-it.encryption-details.encryption-status }
   }

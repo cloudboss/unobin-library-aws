@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -14,9 +16,12 @@ import (
 )
 
 const (
-	markerKey   = "unobin"
-	markerValue = "dsql-it"
-	phaseKey    = "phase"
+	markerKey     = "unobin"
+	markerValue   = "dsql-it"
+	phaseKey      = "phase"
+	primaryRegion = "us-east-1"
+	peerRegion    = "us-west-2"
+	witnessRegion = "us-east-2"
 )
 
 func main() {
@@ -28,37 +33,99 @@ func main() {
 func run() error {
 	phase := os.Getenv("VERIFY_PHASE")
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(ctx)
+	primaryClient, err := dsqlClient(ctx, primaryRegion)
 	if err != nil {
-		return fmt.Errorf("load aws config: %w", err)
+		return err
 	}
-	client := dsql.NewFromConfig(cfg)
+	peerClient, err := dsqlClient(ctx, peerRegion)
+	if err != nil {
+		return err
+	}
 
 	switch phase {
 	case "applied":
-		return verifyPresent(ctx, client, true, "applied")
+		return verifyPresent(ctx, primaryClient, peerClient, true, "applied")
 	case "updated":
-		return verifyPresent(ctx, client, false, "updated")
+		return verifyPresent(ctx, primaryClient, peerClient, false, "updated")
 	case "destroyed":
-		return verifyDestroyed(ctx, client)
+		return verifyDestroyed(ctx, primaryClient, peerClient)
 	default:
 		return fmt.Errorf("VERIFY_PHASE must be applied, updated, or destroyed, got %q", phase)
 	}
 }
 
+func dsqlClient(ctx context.Context, region string) (*dsql.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		return nil, fmt.Errorf("load aws config for %s: %w", region, err)
+	}
+	return dsql.NewFromConfig(cfg), nil
+}
+
 func verifyPresent(
 	ctx context.Context,
-	client *dsql.Client,
+	primaryClient *dsql.Client,
+	peerClient *dsql.Client,
 	wantDeletionProtection bool,
 	wantPhase string,
 ) error {
-	cluster, tags, err := findMarkedCluster(ctx, client)
+	primary, primaryTags, err := findMarkedCluster(ctx, primaryClient)
 	if err != nil {
 		return err
 	}
-	if cluster == nil {
-		return fmt.Errorf("no DSQL cluster tagged %s=%s", markerKey, markerValue)
+	if primary == nil {
+		return fmt.Errorf("no DSQL cluster tagged %s=%s in %s",
+			markerKey, markerValue, primaryRegion)
 	}
+	peer, peerTags, err := findMarkedCluster(ctx, peerClient)
+	if err != nil {
+		return err
+	}
+	if peer == nil {
+		return fmt.Errorf("no DSQL cluster tagged %s=%s in %s",
+			markerKey, markerValue, peerRegion)
+	}
+
+	if err := verifyClusterState(
+		ctx,
+		primaryClient,
+		primary,
+		primaryTags,
+		wantDeletionProtection,
+		wantPhase,
+	); err != nil {
+		return err
+	}
+	if err := verifyClusterState(
+		ctx,
+		peerClient,
+		peer,
+		peerTags,
+		wantDeletionProtection,
+		wantPhase,
+	); err != nil {
+		return err
+	}
+
+	if err := verifyClusterPeering(primary, peer); err != nil {
+		return err
+	}
+	if err := verifyClusterPeering(peer, primary); err != nil {
+		return err
+	}
+
+	fmt.Printf("ok: DSQL peering present with phase %s\n", wantPhase)
+	return nil
+}
+
+func verifyClusterState(
+	ctx context.Context,
+	client *dsql.Client,
+	cluster *dsql.GetClusterOutput,
+	tags map[string]string,
+	wantDeletionProtection bool,
+	wantPhase string,
+) error {
 	id := aws.ToString(cluster.Identifier)
 	if aws.ToBool(cluster.DeletionProtectionEnabled) != wantDeletionProtection {
 		return fmt.Errorf("cluster %s deletion protection is %t, want %t",
@@ -80,8 +147,26 @@ func verifyPresent(
 	if aws.ToString(service.ServiceName) == "" {
 		return fmt.Errorf("cluster %s has no VPC endpoint service name", id)
 	}
+	return nil
+}
 
-	fmt.Printf("ok: cluster %s present with phase %s\n", id, wantPhase)
+func verifyClusterPeering(cluster, peer *dsql.GetClusterOutput) error {
+	id := aws.ToString(cluster.Identifier)
+	props := cluster.MultiRegionProperties
+	if props == nil {
+		return fmt.Errorf("cluster %s has no multi-region properties", id)
+	}
+	if aws.ToString(props.WitnessRegion) != witnessRegion {
+		return fmt.Errorf("cluster %s witness region is %q, want %q",
+			id, aws.ToString(props.WitnessRegion), witnessRegion)
+	}
+	peerARN := aws.ToString(peer.Arn)
+	if !slices.ContainsFunc(props.Clusters, func(clusterARN string) bool {
+		return strings.EqualFold(clusterARN, peerARN)
+	}) {
+		return fmt.Errorf("cluster %s peering clusters are %v, want %s",
+			id, props.Clusters, peerARN)
+	}
 	return nil
 }
 
@@ -106,15 +191,22 @@ func verifyAWSOwnedEncryption(cluster *dsql.GetClusterOutput) error {
 	return nil
 }
 
-func verifyDestroyed(ctx context.Context, client *dsql.Client) error {
-	cluster, _, err := findMarkedCluster(ctx, client)
+func verifyDestroyed(ctx context.Context, primaryClient, peerClient *dsql.Client) error {
+	cluster, _, err := findMarkedCluster(ctx, primaryClient)
 	if err != nil {
 		return err
 	}
 	if cluster != nil {
 		return fmt.Errorf("cluster %s still exists", aws.ToString(cluster.Identifier))
 	}
-	fmt.Printf("ok: no DSQL cluster tagged %s=%s\n", markerKey, markerValue)
+	cluster, _, err = findMarkedCluster(ctx, peerClient)
+	if err != nil {
+		return err
+	}
+	if cluster != nil {
+		return fmt.Errorf("cluster %s still exists", aws.ToString(cluster.Identifier))
+	}
+	fmt.Printf("ok: no DSQL clusters tagged %s=%s\n", markerKey, markerValue)
 	return nil
 }
 

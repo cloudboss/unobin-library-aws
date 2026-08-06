@@ -14,7 +14,7 @@ import (
 
 func TestClusterSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 1)
+	require.Len(t, schema.Resources, 2)
 	require.Contains(t, schema.Resources, "cluster")
 	cluster := schema.Resources["cluster"]
 
@@ -40,6 +40,28 @@ func TestClusterSchema(t *testing.T) {
 	assert.Contains(t, cluster.Defaults, lang.DefaultSpec{
 		Field: "input.force-destroy", Value: "false",
 	})
+}
+
+func TestClusterPeeringSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 2)
+	require.Contains(t, schema.Resources, "cluster-peering")
+	clusterPeering := schema.Resources["cluster-peering"]
+
+	assert.Equal(t, map[string]typecheck.Type{
+		"identifier":     typecheck.TString(),
+		"clusters":       typecheck.TList(typecheck.TString()),
+		"witness-region": typecheck.TString(),
+	}, clusterPeering.Inputs)
+	assert.Equal(t, map[string]typecheck.Type{
+		"identifier":     typecheck.TString(),
+		"clusters":       typecheck.TList(typecheck.TString()),
+		"witness-region": typecheck.TString(),
+	}, clusterPeering.Outputs)
+	assert.Empty(t, clusterPeering.SensitiveInputs)
+	assert.Empty(t, clusterPeering.SensitiveOutputs)
+	assert.Empty(t, clusterPeering.Defaults)
+	assert.Empty(t, clusterPeering.Constraints)
 }
 
 func TestClusterOutputs(t *testing.T) {
