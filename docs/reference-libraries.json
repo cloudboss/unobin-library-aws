@@ -36,6 +36,13 @@
       "alias": "aws-cloudfront"
     },
     {
+      "title": "CloudTrail",
+      "slug": "cloudtrail",
+      "package": "service/cloudtrail",
+      "module": "github.com/cloudboss/unobin-library-aws//service/cloudtrail",
+      "alias": "aws-cloudtrail"
+    },
+    {
       "title": "CloudWatch",
       "slug": "cloudwatch",
       "package": "service/cloudwatch",
@@ -48,6 +55,13 @@
       "package": "service/cloudwatchlogs",
       "module": "github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs",
       "alias": "aws-cloudwatchlogs"
+    },
+    {
+      "title": "Cognito Identity Provider",
+      "slug": "cognitoidp",
+      "package": "service/cognitoidp",
+      "module": "github.com/cloudboss/unobin-library-aws//service/cognitoidp",
+      "alias": "aws-cognitoidp"
     },
     {
       "title": "DynamoDB",
@@ -78,6 +92,27 @@
       "alias": "aws-ecs"
     },
     {
+      "title": "EFS",
+      "slug": "efs",
+      "package": "service/efs",
+      "module": "github.com/cloudboss/unobin-library-aws//service/efs",
+      "alias": "aws-efs"
+    },
+    {
+      "title": "EKS",
+      "slug": "eks",
+      "package": "service/eks",
+      "module": "github.com/cloudboss/unobin-library-aws//service/eks",
+      "alias": "aws-eks"
+    },
+    {
+      "title": "ElastiCache",
+      "slug": "elasticache",
+      "package": "service/elasticache",
+      "module": "github.com/cloudboss/unobin-library-aws//service/elasticache",
+      "alias": "aws-elasticache"
+    },
+    {
       "title": "ELBv2",
       "slug": "elbv2",
       "package": "service/elbv2",
@@ -97,6 +132,13 @@
       "package": "service/iam",
       "module": "github.com/cloudboss/unobin-library-aws//service/iam",
       "alias": "aws-iam"
+    },
+    {
+      "title": "Kinesis",
+      "slug": "kinesis",
+      "package": "service/kinesis",
+      "module": "github.com/cloudboss/unobin-library-aws//service/kinesis",
+      "alias": "aws-kinesis"
     },
     {
       "title": "KMS",
@@ -120,6 +162,13 @@
       "alias": "aws-lambdamicrovms"
     },
     {
+      "title": "OpenSearch Service",
+      "slug": "opensearch",
+      "package": "service/opensearch",
+      "module": "github.com/cloudboss/unobin-library-aws//service/opensearch",
+      "alias": "aws-opensearch"
+    },
+    {
       "title": "RDS",
       "slug": "rds",
       "package": "service/rds",
@@ -141,11 +190,25 @@
       "alias": "aws-s3"
     },
     {
+      "title": "EventBridge Scheduler",
+      "slug": "scheduler",
+      "package": "service/scheduler",
+      "module": "github.com/cloudboss/unobin-library-aws//service/scheduler",
+      "alias": "aws-scheduler"
+    },
+    {
       "title": "Secrets Manager",
       "slug": "secretsmanager",
       "package": "service/secretsmanager",
       "module": "github.com/cloudboss/unobin-library-aws//service/secretsmanager",
       "alias": "aws-secretsmanager"
+    },
+    {
+      "title": "Step Functions",
+      "slug": "sfn",
+      "package": "service/sfn",
+      "module": "github.com/cloudboss/unobin-library-aws//service/sfn",
+      "alias": "aws-sfn"
     },
     {
       "title": "SNS",
@@ -174,6 +237,13 @@
       "package": "service/sts",
       "module": "github.com/cloudboss/unobin-library-aws//service/sts",
       "alias": "aws-sts"
+    },
+    {
+      "title": "WAFv2",
+      "slug": "wafv2",
+      "package": "service/wafv2",
+      "module": "github.com/cloudboss/unobin-library-aws//service/wafv2",
+      "alias": "aws-wafv2"
     }
   ]
 }
