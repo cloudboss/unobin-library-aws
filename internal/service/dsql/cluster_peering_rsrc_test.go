@@ -467,7 +467,7 @@ func TestClusterPeeringUpdateBehavior(t *testing.T) {
 		_, err := resource.Update(
 			context.Background(),
 			nil,
-			runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput]{
+			runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg]{
 				Inputs:  *validClusterPeeringResource(),
 				Outputs: validClusterPeeringOutput(),
 			},
@@ -487,7 +487,7 @@ func TestClusterPeeringUpdateBehavior(t *testing.T) {
 		out, err := validClusterPeeringResource().Update(
 			context.Background(),
 			nil,
-			runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput]{
+			runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg]{
 				Inputs:   *validClusterPeeringResource(),
 				Outputs:  validClusterPeeringOutput(),
 				Observed: observed,
@@ -503,7 +503,9 @@ func TestClusterPeeringDeleteIsNoOp(t *testing.T) {
 	err := validClusterPeeringResource().Delete(
 		context.Background(),
 		nil,
-		validClusterPeeringOutput(),
+		runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg]{
+			Inputs: *validClusterPeeringResource(), Outputs: validClusterPeeringOutput(),
+		},
 	)
 
 	require.NoError(t, err)

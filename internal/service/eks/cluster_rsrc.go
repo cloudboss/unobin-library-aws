@@ -91,16 +91,6 @@ func (r *ClusterResource) ValidateInputs(ctx context.Context, cfg *awsCfg) error
 	return r.validateInputs(ctx, cfg)
 }
 
-func (r *ClusterResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[ClusterResource, *ClusterResourceOutput, *awsCfg],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState || staticClusterReplacement(req.PriorInputs, req.CurrentInputs) {
-		return nil
-	}
-	return conditionalClusterReplacement(req.PriorInputs, req.CurrentInputs)
-}
-
 func (r *ClusterResource) Create(
 	ctx context.Context,
 	cfg *awsCfg,
@@ -115,8 +105,9 @@ func (r *ClusterResource) Create(
 func (r *ClusterResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	name, err := clusterReadName(r.Name, prior)
 	if err != nil {
 		return nil, err
@@ -131,7 +122,7 @@ func (r *ClusterResource) Read(
 func (r *ClusterResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
 	if err := conditionalClusterReplacement(prior.Inputs, *r); err != nil {
 		return nil, err
@@ -149,8 +140,9 @@ func (r *ClusterResource) Update(
 func (r *ClusterResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	if prior == nil || prior.Name == "" {
 		return errors.New("prior cluster output has no name")
 	}

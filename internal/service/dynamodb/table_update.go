@@ -40,7 +40,7 @@ const (
 func (r *TableResource) reconcile(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	diff := diffGSIs(ptr.Value(prior.Inputs.GlobalSecondaryIndex), ptr.Value(r.GlobalSecondaryIndex))
 	deletes := append(diff.deletes, recreateNames(diff.recreates)...)
@@ -104,7 +104,7 @@ func (r *TableResource) deleteIndexes(
 func (r *TableResource) reconcileTableClass(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	if !runtime.Changed(prior.Inputs.TableClass, r.TableClass) || r.TableClass == nil {
 		return nil
@@ -128,7 +128,7 @@ func (r *TableResource) reconcileTableClass(
 func (r *TableResource) reconcileStreamViewType(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	viewChanged := runtime.Changed(prior.Inputs.StreamViewType, r.StreamViewType)
 	enabledChanged := runtime.Changed(prior.Inputs.StreamEnabled, r.StreamEnabled)
@@ -167,7 +167,7 @@ func (r *TableResource) reconcileStreamViewType(
 func (r *TableResource) mainUpdate(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 	updates []gsiUpdate,
 ) error {
 	in := &dynamodb.UpdateTableInput{TableName: aws.String(r.Name)}
@@ -276,7 +276,7 @@ func (r *TableResource) createIndexes(
 func (r *TableResource) reconcileSSE(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	if !runtime.Changed(prior.Inputs.ServerSideEncryption, r.ServerSideEncryption) {
 		return nil
@@ -289,7 +289,7 @@ func (r *TableResource) reconcileSSE(
 func (r *TableResource) reconcileTTL(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	if !runtime.Changed(prior.Inputs.Ttl, r.Ttl) {
 		return nil
@@ -302,7 +302,7 @@ func (r *TableResource) reconcileTTL(
 func (r *TableResource) reconcilePITR(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	if !runtime.Changed(prior.Inputs.PointInTimeRecovery, r.PointInTimeRecovery) {
 		return nil
@@ -317,7 +317,7 @@ func (r *TableResource) reconcilePITR(
 func (r *TableResource) reconcileWarmThroughput(
 	ctx context.Context,
 	client *dynamodb.Client,
-	prior runtime.Prior[TableResource, *TableResourceOutput],
+	prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) error {
 	if !runtime.Changed(prior.Inputs.WarmThroughput, r.WarmThroughput) || r.WarmThroughput == nil {
 		return nil

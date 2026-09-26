@@ -341,7 +341,7 @@ func TestReplicationGroupUnchangedTagsMakeNoTagCalls(t *testing.T) {
 
 func testReplicationGroupPrior(
 	inputs ReplicationGroupResource,
-) runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput] {
+) runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg] {
 	outputs := &ReplicationGroupResourceOutput{
 		Arn:                  testReplicationGroupArn,
 		ReplicationGroupID:   testReplicationGroupID,
@@ -351,7 +351,7 @@ func testReplicationGroupPrior(
 		ReplicasPerNodeGroup: 0,
 	}
 	observed := *outputs
-	return runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput]{
+	return runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg]{
 		Inputs:   inputs,
 		Outputs:  outputs,
 		Observed: &observed,

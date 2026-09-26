@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -77,6 +78,9 @@ func TestVpcDeleteSucceedsWhenVpcAlreadyGone(t *testing.T) {
 	cfg := fake.configuration()
 
 	r := &VpcResource{}
-	err := r.Delete(context.Background(), cfg, &VpcResourceOutput{VpcId: "vpc-0123456789abcdef0"})
+	err := r.Delete(context.Background(), cfg,
+		runtime.Prior[VpcResource, *VpcResourceOutput, *awsCfg]{
+			Outputs: &VpcResourceOutput{VpcId: "vpc-0123456789abcdef0"},
+		})
 	assert.NoError(t, err, "deleting an already-deleted VPC must succeed")
 }

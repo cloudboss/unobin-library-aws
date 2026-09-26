@@ -749,7 +749,7 @@ func TestFileSystemUpdateClearsOptionalConfiguration(t *testing.T) {
 	clients := fakeFileSystemClients{region: "us-east-1", source: client}
 
 	_, err := r.update(context.Background(), &clients,
-		runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+		runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 			Inputs:  prior,
 			Outputs: &FileSystemResourceOutput{FileSystemId: testFileSystemID},
 		})
@@ -789,7 +789,7 @@ func TestFileSystemUpdateChangesProvisionedThroughputValue(t *testing.T) {
 	clients := fakeFileSystemClients{region: "us-east-1", source: client}
 
 	_, err := r.update(context.Background(), &clients,
-		runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+		runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 			Inputs:  prior,
 			Outputs: &FileSystemResourceOutput{FileSystemId: testFileSystemID},
 		})
@@ -808,7 +808,7 @@ func TestFileSystemUpdateSkipsUnchangedTags(t *testing.T) {
 	clients := fakeFileSystemClients{region: "us-east-1", source: client}
 
 	_, err := r.update(context.Background(), &clients,
-		runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+		runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 			Inputs:  FileSystemResource{Tags: &tags},
 			Outputs: &FileSystemResourceOutput{FileSystemId: testFileSystemID},
 			Observed: &FileSystemResourceOutput{Tags: map[string]string{
@@ -854,7 +854,7 @@ func TestFileSystemUpdateComparesPolicyJSONSemantically(t *testing.T) {
 			clients := fakeFileSystemClients{region: "us-east-1", source: client}
 
 			_, err := r.update(context.Background(), &clients,
-				runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+				runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 					Inputs: FileSystemResource{
 						FileSystemPolicy: &tt.prior,
 					},
@@ -879,7 +879,7 @@ func TestFileSystemUpdateAcceptsReplicatingAsDisabledProtection(t *testing.T) {
 	clients := fakeFileSystemClients{region: "us-east-1", source: client}
 
 	_, err := r.update(context.Background(), &clients,
-		runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+		runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 			Inputs:  FileSystemResource{FileSystemProtection: protection},
 			Outputs: &FileSystemResourceOutput{FileSystemId: testFileSystemID},
 			Observed: &FileSystemResourceOutput{
@@ -940,7 +940,7 @@ func TestFileSystemReplicationReplacementDeletesDestinationFirst(t *testing.T) {
 	}
 
 	_, err := r.update(context.Background(), &clients,
-		runtime.Prior[FileSystemResource, *FileSystemResourceOutput]{
+		runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg]{
 			Inputs:  prior,
 			Outputs: &FileSystemResourceOutput{FileSystemId: testFileSystemID},
 		})

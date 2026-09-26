@@ -175,8 +175,9 @@ func (r *SubnetResource) Create(ctx context.Context, cfg *awsCfg) (*SubnetResour
 func (r *SubnetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubnetResourceOutput) (*SubnetResourceOutput, error,
+	recordedPrior runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg]) (*SubnetResourceOutput, error,
 ) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -232,7 +233,7 @@ func (r *SubnetResource) read(
 }
 
 func (r *SubnetResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SubnetResource, *SubnetResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg],
 ) (*SubnetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -255,8 +256,9 @@ func (r *SubnetResource) Update(
 func (r *SubnetResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubnetResourceOutput,
+	recordedPrior runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -379,7 +381,7 @@ func (r *SubnetResource) reconcileOnUpdate(
 	ctx context.Context,
 	client *ec2.Client,
 	id string,
-	prior runtime.Prior[SubnetResource, *SubnetResourceOutput],
+	prior runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg],
 ) error {
 	if runtime.Changed(prior.Inputs.AssignIpv6AddressOnCreation, r.AssignIpv6AddressOnCreation) &&
 		r.AssignIpv6AddressOnCreation != nil && !*r.AssignIpv6AddressOnCreation {

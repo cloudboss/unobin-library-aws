@@ -88,8 +88,9 @@ func (r *TargetGroupAttachmentResource) Create(
 func (r *TargetGroupAttachmentResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TargetGroupAttachmentResourceOutput,
+	recordedPrior runtime.Prior[TargetGroupAttachmentResource, *TargetGroupAttachmentResourceOutput, *awsCfg],
 ) (*TargetGroupAttachmentResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -113,14 +114,15 @@ func (r *TargetGroupAttachmentResource) Read(
 func (r *TargetGroupAttachmentResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TargetGroupAttachmentResource, *TargetGroupAttachmentResourceOutput],
+	prior runtime.Prior[TargetGroupAttachmentResource, *TargetGroupAttachmentResourceOutput, *awsCfg],
 ) (*TargetGroupAttachmentResourceOutput, error) {
 	tuple := r.tupleWithFallback(prior.Outputs)
 	return &tuple, nil
 }
 
 func (r *TargetGroupAttachmentResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *TargetGroupAttachmentResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[TargetGroupAttachmentResource, *TargetGroupAttachmentResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

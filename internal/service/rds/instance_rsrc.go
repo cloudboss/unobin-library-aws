@@ -336,7 +336,8 @@ func (r *InstanceResource) Create(
 }
 
 func (r *InstanceResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *InstanceResourceOutput) (*InstanceResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg]) (*InstanceResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -345,7 +346,7 @@ func (r *InstanceResource) Read(
 }
 
 func (r *InstanceResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) (*InstanceResourceOutput, error) {
 	if err := r.validateCommon(); err != nil {
 		return nil, err
@@ -384,7 +385,7 @@ func (r *InstanceResource) Update(
 func (r *InstanceResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InstanceResourceOutput,
+	recordedPrior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -1062,7 +1063,7 @@ func (r *InstanceResource) s3FollowOnModify() *rds.ModifyDBInstanceInput {
 // diff, and a rename rides NewDBInstanceIdentifier. The storage co-send rules
 // the API requires are applied after the per-field diff.
 func (r *InstanceResource) updateModify(
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) *rds.ModifyDBInstanceInput {
 	p := prior.Inputs
 	in := &rds.ModifyDBInstanceInput{ApplyImmediately: aws.Bool(true)}
@@ -1259,7 +1260,7 @@ func (r *InstanceResource) maxAllocatedStorageValue() *int32 {
 // storage and IOPS as a pair. A throughput change co-sends them too. The
 // co-sent values come from the inputs.
 func (r *InstanceResource) applyStorageCoSends(
-	in *rds.ModifyDBInstanceInput, prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	in *rds.ModifyDBInstanceInput, prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) {
 	storageFieldChange := runtime.Changed(prior.Inputs.StorageType, r.StorageType) ||
 		runtime.Changed(prior.Inputs.AllocatedStorage, r.AllocatedStorage) ||
@@ -1314,7 +1315,7 @@ func (r *InstanceResource) gp3BelowThreshold() bool {
 // must still address the instance by its prior identifier, so the prior input's
 // identifier is used when it differs.
 func (r *InstanceResource) currentIdentifier(
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) string {
 	if prior.Inputs.Identifier != "" {
 		return prior.Inputs.Identifier

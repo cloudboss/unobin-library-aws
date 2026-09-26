@@ -110,7 +110,8 @@ func (r *EventBusResource) Create(
 }
 
 func (r *EventBusResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *EventBusResourceOutput) (*EventBusResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[EventBusResource, *EventBusResourceOutput, *awsCfg]) (*EventBusResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -119,7 +120,7 @@ func (r *EventBusResource) Read(
 }
 
 func (r *EventBusResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EventBusResource, *EventBusResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EventBusResource, *EventBusResourceOutput, *awsCfg],
 ) (*EventBusResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -149,8 +150,9 @@ func (r *EventBusResource) Update(
 func (r *EventBusResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *EventBusResourceOutput,
+	recordedPrior runtime.Prior[EventBusResource, *EventBusResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

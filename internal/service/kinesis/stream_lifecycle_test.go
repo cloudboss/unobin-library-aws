@@ -179,7 +179,7 @@ func TestStreamUpdateOrdersIndependentMutations(t *testing.T) {
 	output, err := resource.update(
 		context.Background(),
 		client,
-		runtime.Prior[StreamResource, *StreamResourceOutput]{
+		runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 			Inputs: priorInput, Outputs: priorOutput, Observed: priorOutput,
 		},
 		testStreamOptions(&fakeStreamClock{}),
@@ -233,7 +233,7 @@ func TestStreamUpdateModeAndWarmThroughput(t *testing.T) {
 	_, err := resource.update(
 		context.Background(),
 		client,
-		runtime.Prior[StreamResource, *StreamResourceOutput]{
+		runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 			Inputs: priorInput, Outputs: priorOutput, Observed: priorOutput,
 		},
 		testStreamOptions(&fakeStreamClock{}),
@@ -268,7 +268,7 @@ func TestStreamUpdateClearsWarmThroughputWithZero(t *testing.T) {
 	_, err := resource.update(
 		context.Background(),
 		client,
-		runtime.Prior[StreamResource, *StreamResourceOutput]{
+		runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 			Inputs: priorInput, Outputs: priorOutput, Observed: priorOutput,
 		},
 		testStreamOptions(&fakeStreamClock{}),
@@ -307,7 +307,7 @@ func TestStreamUpdateStopsObservedEncryption(t *testing.T) {
 	_, err := resource.update(
 		context.Background(),
 		client,
-		runtime.Prior[StreamResource, *StreamResourceOutput]{
+		runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 			Inputs: priorInput, Outputs: priorOutput, Observed: priorOutput,
 		},
 		testStreamOptions(&fakeStreamClock{}),

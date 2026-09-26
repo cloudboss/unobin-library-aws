@@ -69,7 +69,7 @@ func (r *StateMachineResource) createStateMachine(
 func (r *StateMachineResource) updateStateMachine(
 	ctx context.Context,
 	client stateMachineClient,
-	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput],
+	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
 	options stateMachineOperationOptions,
 ) (*StateMachineResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {

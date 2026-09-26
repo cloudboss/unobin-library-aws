@@ -11,6 +11,7 @@ import (
 type resourcePtr[T, Out any] interface {
 	*T
 	runtime.TypedResource[T, Out, *awscfg.Configuration]
+	ResourceDefinition() runtime.ResourceDefinition[T, Out, *awscfg.Configuration]
 }
 
 type actionPtr[T, Out any] interface {
@@ -19,7 +20,7 @@ type actionPtr[T, Out any] interface {
 }
 
 func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistration {
-	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT]()
+	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT](PT(new(T)).ResourceDefinition())
 }
 
 func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {

@@ -215,8 +215,9 @@ func (r *DomainNameResource) Create(
 func (r *DomainNameResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DomainNameResourceOutput,
+	recordedPrior runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg],
 ) (*DomainNameResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -243,7 +244,7 @@ func (r *DomainNameResource) read(
 func (r *DomainNameResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput],
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg],
 ) (*DomainNameResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -281,8 +282,9 @@ func (r *DomainNameResource) Update(
 func (r *DomainNameResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DomainNameResourceOutput,
+	recordedPrior runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -300,7 +302,7 @@ func (r *DomainNameResource) Delete(
 }
 
 func (r *DomainNameResource) tagsNeedSync(
-	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput],
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg],
 ) bool {
 	desired := domainNameUserTags(ptr.Value(r.Tags))
 	if !maps.Equal(domainNameUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
@@ -310,7 +312,7 @@ func (r *DomainNameResource) tagsNeedSync(
 }
 
 func (r *DomainNameResource) updateDomainNameInput(
-	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput], domainName string,
+	prior runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg], domainName string,
 ) (*apigatewayv2.UpdateDomainNameInput, bool) {
 	configChanged := runtime.Changed(
 		prior.Inputs.DomainNameConfigurations, r.DomainNameConfigurations)

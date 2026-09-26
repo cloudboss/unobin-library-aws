@@ -219,8 +219,9 @@ func (r *LoadBalancerResource) Create(
 func (r *LoadBalancerResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LoadBalancerResourceOutput,
+	recordedPrior runtime.Prior[LoadBalancerResource, *LoadBalancerResourceOutput, *awsCfg],
 ) (*LoadBalancerResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (r *LoadBalancerResource) read(
 func (r *LoadBalancerResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[LoadBalancerResource, *LoadBalancerResourceOutput],
+	prior runtime.Prior[LoadBalancerResource, *LoadBalancerResourceOutput, *awsCfg],
 ) (*LoadBalancerResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -310,8 +311,9 @@ func (r *LoadBalancerResource) Update(
 func (r *LoadBalancerResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LoadBalancerResourceOutput,
+	recordedPrior runtime.Prior[LoadBalancerResource, *LoadBalancerResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -456,7 +456,7 @@ func (s *webACLUpdateScript) client() *fakeWAFClient {
 func webACLUpdateWithTags(
 	priorTags *map[string]string,
 	desiredTags *map[string]string,
-) (*WebACLResource, runtime.Prior[WebACLResource, *WebACLResourceOutput]) {
+) (*WebACLResource, runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg]) {
 	resource := validWebACLResource()
 	resource.Tags = desiredTags
 	priorInputs := *validWebACLResource()
@@ -481,8 +481,8 @@ func stringMapPointer(key, value string) *map[string]string {
 
 func validWebACLUpdatePrior(
 	inputs WebACLResource,
-) runtime.Prior[WebACLResource, *WebACLResourceOutput] {
-	return runtime.Prior[WebACLResource, *WebACLResourceOutput]{
+) runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg] {
+	return runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg]{
 		Inputs: inputs,
 		Outputs: &WebACLResourceOutput{
 			ARN:       testWebACLARN,

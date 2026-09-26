@@ -115,8 +115,9 @@ func (r *EipResource) Create(ctx context.Context, cfg *awsCfg) (*EipResourceOutp
 func (r *EipResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *EipResourceOutput,
+	recordedPrior runtime.Prior[EipResource, *EipResourceOutput, *awsCfg],
 ) (*EipResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -145,7 +146,7 @@ func (r *EipResource) read(
 }
 
 func (r *EipResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EipResource, *EipResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[EipResource, *EipResourceOutput, *awsCfg],
 ) (*EipResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -161,7 +162,8 @@ func (r *EipResource) Update(
 	return r.read(ctx, client, prior.Outputs.AllocationId)
 }
 
-func (r *EipResource) Delete(ctx context.Context, cfg *awsCfg, prior *EipResourceOutput) error {
+func (r *EipResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[EipResource, *EipResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

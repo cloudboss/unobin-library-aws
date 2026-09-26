@@ -143,8 +143,9 @@ func (r *SecurityGroupResource) Create(
 func (r *SecurityGroupResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecurityGroupResourceOutput,
+	recordedPrior runtime.Prior[SecurityGroupResource, *SecurityGroupResourceOutput, *awsCfg],
 ) (*SecurityGroupResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -198,7 +199,7 @@ func (r *SecurityGroupResource) describe(
 func (r *SecurityGroupResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[SecurityGroupResource, *SecurityGroupResourceOutput],
+	prior runtime.Prior[SecurityGroupResource, *SecurityGroupResourceOutput, *awsCfg],
 ) (*SecurityGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -218,8 +219,9 @@ func (r *SecurityGroupResource) Update(
 func (r *SecurityGroupResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecurityGroupResourceOutput,
+	recordedPrior runtime.Prior[SecurityGroupResource, *SecurityGroupResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

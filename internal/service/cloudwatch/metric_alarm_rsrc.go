@@ -262,7 +262,7 @@ func (r *MetricAlarmResource) Create(
 func (r *MetricAlarmResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MetricAlarmResourceOutput,
+	recordedPrior runtime.Prior[MetricAlarmResource, *MetricAlarmResourceOutput, *awsCfg],
 ) (*MetricAlarmResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -298,7 +298,7 @@ func (r *MetricAlarmResource) read(
 func (r *MetricAlarmResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[MetricAlarmResource, *MetricAlarmResourceOutput],
+	prior runtime.Prior[MetricAlarmResource, *MetricAlarmResourceOutput, *awsCfg],
 ) (*MetricAlarmResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -329,8 +329,9 @@ func (r *MetricAlarmResource) Update(
 func (r *MetricAlarmResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MetricAlarmResourceOutput,
+	recordedPrior runtime.Prior[MetricAlarmResource, *MetricAlarmResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -353,7 +353,7 @@ func (r *ClusterInstanceResource) reconcileCACertificate(
 func (r *ClusterInstanceResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterInstanceResourceOutput,
+	recordedPrior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput, *awsCfg],
 ) (*ClusterInstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -458,7 +458,7 @@ func (r *ClusterInstanceResource) findInstance(
 func (r *ClusterInstanceResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput, *awsCfg],
 ) (*ClusterInstanceResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -506,7 +506,7 @@ func (r *ClusterInstanceResource) modify(
 // since RDS treats them as a unit. The CA certificate change rides this one call
 // on update; its reboot is handled by the availability wait that follows.
 func (r *ClusterInstanceResource) modifyInput(
-	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput, *awsCfg],
 ) (*rds.ModifyDBInstanceInput, bool) {
 	p := prior.Inputs
 	in := &rds.ModifyDBInstanceInput{
@@ -576,7 +576,7 @@ func (r *ClusterInstanceResource) modifyInput(
 // since RDS treats the toggle, the KMS key, and the retention period as one
 // setting.
 func (r *ClusterInstanceResource) performanceInsightsChanged(
-	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput],
+	prior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput, *awsCfg],
 ) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.PerformanceInsightsEnabled, r.PerformanceInsightsEnabled) ||
@@ -585,7 +585,7 @@ func (r *ClusterInstanceResource) performanceInsightsChanged(
 }
 
 func (r *ClusterInstanceResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ClusterInstanceResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ClusterInstanceResource, *ClusterInstanceResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

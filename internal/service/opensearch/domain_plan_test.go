@@ -15,32 +15,93 @@ import (
 
 type domainPlanProbe DomainResource
 
-func (*domainPlanProbe) SchemaVersion() int { return 1 }
+type domainPlanOutput struct {
+	ARN string `ub:"arn"`
+}
 
-func (*domainPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"arn": "arn:new"}, nil
+func (*domainPlanProbe) Create(context.Context, any) (*domainPlanOutput, error) {
+	return &domainPlanOutput{ARN: "arn:new"}, nil
 }
 
 func (*domainPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[domainPlanProbe, *domainPlanOutput, any],
+) (*domainPlanOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*domainPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[domainPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[domainPlanProbe, *domainPlanOutput, any],
+) (*domainPlanOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*domainPlanProbe) Delete(context.Context, any, map[string]any) error { return nil }
+func (*domainPlanProbe) Delete(
+	context.Context, any, runtime.Prior[domainPlanProbe, *domainPlanOutput, any],
+) error {
+	return nil
+}
 
-func (*domainPlanProbe) ReplaceFields() []string {
-	return (&DomainResource{}).ReplaceFields()
+func (*domainPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	domainPlanProbe, *domainPlanOutput, any,
+] {
+	equalField := func(field string, prior, desired DomainResource) bool {
+		return (&DomainResource{}).EquivalentInput(field, prior, desired)
+	}
+	return runtime.ResourceDefinition[domainPlanProbe, *domainPlanOutput, any]{
+		SchemaVersion: 1,
+		Equality: []runtime.InputEqualityRule[domainPlanProbe]{
+			runtime.EqualBy(
+				runtime.InputField(func(input *domainPlanProbe) **DomainVPCOptions {
+					return &input.VPCOptions
+				}),
+				func(prior, desired *DomainVPCOptions) bool {
+					return equalField("vpc-options",
+						DomainResource{VPCOptions: prior}, DomainResource{VPCOptions: desired})
+				},
+			),
+			runtime.EqualBy(
+				runtime.InputField(func(input *domainPlanProbe) **DomainAutoTuneOptions {
+					return &input.AutoTuneOptions
+				}),
+				func(prior, desired *DomainAutoTuneOptions) bool {
+					return equalField("auto-tune-options",
+						DomainResource{AutoTuneOptions: prior},
+						DomainResource{AutoTuneOptions: desired})
+				},
+			),
+			runtime.EqualBy(
+				runtime.InputField(func(input *domainPlanProbe) **[]DomainLogPublishingOption {
+					return &input.LogPublishingOptions
+				}),
+				func(prior, desired *[]DomainLogPublishingOption) bool {
+					return equalField("log-publishing-options",
+						DomainResource{LogPublishingOptions: prior},
+						DomainResource{LogPublishingOptions: desired})
+				},
+			),
+			runtime.EqualBy(
+				runtime.InputField(func(input *domainPlanProbe) **string {
+					return &input.AccessPolicies
+				}),
+				func(prior, desired *string) bool {
+					return equalField("access-policies",
+						DomainResource{AccessPolicies: prior}, DomainResource{AccessPolicies: desired})
+				},
+			),
+		},
+		Replace: runtime.Replacement[domainPlanProbe, *domainPlanOutput, any]{
+			Fields: []runtime.AnyInputField[domainPlanProbe]{
+				runtime.InputField(func(input *domainPlanProbe) *string { return &input.DomainName }),
+				runtime.InputField(func(input *domainPlanProbe) **DomainVPCOptions {
+					return &input.VPCOptions
+				}),
+			},
+		},
+	}
 }
 
 func (*domainPlanProbe) EquivalentInput(
@@ -61,6 +122,15 @@ func TestDomainRuntimePlanTreatsConfiguredCollectionsAsUnordered(t *testing.T) {
 		prior  map[string]any
 		source string
 	}{
+		{
+			name:  "omitted access policies",
+			prior: map[string]any{"domain-name": "example"},
+			source: `factory: {
+  resources: {
+    domain: aws-opensearch.domain { domain-name: 'example' }
+  }
+}`,
+		},
 		{
 			name: "VPC IDs",
 			prior: map[string]any{
@@ -156,7 +226,7 @@ func TestDomainRuntimePlanTreatsConfiguredCollectionsAsUnordered(t *testing.T) {
 			step := planDomainChange(t, test.prior, test.source)
 
 			assert.Equal(t, runtime.DecisionNoOp, step.Decision)
-			assert.Empty(t, step.ReplaceTriggers)
+			assert.Empty(t, step.ReplacementReasons)
 		})
 	}
 }
@@ -184,7 +254,7 @@ func TestDomainRuntimePlanReplacesChangedVPCMember(t *testing.T) {
 	step := planDomainChange(t, prior, source)
 
 	assert.Equal(t, runtime.DecisionReplace, step.Decision)
-	assert.Equal(t, []string{"vpc-options"}, step.ReplaceTriggers)
+	assert.Equal(t, []string{"vpc-options"}, step.ReplacementReasons)
 }
 
 func planDomainChange(
@@ -201,7 +271,9 @@ func planDomainChange(
 		"aws-opensearch": {
 			Name: "aws-opensearch",
 			Resources: map[string]runtime.ResourceRegistration{
-				"domain": runtime.MakeResource[domainPlanProbe, map[string]any, any](),
+				"domain": runtime.MakeResource[domainPlanProbe, *domainPlanOutput, any](
+					(&domainPlanProbe{}).ResourceDefinition(),
+				),
 			},
 		},
 	}

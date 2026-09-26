@@ -33,7 +33,7 @@ func TestOverlayChangedConfig(t *testing.T) {
 	}
 	// Only the comment changed; every other input is unset and unchanged.
 	r := &DistributionResource{Comment: aws.String("new")}
-	prior := runtime.Prior[DistributionResource, *DistributionResourceOutput]{
+	prior := runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg]{
 		Inputs: DistributionResource{Comment: aws.String("old")},
 	}
 

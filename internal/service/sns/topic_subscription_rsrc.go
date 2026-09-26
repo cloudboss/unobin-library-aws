@@ -170,8 +170,9 @@ func (r *TopicSubscriptionResource) Create(
 func (r *TopicSubscriptionResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TopicSubscriptionResourceOutput,
+	recordedPrior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput, *awsCfg],
 ) (*TopicSubscriptionResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -280,7 +281,7 @@ func (r *TopicSubscriptionResource) subscriptionPresent(
 func (r *TopicSubscriptionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput],
+	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput, *awsCfg],
 ) (*TopicSubscriptionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -294,7 +295,8 @@ func (r *TopicSubscriptionResource) Update(
 }
 
 func (r *TopicSubscriptionResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *TopicSubscriptionResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -364,7 +366,7 @@ func (r *TopicSubscriptionResource) attributes() map[string]string {
 // absent means the user wants the default back.
 func (r *TopicSubscriptionResource) reconcileAttributes(
 	ctx context.Context, client *sns.Client, arn string,
-	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput],
+	prior runtime.Prior[TopicSubscriptionResource, *TopicSubscriptionResourceOutput, *awsCfg],
 ) error {
 	// SNS reads an omitted scope as MessageAttributes whenever a filter policy is
 	// present, so reconcile to that effective value rather than leave the prior

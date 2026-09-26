@@ -156,7 +156,8 @@ func (r *MicrovmImageResource) Create(
 func (r *MicrovmImageResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MicrovmImageResourceOutput) (*MicrovmImageResourceOutput, error) {
+	recordedPrior runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]) (*MicrovmImageResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -174,7 +175,7 @@ func (r *MicrovmImageResource) Read(
 func (r *MicrovmImageResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput],
+	prior runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg],
 ) (*MicrovmImageResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -205,7 +206,8 @@ func (r *MicrovmImageResource) Update(
 func (r *MicrovmImageResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MicrovmImageResourceOutput) error {
+	recordedPrior runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

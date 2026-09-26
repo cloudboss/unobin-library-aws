@@ -272,15 +272,15 @@ func TestWaitDomainNameAvailableResetsMissingStreakAfterFound(t *testing.T) {
 
 func domainNameUpdatePrior(
 	inputs DomainNameResource,
-) runtime.Prior[DomainNameResource, *DomainNameResourceOutput] {
+) runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg] {
 	return domainNameUpdatePriorObserved(inputs, nil)
 }
 
 func domainNameUpdatePriorObserved(
 	inputs DomainNameResource,
 	observed *DomainNameResourceOutput,
-) runtime.Prior[DomainNameResource, *DomainNameResourceOutput] {
-	return runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+) runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg] {
+	return runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg]{
 		Inputs:   inputs,
 		Observed: observed,
 	}
@@ -300,7 +300,7 @@ func TestDomainNameUserTags(t *testing.T) {
 
 func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
 	r := DomainNameResource{Tags: new(map[string]string{"team": "platform"})}
-	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg]{
 		Inputs: DomainNameResource{Tags: new(map[string]string{"team": "platform"})},
 		Observed: &DomainNameResourceOutput{
 			Tags: map[string]string{"team": "security"},
@@ -312,7 +312,7 @@ func TestDomainNameTagsNeedSyncWhenObservedDiffers(t *testing.T) {
 
 func TestDomainNameTagsNeedSyncUsesUserTags(t *testing.T) {
 	r := DomainNameResource{Tags: new(map[string]string{"aws:system": "new", "team": "platform"})}
-	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput]{
+	prior := runtime.Prior[DomainNameResource, *DomainNameResourceOutput, *awsCfg]{
 		Inputs: DomainNameResource{Tags: new(map[string]string{"team": "platform"})},
 		Observed: &DomainNameResourceOutput{
 			Tags: map[string]string{"team": "platform"},

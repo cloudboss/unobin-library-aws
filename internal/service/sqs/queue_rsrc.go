@@ -200,8 +200,9 @@ func (r *QueueResource) Create(ctx context.Context, cfg *awsCfg) (*QueueResource
 func (r *QueueResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *QueueResourceOutput,
+	recordedPrior runtime.Prior[QueueResource, *QueueResourceOutput, *awsCfg],
 ) (*QueueResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -248,7 +249,7 @@ func (r *QueueResource) read(
 }
 
 func (r *QueueResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[QueueResource, *QueueResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[QueueResource, *QueueResourceOutput, *awsCfg],
 ) (*QueueResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -281,7 +282,8 @@ func (r *QueueResource) Update(
 	return r.read(ctx, client, url)
 }
 
-func (r *QueueResource) Delete(ctx context.Context, cfg *awsCfg, prior *QueueResourceOutput) error {
+func (r *QueueResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[QueueResource, *QueueResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

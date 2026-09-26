@@ -124,8 +124,9 @@ func (r *MetricFilterResource) Create(
 func (r *MetricFilterResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MetricFilterResourceOutput,
+	recordedPrior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg],
 ) (*MetricFilterResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -135,7 +136,7 @@ func (r *MetricFilterResource) Read(
 
 func (r *MetricFilterResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput],
+	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg],
 ) (*MetricFilterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -153,7 +154,8 @@ func (r *MetricFilterResource) Update(
 }
 
 func (r *MetricFilterResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *MetricFilterResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -264,7 +266,7 @@ func (r *MetricFilterResource) read(
 }
 
 func (r *MetricFilterResource) shouldPut(
-	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput],
+	prior runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg],
 ) bool {
 	return r.mutableInputChanged(prior.Inputs) || r.managedOutputDrifted(prior.Observed)
 }

@@ -179,8 +179,9 @@ func (r *HostedZoneResource) Create(
 func (r *HostedZoneResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *HostedZoneResourceOutput,
+	recordedPrior runtime.Prior[HostedZoneResource, *HostedZoneResourceOutput, *awsCfg],
 ) (*HostedZoneResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -240,7 +241,7 @@ func (r *HostedZoneResource) read(
 func (r *HostedZoneResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[HostedZoneResource, *HostedZoneResourceOutput],
+	prior runtime.Prior[HostedZoneResource, *HostedZoneResourceOutput, *awsCfg],
 ) (*HostedZoneResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -280,8 +281,9 @@ func (r *HostedZoneResource) Update(
 func (r *HostedZoneResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *HostedZoneResourceOutput,
+	recordedPrior runtime.Prior[HostedZoneResource, *HostedZoneResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

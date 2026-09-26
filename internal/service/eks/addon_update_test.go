@@ -210,8 +210,8 @@ func TestAddonUpdatePropagatesAPIError(t *testing.T) {
 
 func addonPrior(
 	inputs AddonResource,
-) runtime.Prior[AddonResource, *AddonResourceOutput] {
-	return runtime.Prior[AddonResource, *AddonResourceOutput]{
+) runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg] {
+	return runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg]{
 		Inputs: inputs,
 		Outputs: &AddonResourceOutput{
 			ClusterName: "prior-cluster", AddonName: "prior-addon", ARN: "arn:recorded",

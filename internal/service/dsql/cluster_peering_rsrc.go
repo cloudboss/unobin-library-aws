@@ -114,8 +114,9 @@ func (r *ClusterPeeringResource) Create(
 func (r *ClusterPeeringResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterPeeringResourceOutput,
+	recordedPrior runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg],
 ) (*ClusterPeeringResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -126,7 +127,7 @@ func (r *ClusterPeeringResource) Read(
 func (r *ClusterPeeringResource) Update(
 	_ context.Context,
 	_ *awsCfg,
-	prior runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput],
+	prior runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg],
 ) (*ClusterPeeringResourceOutput, error) {
 	if clusterPeeringInputsChanged(prior.Inputs, *r) {
 		return nil, errors.New("cluster-peering update is not supported")
@@ -143,7 +144,7 @@ func (r *ClusterPeeringResource) Update(
 func (r *ClusterPeeringResource) Delete(
 	_ context.Context,
 	_ *awsCfg,
-	_ *ClusterPeeringResourceOutput,
+	_ runtime.Prior[ClusterPeeringResource, *ClusterPeeringResourceOutput, *awsCfg],
 ) error {
 	return nil
 }

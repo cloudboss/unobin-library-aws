@@ -98,7 +98,7 @@ func TestMicrovmImageReadNotFound(t *testing.T) {
 	})
 
 	_, err := (&MicrovmImageResource{}).Read(context.Background(), fake.configuration(),
-		&MicrovmImageResourceOutput{ImageArn: "missing"})
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "missing"}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -117,7 +117,7 @@ func TestMicrovmImageUpdatePutSendsFullDesiredConfig(t *testing.T) {
 	current := testMicrovmImage(nil)
 	current.Description = aws.String("new description")
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{
 			Inputs:  *prior,
 			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
@@ -156,7 +156,7 @@ func TestMicrovmImageUpdateSyncsTags(t *testing.T) {
 	})
 	current.Description = aws.String("new description")
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{
 			Inputs:  *prior,
 			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
@@ -183,7 +183,7 @@ func TestMicrovmImageUpdateSkipsPutWhenOnlyTagsChanged(t *testing.T) {
 	prior := testMicrovmImage(map[string]string{"old": "value"})
 	current := testMicrovmImage(map[string]string{"new": "value"})
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{
 			Inputs:  *prior,
 			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
@@ -202,7 +202,7 @@ func TestMicrovmImageUpdateSkipsPutWhenOnlyTerminateOnDestroyChanged(t *testing.
 	current := testMicrovmImage(nil)
 	current.TerminateOnDestroy = aws.Bool(true)
 	_, err := current.Update(context.Background(), fake.configuration(),
-		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput]{
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{
 			Inputs:  *prior,
 			Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"},
 		})
@@ -220,7 +220,7 @@ func TestMicrovmImageDeleteWaitsUntilGone(t *testing.T) {
 	})
 
 	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageResourceOutput{ImageArn: "image-1"})
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"}})
 	assert.NoError(t, err)
 }
 
@@ -232,7 +232,7 @@ func TestMicrovmImageDeleteDoesNotTerminateMicrovmsByDefault(t *testing.T) {
 	})
 
 	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageResourceOutput{ImageArn: "image-1"})
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"}})
 	require.ErrorContains(t, err, "Cannot delete MicroVM image with running MicroVMs")
 }
 
@@ -260,7 +260,7 @@ func TestMicrovmImageDeleteTerminatesMicrovmsBeforeDeletingImage(t *testing.T) {
 	})
 
 	err := (&MicrovmImageResource{TerminateOnDestroy: aws.Bool(true)}).Delete(
-		context.Background(), fake.configuration(), &MicrovmImageResourceOutput{ImageArn: "image-1"})
+		context.Background(), fake.configuration(), runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"}})
 	require.NoError(t, err)
 	assert.Len(t, fake.sent(terminateRoute), 1)
 	queries := fake.queries(listRoute)
@@ -276,7 +276,7 @@ func TestMicrovmImageDeleteTreatsInitialNotFoundAsSuccess(t *testing.T) {
 	})
 
 	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageResourceOutput{ImageArn: "image-1"})
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"}})
 	assert.NoError(t, err)
 }
 
@@ -290,7 +290,7 @@ func TestMicrovmImageDeleteFailureStateReturnsError(t *testing.T) {
 	})
 
 	err := (&MicrovmImageResource{}).Delete(context.Background(), fake.configuration(),
-		&MicrovmImageResourceOutput{ImageArn: "image-1"})
+		runtime.Prior[MicrovmImageResource, *MicrovmImageResourceOutput, *awsCfg]{Outputs: &MicrovmImageResourceOutput{ImageArn: "image-1"}})
 	require.ErrorContains(t, err, "DELETE_FAILED")
 }
 

@@ -95,20 +95,20 @@ func TestSecretVersionStagesNeedUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
 		current  *SecretVersionResource
-		prior    runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]
+		prior    runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]
 		wantNeed bool
 	}{
 		{
 			name:    "omitted stages leave observed labels alone",
 			current: &SecretVersionResource{},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{"AWSPENDING"}},
 			},
 		},
 		{
 			name:    "explicit empty changed from omitted reconciles labels",
 			current: &SecretVersionResource{VersionStages: stringSlicePtr()},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{"AWSPENDING"}},
 			},
 			wantNeed: true,
@@ -116,7 +116,7 @@ func TestSecretVersionStagesNeedUpdate(t *testing.T) {
 		{
 			name:    "explicit empty removes observed custom label drift",
 			current: &SecretVersionResource{VersionStages: stringSlicePtr()},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Inputs:   SecretVersionResource{VersionStages: stringSlicePtr()},
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{"AWSPENDING"}},
 			},
@@ -125,7 +125,7 @@ func TestSecretVersionStagesNeedUpdate(t *testing.T) {
 		{
 			name:    "explicit empty ignores an unremovable current label",
 			current: &SecretVersionResource{VersionStages: stringSlicePtr()},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Inputs:   SecretVersionResource{VersionStages: stringSlicePtr()},
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{currentStage}},
 			},
@@ -133,7 +133,7 @@ func TestSecretVersionStagesNeedUpdate(t *testing.T) {
 		{
 			name:    "managed labels changing by input reconciles labels",
 			current: &SecretVersionResource{VersionStages: stringSlicePtr("new")},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Inputs:   SecretVersionResource{VersionStages: stringSlicePtr("old")},
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{"old"}},
 			},
@@ -142,7 +142,7 @@ func TestSecretVersionStagesNeedUpdate(t *testing.T) {
 		{
 			name:    "empty-only input changes do not reconcile labels",
 			current: &SecretVersionResource{VersionStages: stringSlicePtr("old", "")},
-			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput]{
+			prior: runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg]{
 				Inputs:   SecretVersionResource{VersionStages: stringSlicePtr("old")},
 				Observed: &SecretVersionResourceOutput{VersionStages: []string{"old"}},
 			},

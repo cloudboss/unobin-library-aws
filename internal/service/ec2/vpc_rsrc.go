@@ -126,8 +126,9 @@ func (r *VpcResource) Create(ctx context.Context, cfg *awsCfg) (*VpcResourceOutp
 func (r *VpcResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VpcResourceOutput,
+	recordedPrior runtime.Prior[VpcResource, *VpcResourceOutput, *awsCfg],
 ) (*VpcResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -144,12 +145,13 @@ func (r *VpcResource) Read(
 }
 
 func (r *VpcResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VpcResource, *VpcResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VpcResource, *VpcResourceOutput, *awsCfg],
 ) (*VpcResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (r *VpcResource) Delete(ctx context.Context, cfg *awsCfg, prior *VpcResourceOutput) error {
+func (r *VpcResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[VpcResource, *VpcResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

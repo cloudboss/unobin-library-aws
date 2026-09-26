@@ -670,7 +670,7 @@ func TestUserPoolUpdateOrdersOperations(t *testing.T) {
 		Schema:           &currentSchema,
 		Tags:             &currentTags,
 	}
-	prior := runtime.Prior[UserPoolResource, *UserPoolResourceOutput]{
+	prior := runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg]{
 		Inputs: UserPoolResource{
 			Name:             "old-name",
 			MFAConfiguration: aws.String("OFF"),
@@ -816,7 +816,7 @@ func TestUserPoolUpdateCallGates(t *testing.T) {
 				context.Background(),
 				client,
 				"us-east-1",
-				runtime.Prior[UserPoolResource, *UserPoolResourceOutput]{
+				runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg]{
 					Inputs: tt.prior,
 					Outputs: &UserPoolResourceOutput{
 						UserPoolID: "prior-id",
@@ -929,7 +929,7 @@ func TestUserPoolUpdateWithoutChangesOnlyReads(t *testing.T) {
 		context.Background(),
 		client,
 		"us-east-1",
-		runtime.Prior[UserPoolResource, *UserPoolResourceOutput]{
+		runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg]{
 			Inputs: resource,
 			Outputs: &UserPoolResourceOutput{
 				UserPoolID: "prior-id",
@@ -997,7 +997,7 @@ func TestUserPoolUpdateReplacementErrorsPrecedeCalls(t *testing.T) {
 				context.Background(),
 				client,
 				"us-east-1",
-				runtime.Prior[UserPoolResource, *UserPoolResourceOutput]{
+				runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg]{
 					Inputs: tt.prior,
 					Outputs: &UserPoolResourceOutput{
 						UserPoolID: "prior-id", ARN: "pool-arn",

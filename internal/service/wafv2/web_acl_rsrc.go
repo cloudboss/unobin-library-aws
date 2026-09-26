@@ -26,30 +26,6 @@ func (r *WebACLResource) ReplaceFields() []string {
 	return []string{"name", "scope", "application-config"}
 }
 
-func (r *WebACLResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[WebACLResource, *WebACLResourceOutput, *awsCfg],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState {
-		return nil
-	}
-	prior := req.PriorInputs
-	current := req.CurrentInputs
-	if runtime.Changed(prior.Name, current.Name) ||
-		runtime.Changed(prior.Scope, current.Scope) ||
-		runtime.Changed(prior.ApplicationConfig, current.ApplicationConfig) {
-		return nil
-	}
-	if !current.configurationChanged(prior) {
-		return nil
-	}
-	resp.MarkOutputUnknown("lock-token")
-	if runtime.Changed(prior.Rules, current.Rules) {
-		resp.MarkOutputUnknown("capacity", "application-integration-url")
-	}
-	return nil
-}
-
 func (r *WebACLResource) Create(
 	ctx context.Context,
 	cfg *awsCfg,
@@ -117,8 +93,9 @@ func (r *WebACLResource) resolveName(random io.Reader) (string, error) {
 func (r *WebACLResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *WebACLResourceOutput,
+	recordedPrior runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 ) (*WebACLResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	identity, err := priorWebACLIdentity(prior)
 	if err != nil {
 		return nil, err
@@ -170,7 +147,7 @@ func readWebACL(
 func (r *WebACLResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[WebACLResource, *WebACLResourceOutput],
+	prior runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 ) (*WebACLResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -182,8 +159,9 @@ func (r *WebACLResource) Update(
 func (r *WebACLResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *WebACLResourceOutput,
+	recordedPrior runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

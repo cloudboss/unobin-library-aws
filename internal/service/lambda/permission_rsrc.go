@@ -168,8 +168,9 @@ func (r *PermissionResource) Create(
 func (r *PermissionResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PermissionResourceOutput,
+	recordedPrior runtime.Prior[PermissionResource, *PermissionResourceOutput, *awsCfg],
 ) (*PermissionResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (r *PermissionResource) Read(
 func (r *PermissionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[PermissionResource, *PermissionResourceOutput],
+	prior runtime.Prior[PermissionResource, *PermissionResourceOutput, *awsCfg],
 ) (*PermissionResourceOutput, error) {
 	return prior.Outputs, nil
 }
@@ -191,8 +192,9 @@ func (r *PermissionResource) Update(
 func (r *PermissionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PermissionResourceOutput,
+	recordedPrior runtime.Prior[PermissionResource, *PermissionResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

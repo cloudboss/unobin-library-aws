@@ -235,8 +235,9 @@ func (r *TopicResource) Create(ctx context.Context, cfg *awsCfg) (*TopicResource
 func (r *TopicResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TopicResourceOutput,
+	recordedPrior runtime.Prior[TopicResource, *TopicResourceOutput, *awsCfg],
 ) (*TopicResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -273,7 +274,7 @@ func (r *TopicResource) read(
 }
 
 func (r *TopicResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicResource, *TopicResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TopicResource, *TopicResourceOutput, *awsCfg],
 ) (*TopicResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -297,7 +298,8 @@ func (r *TopicResource) Update(
 	return r.read(ctx, client, topicArn)
 }
 
-func (r *TopicResource) Delete(ctx context.Context, cfg *awsCfg, prior *TopicResourceOutput) error {
+func (r *TopicResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[TopicResource, *TopicResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

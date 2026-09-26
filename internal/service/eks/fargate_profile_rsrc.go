@@ -49,8 +49,9 @@ func (r *FargateProfileResource) Create(
 func (r *FargateProfileResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FargateProfileResourceOutput,
+	recordedPrior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg],
 ) (*FargateProfileResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func (r *FargateProfileResource) Read(
 func (r *FargateProfileResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput],
+	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg],
 ) (*FargateProfileResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -73,8 +74,9 @@ func (r *FargateProfileResource) Update(
 func (r *FargateProfileResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FargateProfileResourceOutput,
+	recordedPrior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

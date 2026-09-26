@@ -138,7 +138,7 @@ func (r *ClusterParameterGroupResource) Create(
 func (r *ClusterParameterGroupResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterParameterGroupResourceOutput,
+	recordedPrior runtime.Prior[ClusterParameterGroupResource, *ClusterParameterGroupResourceOutput, *awsCfg],
 ) (*ClusterParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -186,7 +186,7 @@ func (r *ClusterParameterGroupResource) read(
 
 func (r *ClusterParameterGroupResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[ClusterParameterGroupResource, *ClusterParameterGroupResourceOutput],
+	prior runtime.Prior[ClusterParameterGroupResource, *ClusterParameterGroupResourceOutput, *awsCfg],
 ) (*ClusterParameterGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -211,7 +211,7 @@ func (r *ClusterParameterGroupResource) Update(
 }
 
 func (r *ClusterParameterGroupResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ClusterParameterGroupResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ClusterParameterGroupResource, *ClusterParameterGroupResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

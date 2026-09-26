@@ -94,8 +94,9 @@ func (r *ResourcePolicyResource) Create(
 func (r *ResourcePolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ResourcePolicyResourceOutput,
+	recordedPrior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput, *awsCfg],
 ) (*ResourcePolicyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func (r *ResourcePolicyResource) Read(
 
 func (r *ResourcePolicyResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
+	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput, *awsCfg],
 ) (*ResourcePolicyResourceOutput, error) {
 	document, err := r.validate()
 	if err != nil {
@@ -125,7 +126,8 @@ func (r *ResourcePolicyResource) Update(
 }
 
 func (r *ResourcePolicyResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ResourcePolicyResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	if prior == nil {
 		return errors.New("delete resource policy: missing prior output")
 	}
@@ -241,7 +243,7 @@ func resourcePolicyOutput(
 }
 
 func (r *ResourcePolicyResource) shouldPut(
-	desiredDocument string, prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
+	desiredDocument string, prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput, *awsCfg],
 ) bool {
 	priorDocument, err := normalizeResourcePolicyDocument(prior.Inputs.PolicyDocument)
 	if err != nil || priorDocument != desiredDocument {
@@ -324,7 +326,7 @@ func validResourcePolicyARN(s string) bool {
 }
 
 func resourcePolicyExpectedRevisionId(
-	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput],
+	prior runtime.Prior[ResourcePolicyResource, *ResourcePolicyResourceOutput, *awsCfg],
 ) *string {
 	if prior.Observed != nil {
 		if revisionId := effectiveOptionalString(prior.Observed.RevisionId); revisionId != "" {

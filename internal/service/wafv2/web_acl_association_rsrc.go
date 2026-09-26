@@ -83,8 +83,9 @@ func (r *WebACLAssociationResource) Create(
 func (r *WebACLAssociationResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *WebACLAssociationResourceOutput,
+	recordedPrior runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput, *awsCfg],
 ) (*WebACLAssociationResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,7 @@ func (r *WebACLAssociationResource) Read(
 func (*WebACLAssociationResource) Update(
 	_ context.Context,
 	_ *awsCfg,
-	prior runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput],
+	prior runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput, *awsCfg],
 ) (*WebACLAssociationResourceOutput, error) {
 	return prior.Outputs, nil
 }
@@ -103,8 +104,9 @@ func (*WebACLAssociationResource) Update(
 func (r *WebACLAssociationResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *WebACLAssociationResourceOutput,
+	recordedPrior runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

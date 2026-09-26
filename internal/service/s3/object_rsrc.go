@@ -142,7 +142,7 @@ func (r *ObjectResource) Create(ctx context.Context, cfg *awsCfg) (*ObjectResour
 }
 
 func (r *ObjectResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *ObjectResourceOutput) (*ObjectResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ObjectResource, *ObjectResourceOutput, *awsCfg]) (*ObjectResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (r *ObjectResource) Read(
 }
 
 func (r *ObjectResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ObjectResource, *ObjectResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ObjectResource, *ObjectResourceOutput, *awsCfg],
 ) (*ObjectResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -171,7 +171,7 @@ func (r *ObjectResource) Update(
 func (r *ObjectResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ObjectResourceOutput,
+	recordedPrior runtime.Prior[ObjectResource, *ObjectResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

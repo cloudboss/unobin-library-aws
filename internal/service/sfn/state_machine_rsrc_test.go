@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -249,82 +248,4 @@ func TestStateMachineValidateInputsRejectsInvalidValues(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.match)
 		})
 	}
-}
-
-func TestStateMachineModifyResourcePlan(t *testing.T) {
-	base := baseStateMachine()
-	tags := map[string]string{"owner": "one"}
-	base.Tags = &tags
-	priorOutput := &StateMachineResourceOutput{ARN: testStateMachineARN, RevisionID: "revision-1"}
-
-	tests := []struct {
-		name    string
-		mutate  func(*StateMachineResource)
-		unknown bool
-	}{
-		{
-			name: "definition update",
-			mutate: func(r *StateMachineResource) {
-				r.Definition = `{"StartAt":"Done","States":{"Done":{"Type":"Succeed"}}}`
-			},
-			unknown: true,
-		},
-		{
-			name: "role update",
-			mutate: func(r *StateMachineResource) {
-				r.RoleARN = "arn:aws:iam::123456789012:role/other"
-			},
-			unknown: true,
-		},
-		{
-			name: "configuration removal",
-			mutate: func(r *StateMachineResource) {
-				r.TracingConfiguration = nil
-			},
-			unknown: true,
-		},
-		{
-			name: "tag update",
-			mutate: func(r *StateMachineResource) {
-				updated := map[string]string{"owner": "two"}
-				r.Tags = &updated
-			},
-		},
-		{
-			name: "replacement",
-			mutate: func(r *StateMachineResource) {
-				r.Name = aws.String("replacement")
-			},
-		},
-		{name: "no change", mutate: func(*StateMachineResource) {}},
-	}
-
-	base.TracingConfiguration = &StateMachineTracingConfiguration{Enabled: aws.Bool(true)}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			current := base
-			tt.mutate(&current)
-			var response runtime.ResourcePlanResponse
-			err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-				StateMachineResource, *StateMachineResourceOutput, *awsCfg,
-			]{
-				PriorInputs:   base,
-				CurrentInputs: current,
-				PriorOutputs:  priorOutput,
-				HasPriorState: true,
-			}, &response)
-			require.NoError(t, err)
-			assert.Equal(t, tt.unknown, response.UnknownOutputs["revision-id"])
-		})
-	}
-}
-
-func TestStateMachineModifyResourcePlanWithoutPriorState(t *testing.T) {
-	resource := baseStateMachine()
-	var response runtime.ResourcePlanResponse
-	err := resource.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		StateMachineResource, *StateMachineResourceOutput, *awsCfg,
-	]{CurrentInputs: resource}, &response)
-	require.NoError(t, err)
-	assert.Empty(t, response.UnknownOutputs)
 }

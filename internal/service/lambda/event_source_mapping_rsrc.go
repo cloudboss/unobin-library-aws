@@ -314,8 +314,9 @@ func (r *EventSourceMappingResource) Create(
 func (r *EventSourceMappingResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *EventSourceMappingResourceOutput,
+	recordedPrior runtime.Prior[EventSourceMappingResource, *EventSourceMappingResourceOutput, *awsCfg],
 ) (*EventSourceMappingResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -326,7 +327,7 @@ func (r *EventSourceMappingResource) Read(
 func (r *EventSourceMappingResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[EventSourceMappingResource, *EventSourceMappingResourceOutput],
+	prior runtime.Prior[EventSourceMappingResource, *EventSourceMappingResourceOutput, *awsCfg],
 ) (*EventSourceMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -356,7 +357,8 @@ func (r *EventSourceMappingResource) Update(
 }
 
 func (r *EventSourceMappingResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *EventSourceMappingResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[EventSourceMappingResource, *EventSourceMappingResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

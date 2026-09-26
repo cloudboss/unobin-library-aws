@@ -135,7 +135,7 @@ func TestMetricFilterUpdateValidatesBeforeNoop(t *testing.T) {
 	}
 	priorInputs := r
 	priorInputs.FilterPattern = ""
-	prior := runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput]{
+	prior := runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Observed: &MetricFilterResourceOutput{
 			FilterPattern:          "",
@@ -182,8 +182,8 @@ func TestMetricFilterShouldPut(t *testing.T) {
 }
 
 func runtimePriorMetricFilter(
-	r MetricFilterResource) runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput] {
-	return runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput]{
+	r MetricFilterResource) runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg] {
+	return runtime.Prior[MetricFilterResource, *MetricFilterResourceOutput, *awsCfg]{
 		Inputs: r,
 		Observed: &MetricFilterResourceOutput{
 			FilterPattern:          strings.TrimSpace(r.FilterPattern),

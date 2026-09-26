@@ -178,8 +178,9 @@ func (r *TargetResource) Create(ctx context.Context, cfg *awsCfg) (*TargetResour
 func (r *TargetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TargetResourceOutput) (*TargetResourceOutput, error,
+	recordedPrior runtime.Prior[TargetResource, *TargetResourceOutput, *awsCfg]) (*TargetResourceOutput, error,
 ) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -188,7 +189,7 @@ func (r *TargetResource) Read(
 }
 
 func (r *TargetResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TargetResource, *TargetResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TargetResource, *TargetResourceOutput, *awsCfg],
 ) (*TargetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -210,8 +211,9 @@ func (r *TargetResource) Update(
 func (r *TargetResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TargetResourceOutput,
+	recordedPrior runtime.Prior[TargetResource, *TargetResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

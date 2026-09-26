@@ -233,8 +233,9 @@ func (r *ListenerRuleResource) Create(
 func (r *ListenerRuleResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ListenerRuleResourceOutput,
+	recordedPrior runtime.Prior[ListenerRuleResource, *ListenerRuleResourceOutput, *awsCfg],
 ) (*ListenerRuleResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -245,7 +246,7 @@ func (r *ListenerRuleResource) Read(
 func (r *ListenerRuleResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ListenerRuleResource, *ListenerRuleResourceOutput],
+	prior runtime.Prior[ListenerRuleResource, *ListenerRuleResourceOutput, *awsCfg],
 ) (*ListenerRuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -298,8 +299,9 @@ func (r *ListenerRuleResource) Update(
 func (r *ListenerRuleResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ListenerRuleResourceOutput,
+	recordedPrior runtime.Prior[ListenerRuleResource, *ListenerRuleResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

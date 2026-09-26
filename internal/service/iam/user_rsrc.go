@@ -130,8 +130,9 @@ func (r *UserResource) Create(ctx context.Context, cfg *awsCfg) (*UserResourceOu
 func (r *UserResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserResourceOutput,
+	recordedPrior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) (*UserResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -140,7 +141,7 @@ func (r *UserResource) Read(
 }
 
 func (r *UserResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[UserResource, *UserResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) (*UserResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -203,7 +204,8 @@ func (r *UserResource) Update(
 	return readUser(ctx, client, handle, false)
 }
 
-func (r *UserResource) Delete(ctx context.Context, cfg *awsCfg, prior *UserResourceOutput) error {
+func (r *UserResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -344,7 +346,7 @@ func (r *UserResource) handle(prior *UserResourceOutput) string {
 	return r.Name
 }
 
-func priorUserName(prior runtime.Prior[UserResource, *UserResourceOutput], fallback string) string {
+func priorUserName(prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg], fallback string) string {
 	if prior.Outputs != nil && prior.Outputs.Name != "" {
 		return prior.Outputs.Name
 	}
@@ -374,7 +376,7 @@ func permissionsBoundaryPresent(v *string) bool {
 }
 
 func userNameOrPathNeedsUpdate(
-	prior runtime.Prior[UserResource, *UserResourceOutput],
+	prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 	current UserResource,
 ) bool {
 	if prior.Observed != nil {
@@ -386,7 +388,7 @@ func userNameOrPathNeedsUpdate(
 }
 
 func userPermissionsBoundaryNeedsUpdate(
-	prior runtime.Prior[UserResource, *UserResourceOutput], current *string,
+	prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg], current *string,
 ) bool {
 	desired := desiredUserPermissionsBoundary(current)
 	if prior.Observed != nil {

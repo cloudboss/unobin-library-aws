@@ -92,8 +92,9 @@ func (r *AliasResource) Create(ctx context.Context, cfg *awsCfg) (*AliasResource
 func (r *AliasResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AliasResourceOutput,
+	recordedPrior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg],
 ) (*AliasResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func (r *AliasResource) Read(
 // string when absent, and routing-config is always sent, using an empty config
 // when absent, so removed values clear in AWS instead of being left in place.
 func (r *AliasResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AliasResource, *AliasResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg],
 ) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -136,7 +137,8 @@ func (r *AliasResource) Update(
 // Delete removes the alias by the prior identity, because a replacement delete
 // receives the replacement's new inputs on the receiver. A missing alias is
 // already deleted and is therefore a successful outcome.
-func (r *AliasResource) Delete(ctx context.Context, cfg *awsCfg, prior *AliasResourceOutput) error {
+func (r *AliasResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -300,8 +300,9 @@ func (r *TrailResource) Create(
 func (r *TrailResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TrailResourceOutput,
+	recordedPrior runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg],
 ) (*TrailResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -312,7 +313,7 @@ func (r *TrailResource) Read(
 func (r *TrailResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TrailResource, *TrailResourceOutput],
+	prior runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg],
 ) (*TrailResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, cfg); err != nil {
 		return nil, err
@@ -327,8 +328,9 @@ func (r *TrailResource) Update(
 func (r *TrailResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TrailResourceOutput,
+	recordedPrior runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -431,7 +433,7 @@ func (r *TrailResource) read(
 func (r *TrailResource) update(
 	ctx context.Context,
 	client trailClient,
-	prior runtime.Prior[TrailResource, *TrailResourceOutput],
+	prior runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg],
 ) (*TrailResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err
@@ -1315,7 +1317,7 @@ func trailHandle(fallback string, prior *TrailResourceOutput) string {
 
 func trailPriorHandle(
 	fallback string,
-	prior runtime.Prior[TrailResource, *TrailResourceOutput],
+	prior runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg],
 ) string {
 	if prior.Observed != nil && prior.Observed.Arn != "" {
 		return prior.Observed.Arn

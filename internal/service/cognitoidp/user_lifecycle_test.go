@@ -477,12 +477,12 @@ func TestUserDeleteUsesPriorIdentity(t *testing.T) {
 
 func userPrior(
 	inputs UserResource,
-) runtime.Prior[UserResource, *UserResourceOutput] {
+) runtime.Prior[UserResource, *UserResourceOutput, *awsCfg] {
 	output := &UserResourceOutput{
 		UserPoolID: inputs.UserPoolID,
 		Username:   inputs.Username,
 	}
-	return runtime.Prior[UserResource, *UserResourceOutput]{
+	return runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{
 		Inputs: inputs, Outputs: output, Observed: output,
 	}
 }

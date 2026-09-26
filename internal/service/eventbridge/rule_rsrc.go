@@ -122,7 +122,7 @@ func (r *RuleResource) Create(ctx context.Context, cfg *awsCfg) (*RuleResourceOu
 func (r *RuleResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RuleResourceOutput,
+	recordedPrior runtime.Prior[RuleResource, *RuleResourceOutput, *awsCfg],
 ) (*RuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -152,7 +152,7 @@ func (r *RuleResource) read(
 }
 
 func (r *RuleResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RuleResource, *RuleResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RuleResource, *RuleResourceOutput, *awsCfg],
 ) (*RuleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -189,7 +189,7 @@ func (r *RuleResource) Update(
 	return prior.Outputs, nil
 }
 
-func (r *RuleResource) Delete(ctx context.Context, cfg *awsCfg, prior *RuleResourceOutput) error {
+func (r *RuleResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RuleResource, *RuleResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

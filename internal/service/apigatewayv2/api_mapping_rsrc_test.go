@@ -115,8 +115,8 @@ func TestApiMappingUpdateInputChangedStage(t *testing.T) {
 
 func apiMappingPrior(
 	inputs ApiMappingResource,
-) runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput] {
-	return runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput]{
+) runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg] {
+	return runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg]{
 		Inputs: inputs,
 		Outputs: &ApiMappingResourceOutput{
 			ApiMappingId: "mapping-123",

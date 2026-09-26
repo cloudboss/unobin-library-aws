@@ -157,8 +157,9 @@ func (r *NatGatewayResource) Create(
 func (r *NatGatewayResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *NatGatewayResourceOutput,
+	recordedPrior runtime.Prior[NatGatewayResource, *NatGatewayResourceOutput, *awsCfg],
 ) (*NatGatewayResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -169,7 +170,7 @@ func (r *NatGatewayResource) Read(
 func (r *NatGatewayResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[NatGatewayResource, *NatGatewayResourceOutput],
+	prior runtime.Prior[NatGatewayResource, *NatGatewayResourceOutput, *awsCfg],
 ) (*NatGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -214,8 +215,9 @@ func (r *NatGatewayResource) Update(
 func (r *NatGatewayResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *NatGatewayResourceOutput,
+	recordedPrior runtime.Prior[NatGatewayResource, *NatGatewayResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

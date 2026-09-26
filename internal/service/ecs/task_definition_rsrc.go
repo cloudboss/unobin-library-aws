@@ -266,8 +266,9 @@ func (r *TaskDefinitionResource) Create(
 func (r *TaskDefinitionResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TaskDefinitionResourceOutput,
+	recordedPrior runtime.Prior[TaskDefinitionResource, *TaskDefinitionResourceOutput, *awsCfg],
 ) (*TaskDefinitionResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -303,7 +304,7 @@ func (r *TaskDefinitionResource) Read(
 func (r *TaskDefinitionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TaskDefinitionResource, *TaskDefinitionResourceOutput],
+	prior runtime.Prior[TaskDefinitionResource, *TaskDefinitionResourceOutput, *awsCfg],
 ) (*TaskDefinitionResourceOutput, error) {
 	if runtime.Changed(ptr.Value(prior.Inputs.Tags), ptr.Value(r.Tags)) {
 		client, err := newClient(ctx, cfg)
@@ -325,7 +326,8 @@ func (r *TaskDefinitionResource) Update(
 func (r *TaskDefinitionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TaskDefinitionResourceOutput) error {
+	recordedPrior runtime.Prior[TaskDefinitionResource, *TaskDefinitionResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -215,8 +215,9 @@ func (r *DistributionResource) Create(
 func (r *DistributionResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DistributionResourceOutput,
+	recordedPrior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) (*DistributionResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -264,7 +265,7 @@ func (r *DistributionResource) read(
 func (r *DistributionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) (*DistributionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -309,7 +310,7 @@ func (r *DistributionResource) Update(
 // so they are excluded here. When this is false and only tags changed, Update
 // skips the full UpdateDistribution and its long redeploy wait entirely.
 func (r *DistributionResource) configChanged(
-	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(prior.Inputs.Enabled, r.Enabled) ||
 		runtime.Changed(ptr.Value(prior.Inputs.Aliases), ptr.Value(r.Aliases)) ||
@@ -376,7 +377,7 @@ func (r *DistributionResource) updateConfig(
 // ETag read with it, the concurrency token the write that follows guards on.
 func (r *DistributionResource) updatedConfig(
 	ctx context.Context, client *cloudfront.Client, id string,
-	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) (*cloudfronttypes.DistributionConfig, string, error) {
 	cur, err := client.GetDistributionConfig(ctx, &cloudfront.GetDistributionConfigInput{
 		Id: aws.String(id),
@@ -396,7 +397,7 @@ func (r *DistributionResource) updatedConfig(
 func overlayChangedConfig(
 	config *cloudfronttypes.DistributionConfig,
 	r *DistributionResource,
-	prior runtime.Prior[DistributionResource, *DistributionResourceOutput],
+	prior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) {
 	if runtime.Changed(prior.Inputs.Enabled, r.Enabled) {
 		config.Enabled = boolOrFalse(r.Enabled)

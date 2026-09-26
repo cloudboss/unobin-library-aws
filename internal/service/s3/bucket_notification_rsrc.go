@@ -208,8 +208,9 @@ func (r *BucketNotificationResource) Create(
 func (r *BucketNotificationResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *BucketNotificationResourceOutput,
+	recordedPrior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg],
 ) (*BucketNotificationResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newBucketNotificationClient(ctx, cfg, prior.Bucket)
 	if err != nil {
 		return nil, err
@@ -219,7 +220,7 @@ func (r *BucketNotificationResource) Read(
 
 func (r *BucketNotificationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput],
+	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg],
 ) (*BucketNotificationResourceOutput, error) {
 	bucket := prior.Outputs.Bucket
 	client, err := newBucketNotificationClient(ctx, cfg, bucket)
@@ -243,7 +244,8 @@ func (r *BucketNotificationResource) Update(
 }
 
 func (r *BucketNotificationResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *BucketNotificationResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newBucketNotificationClient(ctx, cfg, prior.Bucket)
 	if err != nil {
 		return err
@@ -272,7 +274,7 @@ func (r *BucketNotificationResource) Delete(
 }
 
 func (r *BucketNotificationResource) needsPut(
-	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput],
+	prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg],
 	desired bucketNotificationDesired,
 ) bool {
 	return r.changed(prior.Inputs) || r.observedDrifted(prior.Observed, desired)

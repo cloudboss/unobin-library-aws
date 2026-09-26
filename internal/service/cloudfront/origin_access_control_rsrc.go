@@ -130,8 +130,9 @@ func (r *OriginAccessControlResource) Create(
 func (r *OriginAccessControlResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *OriginAccessControlResourceOutput,
+	recordedPrior runtime.Prior[OriginAccessControlResource, *OriginAccessControlResourceOutput, *awsCfg],
 ) (*OriginAccessControlResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -163,7 +164,7 @@ func (r *OriginAccessControlResource) read(
 
 func (r *OriginAccessControlResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[OriginAccessControlResource, *OriginAccessControlResourceOutput],
+	prior runtime.Prior[OriginAccessControlResource, *OriginAccessControlResourceOutput, *awsCfg],
 ) (*OriginAccessControlResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -189,7 +190,8 @@ func (r *OriginAccessControlResource) Update(
 }
 
 func (r *OriginAccessControlResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *OriginAccessControlResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[OriginAccessControlResource, *OriginAccessControlResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -100,21 +100,6 @@ func (r *FunctionResource) ReplaceFields() []string {
 	return []string{"function-name", "package-type"}
 }
 
-func (r *FunctionResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[FunctionResource, *FunctionResourceOutput, *awsCfg],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState {
-		return nil
-	}
-	current := req.CurrentInputs
-	if !current.publishesVersion(req.PriorInputs) {
-		return nil
-	}
-	resp.MarkOutputUnknown("qualified-arn", "qualified-invoke-arn", "version")
-	return nil
-}
-
 // Constraints declares the rules Lambda places on a function's inputs. The
 // deployment package comes from exactly one source, so exactly one of the
 // code block's four primary source handles is set; the inline and on-disk zip
@@ -237,7 +222,7 @@ func (r *FunctionResource) Create(
 }
 
 func (r *FunctionResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *FunctionResourceOutput) (*FunctionResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg]) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -294,7 +279,7 @@ func (r *FunctionResource) read(
 }
 
 func (r *FunctionResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -342,7 +327,7 @@ func (r *FunctionResource) Update(
 func (r *FunctionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FunctionResourceOutput,
+	recordedPrior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

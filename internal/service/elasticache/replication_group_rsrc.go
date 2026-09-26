@@ -341,8 +341,9 @@ func (r *ReplicationGroupResource) Create(
 func (r *ReplicationGroupResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ReplicationGroupResourceOutput,
+	recordedPrior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 ) (*ReplicationGroupResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -354,7 +355,7 @@ func (r *ReplicationGroupResource) Read(
 func (r *ReplicationGroupResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
+	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 ) (*ReplicationGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -366,8 +367,9 @@ func (r *ReplicationGroupResource) Update(
 func (r *ReplicationGroupResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ReplicationGroupResourceOutput,
+	recordedPrior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

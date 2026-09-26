@@ -19,32 +19,114 @@ type userPoolPlanProbe UserPoolResource
 
 type userPoolClientPlanProbe UserPoolClientResource
 
-func (*userPoolPlanProbe) SchemaVersion() int { return 1 }
+type userPoolPlanOutput struct {
+	UserPoolID string `ub:"user-pool-id"`
+}
 
-func (*userPoolPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"user-pool-id": "new-id"}, nil
+type userPoolClientPlanOutput struct {
+	ID   string `ub:"id"`
+	Name string `ub:"name"`
+}
+
+func (*userPoolPlanProbe) Create(context.Context, any) (*userPoolPlanOutput, error) {
+	return &userPoolPlanOutput{UserPoolID: "new-id"}, nil
 }
 
 func (*userPoolPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[userPoolPlanProbe, *userPoolPlanOutput, any],
+) (*userPoolPlanOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*userPoolPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[userPoolPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[userPoolPlanProbe, *userPoolPlanOutput, any],
+) (*userPoolPlanOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*userPoolPlanProbe) Delete(context.Context, any, map[string]any) error { return nil }
+func (*userPoolPlanProbe) Delete(
+	context.Context, any, runtime.Prior[userPoolPlanProbe, *userPoolPlanOutput, any],
+) error {
+	return nil
+}
 
-func (*userPoolPlanProbe) ReplaceFields() []string {
-	return (&UserPoolResource{}).ReplaceFields()
+func poolEqual[Value any](
+	field runtime.InputDescriptor[userPoolPlanProbe, Value],
+	name string,
+	toInput func(Value) UserPoolResource,
+) runtime.InputEqualityRule[userPoolPlanProbe] {
+	return runtime.EqualBy(field, func(prior, desired Value) bool {
+		return (&UserPoolResource{}).EquivalentInput(
+			name, toInput(prior), toInput(desired),
+		)
+	})
+}
+
+func (*userPoolPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	userPoolPlanProbe, *userPoolPlanOutput, any,
+] {
+	return runtime.ResourceDefinition[userPoolPlanProbe, *userPoolPlanOutput, any]{
+		SchemaVersion: 1,
+		Equality: []runtime.InputEqualityRule[userPoolPlanProbe]{
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+				return &input.AliasAttributes
+			}), "alias-attributes", func(value *[]string) UserPoolResource {
+				return UserPoolResource{AliasAttributes: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+				return &input.UsernameAttributes
+			}), "username-attributes", func(value *[]string) UserPoolResource {
+				return UserPoolResource{UsernameAttributes: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+				return &input.AutoVerifiedAttributes
+			}), "auto-verified-attributes", func(value *[]string) UserPoolResource {
+				return UserPoolResource{AutoVerifiedAttributes: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+				return &input.EnabledMFAs
+			}), "enabled-mfas", func(value *[]string) UserPoolResource {
+				return UserPoolResource{EnabledMFAs: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **[]UserPoolSchemaAttribute {
+				return &input.Schema
+			}), "schema", func(value *[]UserPoolSchemaAttribute) UserPoolResource {
+				return UserPoolResource{Schema: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **UserPoolAccountRecoverySetting {
+				return &input.AccountRecoverySetting
+			}), "account-recovery-setting", func(value *UserPoolAccountRecoverySetting) UserPoolResource {
+				return UserPoolResource{AccountRecoverySetting: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **UserPoolSignInPolicy {
+				return &input.SignInPolicy
+			}), "sign-in-policy", func(value *UserPoolSignInPolicy) UserPoolResource {
+				return UserPoolResource{SignInPolicy: value}
+			}),
+			poolEqual(runtime.InputField(func(input *userPoolPlanProbe) **UserPoolAttributeUpdateSettings {
+				return &input.UserAttributeUpdateSettings
+			}), "user-attribute-update-settings", func(value *UserPoolAttributeUpdateSettings) UserPoolResource {
+				return UserPoolResource{UserAttributeUpdateSettings: value}
+			}),
+		},
+		Replace: runtime.Replacement[userPoolPlanProbe, *userPoolPlanOutput, any]{
+			Fields: []runtime.AnyInputField[userPoolPlanProbe]{
+				runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+					return &input.AliasAttributes
+				}),
+				runtime.InputField(func(input *userPoolPlanProbe) **[]string {
+					return &input.UsernameAttributes
+				}),
+				runtime.InputField(func(input *userPoolPlanProbe) **UserPoolUsernameConfiguration {
+					return &input.UsernameConfiguration
+				}),
+			},
+		},
+	}
 }
 
 func (*userPoolPlanProbe) EquivalentInput(
@@ -59,34 +141,60 @@ func (*userPoolPlanProbe) EquivalentInput(
 	)
 }
 
-func (*userPoolClientPlanProbe) SchemaVersion() int { return 1 }
-
-func (*userPoolClientPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"id": "new-id", "name": "client-name"}, nil
+func (*userPoolClientPlanProbe) Create(context.Context, any) (*userPoolClientPlanOutput, error) {
+	return &userPoolClientPlanOutput{ID: "new-id", Name: "client-name"}, nil
 }
 
 func (*userPoolClientPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[userPoolClientPlanProbe, *userPoolClientPlanOutput, any],
+) (*userPoolClientPlanOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*userPoolClientPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[userPoolClientPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[userPoolClientPlanProbe, *userPoolClientPlanOutput, any],
+) (*userPoolClientPlanOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*userPoolClientPlanProbe) Delete(context.Context, any, map[string]any) error {
+func (*userPoolClientPlanProbe) Delete(
+	context.Context, any, runtime.Prior[userPoolClientPlanProbe, *userPoolClientPlanOutput, any],
+) error {
 	return nil
 }
 
-func (*userPoolClientPlanProbe) ReplaceFields() []string {
-	return (&UserPoolClientResource{}).ReplaceFields()
+func (*userPoolClientPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	userPoolClientPlanProbe, *userPoolClientPlanOutput, any,
+] {
+	return runtime.ResourceDefinition[userPoolClientPlanProbe, *userPoolClientPlanOutput, any]{
+		SchemaVersion: 1,
+		Equality: []runtime.InputEqualityRule[userPoolClientPlanProbe]{
+			runtime.EqualBy(
+				runtime.InputField(func(input *userPoolClientPlanProbe) **bool {
+					return &input.GenerateSecret
+				}),
+				func(prior, desired *bool) bool {
+					return (&UserPoolClientResource{}).EquivalentInput("generate-secret",
+						UserPoolClientResource{GenerateSecret: prior},
+						UserPoolClientResource{GenerateSecret: desired})
+				},
+			),
+		},
+		Replace: runtime.Replacement[userPoolClientPlanProbe, *userPoolClientPlanOutput, any]{
+			Fields: []runtime.AnyInputField[userPoolClientPlanProbe]{
+				runtime.InputField(func(input *userPoolClientPlanProbe) *string {
+					return &input.UserPoolID
+				}),
+				runtime.InputField(func(input *userPoolClientPlanProbe) **bool {
+					return &input.GenerateSecret
+				}),
+			},
+		},
+	}
 }
 
 func (*userPoolClientPlanProbe) EquivalentInput(
@@ -139,7 +247,7 @@ func TestUserPoolClientGenerateSecretPlans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := planUserPoolClientChange(t, tt.prior, tt.current)
 			assert.Equal(t, tt.decision, step.Decision)
-			assert.Equal(t, tt.triggers, step.ReplaceTriggers)
+			assert.Equal(t, tt.triggers, step.ReplacementReasons)
 		})
 	}
 }
@@ -168,9 +276,9 @@ func planUserPoolClientChange(
 			Resources: map[string]runtime.ResourceRegistration{
 				"user-pool-client": runtime.MakeResource[
 					userPoolClientPlanProbe,
-					map[string]any,
+					*userPoolClientPlanOutput,
 					any,
-				](),
+				]((&userPoolClientPlanProbe{}).ResourceDefinition()),
 			},
 		},
 	}
@@ -382,7 +490,7 @@ func TestUserPoolUnorderedCollectionPlans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := planUserPoolChange(t, tt.priorField, tt.priorValue, tt.currentField)
 			assert.Equal(t, tt.decision, step.Decision)
-			assert.Equal(t, tt.triggers, step.ReplaceTriggers)
+			assert.Equal(t, tt.triggers, step.ReplacementReasons)
 		})
 	}
 }
@@ -412,9 +520,9 @@ func planUserPoolChange(
 			Resources: map[string]runtime.ResourceRegistration{
 				"user-pool": runtime.MakeResource[
 					userPoolPlanProbe,
-					map[string]any,
+					*userPoolPlanOutput,
 					any,
-				](),
+				]((&userPoolPlanProbe{}).ResourceDefinition()),
 			},
 		},
 	}

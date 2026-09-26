@@ -111,8 +111,9 @@ func (r *SubscriptionFilterResource) Create(
 func (r *SubscriptionFilterResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubscriptionFilterResourceOutput,
+	recordedPrior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg],
 ) (*SubscriptionFilterResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -122,7 +123,7 @@ func (r *SubscriptionFilterResource) Read(
 
 func (r *SubscriptionFilterResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput],
+	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg],
 ) (*SubscriptionFilterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -137,7 +138,8 @@ func (r *SubscriptionFilterResource) Update(
 }
 
 func (r *SubscriptionFilterResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *SubscriptionFilterResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	// Replacement runs Delete on the desired receiver before Create, so validate the
 	// desired input before deleting the prior filter.
 	if err := r.validate(); err != nil {
@@ -243,7 +245,7 @@ func (r *SubscriptionFilterResource) read(
 }
 
 func (r *SubscriptionFilterResource) shouldPut(
-	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput],
+	prior runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg],
 ) bool {
 	return r.mutableInputChanged(prior.Inputs) || r.managedOutputDrifted(prior.Observed)
 }

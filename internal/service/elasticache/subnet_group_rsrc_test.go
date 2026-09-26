@@ -909,9 +909,9 @@ func testSubnetGroupOutput() *SubnetGroupResourceOutput {
 	}
 }
 
-func testSubnetGroupPrior() runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput] {
+func testSubnetGroupPrior() runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput, *awsCfg] {
 	r := testSubnetGroupResource()
-	return runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput]{
+	return runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput, *awsCfg]{
 		Inputs: *r, Outputs: testSubnetGroupOutput(), Observed: testSubnetGroupOutput(),
 	}
 }

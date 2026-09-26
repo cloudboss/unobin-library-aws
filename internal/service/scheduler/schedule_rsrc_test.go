@@ -387,7 +387,7 @@ func TestScheduleUpdateReadsWithoutUpdateWhenInputsAreUnchanged(t *testing.T) {
 
 	output, err := resource.update(context.Background(), client, runtime.Prior[
 		ScheduleResource, *ScheduleResourceOutput,
-	]{
+		*awsCfg]{
 		Inputs:  resource,
 		Outputs: &ScheduleResourceOutput{ARN: testScheduleARN},
 	})
@@ -475,7 +475,7 @@ func TestScheduleUpdateCallsAWSForEveryMutableInput(t *testing.T) {
 			client := &fakeScheduleClient{}
 			_, err := current.update(context.Background(), client, runtime.Prior[
 				ScheduleResource, *ScheduleResourceOutput,
-			]{
+				*awsCfg]{
 				Inputs:  prior,
 				Outputs: &ScheduleResourceOutput{ARN: testScheduleARN},
 			})
@@ -494,7 +494,7 @@ func TestScheduleUpdateSendsCurrentSnapshotAndClearsRemovedOptionals(t *testing.
 
 	_, err := current.update(context.Background(), client, runtime.Prior[
 		ScheduleResource, *ScheduleResourceOutput,
-	]{
+		*awsCfg]{
 		Inputs:  prior,
 		Outputs: &ScheduleResourceOutput{ARN: teamScheduleARN},
 	})
@@ -788,7 +788,7 @@ func TestScheduleUpdateSendsExplicitEmptyDescription(t *testing.T) {
 
 	_, err := current.update(context.Background(), client, runtime.Prior[
 		ScheduleResource, *ScheduleResourceOutput,
-	]{
+		*awsCfg]{
 		Inputs:  prior,
 		Outputs: &ScheduleResourceOutput{ARN: testScheduleARN},
 	})
@@ -822,7 +822,7 @@ func TestScheduleCreateAndUpdateRetryOnlyIAMPropagationError(t *testing.T) {
 	updateClient := &fakeScheduleClient{updateErrors: []error{propagation, nil}}
 	_, err = resource.update(context.Background(), updateClient, runtime.Prior[
 		ScheduleResource, *ScheduleResourceOutput,
-	]{
+		*awsCfg]{
 		Inputs:  prior,
 		Outputs: &ScheduleResourceOutput{ARN: testScheduleARN},
 	}, retry.WithInterval(0), retry.WithTimeout(time.Second))
@@ -1096,7 +1096,7 @@ func scheduleUpdateRequest(
 
 	_, err := current.update(context.Background(), client, runtime.Prior[
 		ScheduleResource, *ScheduleResourceOutput,
-	]{
+		*awsCfg]{
 		Inputs:  prior,
 		Outputs: &ScheduleResourceOutput{ARN: teamScheduleARN},
 	})

@@ -99,8 +99,9 @@ func (r *RouteTableAssociationResource) Create(
 func (r *RouteTableAssociationResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RouteTableAssociationResourceOutput,
+	recordedPrior runtime.Prior[RouteTableAssociationResource, *RouteTableAssociationResourceOutput, *awsCfg],
 ) (*RouteTableAssociationResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -110,7 +111,7 @@ func (r *RouteTableAssociationResource) Read(
 
 func (r *RouteTableAssociationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[RouteTableAssociationResource, *RouteTableAssociationResourceOutput],
+	prior runtime.Prior[RouteTableAssociationResource, *RouteTableAssociationResourceOutput, *awsCfg],
 ) (*RouteTableAssociationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -154,7 +155,8 @@ func (r *RouteTableAssociationResource) Update(
 }
 
 func (r *RouteTableAssociationResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *RouteTableAssociationResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RouteTableAssociationResource, *RouteTableAssociationResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -248,7 +248,7 @@ func (s *webACLInitialRetryScript) client() *fakeWAFClient {
 
 func webACLInitialRetryFixture(
 	t *testing.T,
-) (*WebACLResource, runtime.Prior[WebACLResource, *WebACLResourceOutput],
+) (*WebACLResource, runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 	*awssvc.UpdateWebACLInput) {
 	t.Helper()
 	desiredRules := []WebACLRule{

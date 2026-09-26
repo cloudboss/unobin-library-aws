@@ -16,7 +16,7 @@ import (
 func (r *ClusterResource) updateCluster(
 	ctx context.Context,
 	client eksClient,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 	clock clusterClock,
 ) (*ClusterResourceOutput, error) {
 	if err := conditionalClusterReplacement(prior.Inputs, *r); err != nil {
@@ -296,7 +296,7 @@ func clusterUpdateName(output *ClusterResourceOutput) (string, error) {
 }
 
 func clusterTagARN(
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (string, error) {
 	if prior.Observed != nil && prior.Observed.Arn != "" {
 		return prior.Observed.Arn, nil

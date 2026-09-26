@@ -96,7 +96,7 @@ func TestClusterUpdateTreatsSpecifiedOmissionsAsNoChange(t *testing.T) {
 	_, err := current.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs: priorResource, Outputs: &ClusterResourceOutput{Name: "example"},
 		},
 		newFakeClusterClock(),
@@ -130,7 +130,7 @@ func TestClusterUpdateSendsExplicitClearRequests(t *testing.T) {
 	_, err := current.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs: priorResource, Outputs: &ClusterResourceOutput{Name: "example"},
 		},
 		newFakeClusterClock(),
@@ -176,7 +176,7 @@ func TestClusterUpdateRejectsReplacementBeforeTagsOrAPI(t *testing.T) {
 	_, err := current.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs: priorResource, Outputs: &ClusterResourceOutput{Name: "example"},
 		},
 		newFakeClusterClock(),
@@ -196,7 +196,7 @@ func TestClusterUpdateRejectsMissingUpdateID(t *testing.T) {
 	_, err := current.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs: priorResource, Outputs: &ClusterResourceOutput{Name: "example"},
 		},
 		newFakeClusterClock(),
@@ -209,7 +209,7 @@ func TestClusterUpdateRejectsMissingUpdateID(t *testing.T) {
 
 func clusterUpdatePair(
 	t *testing.T,
-) (runtime.Prior[ClusterResource, *ClusterResourceOutput], *ClusterResource) {
+) (runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg], *ClusterResource) {
 	t.Helper()
 	priorResource := *validClusterResource()
 	priorResource.BootstrapSelfManagedAddons = false
@@ -260,7 +260,7 @@ func clusterUpdatePair(
 	currentTags := map[string]string{"add": "yes", "change": "new", "keep": "1"}
 	current.Tags = &currentTags
 
-	return runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+	return runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 		Inputs: priorResource,
 		Outputs: &ClusterResourceOutput{
 			Name: "example", Arn: "prior-arn",

@@ -177,8 +177,9 @@ func (r *VolumeResource) Create(ctx context.Context, cfg *awsCfg) (*VolumeResour
 func (r *VolumeResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VolumeResourceOutput) (*VolumeResourceOutput, error,
+	recordedPrior runtime.Prior[VolumeResource, *VolumeResourceOutput, *awsCfg]) (*VolumeResourceOutput, error,
 ) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -187,7 +188,7 @@ func (r *VolumeResource) Read(
 }
 
 func (r *VolumeResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VolumeResource, *VolumeResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[VolumeResource, *VolumeResourceOutput, *awsCfg],
 ) (*VolumeResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -215,8 +216,9 @@ func (r *VolumeResource) Update(
 func (r *VolumeResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VolumeResourceOutput,
+	recordedPrior runtime.Prior[VolumeResource, *VolumeResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -276,7 +278,7 @@ func (r *VolumeResource) read(
 // throughput, or volume type -- differs from the prior inputs, so Update makes
 // the call only when there is real work.
 func (r *VolumeResource) modifyChanged(
-	prior runtime.Prior[VolumeResource, *VolumeResourceOutput],
+	prior runtime.Prior[VolumeResource, *VolumeResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(prior.Inputs.Size, r.Size) ||
 		runtime.Changed(prior.Inputs.Iops, r.Iops) ||

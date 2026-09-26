@@ -119,8 +119,9 @@ func (r *StreamResource) Create(
 func (r *StreamResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *StreamResourceOutput,
+	recordedPrior runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg],
 ) (*StreamResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -131,7 +132,7 @@ func (r *StreamResource) Read(
 func (r *StreamResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[StreamResource, *StreamResourceOutput],
+	prior runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg],
 ) (*StreamResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -143,8 +144,9 @@ func (r *StreamResource) Update(
 func (r *StreamResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *StreamResourceOutput,
+	recordedPrior runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

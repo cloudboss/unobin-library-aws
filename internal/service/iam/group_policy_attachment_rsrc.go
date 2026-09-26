@@ -75,8 +75,9 @@ func (r *GroupPolicyAttachmentResource) Create(
 func (r *GroupPolicyAttachmentResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *GroupPolicyAttachmentResourceOutput,
+	recordedPrior runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg],
 ) (*GroupPolicyAttachmentResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	key := r.key(prior)
 	if err := validateGroupPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return nil, err
@@ -90,13 +91,14 @@ func (r *GroupPolicyAttachmentResource) Read(
 
 func (r *GroupPolicyAttachmentResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput],
+	prior runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg],
 ) (*GroupPolicyAttachmentResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
 func (r *GroupPolicyAttachmentResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *GroupPolicyAttachmentResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	key := r.key(prior)
 	if err := validateGroupPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return err

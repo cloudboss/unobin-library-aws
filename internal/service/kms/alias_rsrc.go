@@ -70,7 +70,7 @@ func (r *AliasResource) Create(ctx context.Context, cfg *awsCfg) (*AliasResource
 }
 
 func (r *AliasResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *AliasResourceOutput) (*AliasResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg]) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (r *AliasResource) read(
 }
 
 func (r *AliasResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AliasResource, *AliasResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg],
 ) (*AliasResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -136,7 +136,7 @@ func (r *AliasResource) Update(
 	return r.read(ctx, client, r.AliasName, false)
 }
 
-func (r *AliasResource) Delete(ctx context.Context, cfg *awsCfg, prior *AliasResourceOutput) error {
+func (r *AliasResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

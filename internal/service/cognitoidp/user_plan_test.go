@@ -16,34 +16,44 @@ import (
 
 type userPlanProbe UserResource
 
-func (*userPlanProbe) SchemaVersion() int { return 1 }
-
-func (*userPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"user-pool-id": "us-east-1_example", "username": "alice"}, nil
+func (*userPlanProbe) Create(context.Context, any) (*UserResourceOutput, error) {
+	return &UserResourceOutput{UserPoolID: "us-east-1_example", Username: "alice"}, nil
 }
 
 func (*userPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[userPlanProbe, *UserResourceOutput, any],
+) (*UserResourceOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*userPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[userPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[userPlanProbe, *UserResourceOutput, any],
+) (*UserResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*userPlanProbe) Delete(context.Context, any, map[string]any) error {
+func (*userPlanProbe) Delete(
+	context.Context, any, runtime.Prior[userPlanProbe, *UserResourceOutput, any],
+) error {
 	return nil
 }
 
-func (*userPlanProbe) ReplaceFields() []string {
-	return (&UserResource{}).ReplaceFields()
+func (*userPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	userPlanProbe, *UserResourceOutput, any,
+] {
+	return runtime.ResourceDefinition[userPlanProbe, *UserResourceOutput, any]{
+		SchemaVersion: 1,
+		Replace: runtime.Replacement[userPlanProbe, *UserResourceOutput, any]{
+			Fields: []runtime.AnyInputField[userPlanProbe]{
+				runtime.InputField(func(input *userPlanProbe) *string { return &input.UserPoolID }),
+				runtime.InputField(func(input *userPlanProbe) *string { return &input.Username }),
+			},
+		},
+	}
 }
 
 func TestUserReplacementPlans(t *testing.T) {
@@ -83,7 +93,7 @@ func TestUserReplacementPlans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			step := planUserChange(t, tt.poolID, tt.username, tt.current)
 			assert.Equal(t, tt.decision, step.Decision)
-			assert.Equal(t, tt.triggers, step.ReplaceTriggers)
+			assert.Equal(t, tt.triggers, step.ReplacementReasons)
 		})
 	}
 }
@@ -114,9 +124,9 @@ func planUserChange(
 			Resources: map[string]runtime.ResourceRegistration{
 				"user": runtime.MakeResource[
 					userPlanProbe,
-					map[string]any,
+					*UserResourceOutput,
 					any,
-				](),
+				]((&userPlanProbe{}).ResourceDefinition()),
 			},
 		},
 	}

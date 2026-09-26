@@ -291,8 +291,9 @@ func (r *ScheduleResource) Create(
 func (r *ScheduleResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ScheduleResourceOutput,
+	recordedPrior runtime.Prior[ScheduleResource, *ScheduleResourceOutput, *awsCfg],
 ) (*ScheduleResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -303,7 +304,7 @@ func (r *ScheduleResource) Read(
 func (r *ScheduleResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ScheduleResource, *ScheduleResourceOutput],
+	prior runtime.Prior[ScheduleResource, *ScheduleResourceOutput, *awsCfg],
 ) (*ScheduleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -315,8 +316,9 @@ func (r *ScheduleResource) Update(
 func (r *ScheduleResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ScheduleResourceOutput,
+	recordedPrior runtime.Prior[ScheduleResource, *ScheduleResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -431,7 +433,7 @@ func (r *ScheduleResource) read(
 func (r *ScheduleResource) update(
 	ctx context.Context,
 	client scheduleClient,
-	prior runtime.Prior[ScheduleResource, *ScheduleResourceOutput],
+	prior runtime.Prior[ScheduleResource, *ScheduleResourceOutput, *awsCfg],
 	options ...retry.Option,
 ) (*ScheduleResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {

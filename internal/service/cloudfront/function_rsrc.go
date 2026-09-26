@@ -181,7 +181,7 @@ func (r *FunctionResource) Create(
 }
 
 func (r *FunctionResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *FunctionResourceOutput) (*FunctionResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg]) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -232,7 +232,7 @@ func (r *FunctionResource) read(
 }
 
 func (r *FunctionResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) (*FunctionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -277,7 +277,7 @@ func (r *FunctionResource) Update(
 // codeChanged reports whether the function's code source changed against the
 // prior inputs.
 func (r *FunctionResource) codeChanged(
-	prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+	prior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(prior.Inputs.CodeContent, r.CodeContent) ||
 		runtime.Changed(prior.Inputs.CodePath, r.CodePath)
@@ -286,7 +286,7 @@ func (r *FunctionResource) codeChanged(
 // configChanged reports whether any field that rides FunctionConfig changed
 // against the prior inputs.
 func (r *FunctionResource) configChanged(
-	prior runtime.Prior[FunctionResource, *FunctionResourceOutput],
+	prior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(prior.Inputs.Comment, r.Comment) ||
 		runtime.Changed(prior.Inputs.Runtime, r.Runtime) ||
@@ -297,8 +297,9 @@ func (r *FunctionResource) configChanged(
 func (r *FunctionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FunctionResourceOutput,
+	recordedPrior runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

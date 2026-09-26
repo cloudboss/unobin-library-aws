@@ -244,7 +244,7 @@ func (r *TableResource) createTable(ctx context.Context, client *dynamodb.Client
 func (r *TableResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TableResourceOutput,
+	recordedPrior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) (*TableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -261,7 +261,7 @@ func (r *TableResource) Read(
 }
 
 func (r *TableResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TableResource, *TableResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg],
 ) (*TableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -288,7 +288,8 @@ func (r *TableResource) Update(
 	return tableOutput(desc), nil
 }
 
-func (r *TableResource) Delete(ctx context.Context, cfg *awsCfg, prior *TableResourceOutput) error {
+func (r *TableResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[TableResource, *TableResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

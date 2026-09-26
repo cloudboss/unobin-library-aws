@@ -136,8 +136,9 @@ func userPoolClientOutput(
 func (r *UserPoolClientResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolClientResourceOutput,
+	recordedPrior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 ) (*UserPoolClientResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	id, err := priorUserPoolClientID(prior)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (r *UserPoolClientResource) read(
 func (r *UserPoolClientResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput],
+	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 ) (*UserPoolClientResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -195,7 +196,7 @@ func (r *UserPoolClientResource) Update(
 func (r *UserPoolClientResource) update(
 	ctx context.Context,
 	client userPoolClientAPI,
-	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput],
+	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 	clock userPoolClock,
 ) (*UserPoolClientResourceOutput, error) {
 	if err := r.validateInputs(); err != nil {
@@ -241,8 +242,9 @@ func (r *UserPoolClientResource) update(
 func (r *UserPoolClientResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolClientResourceOutput,
+	recordedPrior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	id, err := priorUserPoolClientID(prior)
 	if err != nil {
 		return err
@@ -291,7 +293,7 @@ func (r *UserPoolClientResource) mutableInputsChanged(prior UserPoolClientResour
 }
 
 func (r *UserPoolClientResource) updateName(
-	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput],
+	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 ) (string, error) {
 	if r.Name != nil {
 		return *r.Name, nil
@@ -306,7 +308,7 @@ func (r *UserPoolClientResource) updateName(
 }
 
 func (r *UserPoolClientResource) nameDrifted(
-	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput],
+	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 	name string,
 ) bool {
 	if r.Name == nil {
@@ -319,7 +321,7 @@ func (r *UserPoolClientResource) nameDrifted(
 }
 
 func userPoolClientPriorSecret(
-	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput],
+	prior runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg],
 ) *string {
 	if prior.Observed != nil && prior.Observed.ClientSecret != nil {
 		return prior.Observed.ClientSecret

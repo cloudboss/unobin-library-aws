@@ -136,7 +136,7 @@ func (r *RouteResource) Create(ctx context.Context, cfg *awsCfg) (*RouteResource
 func (r *RouteResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RouteResourceOutput,
+	recordedPrior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg],
 ) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -150,7 +150,7 @@ func (r *RouteResource) Read(
 }
 
 func (r *RouteResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg],
 ) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -168,7 +168,7 @@ func (r *RouteResource) Update(
 	return &RouteResourceOutput{State: string(route.State)}, nil
 }
 
-func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, prior *RouteResourceOutput) error {
+func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -560,7 +560,7 @@ func TestAccessPointUpdateSkipsTagsWhenSourceIsUnchanged(t *testing.T) {
 	client := &fakeAccessPointClient{describeResults: []accessPointDescribeResult{{
 		output: accessPointDescribeOutput(efstypes.LifeCycleStateAvailable),
 	}}}
-	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput]{
+	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg]{
 		Inputs:  AccessPointResource{FileSystemId: testAccessPointFileSystemID, Tags: &tags},
 		Outputs: &AccessPointResourceOutput{AccessPointId: testAccessPointID},
 	}
@@ -592,7 +592,7 @@ func TestAccessPointUpdateReconcilesPaginatedTags(t *testing.T) {
 			output: accessPointDescribeOutput(efstypes.LifeCycleStateAvailable),
 		}},
 	}
-	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput]{
+	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg]{
 		Inputs:  AccessPointResource{FileSystemId: testAccessPointFileSystemID, Tags: &priorTags},
 		Outputs: &AccessPointResourceOutput{AccessPointId: testAccessPointID},
 	}
@@ -627,7 +627,7 @@ func TestAccessPointUpdateClearsAllUserTags(t *testing.T) {
 			output: accessPointDescribeOutput(efstypes.LifeCycleStateAvailable),
 		}},
 	}
-	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput]{
+	prior := runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg]{
 		Inputs:  AccessPointResource{FileSystemId: testAccessPointFileSystemID, Tags: &priorTags},
 		Outputs: &AccessPointResourceOutput{AccessPointId: testAccessPointID},
 	}

@@ -208,8 +208,9 @@ func (r *IntegrationResource) Create(
 func (r *IntegrationResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *IntegrationResourceOutput,
+	recordedPrior runtime.Prior[IntegrationResource, *IntegrationResourceOutput, *awsCfg],
 ) (*IntegrationResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -245,7 +246,7 @@ func (r *IntegrationResource) Read(
 func (r *IntegrationResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput],
+	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput, *awsCfg],
 ) (*IntegrationResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -281,7 +282,7 @@ func (r *IntegrationResource) Update(
 // their removal sentinels; and a removed tls-config block sends the
 // empty-object clear, a nil member meaning leave unchanged.
 func (r *IntegrationResource) updateIntegrationInput(
-	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput],
+	prior runtime.Prior[IntegrationResource, *IntegrationResourceOutput, *awsCfg],
 ) (*apigatewayv2.UpdateIntegrationInput, bool) {
 	in := &apigatewayv2.UpdateIntegrationInput{
 		ApiId:              aws.String(prior.Outputs.ApiId),
@@ -376,8 +377,9 @@ func (r *IntegrationResource) updateIntegrationInput(
 func (r *IntegrationResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *IntegrationResourceOutput,
+	recordedPrior runtime.Prior[IntegrationResource, *IntegrationResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

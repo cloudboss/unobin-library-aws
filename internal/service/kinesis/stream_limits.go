@@ -48,7 +48,7 @@ func (r StreamResource) validateCreateLimits(
 func (r StreamResource) validateUpdateLimits(
 	ctx context.Context,
 	client streamClient,
-	prior runtime.Prior[StreamResource, *StreamResourceOutput],
+	prior runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg],
 ) error {
 	if effectiveStreamMode(r.StreamModeDetails) != streamModeProvisioned {
 		return nil

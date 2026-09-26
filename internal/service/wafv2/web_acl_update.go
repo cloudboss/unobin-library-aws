@@ -15,7 +15,7 @@ import (
 func (r *WebACLResource) update(
 	ctx context.Context,
 	client wafClient,
-	prior runtime.Prior[WebACLResource, *WebACLResourceOutput],
+	prior runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 	retryOptions ...awsretry.Option,
 ) (*WebACLResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
@@ -82,7 +82,7 @@ func (r *WebACLResource) update(
 }
 
 func webACLUpdatePriorOutput(
-	prior runtime.Prior[WebACLResource, *WebACLResourceOutput],
+	prior runtime.Prior[WebACLResource, *WebACLResourceOutput, *awsCfg],
 	identity webACLIdentity,
 ) (*WebACLResourceOutput, error) {
 	observed := prior.Observed

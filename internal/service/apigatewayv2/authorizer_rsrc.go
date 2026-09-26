@@ -156,8 +156,9 @@ func (r *AuthorizerResource) Create(
 func (r *AuthorizerResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AuthorizerResourceOutput,
+	recordedPrior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg],
 ) (*AuthorizerResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -184,7 +185,7 @@ func (r *AuthorizerResource) read(
 func (r *AuthorizerResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg],
 ) (*AuthorizerResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -213,8 +214,9 @@ func (r *AuthorizerResource) Update(
 func (r *AuthorizerResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AuthorizerResourceOutput,
+	recordedPrior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -291,7 +293,7 @@ func (r *AuthorizerResource) createInput(
 }
 
 func (r *AuthorizerResource) updateInput(
-	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg],
 ) (*apigatewayv2.UpdateAuthorizerInput, bool) {
 	in := &apigatewayv2.UpdateAuthorizerInput{
 		ApiId:        aws.String(prior.Outputs.ApiId),
@@ -346,7 +348,7 @@ func (r *AuthorizerResource) updateInput(
 }
 
 func (r *AuthorizerResource) ttlNeedsUpdate(
-	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput],
+	prior runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(
 		prior.Inputs.AuthorizerResultTtlInSeconds,

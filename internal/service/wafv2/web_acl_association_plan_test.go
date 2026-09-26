@@ -30,13 +30,27 @@ type webACLAssociationPlanProbe struct {
 	recorder *webACLAssociationPlanRecorder
 }
 
-func (*webACLAssociationPlanProbe) SchemaVersion() int { return 1 }
-
-func (*webACLAssociationPlanProbe) ReplaceFields() []string {
-	return (&WebACLAssociationResource{}).ReplaceFields()
+func (*webACLAssociationPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any,
+] {
+	return runtime.ResourceDefinition[
+		webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any,
+	]{
+		SchemaVersion: 1,
+		Replace: runtime.Replacement[
+			webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any,
+		]{
+			Fields: []runtime.AnyInputField[webACLAssociationPlanProbe]{
+				runtime.InputField(func(input *webACLAssociationPlanProbe) *string {
+					return &input.ResourceARN
+				}),
+				runtime.InputField(func(input *webACLAssociationPlanProbe) *string {
+					return &input.WebACLARN
+				}),
+			},
+		},
+	}
 }
-
-func (*webACLAssociationPlanProbe) ValidateInputs(context.Context, any) error { return nil }
 
 func (r *webACLAssociationPlanProbe) Create(
 	context.Context,
@@ -50,18 +64,18 @@ func (r *webACLAssociationPlanProbe) Create(
 func (r *webACLAssociationPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior *WebACLAssociationResourceOutput,
+	prior runtime.Prior[webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any],
 ) (*WebACLAssociationResourceOutput, error) {
 	if r.recorder.drifted {
 		return nil, runtime.ErrNotFound
 	}
-	return prior, nil
+	return prior.Outputs, nil
 }
 
 func (r *webACLAssociationPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[webACLAssociationPlanProbe, *WebACLAssociationResourceOutput],
+	prior runtime.Prior[webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any],
 ) (*WebACLAssociationResourceOutput, error) {
 	r.recorder.updates++
 	return prior.Outputs, nil
@@ -70,10 +84,10 @@ func (r *webACLAssociationPlanProbe) Update(
 func (r *webACLAssociationPlanProbe) Delete(
 	_ context.Context,
 	_ any,
-	prior *WebACLAssociationResourceOutput,
+	prior runtime.Prior[webACLAssociationPlanProbe, *WebACLAssociationResourceOutput, any],
 ) error {
 	r.recorder.deletes++
-	r.recorder.deleteIdentity = r.identity(prior)
+	r.recorder.deleteIdentity = r.identity(prior.Outputs)
 	return nil
 }
 
@@ -118,7 +132,7 @@ func TestWebACLAssociationPlanReplacesEitherFieldAndDeletesPriorPair(t *testing.
 			require.NoError(t, err)
 			require.Len(t, plan.Steps, 1)
 			assert.Equal(t, runtime.DecisionReplace, plan.Steps[0].Decision)
-			assert.Equal(t, []string{tt.trigger}, plan.Steps[0].ReplaceTriggers)
+			assert.Equal(t, []string{tt.trigger}, plan.Steps[0].ReplacementReasons)
 
 			encoded, err := runtime.EncodePlan(plan)
 			require.NoError(t, err)
@@ -194,7 +208,7 @@ func webACLAssociationPlanExecutor(
 					webACLAssociationPlanProbe,
 					*WebACLAssociationResourceOutput,
 					any,
-				](func() *webACLAssociationPlanProbe {
+				]((&webACLAssociationPlanProbe{}).ResourceDefinition(), func() *webACLAssociationPlanProbe {
 					return &webACLAssociationPlanProbe{recorder: recorder}
 				}),
 			},

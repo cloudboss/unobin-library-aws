@@ -143,19 +143,6 @@ func (r *StateMachineResource) ValidateInputs(context.Context, *awsCfg) error {
 	return r.validateTags()
 }
 
-func (r *StateMachineResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState {
-		return nil
-	}
-	if stateMachineConfigurationChanged(req.PriorInputs, req.CurrentInputs) {
-		resp.MarkOutputUnknown("revision-id")
-	}
-	return nil
-}
-
 func (r *StateMachineResource) Create(
 	ctx context.Context,
 	cfg *awsCfg,
@@ -170,8 +157,9 @@ func (r *StateMachineResource) Create(
 func (r *StateMachineResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *StateMachineResourceOutput,
+	recordedPrior runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
 ) (*StateMachineResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -182,7 +170,7 @@ func (r *StateMachineResource) Read(
 func (r *StateMachineResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput],
+	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
 ) (*StateMachineResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -194,8 +182,9 @@ func (r *StateMachineResource) Update(
 func (r *StateMachineResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *StateMachineResourceOutput,
+	recordedPrior runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -257,7 +246,7 @@ func (r *StateMachineResource) read(
 func (r *StateMachineResource) update(
 	ctx context.Context,
 	client stateMachineClient,
-	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput],
+	prior runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg],
 	options stateMachineOperationOptions,
 ) (*StateMachineResourceOutput, error) {
 	return r.updateStateMachine(ctx, client, prior, options.withDefaults())

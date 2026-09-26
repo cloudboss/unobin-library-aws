@@ -183,7 +183,7 @@ func (r *ParameterResource) Create(
 func (r *ParameterResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ParameterResourceOutput,
+	recordedPrior runtime.Prior[ParameterResource, *ParameterResourceOutput, *awsCfg],
 ) (*ParameterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -193,7 +193,7 @@ func (r *ParameterResource) Read(
 }
 
 func (r *ParameterResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ParameterResource, *ParameterResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ParameterResource, *ParameterResourceOutput, *awsCfg],
 ) (*ParameterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -225,8 +225,9 @@ func (r *ParameterResource) Update(
 func (r *ParameterResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ParameterResourceOutput,
+	recordedPrior runtime.Prior[ParameterResource, *ParameterResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

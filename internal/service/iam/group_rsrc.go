@@ -73,7 +73,8 @@ func (r *GroupResource) Create(ctx context.Context, cfg *awsCfg) (*GroupResource
 }
 
 func (r *GroupResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) (*GroupResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]) (*GroupResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -82,7 +83,7 @@ func (r *GroupResource) Read(
 }
 
 func (r *GroupResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) (*GroupResourceOutput, error) {
 	if err := validateGroupName(r.Name); err != nil {
 		return nil, err
@@ -108,7 +109,8 @@ func (r *GroupResource) Update(
 	return readGroup(ctx, client, r.Name, false)
 }
 
-func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) error {
+func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -172,7 +174,7 @@ func findGroupByName(
 }
 
 func groupNeedsUpdate(
-	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 	current GroupResource,
 ) bool {
 	if runtime.Changed(prior.Inputs.Name, current.Name) ||
@@ -187,7 +189,7 @@ func groupNeedsUpdate(
 }
 
 func priorGroupName(
-	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 	fallback string,
 ) string {
 	if prior.Outputs != nil && prior.Outputs.Name != "" {

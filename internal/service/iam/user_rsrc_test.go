@@ -83,7 +83,7 @@ func TestUserReadMapsEmptyResultToNotFound(t *testing.T) {
 	})
 
 	_, err := (&UserResource{Name: "missing-user"}).Read(
-		context.Background(), fake.configuration(), &UserResourceOutput{Name: "missing-user"})
+		context.Background(), fake.configuration(), runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{Outputs: &UserResourceOutput{Name: "missing-user"}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -119,7 +119,7 @@ func TestUserUpdateReconcilesChangedFields(t *testing.T) {
 			"arn:aws:iam::123456789012:user/new/new-user", nil,
 			map[string]string{"Keep": "new"})
 	})
-	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+	prior := runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{
 		Inputs: UserResource{
 			Name:                "old-user",
 			Path:                "/old/",
@@ -181,7 +181,7 @@ func TestUserUpdateReconcilesObservedMutableDrift(t *testing.T) {
 			"arn:aws:iam::123456789012:user/wanted/same-user", aws.String(desiredBoundary),
 			map[string]string{"Keep": "wanted", "aws:system": "ignored"})
 	})
-	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+	prior := runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{
 		Inputs: UserResource{
 			Name:                "same-user",
 			Path:                "/wanted/",
@@ -222,7 +222,7 @@ func TestUserUpdateReturnsObservedWhenOnlyComputedFieldsChanged(t *testing.T) {
 		Path:     "/",
 		Tags:     map[string]string{"Keep": "same"},
 	}
-	prior := runtime.Prior[UserResource, *UserResourceOutput]{
+	prior := runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{
 		Inputs: UserResource{Name: "same", Path: "/", Tags: new(map[string]string{"Keep": "same"})},
 		Outputs: &UserResourceOutput{
 			Arn:      "old",
@@ -260,7 +260,7 @@ func TestUserDeleteRemovesGroupsBeforeDeletingUser(t *testing.T) {
 	})
 
 	err := (&UserResource{Name: "delete-user"}).Delete(
-		context.Background(), fake.configuration(), &UserResourceOutput{Name: "delete-user"})
+		context.Background(), fake.configuration(), runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{Outputs: &UserResourceOutput{Name: "delete-user"}})
 	require.NoError(t, err)
 }
 
@@ -337,7 +337,7 @@ func TestUserDeleteForceDestroyCleansDependencies(t *testing.T) {
 	})
 
 	err := (&UserResource{Name: "force-user", ForceDestroy: true}).Delete(
-		context.Background(), fake.configuration(), &UserResourceOutput{Name: "force-user"})
+		context.Background(), fake.configuration(), runtime.Prior[UserResource, *UserResourceOutput, *awsCfg]{Outputs: &UserResourceOutput{Name: "force-user"}})
 	require.NoError(t, err)
 }
 

@@ -60,6 +60,9 @@ func (r *DashboardResource) EquivalentInput(
 	if field != "body" {
 		return false
 	}
+	if prior.Body == current.Body {
+		return true
+	}
 	return equivalentDashboardJSON(prior.Body, current.Body)
 }
 
@@ -114,8 +117,9 @@ func (r *DashboardResource) Create(
 func (r *DashboardResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DashboardResourceOutput,
+	recordedPrior runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg],
 ) (*DashboardResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -130,7 +134,7 @@ func (r *DashboardResource) Read(
 func (r *DashboardResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[DashboardResource, *DashboardResourceOutput],
+	prior runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg],
 ) (*DashboardResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, cfg); err != nil {
 		return nil, err
@@ -145,8 +149,9 @@ func (r *DashboardResource) Update(
 func (r *DashboardResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DashboardResourceOutput,
+	recordedPrior runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -242,7 +247,7 @@ func (r *DashboardResource) read(
 func (r *DashboardResource) update(
 	ctx context.Context,
 	client dashboardClient,
-	prior runtime.Prior[DashboardResource, *DashboardResourceOutput],
+	prior runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg],
 ) (*DashboardResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err
@@ -331,7 +336,7 @@ func (r *DashboardResource) syncTags(
 }
 
 func dashboardPriorOutput(
-	prior runtime.Prior[DashboardResource, *DashboardResourceOutput],
+	prior runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg],
 ) DashboardResourceOutput {
 	var out DashboardResourceOutput
 	if prior.Outputs != nil {

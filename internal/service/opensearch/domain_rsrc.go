@@ -202,7 +202,7 @@ func (r *DomainResource) EquivalentInput(
 		)
 	case "access-policies":
 		if prior.AccessPolicies == nil || current.AccessPolicies == nil {
-			return false
+			return prior.AccessPolicies == nil && current.AccessPolicies == nil
 		}
 	default:
 		return false
@@ -229,8 +229,9 @@ func (r *DomainResource) Create(
 func (r *DomainResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DomainResourceOutput,
+	recordedPrior runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg],
 ) (*DomainResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -241,7 +242,7 @@ func (r *DomainResource) Read(
 func (r *DomainResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[DomainResource, *DomainResourceOutput],
+	prior runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg],
 ) (*DomainResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -253,8 +254,9 @@ func (r *DomainResource) Update(
 func (r *DomainResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DomainResourceOutput,
+	recordedPrior runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

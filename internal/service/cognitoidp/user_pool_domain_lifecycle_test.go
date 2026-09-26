@@ -380,7 +380,7 @@ func TestUserPoolDomainUpdateRequests(t *testing.T) {
 						cognitotypes.DomainStatusTypeActive),
 				},
 			}
-			prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput]{
+			prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg]{
 				Inputs: tt.prior,
 				Outputs: &UserPoolDomainResourceOutput{
 					Domain: tt.prior.Domain, UserPoolID: tt.prior.UserPoolID,
@@ -403,7 +403,7 @@ func TestUserPoolDomainUpdateRequests(t *testing.T) {
 }
 
 func TestUserPoolDomainUpdateReplacementAndRemoval(t *testing.T) {
-	prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput]{
+	prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg]{
 		Inputs: UserPoolDomainResource{
 			Domain: "auth", UserPoolID: "pool",
 		},
@@ -443,7 +443,7 @@ func TestUserPoolDomainUpdateRejectsCreatingStatus(t *testing.T) {
 				cognitotypes.DomainStatusTypeCreating),
 		},
 	}
-	prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput]{
+	prior := runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg]{
 		Inputs: priorInput,
 		Outputs: &UserPoolDomainResourceOutput{
 			Domain: "auth.example.com", UserPoolID: "us-east-1_pool",

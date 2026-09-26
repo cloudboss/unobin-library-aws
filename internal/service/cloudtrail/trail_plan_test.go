@@ -26,33 +26,44 @@ type trailPlanProbe struct {
 	counters *trailPlanCounters
 }
 
-func (r *trailPlanProbe) SchemaVersion() int { return 1 }
-
-func (r *trailPlanProbe) Create(context.Context, any) (any, error) {
+func (r *trailPlanProbe) Create(context.Context, any) (*TrailResourceOutput, error) {
 	r.counters.creates++
-	return map[string]any{"arn": "arn:new"}, nil
+	return &TrailResourceOutput{Arn: "arn:new"}, nil
 }
 
-func (r *trailPlanProbe) Read(_ context.Context, _ any, prior any) (any, error) {
-	return prior, nil
+func (r *trailPlanProbe) Read(
+	_ context.Context, _ any, prior runtime.Prior[trailPlanProbe, *TrailResourceOutput, any],
+) (*TrailResourceOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (r *trailPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[trailPlanProbe, any],
-) (any, error) {
+	prior runtime.Prior[trailPlanProbe, *TrailResourceOutput, any],
+) (*TrailResourceOutput, error) {
 	r.counters.updates++
 	return prior.Outputs, nil
 }
 
-func (r *trailPlanProbe) Delete(context.Context, any, any) error {
+func (r *trailPlanProbe) Delete(
+	context.Context, any, runtime.Prior[trailPlanProbe, *TrailResourceOutput, any],
+) error {
 	r.counters.deletes++
 	return nil
 }
 
-func (r *trailPlanProbe) ReplaceFields() []string {
-	return (&TrailResource{}).ReplaceFields()
+func (r *trailPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	trailPlanProbe, *TrailResourceOutput, any,
+] {
+	return runtime.ResourceDefinition[trailPlanProbe, *TrailResourceOutput, any]{
+		SchemaVersion: 1,
+		Replace: runtime.Replacement[trailPlanProbe, *TrailResourceOutput, any]{
+			Fields: []runtime.AnyInputField[trailPlanProbe]{
+				runtime.InputField(func(input *trailPlanProbe) *string { return &input.Name }),
+			},
+		},
+	}
 }
 
 func TestTrailNameChangePlansAndAppliesReplacement(t *testing.T) {
@@ -74,7 +85,8 @@ func TestTrailNameChangePlansAndAppliesReplacement(t *testing.T) {
 		"aws-cloudtrail": {
 			Name: "aws-cloudtrail",
 			Resources: map[string]runtime.ResourceRegistration{
-				"trail": runtime.MakeResourceWith[trailPlanProbe, any, any](
+				"trail": runtime.MakeResourceWith[trailPlanProbe, *TrailResourceOutput, any](
+					(&trailPlanProbe{}).ResourceDefinition(),
 					func() *trailPlanProbe { return &trailPlanProbe{counters: counters} },
 				),
 			},
@@ -110,7 +122,7 @@ func TestTrailNameChangePlansAndAppliesReplacement(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, plan.Steps, 1)
 	assert.Equal(t, runtime.DecisionReplace, plan.Steps[0].Decision)
-	assert.Equal(t, []string{"name"}, plan.Steps[0].ReplaceTriggers)
+	assert.Equal(t, []string{"name"}, plan.Steps[0].ReplacementReasons)
 
 	encoded, err := runtime.EncodePlan(plan)
 	require.NoError(t, err)

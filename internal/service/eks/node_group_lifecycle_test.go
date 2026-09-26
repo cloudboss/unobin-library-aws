@@ -136,7 +136,7 @@ func TestNodeGroupUpdateOrdersTagsVersionAndConfig(t *testing.T) {
 			nodeGroupDescribe(completeSDKNodeGroup()),
 		},
 	}
-	prior := runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+	prior := runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Outputs: &NodeGroupResourceOutput{
 			ClusterName: "prior-cluster", NodeGroupName: "prior-workers",
@@ -176,7 +176,7 @@ func TestNodeGroupUpdateForceOnlyDoesNotMutate(t *testing.T) {
 	}}
 
 	_, err := resource.updateNodeGroup(t.Context(), client,
-		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 			Inputs: priorInputs,
 			Outputs: &NodeGroupResourceOutput{
 				ClusterName: "prior-cluster", NodeGroupName: "prior-workers",
@@ -203,7 +203,7 @@ func TestNodeGroupUpdateIgnoresAutoscalerDesiredSizeDrift(t *testing.T) {
 	}}
 
 	_, err := resource.updateNodeGroup(t.Context(), client,
-		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 			Inputs: priorInputs,
 			Outputs: &NodeGroupResourceOutput{
 				ClusterName: "prior-cluster", NodeGroupName: "prior-workers",
@@ -232,7 +232,7 @@ func TestNodeGroupUpdateTagOnlySkipsEmptyTagCalls(t *testing.T) {
 	}
 
 	_, err := resource.updateNodeGroup(t.Context(), client,
-		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 			Inputs: priorInputs,
 			Outputs: &NodeGroupResourceOutput{
 				ClusterName: "cluster", NodeGroupName: "workers", ARN: "output-arn",
@@ -267,7 +267,7 @@ func TestNodeGroupUpdateRejectsMalformedUpdateResults(t *testing.T) {
 				versionOutputs: []*eks.UpdateNodegroupVersionOutput{tt.output},
 			}
 			_, err := resource.updateNodeGroup(t.Context(), client,
-				runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+				runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 					Inputs: priorInputs,
 					Outputs: &NodeGroupResourceOutput{
 						ClusterName: "cluster", NodeGroupName: "workers",
@@ -301,7 +301,7 @@ func TestNodeGroupUpdateRejectsMalformedConfigResults(t *testing.T) {
 				configOutputs: []*eks.UpdateNodegroupConfigOutput{tt.output},
 			}
 			_, err := resource.updateNodeGroup(t.Context(), client,
-				runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+				runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 					Inputs: priorInputs,
 					Outputs: &NodeGroupResourceOutput{
 						ClusterName: "cluster", NodeGroupName: "workers",
@@ -337,7 +337,7 @@ func TestNodeGroupOutputExposesEffectiveCloudValues(t *testing.T) {
 func TestNodeGroupUpdateRequiresPriorIdentityAndTagARN(t *testing.T) {
 	resource := validNodeGroupResource()
 	_, err := resource.updateNodeGroup(t.Context(), &fakeNodeGroupClient{},
-		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{Inputs: resource},
+		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{Inputs: resource},
 		newFakeClusterClock(),
 	)
 	require.Error(t, err)
@@ -347,7 +347,7 @@ func TestNodeGroupUpdateRequiresPriorIdentityAndTagARN(t *testing.T) {
 	resource = cloneNodeGroupResource(t, priorInputs)
 	resource.Tags = &map[string]string{"new": "value"}
 	_, err = resource.updateNodeGroup(t.Context(), &fakeNodeGroupClient{},
-		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput]{
+		runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg]{
 			Inputs: priorInputs,
 			Outputs: &NodeGroupResourceOutput{
 				ClusterName: "cluster", NodeGroupName: "workers",

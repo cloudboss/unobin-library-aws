@@ -162,8 +162,9 @@ func (r *RouteResource) Create(ctx context.Context, cfg *awsCfg) (*RouteResource
 func (r *RouteResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RouteResourceOutput,
+	recordedPrior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg],
 ) (*RouteResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -195,7 +196,7 @@ func (r *RouteResource) Read(
 // keys are removed first with DeleteRouteRequestParameter, and when those
 // removals are the whole change the patch call is skipped.
 func (r *RouteResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg],
 ) (*RouteResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -293,7 +294,8 @@ func (r *RouteResource) Update(
 // outputs so that a replacement deletes the old route rather than the new
 // one's coordinates. A NotFoundException means the route is already gone,
 // which is the desired end state.
-func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, prior *RouteResourceOutput) error {
+func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -320,7 +322,7 @@ func (r *RouteResource) Delete(ctx context.Context, cfg *awsCfg, prior *RouteRes
 func (r *RouteResource) removeDepartedParameters(
 	ctx context.Context,
 	client *apigatewayv2.Client,
-	prior runtime.Prior[RouteResource, *RouteResourceOutput],
+	prior runtime.Prior[RouteResource, *RouteResourceOutput, *awsCfg],
 ) error {
 	var keys []string
 	for key, required := range ptr.Value(prior.Inputs.RequestParameters) {

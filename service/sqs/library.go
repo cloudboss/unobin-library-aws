@@ -11,10 +11,11 @@ import (
 type resourcePtr[T, Out any] interface {
 	*T
 	runtime.TypedResource[T, Out, *awscfg.Configuration]
+	ResourceDefinition() runtime.ResourceDefinition[T, Out, *awscfg.Configuration]
 }
 
 func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistration {
-	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT]()
+	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT](PT(new(T)).ResourceDefinition())
 }
 
 func Library() *runtime.Library {

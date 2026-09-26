@@ -191,7 +191,8 @@ func (r *ClusterResource) Create(ctx context.Context, cfg *awsCfg) (*ClusterReso
 }
 
 func (r *ClusterResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterResourceOutput) (*ClusterResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]) (*ClusterResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -204,7 +205,7 @@ func (r *ClusterResource) Read(
 }
 
 func (r *ClusterResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -237,8 +238,9 @@ func (r *ClusterResource) Update(
 func (r *ClusterResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -270,7 +272,7 @@ func (r *ClusterResource) Delete(
 // so removing them sends nothing and leaves the values already on the
 // cluster in place.
 func (r *ClusterResource) updateClusterInput(
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput], arn string,
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg], arn string,
 ) (*ecs.UpdateClusterInput, bool) {
 	in := &ecs.UpdateClusterInput{Cluster: aws.String(arn)}
 	needed := false
@@ -301,7 +303,7 @@ func (r *ClusterResource) updateClusterInput(
 // PutClusterCapacityProviders reconciles differs from the prior inputs. The
 // two ride one whole-state call, so a change to either resends both.
 func (r *ClusterResource) capacityProvidersChanged(
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(ptr.Value(prior.Inputs.CapacityProviders), ptr.Value(r.CapacityProviders)) ||
 		runtime.Changed(prior.Inputs.DefaultCapacityProviderStrategy,

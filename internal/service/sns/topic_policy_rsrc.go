@@ -68,7 +68,7 @@ func (r *TopicPolicyResource) Create(
 func (r *TopicPolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TopicPolicyResourceOutput,
+	recordedPrior runtime.Prior[TopicPolicyResource, *TopicPolicyResourceOutput, *awsCfg],
 ) (*TopicPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -80,7 +80,7 @@ func (r *TopicPolicyResource) Read(
 func (r *TopicPolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[TopicPolicyResource, *TopicPolicyResourceOutput],
+	prior runtime.Prior[TopicPolicyResource, *TopicPolicyResourceOutput, *awsCfg],
 ) (*TopicPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -95,8 +95,9 @@ func (r *TopicPolicyResource) Update(
 func (r *TopicPolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *TopicPolicyResourceOutput,
+	recordedPrior runtime.Prior[TopicPolicyResource, *TopicPolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

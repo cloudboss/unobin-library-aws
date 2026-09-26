@@ -101,8 +101,9 @@ func (r *CertificateValidationResource) Create(
 func (r *CertificateValidationResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *CertificateValidationResourceOutput,
+	recordedPrior runtime.Prior[CertificateValidationResource, *CertificateValidationResourceOutput, *awsCfg],
 ) (*CertificateValidationResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -128,7 +129,7 @@ func (r *CertificateValidationResource) Read(
 // outputs unchanged.
 func (r *CertificateValidationResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[CertificateValidationResource, *CertificateValidationResourceOutput],
+	prior runtime.Prior[CertificateValidationResource, *CertificateValidationResourceOutput, *awsCfg],
 ) (*CertificateValidationResourceOutput, error) {
 	return prior.Outputs, nil
 }
@@ -136,7 +137,7 @@ func (r *CertificateValidationResource) Update(
 // Delete is a no-op. The certificate belongs to the acm-certificate resource;
 // this barrier has nothing of its own to remove.
 func (r *CertificateValidationResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *CertificateValidationResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[CertificateValidationResource, *CertificateValidationResourceOutput, *awsCfg]) error {
 	return nil
 }
 

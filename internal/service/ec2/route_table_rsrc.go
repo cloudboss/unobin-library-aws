@@ -72,8 +72,9 @@ func (r *RouteTableResource) Create(
 func (r *RouteTableResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RouteTableResourceOutput,
+	recordedPrior runtime.Prior[RouteTableResource, *RouteTableResourceOutput, *awsCfg],
 ) (*RouteTableResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func (r *RouteTableResource) Read(
 func (r *RouteTableResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[RouteTableResource, *RouteTableResourceOutput],
+	prior runtime.Prior[RouteTableResource, *RouteTableResourceOutput, *awsCfg],
 ) (*RouteTableResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -113,8 +114,9 @@ func (r *RouteTableResource) Update(
 func (r *RouteTableResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RouteTableResourceOutput,
+	recordedPrior runtime.Prior[RouteTableResource, *RouteTableResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

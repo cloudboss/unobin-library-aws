@@ -26,7 +26,7 @@ func TestDomainCreateAllowsJWTWhenEngineVersionIsOmitted(t *testing.T) {
 }
 
 func TestDomainUpdateUsesObservedVersionForJWTValidation(t *testing.T) {
-	prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+	prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 		Inputs: DomainResource{
 			DomainName: "example",
 			AdvancedSecurityOptions: &DomainAdvancedSecurityOptions{
@@ -75,7 +75,7 @@ func TestDomainUpdateUsesObservedVersionForJWTValidation(t *testing.T) {
 }
 
 func TestDomainUpdateUsesObservedVersionForConditionalReplacement(t *testing.T) {
-	prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+	prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 		Inputs: DomainResource{
 			DomainName:    "example",
 			EncryptAtRest: &DomainEncryptionAtRestOptions{},
@@ -122,7 +122,7 @@ func TestDomainUpdateUsesPriorStateVersionForColdStorageProjection(t *testing.T)
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+			prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 				Inputs: DomainResource{
 					DomainName: "example",
 					ClusterConfig: &DomainClusterConfig{

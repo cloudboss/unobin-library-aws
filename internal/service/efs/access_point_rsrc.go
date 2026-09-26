@@ -178,8 +178,9 @@ func (r *AccessPointResource) Create(
 func (r *AccessPointResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AccessPointResourceOutput,
+	recordedPrior runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg],
 ) (*AccessPointResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	if prior == nil || prior.AccessPointId == "" {
 		return nil, errors.New("read access point: missing prior access-point-id")
 	}
@@ -193,7 +194,7 @@ func (r *AccessPointResource) Read(
 func (r *AccessPointResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[AccessPointResource, *AccessPointResourceOutput],
+	prior runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg],
 ) (*AccessPointResourceOutput, error) {
 	client, err := newAccessPointClient(ctx, cfg)
 	if err != nil {
@@ -205,8 +206,9 @@ func (r *AccessPointResource) Update(
 func (r *AccessPointResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AccessPointResourceOutput,
+	recordedPrior runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	if prior == nil || prior.AccessPointId == "" {
 		return errors.New("delete access point: missing prior access-point-id")
 	}
@@ -265,7 +267,7 @@ func (r *AccessPointResource) read(
 func (r *AccessPointResource) update(
 	ctx context.Context,
 	client accessPointClient,
-	prior runtime.Prior[AccessPointResource, *AccessPointResourceOutput],
+	prior runtime.Prior[AccessPointResource, *AccessPointResourceOutput, *awsCfg],
 ) (*AccessPointResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err

@@ -108,7 +108,7 @@ func (r *SubnetGroupResource) Create(
 func (r *SubnetGroupResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubnetGroupResourceOutput,
+	recordedPrior runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput, *awsCfg],
 ) (*SubnetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -136,7 +136,7 @@ func (r *SubnetGroupResource) read(
 func (r *SubnetGroupResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput],
+	prior runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput, *awsCfg],
 ) (*SubnetGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -168,7 +168,7 @@ func (r *SubnetGroupResource) Update(
 func (r *SubnetGroupResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SubnetGroupResourceOutput,
+	recordedPrior runtime.Prior[SubnetGroupResource, *SubnetGroupResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

@@ -62,8 +62,9 @@ func (r *GroupPolicyResource) Create(
 func (r *GroupPolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *GroupPolicyResourceOutput,
+	recordedPrior runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg],
 ) (*GroupPolicyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -77,7 +78,7 @@ func (r *GroupPolicyResource) Read(
 func (r *GroupPolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput],
+	prior runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg],
 ) (*GroupPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -99,8 +100,9 @@ func (r *GroupPolicyResource) Update(
 func (r *GroupPolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *GroupPolicyResourceOutput,
+	recordedPrior runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

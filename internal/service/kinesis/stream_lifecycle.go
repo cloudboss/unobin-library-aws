@@ -129,7 +129,7 @@ func (r StreamResource) read(
 func (r StreamResource) update(
 	ctx context.Context,
 	client streamClient,
-	prior runtime.Prior[StreamResource, *StreamResourceOutput],
+	prior runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg],
 	options streamOperationOptions,
 ) (*StreamResourceOutput, error) {
 	options = options.withDefaults()

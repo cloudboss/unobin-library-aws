@@ -21,7 +21,7 @@ import (
 func (r *ReplicationGroupResource) update(
 	ctx context.Context,
 	client replicationGroupClient,
-	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
+	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 	options replicationGroupOperationOptions,
 ) (*ReplicationGroupResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
@@ -99,7 +99,7 @@ func (r *ReplicationGroupResource) update(
 }
 
 func (r *ReplicationGroupResource) validateUpdateTransitions(
-	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
+	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 	observed *ReplicationGroupResourceOutput,
 ) error {
 	priorEngine := prior.Inputs.Engine
@@ -361,7 +361,7 @@ func waitReplicationGroupMemberAvailable(
 }
 
 func (r *ReplicationGroupResource) needsSlowLogEnginePreupgrade(
-	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
+	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 	observed *ReplicationGroupResourceOutput,
 ) bool {
 	if r.EngineVersion == nil || observed == nil || observed.EngineVersion == "" ||
@@ -405,7 +405,7 @@ func (r *ReplicationGroupResource) applyStandardModify(
 	ctx context.Context,
 	client replicationGroupClient,
 	id string,
-	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput],
+	prior runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg],
 	preupgraded bool,
 	promoting bool,
 	options replicationGroupOperationOptions,

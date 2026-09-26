@@ -385,8 +385,9 @@ func (r *CapacityProviderResource) Create(
 func (r *CapacityProviderResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *CapacityProviderResourceOutput,
+	recordedPrior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg],
 ) (*CapacityProviderResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -397,7 +398,7 @@ func (r *CapacityProviderResource) Read(
 func (r *CapacityProviderResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg],
 ) (*CapacityProviderResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -435,7 +436,8 @@ func (r *CapacityProviderResource) Update(
 }
 
 func (r *CapacityProviderResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *CapacityProviderResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -454,7 +456,7 @@ func (r *CapacityProviderResource) Delete(
 }
 
 func (r *CapacityProviderResource) tagsNeedSync(
-	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg],
 ) bool {
 	desired := capacityProviderUserTags(ptr.Value(r.Tags))
 	if !maps.Equal(capacityProviderUserTags(ptr.Value(prior.Inputs.Tags)), desired) {
@@ -465,7 +467,7 @@ func (r *CapacityProviderResource) tagsNeedSync(
 }
 
 func (r *CapacityProviderResource) providerChanged(
-	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput],
+	prior runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.AutoScalingGroupProvider, r.AutoScalingGroupProvider) ||
 		runtime.Changed(prior.Inputs.ManagedInstancesProvider, r.ManagedInstancesProvider) {

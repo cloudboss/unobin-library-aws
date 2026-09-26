@@ -49,8 +49,9 @@ func (r *AddonResource) Create(
 func (r *AddonResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AddonResourceOutput,
+	recordedPrior runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg],
 ) (*AddonResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func (r *AddonResource) Read(
 func (r *AddonResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[AddonResource, *AddonResourceOutput],
+	prior runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg],
 ) (*AddonResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -73,8 +74,9 @@ func (r *AddonResource) Update(
 func (r *AddonResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AddonResourceOutput,
+	recordedPrior runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

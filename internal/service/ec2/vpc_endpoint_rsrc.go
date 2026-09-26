@@ -171,8 +171,9 @@ func (r *VpcEndpointResource) Create(
 func (r *VpcEndpointResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VpcEndpointResourceOutput,
+	recordedPrior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput, *awsCfg],
 ) (*VpcEndpointResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -183,7 +184,7 @@ func (r *VpcEndpointResource) Read(
 func (r *VpcEndpointResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput],
+	prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput, *awsCfg],
 ) (*VpcEndpointResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -212,8 +213,9 @@ func (r *VpcEndpointResource) Update(
 func (r *VpcEndpointResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *VpcEndpointResourceOutput,
+	recordedPrior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -256,7 +258,7 @@ func (r *VpcEndpointResource) Delete(
 // private DNS re-sends the DNS options alongside the toggle, the pairing EC2
 // expects.
 func (r *VpcEndpointResource) buildModify(
-	id string, prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput],
+	id string, prior runtime.Prior[VpcEndpointResource, *VpcEndpointResourceOutput, *awsCfg],
 ) *ec2.ModifyVpcEndpointInput {
 	in := &ec2.ModifyVpcEndpointInput{VpcEndpointId: aws.String(id)}
 	changed := false

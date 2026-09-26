@@ -125,7 +125,7 @@ func TestSubnetUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	priorInputs.MapCustomerOwnedIpOnLaunch = aws.Bool(true)
 
 	current := base
-	prior := runtime.Prior[SubnetResource, *SubnetResourceOutput]{
+	prior := runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Outputs: &SubnetResourceOutput{
 			Id:        "subnet-0123456789abcdef0",
@@ -175,7 +175,7 @@ func TestSubnetUpdateSendsNoAttributelessModify(t *testing.T) {
 			priorInputs := base
 			tt.prior(&priorInputs)
 			current := base
-			prior := runtime.Prior[SubnetResource, *SubnetResourceOutput]{
+			prior := runtime.Prior[SubnetResource, *SubnetResourceOutput, *awsCfg]{
 				Inputs: priorInputs,
 				Outputs: &SubnetResourceOutput{
 					Id:        "subnet-0123456789abcdef0",

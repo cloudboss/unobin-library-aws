@@ -86,8 +86,9 @@ func (r *InternetGatewayResource) Create(
 func (r *InternetGatewayResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InternetGatewayResourceOutput,
+	recordedPrior runtime.Prior[InternetGatewayResource, *InternetGatewayResourceOutput, *awsCfg],
 ) (*InternetGatewayResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -98,7 +99,7 @@ func (r *InternetGatewayResource) Read(
 func (r *InternetGatewayResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[InternetGatewayResource, *InternetGatewayResourceOutput],
+	prior runtime.Prior[InternetGatewayResource, *InternetGatewayResourceOutput, *awsCfg],
 ) (*InternetGatewayResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -130,7 +131,8 @@ func (r *InternetGatewayResource) Update(
 func (r *InternetGatewayResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InternetGatewayResourceOutput) error {
+	recordedPrior runtime.Prior[InternetGatewayResource, *InternetGatewayResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

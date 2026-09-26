@@ -28,7 +28,7 @@ func TestStateMachineUpdateValidatesWaitsAndReads(t *testing.T) {
 		describeOutputs: []*sfn.DescribeStateMachineOutput{old, converged, converged},
 	}
 	clock := &fakeStateMachineClock{}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN, RevisionID: "revision-1"},
 	}
@@ -70,7 +70,7 @@ func TestStateMachineUpdateReconcilesTagsBeforeConfiguration(t *testing.T) {
 		},
 		describeOutputs: []*sfn.DescribeStateMachineOutput{converged, converged},
 	}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN, RevisionID: "revision-1"},
 	}
@@ -102,7 +102,7 @@ func TestStateMachineUpdateTagOnlySkipsStateMachineMutation(t *testing.T) {
 			{Tags: []sfntypes.Tag{{Key: aws.String("old"), Value: aws.String("value")}}},
 		},
 	}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN, RevisionID: "revision-1"},
 	}
@@ -118,7 +118,7 @@ func TestStateMachineUpdateTagOnlySkipsStateMachineMutation(t *testing.T) {
 func TestStateMachineUpdateUnchangedReadsOnly(t *testing.T) {
 	resource := baseStateMachine()
 	client := &fakeStateMachineClient{}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  resource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN, RevisionID: "revision-1"},
 	}
@@ -213,7 +213,7 @@ func TestStateMachineUpdateOptionalConfigurationRequests(t *testing.T) {
 			client := &fakeStateMachineClient{
 				describeOutputs: []*sfn.DescribeStateMachineOutput{observed, observed},
 			}
-			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 				Inputs: priorResource,
 				Outputs: &StateMachineResourceOutput{
 					ARN: testStateMachineARN, RevisionID: "revision-1",
@@ -250,7 +250,7 @@ func TestStateMachineUpdateWaitIgnoresUnsentEncryptionPeriod(t *testing.T) {
 	clock := &fakeStateMachineClock{}
 	options := stateMachineOptions(clock)
 	options.updateWindow = time.Second
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs: priorResource,
 		Outputs: &StateMachineResourceOutput{
 			ARN: testStateMachineARN, RevisionID: "revision-1",
@@ -303,7 +303,7 @@ func TestStateMachineUpdateRemovingConfigurationSendsNil(t *testing.T) {
 			client := &fakeStateMachineClient{
 				describeOutputs: []*sfn.DescribeStateMachineOutput{converged, converged},
 			}
-			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 				Inputs: priorResource,
 				Outputs: &StateMachineResourceOutput{
 					ARN: testStateMachineARN, RevisionID: "revision-1",
@@ -331,7 +331,7 @@ func TestStateMachineUpdateDefinitionValidationPrecedesTags(t *testing.T) {
 	client := &fakeStateMachineClient{
 		validateErrors: []error{errors.New("validation failed")},
 	}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -348,7 +348,7 @@ func TestStateMachineUpdateDoesNotRetryMutationError(t *testing.T) {
 	current.RoleARN = "arn:aws:iam::123456789012:role/new-workflow"
 	client := &fakeStateMachineClient{updateErrors: []error{errors.New("conflict")}}
 	clock := &fakeStateMachineClock{}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -409,7 +409,7 @@ func TestStateMachineUpdateWaitChecksCompleteConfiguration(t *testing.T) {
 		describeOutputs: []*sfn.DescribeStateMachineOutput{first, second, second},
 	}
 	clock := &fakeStateMachineClock{}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -424,7 +424,7 @@ func TestStateMachineUpdateWaitStopsOnDescribeError(t *testing.T) {
 	current := priorResource
 	current.RoleARN = "arn:aws:iam::123456789012:role/new-workflow"
 	client := &fakeStateMachineClient{describeErrors: []error{errors.New("describe denied")}}
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -444,7 +444,7 @@ func TestStateMachineUpdateWaitDoesNotAcceptMissingConfiguration(t *testing.T) {
 	clock := &fakeStateMachineClock{}
 	options := stateMachineOptions(clock)
 	options.updateWindow = time.Second
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -460,7 +460,7 @@ func TestStateMachineUpdateWaitTimeoutAndCancellation(t *testing.T) {
 	priorResource := baseStateMachine()
 	current := priorResource
 	current.RoleARN = "arn:aws:iam::123456789012:role/new-workflow"
-	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+	prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 		Inputs:  priorResource,
 		Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 	}
@@ -530,7 +530,7 @@ func TestStateMachineUpdateStopsAfterTagErrors(t *testing.T) {
 			current.Tags = &newTags
 			client := &fakeStateMachineClient{}
 			tt.configure(client)
-			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput]{
+			prior := runtime.Prior[StateMachineResource, *StateMachineResourceOutput, *awsCfg]{
 				Inputs:  priorResource,
 				Outputs: &StateMachineResourceOutput{ARN: testStateMachineARN},
 			}

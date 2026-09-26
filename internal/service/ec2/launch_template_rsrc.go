@@ -206,8 +206,9 @@ func (r *LaunchTemplateResource) Create(
 func (r *LaunchTemplateResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LaunchTemplateResourceOutput,
+	recordedPrior runtime.Prior[LaunchTemplateResource, *LaunchTemplateResourceOutput, *awsCfg],
 ) (*LaunchTemplateResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -218,7 +219,7 @@ func (r *LaunchTemplateResource) Read(
 func (r *LaunchTemplateResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[LaunchTemplateResource, *LaunchTemplateResourceOutput],
+	prior runtime.Prior[LaunchTemplateResource, *LaunchTemplateResourceOutput, *awsCfg],
 ) (*LaunchTemplateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -267,7 +268,8 @@ func (r *LaunchTemplateResource) Update(
 func (r *LaunchTemplateResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LaunchTemplateResourceOutput) error {
+	recordedPrior runtime.Prior[LaunchTemplateResource, *LaunchTemplateResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

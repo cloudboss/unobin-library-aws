@@ -112,16 +112,6 @@ func (r *ClusterResource) ValidateInputs(context.Context, *awsCfg) error {
 	return fmt.Errorf("kms-encryption-key must be an ARN or %s", awsOwnedKMSKey)
 }
 
-func (r *ClusterResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[ClusterResource, *ClusterResourceOutput, *awsCfg],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState {
-		return nil
-	}
-	return conditionalClusterReplacement(req.PriorInputs, req.CurrentInputs)
-}
-
 func (r *ClusterResource) EquivalentInput(
 	field string,
 	prior,
@@ -150,8 +140,9 @@ func (r *ClusterResource) Create(
 func (r *ClusterResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -162,7 +153,7 @@ func (r *ClusterResource) Read(
 func (r *ClusterResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -174,8 +165,9 @@ func (r *ClusterResource) Update(
 func (r *ClusterResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -245,7 +237,7 @@ func (r *ClusterResource) readWithClient(
 func (r *ClusterResource) updateWithClient(
 	ctx context.Context,
 	client clusterClient,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 	options clusterOperationOptions,
 ) (*ClusterResourceOutput, error) {
 	if prior.Outputs == nil || prior.Outputs.Identifier == "" {
@@ -412,7 +404,7 @@ func waitClusterDeleted(
 }
 
 func (r *ClusterResource) updateInput(
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 	identifier string,
 ) (*awssdksql.UpdateClusterInput, bool, error) {
 	token, err := newClientToken()

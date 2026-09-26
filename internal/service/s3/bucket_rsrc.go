@@ -458,7 +458,7 @@ func (r *BucketResource) createInput(
 }
 
 func (r *BucketResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *BucketResourceOutput) (*BucketResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[BucketResource, *BucketResourceOutput, *awsCfg]) (*BucketResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (r *BucketResource) read(
 }
 
 func (r *BucketResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[BucketResource, *BucketResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[BucketResource, *BucketResourceOutput, *awsCfg],
 ) (*BucketResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -521,7 +521,7 @@ func (r *BucketResource) Update(
 func (r *BucketResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *BucketResourceOutput,
+	recordedPrior runtime.Prior[BucketResource, *BucketResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

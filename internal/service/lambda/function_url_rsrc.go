@@ -125,8 +125,9 @@ func (r *FunctionUrlResource) Create(
 func (r *FunctionUrlResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FunctionUrlResourceOutput,
+	recordedPrior runtime.Prior[FunctionUrlResource, *FunctionUrlResourceOutput, *awsCfg],
 ) (*FunctionUrlResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -161,7 +162,7 @@ func (r *FunctionUrlResource) Read(
 func (r *FunctionUrlResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[FunctionUrlResource, *FunctionUrlResourceOutput],
+	prior runtime.Prior[FunctionUrlResource, *FunctionUrlResourceOutput, *awsCfg],
 ) (*FunctionUrlResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -216,8 +217,9 @@ func (r *FunctionUrlResource) Update(
 func (r *FunctionUrlResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FunctionUrlResourceOutput,
+	recordedPrior runtime.Prior[FunctionUrlResource, *FunctionUrlResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

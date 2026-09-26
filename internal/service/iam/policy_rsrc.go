@@ -100,7 +100,8 @@ func (r *PolicyResource) Create(ctx context.Context, cfg *awsCfg) (*PolicyResour
 }
 
 func (r *PolicyResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *PolicyResourceOutput) (*PolicyResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg]) (*PolicyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -148,7 +149,7 @@ func (r *PolicyResource) read(
 }
 
 func (r *PolicyResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[PolicyResource, *PolicyResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg],
 ) (*PolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -173,8 +174,9 @@ func (r *PolicyResource) Update(
 func (r *PolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PolicyResourceOutput,
+	recordedPrior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

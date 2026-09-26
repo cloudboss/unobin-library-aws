@@ -75,8 +75,9 @@ func (r *UserPolicyAttachmentResource) Create(
 func (r *UserPolicyAttachmentResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPolicyAttachmentResourceOutput,
+	recordedPrior runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg],
 ) (*UserPolicyAttachmentResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	key := r.key(prior)
 	if err := validateUserPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return nil, err
@@ -90,13 +91,14 @@ func (r *UserPolicyAttachmentResource) Read(
 
 func (r *UserPolicyAttachmentResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput],
+	prior runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg],
 ) (*UserPolicyAttachmentResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
 func (r *UserPolicyAttachmentResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *UserPolicyAttachmentResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	key := r.key(prior)
 	if err := validateUserPolicyAttachmentARN(key.PolicyArn); err != nil {
 		return err

@@ -53,7 +53,7 @@ func TestFunctionUpdateLeavesRemovedScalarsToAWS(t *testing.T) {
 	priorInputs.KMSKeyArn = aws.String("arn:aws:kms:us-east-1:123456789012:key/k-1")
 
 	current := base
-	prior := runtime.Prior[FunctionResource, *FunctionResourceOutput]{
+	prior := runtime.Prior[FunctionResource, *FunctionResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Outputs: &FunctionResourceOutput{
 			Arn: "arn:aws:lambda:us-east-1:123456789012:function:fn",
@@ -69,63 +69,4 @@ func TestFunctionUpdateLeavesRemovedScalarsToAWS(t *testing.T) {
 		assert.NotContains(t, body, key,
 			"a removed %s must not be sent to UpdateFunctionConfiguration", key)
 	}
-}
-
-func TestFunctionModifyResourcePlanUnknownVersionOutputs(t *testing.T) {
-	priorInputs := FunctionResource{
-		FunctionName: "fn",
-		Role:         "arn:aws:iam::123456789012:role/fn-role",
-		Code:         FunctionCode{S3Bucket: aws.String("b"), S3Key: aws.String("k")},
-		Runtime:      aws.String("python3.13"),
-		MemorySize:   aws.Int64(128),
-		Publish:      aws.Bool(true),
-	}
-	current := priorInputs
-	current.MemorySize = aws.Int64(256)
-
-	var resp runtime.ResourcePlanResponse
-	err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		FunctionResource, *FunctionResourceOutput, *awsCfg,
-	]{
-		PriorInputs:   priorInputs,
-		CurrentInputs: current,
-		PriorOutputs: &FunctionResourceOutput{
-			Arn:     "arn:aws:lambda:us-east-1:123456789012:function:fn",
-			Version: "1",
-		},
-		HasPriorState: true,
-	}, &resp)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]bool{
-		"qualified-arn":        true,
-		"qualified-invoke-arn": true,
-		"version":              true,
-	}, resp.UnknownOutputs)
-}
-
-func TestFunctionModifyResourcePlanLeavesStableVersionOutputs(t *testing.T) {
-	priorInputs := FunctionResource{
-		FunctionName: "fn",
-		Role:         "arn:aws:iam::123456789012:role/fn-role",
-		Code:         FunctionCode{S3Bucket: aws.String("b"), S3Key: aws.String("k")},
-		Runtime:      aws.String("python3.13"),
-		MemorySize:   aws.Int64(128),
-		Publish:      aws.Bool(true),
-	}
-	current := priorInputs
-
-	var resp runtime.ResourcePlanResponse
-	err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		FunctionResource, *FunctionResourceOutput, *awsCfg,
-	]{
-		PriorInputs:   priorInputs,
-		CurrentInputs: current,
-		PriorOutputs: &FunctionResourceOutput{
-			Arn:     "arn:aws:lambda:us-east-1:123456789012:function:fn",
-			Version: "1",
-		},
-		HasPriorState: true,
-	}, &resp)
-	require.NoError(t, err)
-	assert.Empty(t, resp.UnknownOutputs)
 }

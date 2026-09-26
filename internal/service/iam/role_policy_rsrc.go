@@ -80,8 +80,9 @@ func (r *RolePolicyResource) Create(
 func (r *RolePolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RolePolicyResourceOutput,
+	recordedPrior runtime.Prior[RolePolicyResource, *RolePolicyResourceOutput, *awsCfg],
 ) (*RolePolicyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func (r *RolePolicyResource) read(
 func (r *RolePolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[RolePolicyResource, *RolePolicyResourceOutput],
+	prior runtime.Prior[RolePolicyResource, *RolePolicyResourceOutput, *awsCfg],
 ) (*RolePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -172,8 +173,9 @@ func (r *RolePolicyResource) Update(
 func (r *RolePolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RolePolicyResourceOutput,
+	recordedPrior runtime.Prior[RolePolicyResource, *RolePolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

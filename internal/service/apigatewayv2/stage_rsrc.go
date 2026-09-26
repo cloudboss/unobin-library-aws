@@ -195,8 +195,9 @@ func (r *StageResource) Create(ctx context.Context, cfg *awsCfg) (*StageResource
 func (r *StageResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *StageResourceOutput,
+	recordedPrior runtime.Prior[StageResource, *StageResourceOutput, *awsCfg],
 ) (*StageResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -231,7 +232,7 @@ func (r *StageResource) read(
 }
 
 func (r *StageResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[StageResource, *StageResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[StageResource, *StageResourceOutput, *awsCfg],
 ) (*StageResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -394,7 +395,8 @@ func stageDeleteAccessLogSettings(
 // Delete removes the stage, keying off the prior outputs so that on a
 // replace the old stage is the one deleted. A stage already gone counts as
 // deleted.
-func (r *StageResource) Delete(ctx context.Context, cfg *awsCfg, prior *StageResourceOutput) error {
+func (r *StageResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[StageResource, *StageResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -267,7 +267,7 @@ func TestMountTargetUpdateSecurityGroups(t *testing.T) {
 				ec2:    &fakeMountTargetSubnetClient{},
 			}
 			r := &MountTargetResource{SecurityGroups: tt.groups}
-			prior := runtime.Prior[MountTargetResource, *MountTargetResourceOutput]{
+			prior := runtime.Prior[MountTargetResource, *MountTargetResourceOutput, *awsCfg]{
 				Inputs: MountTargetResource{SecurityGroups: &priorGroups},
 				Outputs: &MountTargetResourceOutput{
 					MountTargetId: "fsmt-0123456789abcdef0",

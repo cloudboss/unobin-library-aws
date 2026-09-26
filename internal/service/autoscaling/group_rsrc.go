@@ -235,7 +235,7 @@ func (r *GroupResource) createInput() *autoscaling.CreateAutoScalingGroupInput {
 func (r *GroupResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *GroupResourceOutput,
+	recordedPrior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -269,7 +269,7 @@ func (r *GroupResource) read(
 }
 
 func (r *GroupResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) (*GroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -323,7 +323,7 @@ func (r *GroupResource) Update(
 // groups, suspended processes, metrics -- are handled by their own calls and
 // are not tested here.
 func (r *GroupResource) groupChanged(
-	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.MinSize, r.MinSize) ||
@@ -349,7 +349,7 @@ func (r *GroupResource) groupChanged(
 // metricsChanged reports whether the enabled metrics or their granularity
 // differ from the prior inputs; a granularity change re-enables the metrics.
 func (r *GroupResource) metricsChanged(
-	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(ptr.Value(prior.Inputs.EnabledMetrics), ptr.Value(r.EnabledMetrics)) ||
 		runtime.Changed(prior.Inputs.MetricsGranularity, r.MetricsGranularity)
@@ -367,7 +367,7 @@ func (r *GroupResource) metricsChanged(
 func (r *GroupResource) update(
 	ctx context.Context,
 	client *autoscaling.Client,
-	prior runtime.Prior[GroupResource, *GroupResourceOutput],
+	prior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg],
 ) error {
 	p := prior.Inputs
 	in := &autoscaling.UpdateAutoScalingGroupInput{
@@ -491,7 +491,7 @@ func (r *GroupResource) setMaintenancePolicy(in *autoscaling.UpdateAutoScalingGr
 	in.InstanceMaintenancePolicy = removedMaintenancePolicy()
 }
 
-func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, prior *GroupResourceOutput) error {
+func (r *GroupResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

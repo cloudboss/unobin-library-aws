@@ -105,7 +105,7 @@ func TestAccessKeyReadPaginatesAndPreservesSecretOutputs(t *testing.T) {
 	}
 
 	out, err := (&AccessKeyResource{UserName: "desired-user"}).Read(
-		context.Background(), fake.configuration(), prior)
+		context.Background(), fake.configuration(), runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{Outputs: prior})
 	require.NoError(t, err)
 	assert.Equal(t, "AKIAMATCH", out.AccessKeyId)
 	assert.Equal(t, "test-user", out.UserName)
@@ -130,7 +130,7 @@ func TestAccessKeyReadMapsNoSuchEntityToNotFound(t *testing.T) {
 	})
 
 	_, err := (&AccessKeyResource{UserName: "missing-user"}).Read(
-		context.Background(), fake.configuration(), &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"})
+		context.Background(), fake.configuration(), runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{Outputs: &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -142,7 +142,7 @@ func TestAccessKeyReadMapsMissingKeyToNotFound(t *testing.T) {
 	})
 
 	_, err := (&AccessKeyResource{UserName: "test-user"}).Read(
-		context.Background(), fake.configuration(), &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"})
+		context.Background(), fake.configuration(), runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{Outputs: &AccessKeyResourceOutput{AccessKeyId: "AKIAMISS"}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -159,7 +159,7 @@ func TestAccessKeyUpdateReconcilesObservedStatusDrift(t *testing.T) {
 		return 200, listAccessKeysPageXML(false, "",
 			accessKeyMetadataXML("test-user", "AKIATEST", "Active"))
 	})
-	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]{
+	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{
 		Inputs: AccessKeyResource{UserName: "test-user", Status: "Active"},
 		Outputs: &AccessKeyResourceOutput{
 			AccessKeyId:       "AKIATEST",
@@ -192,7 +192,7 @@ func TestAccessKeyUpdateReturnsObservedWhenStatusMatches(t *testing.T) {
 		UserName:    "test-user",
 		Status:      "Active",
 	}
-	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]{
+	prior := runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{
 		Inputs: AccessKeyResource{UserName: "test-user", Status: "Active"},
 		Outputs: &AccessKeyResourceOutput{
 			AccessKeyId: "AKIATEST",
@@ -219,7 +219,7 @@ func TestAccessKeyDeleteUsesPriorUserNameAndTreatsNoSuchEntityAsSuccess(t *testi
 
 	err := (&AccessKeyResource{UserName: "new-user"}).Delete(
 		context.Background(), fake.configuration(),
-		&AccessKeyResourceOutput{AccessKeyId: "AKIATEST", UserName: "old-user"})
+		runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]{Outputs: &AccessKeyResourceOutput{AccessKeyId: "AKIATEST", UserName: "old-user"}})
 	require.NoError(t, err)
 }
 

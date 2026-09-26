@@ -243,7 +243,7 @@ func TestUpdateDomainMutationOrder(t *testing.T) {
 	operations := []string{}
 	priorTags := map[string]string{"remove": "old", "change": "old"}
 	currentTags := map[string]string{"change": "new", "add": "value"}
-	prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+	prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 		Inputs: DomainResource{
 			DomainName:    "example",
 			EngineVersion: stringPointer("OpenSearch_2.11"),
@@ -364,7 +364,7 @@ func TestUpdateDomainReplacementPreflightPreventsMutation(t *testing.T) {
 			return &awssdk.UpdateDomainConfigOutput{}, nil
 		},
 	}
-	prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+	prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 		Inputs: DomainResource{
 			DomainName: "example",
 			EncryptAtRest: &DomainEncryptionAtRestOptions{
@@ -412,7 +412,7 @@ func TestUpdateDomainBuildsFallibleRequestsBeforeTagMutation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			priorTags := map[string]string{}
 			currentTags := map[string]string{"new": "value"}
-			prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+			prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 				Inputs: DomainResource{
 					DomainName: "example", Tags: &priorTags,
 					AccessPolicies: stringPointer(`{"Statement":[]}`),

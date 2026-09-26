@@ -17,34 +17,67 @@ import (
 
 type addonPlanProbe AddonResource
 
-func (*addonPlanProbe) SchemaVersion() int { return 1 }
+type addonPlanOutput struct {
+	ClusterName string `ub:"cluster-name"`
+	AddonName   string `ub:"addon-name"`
+	ARN         string `ub:"arn"`
+}
 
-func (*addonPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"arn": "arn:new"}, nil
+func (*addonPlanProbe) Create(context.Context, any) (*addonPlanOutput, error) {
+	return &addonPlanOutput{ARN: "arn:new"}, nil
 }
 
 func (*addonPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[addonPlanProbe, *addonPlanOutput, any],
+) (*addonPlanOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*addonPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[addonPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[addonPlanProbe, *addonPlanOutput, any],
+) (*addonPlanOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*addonPlanProbe) Delete(context.Context, any, map[string]any) error {
+func (*addonPlanProbe) Delete(
+	context.Context, any, runtime.Prior[addonPlanProbe, *addonPlanOutput, any],
+) error {
 	return nil
 }
 
-func (*addonPlanProbe) ReplaceFields() []string {
-	return (&AddonResource{}).ReplaceFields()
+func (*addonPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	addonPlanProbe, *addonPlanOutput, any,
+] {
+	return runtime.ResourceDefinition[addonPlanProbe, *addonPlanOutput, any]{
+		SchemaVersion: 1,
+		Equality: []runtime.InputEqualityRule[addonPlanProbe]{
+			runtime.EqualBy(
+				runtime.InputField(func(input *addonPlanProbe) **[]AddonPodIdentityAssociation {
+					return &input.PodIdentityAssociation
+				}),
+				func(prior, desired *[]AddonPodIdentityAssociation) bool {
+					return (&AddonResource{}).EquivalentInput(
+						"pod-identity-association",
+						AddonResource{PodIdentityAssociation: prior},
+						AddonResource{PodIdentityAssociation: desired},
+					)
+				},
+			),
+		},
+		Replace: runtime.Replacement[addonPlanProbe, *addonPlanOutput, any]{
+			Fields: []runtime.AnyInputField[addonPlanProbe]{
+				runtime.InputField(func(input *addonPlanProbe) *string { return &input.ClusterName }),
+				runtime.InputField(func(input *addonPlanProbe) *string { return &input.AddonName }),
+				runtime.InputField(func(input *addonPlanProbe) **AddonNamespaceConfig {
+					return &input.NamespaceConfig
+				}),
+			},
+		},
+	}
 }
 
 func (*addonPlanProbe) EquivalentInput(
@@ -98,7 +131,7 @@ func TestAddonRuntimePlanReplacesCompositeIdentityAndNamespace(t *testing.T) {
 			test.modify(&current)
 			step := planAddonChange(t, test.prior, current)
 			assert.Equal(t, runtime.DecisionReplace, step.Decision)
-			assert.Equal(t, []string{test.trigger}, step.ReplaceTriggers)
+			assert.Equal(t, []string{test.trigger}, step.ReplacementReasons)
 		})
 	}
 }
@@ -118,7 +151,7 @@ func TestAddonRuntimePlanTreatsPodIdentityAssociationsAsUnordered(t *testing.T) 
 	step := planAddonChange(t, prior, current)
 
 	assert.Equal(t, runtime.DecisionNoOp, step.Decision)
-	assert.Empty(t, step.ReplaceTriggers)
+	assert.Empty(t, step.ReplacementReasons)
 }
 
 func TestAddonRuntimePlanUpdatesChangedPodIdentityAssociation(t *testing.T) {
@@ -134,7 +167,7 @@ func TestAddonRuntimePlanUpdatesChangedPodIdentityAssociation(t *testing.T) {
 	step := planAddonChange(t, prior, current)
 
 	assert.Equal(t, runtime.DecisionUpdate, step.Decision)
-	assert.Empty(t, step.ReplaceTriggers)
+	assert.Empty(t, step.ReplacementReasons)
 }
 
 func planAddonChange(
@@ -151,7 +184,9 @@ func planAddonChange(
 		"aws-eks": {
 			Name: "aws-eks",
 			Resources: map[string]runtime.ResourceRegistration{
-				"addon": runtime.MakeResource[addonPlanProbe, map[string]any, any](),
+				"addon": runtime.MakeResource[addonPlanProbe, *addonPlanOutput, any](
+					(&addonPlanProbe{}).ResourceDefinition(),
+				),
 			},
 		},
 	}

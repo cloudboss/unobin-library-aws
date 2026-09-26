@@ -42,42 +42,6 @@ func (r *UserPoolDomainResource) ReplaceFields() []string {
 	return []string{"domain", "user-pool-id"}
 }
 
-func (r *UserPoolDomainResource) ModifyResourcePlan(
-	req runtime.ResourcePlanRequest[
-		UserPoolDomainResource,
-		*UserPoolDomainResourceOutput,
-		*awsCfg,
-	],
-	resp *runtime.ResourcePlanResponse,
-) error {
-	if !req.HasPriorState {
-		return nil
-	}
-	if req.PriorInputs.Domain != req.CurrentInputs.Domain ||
-		req.PriorInputs.UserPoolID != req.CurrentInputs.UserPoolID {
-		return nil
-	}
-	prior := req.PriorInputs
-	current := req.CurrentInputs
-	if prior.hasCustomCertificate() != current.hasCustomCertificate() {
-		return nil
-	}
-	if !current.domainUpdateNeeded(prior, req.PriorOutputs) {
-		return nil
-	}
-	resp.MarkOutputUnknown(
-		"custom-domain-config",
-		"managed-login-version",
-		"routing",
-		"aws-account-id",
-		"cloudfront-distribution",
-		"cloudfront-distribution-zone-id",
-		"s3-bucket",
-		"version",
-	)
-	return nil
-}
-
 func (r *UserPoolDomainResource) Create(
 	ctx context.Context,
 	cfg *awsCfg,
@@ -133,8 +97,9 @@ func (r *UserPoolDomainResource) cleanupCreatedDomain(
 func (r *UserPoolDomainResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolDomainResourceOutput,
+	recordedPrior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg],
 ) (*UserPoolDomainResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	domain, err := priorUserPoolDomain(prior)
 	if err != nil {
 		return nil, err
@@ -190,7 +155,7 @@ func (r *UserPoolDomainResource) read(
 func (r *UserPoolDomainResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput],
+	prior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg],
 ) (*UserPoolDomainResourceOutput, error) {
 	client, region, err := newDomainClient(ctx, cfg)
 	if err != nil {
@@ -203,7 +168,7 @@ func (r *UserPoolDomainResource) update(
 	ctx context.Context,
 	client userPoolDomainAPI,
 	region string,
-	prior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput],
+	prior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg],
 	clock userPoolClock,
 ) (*UserPoolDomainResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
@@ -239,8 +204,9 @@ func (r *UserPoolDomainResource) update(
 func (r *UserPoolDomainResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolDomainResourceOutput,
+	recordedPrior runtime.Prior[UserPoolDomainResource, *UserPoolDomainResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, _, err := newDomainClient(ctx, cfg)
 	if err != nil {
 		return err

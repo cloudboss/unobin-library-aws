@@ -67,10 +67,10 @@ func TestGroupPolicyAttachmentReadUsesPriorIdentityAndPaginates(t *testing.T) {
 	out, err := (&GroupPolicyAttachmentResource{
 		GroupName: "desired-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/desired-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: policyArn,
-	})
+	}})
 	require.NoError(t, err)
 	assert.Equal(t, &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
@@ -87,10 +87,10 @@ func TestGroupPolicyAttachmentReadMapsMissingGroupToNotFound(t *testing.T) {
 	_, err := (&GroupPolicyAttachmentResource{
 		GroupName: "missing-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &GroupPolicyAttachmentResourceOutput{
 		GroupName: "missing-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	})
+	}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -104,10 +104,10 @@ func TestGroupPolicyAttachmentReadMapsAbsentPolicyToNotFound(t *testing.T) {
 	_, err := (&GroupPolicyAttachmentResource{
 		GroupName: "test-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &GroupPolicyAttachmentResourceOutput{
 		GroupName: "test-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	})
+	}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -123,10 +123,10 @@ func TestGroupPolicyAttachmentDeleteUsesPriorIdentityAndTreatsNotFoundAsSuccess(
 	err := (&GroupPolicyAttachmentResource{
 		GroupName: "new-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/new-policy",
-	}).Delete(context.Background(), fake.configuration(), &GroupPolicyAttachmentResourceOutput{
+	}).Delete(context.Background(), fake.configuration(), runtime.Prior[GroupPolicyAttachmentResource, *GroupPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &GroupPolicyAttachmentResourceOutput{
 		GroupName: "old-group",
 		PolicyArn: "arn:aws:iam::123456789012:policy/old-policy",
-	})
+	}})
 	require.NoError(t, err)
 }
 

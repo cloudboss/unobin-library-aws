@@ -151,13 +151,13 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 	tests := []struct {
 		name  string
 		item  *BucketNotificationResource
-		prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]
+		prior runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]
 		want  bool
 	}{
 		{
 			name: "input change writes full configuration",
 			item: &BucketNotificationResource{Eventbridge: aws.Bool(true)},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs:   BucketNotificationResource{Eventbridge: aws.Bool(false)},
 				Observed: &BucketNotificationResourceOutput{Eventbridge: true},
 			},
@@ -166,7 +166,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 		{
 			name: "eventbridge drift writes full configuration",
 			item: &BucketNotificationResource{Eventbridge: aws.Bool(true)},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs:   BucketNotificationResource{Eventbridge: aws.Bool(true)},
 				Observed: &BucketNotificationResourceOutput{Eventbridge: false},
 			},
@@ -177,7 +177,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 			item: &BucketNotificationResource{
 				LambdaFunction: new([]BucketNotificationLambdaFunction{{Id: &configured}}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					LambdaFunction: new([]BucketNotificationLambdaFunction{{Id: &configured}}),
 				},
@@ -196,7 +196,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
@@ -224,7 +224,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{QueueArn: "arn", Events: []string{"s3:ObjectCreated:*"}},
@@ -253,7 +253,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{
@@ -286,7 +286,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{
@@ -320,7 +320,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{
@@ -358,7 +358,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 					},
 				}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Queue: new([]BucketNotificationQueue{
 						{
@@ -391,7 +391,7 @@ func TestBucketNotificationNeedsPut(t *testing.T) {
 				Eventbridge: aws.Bool(true),
 				Topic:       new([]BucketNotificationTopic{{Id: &configured}}),
 			},
-			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput]{
+			prior: runtime.Prior[BucketNotificationResource, *BucketNotificationResourceOutput, *awsCfg]{
 				Inputs: BucketNotificationResource{
 					Eventbridge: aws.Bool(true),
 					Topic:       new([]BucketNotificationTopic{{Id: &configured}}),

@@ -12,24 +12,32 @@ import (
 	"github.com/cloudboss/unobin-library-aws/service/apigatewayv2"
 	"github.com/cloudboss/unobin-library-aws/service/autoscaling"
 	"github.com/cloudboss/unobin-library-aws/service/cloudfront"
+	"github.com/cloudboss/unobin-library-aws/service/cloudtrail"
 	"github.com/cloudboss/unobin-library-aws/service/cloudwatch"
 	"github.com/cloudboss/unobin-library-aws/service/cloudwatchlogs"
+	"github.com/cloudboss/unobin-library-aws/service/cognitoidp"
 	"github.com/cloudboss/unobin-library-aws/service/dsql"
 	"github.com/cloudboss/unobin-library-aws/service/dynamodb"
 	"github.com/cloudboss/unobin-library-aws/service/ec2"
 	"github.com/cloudboss/unobin-library-aws/service/ecr"
 	"github.com/cloudboss/unobin-library-aws/service/ecs"
+	"github.com/cloudboss/unobin-library-aws/service/efs"
 	"github.com/cloudboss/unobin-library-aws/service/eks"
+	"github.com/cloudboss/unobin-library-aws/service/elasticache"
 	"github.com/cloudboss/unobin-library-aws/service/elbv2"
 	"github.com/cloudboss/unobin-library-aws/service/eventbridge"
 	"github.com/cloudboss/unobin-library-aws/service/iam"
+	"github.com/cloudboss/unobin-library-aws/service/kinesis"
 	"github.com/cloudboss/unobin-library-aws/service/kms"
 	awslambda "github.com/cloudboss/unobin-library-aws/service/lambda"
 	"github.com/cloudboss/unobin-library-aws/service/lambdamicrovms"
+	"github.com/cloudboss/unobin-library-aws/service/opensearch"
 	"github.com/cloudboss/unobin-library-aws/service/rds"
 	"github.com/cloudboss/unobin-library-aws/service/route53"
 	"github.com/cloudboss/unobin-library-aws/service/s3"
+	"github.com/cloudboss/unobin-library-aws/service/scheduler"
 	"github.com/cloudboss/unobin-library-aws/service/secretsmanager"
+	"github.com/cloudboss/unobin-library-aws/service/sfn"
 	"github.com/cloudboss/unobin-library-aws/service/sns"
 	"github.com/cloudboss/unobin-library-aws/service/sqs"
 	"github.com/cloudboss/unobin-library-aws/service/ssm"
@@ -78,6 +86,26 @@ func TestRegisteredTypeNames(t *testing.T) {
 	}
 }
 
+func TestResourceInputsEqualIdenticalEmptyInputs(t *testing.T) {
+	for name, lib := range libraries() {
+		t.Run(name, func(t *testing.T) {
+			for kind, registration := range lib.Resources {
+				t.Run(kind, func(t *testing.T) {
+					equal, err := registration.InputsEqual(
+						registration.NewReceiver(), map[string]any{},
+					)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !equal {
+						t.Fatal("identical empty inputs must compare equal")
+					}
+				})
+			}
+		})
+	}
+}
+
 func checkRegistrationTypeNames(
 	t *testing.T,
 	category string,
@@ -112,24 +140,32 @@ func libraries() map[string]*runtime.Library {
 		"apigatewayv2":   apigatewayv2.Library(),
 		"autoscaling":    autoscaling.Library(),
 		"cloudfront":     cloudfront.Library(),
+		"cloudtrail":     cloudtrail.Library(),
 		"cloudwatch":     cloudwatch.Library(),
 		"cloudwatchlogs": cloudwatchlogs.Library(),
+		"cognitoidp":     cognitoidp.Library(),
 		"dynamodb":       dynamodb.Library(),
 		"dsql":           dsql.Library(),
 		"ec2":            ec2.Library(),
 		"ecr":            ecr.Library(),
 		"ecs":            ecs.Library(),
+		"efs":            efs.Library(),
 		"eks":            eks.Library(),
+		"elasticache":    elasticache.Library(),
 		"elbv2":          elbv2.Library(),
 		"eventbridge":    eventbridge.Library(),
 		"iam":            iam.Library(),
+		"kinesis":        kinesis.Library(),
 		"kms":            kms.Library(),
 		"lambda":         awslambda.Library(),
 		"lambdamicrovms": lambdamicrovms.Library(),
+		"opensearch":     opensearch.Library(),
 		"rds":            rds.Library(),
 		"route53":        route53.Library(),
 		"s3":             s3.Library(),
+		"scheduler":      scheduler.Library(),
 		"secretsmanager": secretsmanager.Library(),
+		"sfn":            sfn.Library(),
 		"sns":            sns.Library(),
 		"sqs":            sqs.Library(),
 		"ssm":            ssm.Library(),

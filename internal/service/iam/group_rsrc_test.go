@@ -86,7 +86,7 @@ func TestGroupReadUsesPriorOutputHandle(t *testing.T) {
 	})
 
 	out, err := (&GroupResource{Name: "new-group"}).Read(
-		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "old-group"})
+		context.Background(), fake.configuration(), runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{Outputs: &GroupResourceOutput{Name: "old-group"}})
 	require.NoError(t, err)
 	assert.Equal(t, "old-group", out.Name)
 }
@@ -105,7 +105,7 @@ func TestGroupUpdateUsesPriorHandleAndDefaultsPath(t *testing.T) {
 			"new-group", "/", "AGPANEW", "arn:aws:iam::123456789012:group/new-group")
 	})
 
-	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{
 		Inputs:  GroupResource{Name: "old-group", Path: "/"},
 		Outputs: &GroupResourceOutput{Name: "old-group"},
 	}
@@ -133,7 +133,7 @@ func TestGroupUpdateReconcilesObservedDriftWhenInputsAreUnchanged(t *testing.T) 
 			"same-group", "/wanted/", "AGPASAME", "arn:aws:iam::123456789012:group/wanted/same-group")
 	})
 
-	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{
 		Inputs:  GroupResource{Name: "same-group", Path: "/wanted/"},
 		Outputs: &GroupResourceOutput{Name: "same-group"},
 		Observed: &GroupResourceOutput{
@@ -154,7 +154,7 @@ func TestGroupUpdateReturnsObservedWhenOnlyUniqueIdDrifted(t *testing.T) {
 		Name:     "same-group",
 		UniqueId: "AGPANEW",
 	}
-	prior := runtime.Prior[GroupResource, *GroupResourceOutput]{
+	prior := runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{
 		Inputs: GroupResource{Name: "same-group", Path: "/"},
 		Outputs: &GroupResourceOutput{
 			Arn:      "arn:aws:iam::123456789012:group/same-group",
@@ -179,7 +179,7 @@ func TestGroupDeleteTreatsNotFoundAsSuccess(t *testing.T) {
 	})
 
 	err := (&GroupResource{Name: "new-group"}).Delete(
-		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "old-group"})
+		context.Background(), fake.configuration(), runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{Outputs: &GroupResourceOutput{Name: "old-group"}})
 	require.NoError(t, err)
 }
 
@@ -190,7 +190,7 @@ func TestGroupReadMapsEmptyResultToNotFound(t *testing.T) {
 	})
 
 	_, err := (&GroupResource{Name: "missing-group"}).Read(
-		context.Background(), fake.configuration(), &GroupResourceOutput{Name: "missing-group"})
+		context.Background(), fake.configuration(), runtime.Prior[GroupResource, *GroupResourceOutput, *awsCfg]{Outputs: &GroupResourceOutput{Name: "missing-group"}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 

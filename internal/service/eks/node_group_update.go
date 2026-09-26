@@ -15,7 +15,7 @@ import (
 func (r NodeGroupResource) updateNodeGroup(
 	ctx context.Context,
 	client nodeGroupClient,
-	prior runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput],
+	prior runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg],
 	clock clusterClock,
 ) (*NodeGroupResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
@@ -150,7 +150,7 @@ func syncNodeGroupTags(
 }
 
 func nodeGroupTagARN(
-	prior runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput],
+	prior runtime.Prior[NodeGroupResource, *NodeGroupResourceOutput, *awsCfg],
 ) (string, error) {
 	if prior.Observed != nil && prior.Observed.ARN != "" {
 		return prior.Observed.ARN, nil

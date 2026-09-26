@@ -306,8 +306,8 @@ func TestStreamUpdateConsumerDeletionFlagDoesNotMutateStream(t *testing.T) {
 func streamPrior(
 	input StreamResource,
 	output *StreamResourceOutput,
-) runtime.Prior[StreamResource, *StreamResourceOutput] {
-	return runtime.Prior[StreamResource, *StreamResourceOutput]{
+) runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg] {
+	return runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 		Inputs: input, Outputs: output, Observed: output,
 	}
 }

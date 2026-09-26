@@ -149,7 +149,7 @@ func TestFargateProfileUpdateTagsThenReads(t *testing.T) {
 			fargateProfileDescribe(sdkFargateProfile(ekstypes.FargateProfileStatusActive)),
 		},
 	}
-	prior := runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput]{
+	prior := runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Outputs: &FargateProfileResourceOutput{
 			ClusterName: "prior-cluster", FargateProfileName: "prior-pods",
@@ -180,7 +180,7 @@ func TestFargateProfileUpdateSkipsTagCallsWhenDesiredMatchesLiveTags(t *testing.
 	}
 
 	_, err := resource.updateFargateProfile(t.Context(), client,
-		runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput]{
+		runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg]{
 			Inputs: priorInputs,
 			Outputs: &FargateProfileResourceOutput{
 				ClusterName: "cluster", FargateProfileName: "pods", ARN: "output-arn",

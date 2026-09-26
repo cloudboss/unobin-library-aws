@@ -292,7 +292,8 @@ func (r *ServiceResource) Create(ctx context.Context, cfg *awsCfg) (*ServiceReso
 // any status other than ACTIVE reads as not found; Create and Delete run
 // their own waits, leaving no transitional status for Read to wait out.
 func (r *ServiceResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *ServiceResourceOutput) (*ServiceResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ServiceResource, *ServiceResourceOutput, *awsCfg]) (*ServiceResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -317,7 +318,7 @@ func (r *ServiceResource) Read(
 // ordinary deployment never leaves. The outputs cannot change, so the prior
 // outputs are returned.
 func (r *ServiceResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ServiceResource, *ServiceResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ServiceResource, *ServiceResourceOutput, *awsCfg],
 ) (*ServiceResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -367,8 +368,9 @@ func (r *ServiceResource) Update(
 func (r *ServiceResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ServiceResourceOutput,
+	recordedPrior runtime.Prior[ServiceResource, *ServiceResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -501,7 +503,7 @@ func (r *ServiceResource) createInput(token string) *ecs.CreateServiceInput {
 // DAEMON service. Changing the capacity provider strategy sets
 // ForceNewDeployment, which the API requires for that change.
 func (r *ServiceResource) updateServiceInput(
-	prior runtime.Prior[ServiceResource, *ServiceResourceOutput],
+	prior runtime.Prior[ServiceResource, *ServiceResourceOutput, *awsCfg],
 ) (*ecs.UpdateServiceInput, bool) {
 	in := &ecs.UpdateServiceInput{
 		Cluster: aws.String(prior.Outputs.ClusterArn),

@@ -113,7 +113,7 @@ func TestClusterUpdateKMSWaitsForEncryptionEnabled(t *testing.T) {
 	out, err := current.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs:  ClusterResource{KmsEncryptionKey: aws.String(testKMSARN)},
 			Outputs: priorOutput(),
 		},
@@ -149,7 +149,7 @@ func TestClusterUpdateDeletionProtectionWaitsForActive(t *testing.T) {
 	out, err := (&ClusterResource{DeletionProtectionEnabled: false}).updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs:  ClusterResource{DeletionProtectionEnabled: true},
 			Outputs: priorOutput(),
 		},
@@ -316,6 +316,17 @@ func TestClusterMultiRegionNormalizesSelfARNAndComparesClusterOrder(t *testing.T
 	}}
 	assert.True(t, (&ClusterResource{}).EquivalentInput(
 		"multi-region-properties.clusters", prior, current))
+	registration := runtime.MakeResource[ClusterResource, *ClusterResourceOutput, *awsCfg](
+		(&ClusterResource{}).ResourceDefinition(),
+	)
+	equal, err := registration.InputsEqual(&current, map[string]any{
+		"multi-region-properties": map[string]any{
+			"clusters":       []any{"b", "a"},
+			"witness-region": "us-west-1",
+		},
+	})
+	require.NoError(t, err)
+	assert.True(t, equal)
 }
 
 func TestClusterWitnessRegionChangeRequiresReplacement(t *testing.T) {
@@ -325,13 +336,7 @@ func TestClusterWitnessRegionChangeRequiresReplacement(t *testing.T) {
 	current := ClusterResource{MultiRegionProperties: &ClusterMultiRegionProperties{
 		WitnessRegion: aws.String("us-west-2"),
 	}}
-	var response runtime.ResourcePlanResponse
-
-	err := current.ModifyResourcePlan(runtime.ResourcePlanRequest[
-		ClusterResource,
-		*ClusterResourceOutput,
-		*awsCfg,
-	]{PriorInputs: prior, CurrentInputs: current, HasPriorState: true}, &response)
+	err := conditionalClusterReplacement(prior, current)
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "multi-region-properties.witness-region")
@@ -341,7 +346,7 @@ func TestClusterWitnessRegionChangeRequiresReplacement(t *testing.T) {
 	_, err = (&current).updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs:  prior,
 			Outputs: priorOutput(),
 		},
@@ -395,7 +400,7 @@ func TestClusterTags(t *testing.T) {
 		_, err := (&ClusterResource{Tags: &tags}).updateWithClient(
 			context.Background(),
 			client,
-			runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+			runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 				Inputs:  ClusterResource{Tags: &map[string]string{"keep": "old", "drop": "y"}},
 				Outputs: priorOutput(),
 			},

@@ -915,7 +915,7 @@ func TestTrailUpdate(t *testing.T) {
 		AggregationConfigurations:  &aggregations,
 		Tags:                       &tags,
 	}
-	prior := runtime.Prior[TrailResource, *TrailResourceOutput]{
+	prior := runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 		Inputs: TrailResource{
 			Name:                       testTrailName,
 			S3BucketName:               "logs-bucket",
@@ -982,7 +982,7 @@ func TestTrailUpdate(t *testing.T) {
 
 func TestTrailUpdateUnchangedReadsOnly(t *testing.T) {
 	r := &TrailResource{Name: testTrailName, S3BucketName: "logs-bucket"}
-	prior := runtime.Prior[TrailResource, *TrailResourceOutput]{
+	prior := runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 		Inputs:  *r,
 		Outputs: &TrailResourceOutput{Arn: testTrailArn},
 	}
@@ -1113,7 +1113,7 @@ func TestTrailUpdateDirectFieldGatesAndClears(t *testing.T) {
 			tt.mutate(&current)
 			client := newFakeTrailClient()
 			_, err := current.update(context.Background(), client,
-				runtime.Prior[TrailResource, *TrailResourceOutput]{
+				runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 					Inputs: base, Outputs: &TrailResourceOutput{Arn: testTrailArn},
 				})
 			require.NoError(t, err)
@@ -1141,7 +1141,7 @@ func TestTrailUpdateLoggingTransitions(t *testing.T) {
 				Name: testTrailName, S3BucketName: "logs-bucket",
 				EnableLogging: aws.Bool(tt.current),
 			}
-			prior := runtime.Prior[TrailResource, *TrailResourceOutput]{
+			prior := runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 				Inputs: TrailResource{
 					Name: testTrailName, S3BucketName: "logs-bucket",
 					EnableLogging: aws.Bool(tt.prior),
@@ -1232,7 +1232,7 @@ func TestTrailUpdateSelectorTransitions(t *testing.T) {
 			priorInputs.S3BucketName = "logs-bucket"
 			client := newFakeTrailClient()
 			_, err := r.update(context.Background(), client,
-				runtime.Prior[TrailResource, *TrailResourceOutput]{
+				runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 					Inputs: priorInputs, Outputs: &TrailResourceOutput{Arn: testTrailArn},
 				})
 			require.NoError(t, err)
@@ -1379,7 +1379,7 @@ func TestTrailUpdateSelectorInsightOrdering(t *testing.T) {
 			client := newFakeTrailClient()
 
 			_, err := current.update(context.Background(), client,
-				runtime.Prior[TrailResource, *TrailResourceOutput]{
+				runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 					Inputs: prior, Outputs: &TrailResourceOutput{Arn: testTrailArn},
 				})
 
@@ -1438,7 +1438,7 @@ func TestTrailUpdateInsightsAndAggregation(t *testing.T) {
 	}
 	client := newFakeTrailClient()
 	_, err := r.update(context.Background(), client,
-		runtime.Prior[TrailResource, *TrailResourceOutput]{
+		runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 			Inputs: TrailResource{
 				Name: testTrailName, S3BucketName: "logs-bucket",
 				InsightSelectors:          &priorInsights,
@@ -1534,7 +1534,7 @@ func TestTrailFollowOnErrorsAreNotRetried(t *testing.T) {
 			client := newFakeTrailClient()
 			tt.configure(client)
 			_, err := r.update(context.Background(), client,
-				runtime.Prior[TrailResource, *TrailResourceOutput]{
+				runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 					Inputs: prior, Outputs: &TrailResourceOutput{Arn: testTrailArn},
 				})
 			require.ErrorIs(t, err, sentinel)
@@ -1553,7 +1553,7 @@ func TestTrailConfiguredAggregationUnchangedIsNoOp(t *testing.T) {
 	}
 	client := newFakeTrailClient()
 	_, err := r.update(context.Background(), client,
-		runtime.Prior[TrailResource, *TrailResourceOutput]{
+		runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 			Inputs: *r, Outputs: &TrailResourceOutput{Arn: testTrailArn},
 		})
 	require.NoError(t, err)
@@ -1574,7 +1574,7 @@ func TestTrailInsightServicePrerequisiteErrorIsNotRetried(t *testing.T) {
 	client := newFakeTrailClient()
 	client.insightErrors = []error{serviceErr}
 	_, err := r.update(context.Background(), client,
-		runtime.Prior[TrailResource, *TrailResourceOutput]{
+		runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 			Inputs:  TrailResource{Name: testTrailName, S3BucketName: "logs-bucket"},
 			Outputs: &TrailResourceOutput{Arn: testTrailArn},
 		})
@@ -1610,7 +1610,7 @@ func TestTrailTagClear(t *testing.T) {
 	}}}
 
 	_, err := r.update(context.Background(), client,
-		runtime.Prior[TrailResource, *TrailResourceOutput]{
+		runtime.Prior[TrailResource, *TrailResourceOutput, *awsCfg]{
 			Inputs: TrailResource{
 				Name: testTrailName, S3BucketName: "logs-bucket", Tags: &priorTags,
 			},

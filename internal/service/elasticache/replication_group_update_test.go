@@ -123,7 +123,7 @@ func TestReplicationGroupValidateUpdateTransitions(t *testing.T) {
 			priorInputs := testReplicationGroupResource()
 			current := testReplicationGroupResource()
 			tt.mutate(priorInputs, current)
-			prior := runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput]{
+			prior := runtime.Prior[ReplicationGroupResource, *ReplicationGroupResourceOutput, *awsCfg]{
 				Inputs: *priorInputs,
 			}
 			observed := &ReplicationGroupResourceOutput{EngineVersion: tt.actual}

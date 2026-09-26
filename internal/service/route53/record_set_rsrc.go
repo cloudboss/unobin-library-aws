@@ -167,7 +167,7 @@ func (r *RecordSetResource) Create(
 func (r *RecordSetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RecordSetResourceOutput,
+	recordedPrior runtime.Prior[RecordSetResource, *RecordSetResourceOutput, *awsCfg],
 ) (*RecordSetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -177,7 +177,7 @@ func (r *RecordSetResource) Read(
 }
 
 func (r *RecordSetResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RecordSetResource, *RecordSetResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RecordSetResource, *RecordSetResourceOutput, *awsCfg],
 ) (*RecordSetResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -204,8 +204,9 @@ func (r *RecordSetResource) Update(
 func (r *RecordSetResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RecordSetResourceOutput,
+	recordedPrior runtime.Prior[RecordSetResource, *RecordSetResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

@@ -429,8 +429,9 @@ func (r *FileSystemResource) Create(
 func (r *FileSystemResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FileSystemResourceOutput,
+	recordedPrior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) (*FileSystemResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	clients, err := newFileSystemClients(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -441,7 +442,7 @@ func (r *FileSystemResource) Read(
 func (r *FileSystemResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) (*FileSystemResourceOutput, error) {
 	clients, err := newFileSystemClients(ctx, cfg)
 	if err != nil {
@@ -453,8 +454,9 @@ func (r *FileSystemResource) Update(
 func (r *FileSystemResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *FileSystemResourceOutput,
+	recordedPrior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	clients, err := newFileSystemClients(ctx, cfg)
 	if err != nil {
 		return err
@@ -547,7 +549,7 @@ func (r *FileSystemResource) read(
 func (r *FileSystemResource) update(
 	ctx context.Context,
 	clients fileSystemClientProvider,
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) (*FileSystemResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err
@@ -1074,7 +1076,7 @@ func (r *FileSystemResource) updateThroughput(
 	ctx context.Context,
 	client fileSystemClient,
 	fileSystemID string,
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) error {
 	in := &efssdk.UpdateFileSystemInput{FileSystemId: aws.String(fileSystemID)}
 	modeDrifted := r.ThroughputMode != nil && prior.Observed != nil &&
@@ -1104,7 +1106,7 @@ func (r *FileSystemResource) updateThroughput(
 }
 
 func (r *FileSystemResource) throughputChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.ThroughputMode, r.ThroughputMode) ||
 		runtime.Changed(prior.Inputs.ProvisionedThroughputInMibps,
@@ -1122,7 +1124,7 @@ func (r *FileSystemResource) throughputChanged(
 }
 
 func (r *FileSystemResource) lifecycleChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.LifecyclePolicies, r.LifecyclePolicies) {
 		return true
@@ -1132,7 +1134,7 @@ func (r *FileSystemResource) lifecycleChanged(
 }
 
 func (r *FileSystemResource) backupChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.BackupPolicy, r.BackupPolicy) {
 		return true
@@ -1150,7 +1152,7 @@ func (r *FileSystemResource) desiredBackupStatus() string {
 }
 
 func (r *FileSystemResource) policyChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if !fileSystemPoliciesEqual(prior.Inputs.FileSystemPolicy, r.FileSystemPolicy) ||
 		runtime.Changed(prior.Inputs.BypassPolicyLockoutSafetyCheck,
@@ -1164,7 +1166,7 @@ func (r *FileSystemResource) policyChanged(
 }
 
 func (r *FileSystemResource) protectionChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.FileSystemProtection, r.FileSystemProtection) {
 		return true
@@ -1184,7 +1186,7 @@ func (r *FileSystemResource) desiredProtectionStatus() string {
 }
 
 func (r *FileSystemResource) replicationChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	if runtime.Changed(prior.Inputs.ReplicationConfiguration,
 		r.ReplicationConfiguration) {
@@ -1209,7 +1211,7 @@ func (r *FileSystemResource) replicationChanged(
 }
 
 func (r *FileSystemResource) tagsChanged(
-	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput],
+	prior runtime.Prior[FileSystemResource, *FileSystemResourceOutput, *awsCfg],
 ) bool {
 	desired := ptr.Value(r.Tags)
 	if !maps.Equal(ptr.Value(prior.Inputs.Tags), desired) {

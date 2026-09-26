@@ -224,7 +224,7 @@ func TestStreamUpdateStopsUnsupportedTagCallsAndContinuesMutation(t *testing.T) 
 			_, err := resource.update(
 				context.Background(),
 				client,
-				runtime.Prior[StreamResource, *StreamResourceOutput]{
+				runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 					Inputs: priorInput, Outputs: priorOutput, Observed: priorOutput,
 				},
 				testStreamOptions(&fakeStreamClock{}),

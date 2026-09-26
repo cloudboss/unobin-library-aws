@@ -73,7 +73,7 @@ func (r *BucketPolicyResource) Create(
 func (r *BucketPolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *BucketPolicyResourceOutput,
+	recordedPrior runtime.Prior[BucketPolicyResource, *BucketPolicyResourceOutput, *awsCfg],
 ) (*BucketPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -102,7 +102,7 @@ func (r *BucketPolicyResource) Read(
 func (r *BucketPolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[BucketPolicyResource, *BucketPolicyResourceOutput],
+	prior runtime.Prior[BucketPolicyResource, *BucketPolicyResourceOutput, *awsCfg],
 ) (*BucketPolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -117,7 +117,7 @@ func (r *BucketPolicyResource) Update(
 func (r *BucketPolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *BucketPolicyResourceOutput,
+	recordedPrior runtime.Prior[BucketPolicyResource, *BucketPolicyResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

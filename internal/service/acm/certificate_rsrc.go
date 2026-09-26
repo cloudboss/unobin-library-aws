@@ -183,8 +183,9 @@ func (r *CertificateResource) Create(
 func (r *CertificateResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *CertificateResourceOutput,
+	recordedPrior runtime.Prior[CertificateResource, *CertificateResourceOutput, *awsCfg],
 ) (*CertificateResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -195,7 +196,7 @@ func (r *CertificateResource) Read(
 func (r *CertificateResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput, *awsCfg],
 ) (*CertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -235,8 +236,9 @@ func (r *CertificateResource) Update(
 func (r *CertificateResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *CertificateResourceOutput,
+	recordedPrior runtime.Prior[CertificateResource, *CertificateResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -381,7 +383,7 @@ func (r *CertificateResource) waitValidationsAvailable(
 // importMaterialChanged reports whether any of the imported PEM fields changed,
 // which an imported certificate reconciles by re-importing in place.
 func (r *CertificateResource) importMaterialChanged(
-	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput, *awsCfg],
 ) bool {
 	return runtime.Changed(prior.Inputs.CertificateBody, r.CertificateBody) ||
 		runtime.Changed(prior.Inputs.PrivateKey, r.PrivateKey) ||
@@ -391,7 +393,7 @@ func (r *CertificateResource) importMaterialChanged(
 // transparencyChanged reports whether the transparency-logging preference
 // changed. The export preference is create-only and is not considered here.
 func (r *CertificateResource) transparencyChanged(
-	prior runtime.Prior[CertificateResource, *CertificateResourceOutput],
+	prior runtime.Prior[CertificateResource, *CertificateResourceOutput, *awsCfg],
 ) bool {
 	var prev, cur *string
 	if prior.Inputs.Options != nil {

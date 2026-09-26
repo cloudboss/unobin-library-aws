@@ -172,7 +172,7 @@ func readFargateProfileByName(
 func (r FargateProfileResource) updateFargateProfile(
 	ctx context.Context,
 	client fargateProfileClient,
-	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput],
+	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg],
 ) (*FargateProfileResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err
@@ -299,7 +299,7 @@ func syncFargateProfileTags(
 }
 
 func fargateProfileTagARN(
-	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput],
+	prior runtime.Prior[FargateProfileResource, *FargateProfileResourceOutput, *awsCfg],
 ) (string, error) {
 	if prior.Observed != nil && prior.Observed.ARN != "" {
 		return prior.Observed.ARN, nil

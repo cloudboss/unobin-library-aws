@@ -102,8 +102,9 @@ func (r *SecretVersionResource) Create(
 func (r *SecretVersionResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecretVersionResourceOutput,
+	recordedPrior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg],
 ) (*SecretVersionResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (r *SecretVersionResource) Read(
 func (r *SecretVersionResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput],
+	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg],
 ) (*SecretVersionResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -133,8 +134,9 @@ func (r *SecretVersionResource) Update(
 func (r *SecretVersionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecretVersionResourceOutput,
+	recordedPrior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -243,7 +245,7 @@ func (r *SecretVersionResource) waitReadable(
 }
 
 func (r *SecretVersionResource) stagesNeedUpdate(
-	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput],
+	prior runtime.Prior[SecretVersionResource, *SecretVersionResourceOutput, *awsCfg],
 ) bool {
 	if r.VersionStages == nil {
 		return false

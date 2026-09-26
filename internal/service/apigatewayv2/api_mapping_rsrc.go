@@ -66,8 +66,9 @@ func (r *ApiMappingResource) Create(
 func (r *ApiMappingResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ApiMappingResourceOutput,
+	recordedPrior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg],
 ) (*ApiMappingResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func (r *ApiMappingResource) read(
 func (r *ApiMappingResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput],
+	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg],
 ) (*ApiMappingResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -126,8 +127,9 @@ func (r *ApiMappingResource) Update(
 func (r *ApiMappingResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ApiMappingResourceOutput,
+	recordedPrior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -158,7 +160,7 @@ func (r *ApiMappingResource) createInput() *apigatewayv2.CreateApiMappingInput {
 }
 
 func (r *ApiMappingResource) updateInput(
-	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput],
+	prior runtime.Prior[ApiMappingResource, *ApiMappingResourceOutput, *awsCfg],
 ) (*apigatewayv2.UpdateApiMappingInput, bool) {
 	apiMappingKeyChanged := runtime.Changed(prior.Inputs.ApiMappingKey, r.ApiMappingKey)
 	stageChanged := runtime.Changed(prior.Inputs.Stage, r.Stage)

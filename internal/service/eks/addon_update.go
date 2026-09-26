@@ -15,7 +15,7 @@ import (
 func (r AddonResource) updateAddon(
 	ctx context.Context,
 	client addonClient,
-	prior runtime.Prior[AddonResource, *AddonResourceOutput],
+	prior runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg],
 	clock clusterClock,
 	tokens addonTokenSource,
 ) (*AddonResourceOutput, error) {
@@ -112,7 +112,7 @@ func syncAddonTags(
 }
 
 func addonTagARN(
-	prior runtime.Prior[AddonResource, *AddonResourceOutput],
+	prior runtime.Prior[AddonResource, *AddonResourceOutput, *awsCfg],
 ) (string, error) {
 	if prior.Observed != nil && prior.Observed.ARN != "" {
 		return prior.Observed.ARN, nil

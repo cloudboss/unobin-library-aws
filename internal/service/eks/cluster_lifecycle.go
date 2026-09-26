@@ -58,7 +58,7 @@ func (r *ClusterResource) readWithClient(
 func (r *ClusterResource) updateWithClient(
 	ctx context.Context,
 	client eksClient,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 	clock clusterClock,
 ) (*ClusterResourceOutput, error) {
 	return r.updateCluster(ctx, client, prior, clock)

@@ -101,7 +101,8 @@ func (r *OpenIDConnectProviderResource) Create(
 func (r *OpenIDConnectProviderResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *OpenIDConnectProviderResourceOutput) (*OpenIDConnectProviderResourceOutput, error) {
+	recordedPrior runtime.Prior[OpenIDConnectProviderResource, *OpenIDConnectProviderResourceOutput, *awsCfg]) (*OpenIDConnectProviderResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -114,7 +115,7 @@ func (r *OpenIDConnectProviderResource) Read(
 func (r *OpenIDConnectProviderResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[OpenIDConnectProviderResource, *OpenIDConnectProviderResourceOutput],
+	prior runtime.Prior[OpenIDConnectProviderResource, *OpenIDConnectProviderResourceOutput, *awsCfg],
 ) (*OpenIDConnectProviderResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -156,7 +157,8 @@ func (r *OpenIDConnectProviderResource) Update(
 func (r *OpenIDConnectProviderResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *OpenIDConnectProviderResourceOutput) error {
+	recordedPrior runtime.Prior[OpenIDConnectProviderResource, *OpenIDConnectProviderResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

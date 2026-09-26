@@ -164,7 +164,7 @@ func TestSubscriptionFilterManagedOutputDrifted(t *testing.T) {
 func TestSubscriptionFilterShouldPut(t *testing.T) {
 	roleArn := "arn:aws:iam::123456789012:role/logs"
 	r := &SubscriptionFilterResource{RoleArn: &roleArn}
-	prior := runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput]{
+	prior := runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg]{
 		Inputs: SubscriptionFilterResource{RoleArn: &roleArn},
 		Observed: &SubscriptionFilterResourceOutput{
 			RoleArn: aws.String("arn:aws:iam::123456789012:role/other"),
@@ -252,7 +252,10 @@ func TestSubscriptionFilterDeleteValidatesDesiredInputBeforeClient(t *testing.T)
 			r := valid
 			tt.mutate(&r)
 
-			err := r.Delete(context.Background(), poisonCfg, prior)
+			err := r.Delete(context.Background(), poisonCfg,
+				runtime.Prior[SubscriptionFilterResource, *SubscriptionFilterResourceOutput, *awsCfg]{
+					Inputs: r, Outputs: prior,
+				})
 
 			if assert.ErrorContains(t, err, tt.wantErr) {
 				assert.NotContains(t, err.Error(), "assume-role")

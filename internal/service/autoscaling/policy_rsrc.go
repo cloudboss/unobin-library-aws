@@ -211,7 +211,7 @@ func (r *PolicyResource) enabled() bool {
 func (r *PolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PolicyResourceOutput) (*PolicyResourceOutput, error,
+	recordedPrior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg]) (*PolicyResourceOutput, error,
 ) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -261,7 +261,7 @@ func (r *PolicyResource) read(
 }
 
 func (r *PolicyResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[PolicyResource, *PolicyResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg],
 ) (*PolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -281,7 +281,7 @@ func (r *PolicyResource) Update(
 // changed reports whether any input that rides PutScalingPolicy differs from the
 // prior inputs. The group name and policy name are not tested: a change to
 // either replaces the policy rather than updating it.
-func (r *PolicyResource) changed(prior runtime.Prior[PolicyResource, *PolicyResourceOutput]) bool {
+func (r *PolicyResource) changed(prior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg]) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.PolicyType, r.PolicyType) ||
 		runtime.Changed(p.Enabled, r.Enabled) ||
@@ -298,8 +298,9 @@ func (r *PolicyResource) changed(prior runtime.Prior[PolicyResource, *PolicyReso
 func (r *PolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *PolicyResourceOutput,
+	recordedPrior runtime.Prior[PolicyResource, *PolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

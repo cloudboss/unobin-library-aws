@@ -196,8 +196,9 @@ func (r *RepositoryResource) Create(
 func (r *RepositoryResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RepositoryResourceOutput,
+	recordedPrior runtime.Prior[RepositoryResource, *RepositoryResourceOutput, *awsCfg],
 ) (*RepositoryResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (r *RepositoryResource) read(
 func (r *RepositoryResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[RepositoryResource, *RepositoryResourceOutput],
+	prior runtime.Prior[RepositoryResource, *RepositoryResourceOutput, *awsCfg],
 ) (*RepositoryResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -309,8 +310,9 @@ func (r *RepositoryResource) Update(
 func (r *RepositoryResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RepositoryResourceOutput,
+	recordedPrior runtime.Prior[RepositoryResource, *RepositoryResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

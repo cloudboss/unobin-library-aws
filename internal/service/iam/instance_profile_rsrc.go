@@ -98,7 +98,7 @@ func (r *InstanceProfileResource) Create(
 func (r *InstanceProfileResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InstanceProfileResourceOutput,
+	recordedPrior runtime.Prior[InstanceProfileResource, *InstanceProfileResourceOutput, *awsCfg],
 ) (*InstanceProfileResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -160,7 +160,7 @@ func (r *InstanceProfileResource) read(
 func (r *InstanceProfileResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[InstanceProfileResource, *InstanceProfileResourceOutput],
+	prior runtime.Prior[InstanceProfileResource, *InstanceProfileResourceOutput, *awsCfg],
 ) (*InstanceProfileResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -187,7 +187,7 @@ func (r *InstanceProfileResource) Update(
 }
 
 func (r *InstanceProfileResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *InstanceProfileResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[InstanceProfileResource, *InstanceProfileResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

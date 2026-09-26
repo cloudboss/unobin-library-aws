@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestClusterModifyResourcePlanRejectsConditionalReplacement(t *testing.T) {
+func TestClusterConditionalReplacementRejectsUnsupportedUpdates(t *testing.T) {
 	tests := []struct {
 		name   string
 		prior  ClusterResource
@@ -81,8 +81,7 @@ func TestClusterModifyResourcePlanRejectsConditionalReplacement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			current := cloneClusterResource(t, tt.prior)
 			tt.modify(&current)
-			var response runtime.ResourcePlanResponse
-			err := current.ModifyResourcePlan(clusterPlanRequest(tt.prior, current), &response)
+			err := conditionalClusterReplacement(tt.prior, current)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.field)
 			assert.ErrorContains(t, err, "requires replacement")
@@ -90,7 +89,7 @@ func TestClusterModifyResourcePlanRejectsConditionalReplacement(t *testing.T) {
 	}
 }
 
-func TestClusterModifyResourcePlanAllowsSupportedTransitions(t *testing.T) {
+func TestClusterConditionalReplacementAllowsSupportedTransitions(t *testing.T) {
 	tests := []struct {
 		name   string
 		prior  ClusterResource
@@ -136,44 +135,30 @@ func TestClusterModifyResourcePlanAllowsSupportedTransitions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			current := cloneClusterResource(t, tt.prior)
 			tt.modify(&current)
-			var response runtime.ResourcePlanResponse
-			require.NoError(t,
-				current.ModifyResourcePlan(clusterPlanRequest(tt.prior, current), &response))
+			require.NoError(t, conditionalClusterReplacement(tt.prior, current))
 		})
 	}
 }
 
-func TestClusterModifyResourcePlanDefersToStaticReplacement(t *testing.T) {
+func TestClusterStaticReplacement(t *testing.T) {
 	prior := clusterWithAccessBootstrap(true)
 	current := cloneClusterResource(t, prior)
 	current.Name = "replacement"
 	current.AccessConfig.BootstrapClusterCreatorAdminPermissions = boolPointer(false)
-	var response runtime.ResourcePlanResponse
-
-	err := current.ModifyResourcePlan(clusterPlanRequest(prior, current), &response)
-
-	require.NoError(t, err)
+	assert.True(t, staticClusterReplacement(prior, current))
 }
 
-func TestClusterEgressReplacementGuardSurvivesOmittedPlan(t *testing.T) {
+func TestClusterEgressReplacementGuardSurvivesOmittedInput(t *testing.T) {
 	customerRouted := clusterWithEgress("CUSTOMER_ROUTED")
 	omitted := cloneClusterResource(t, customerRouted)
 	omitted.VPCConfig.ControlPlaneEgressMode = nil
-	var firstResponse runtime.ResourcePlanResponse
-	require.NoError(t, omitted.ModifyResourcePlan(
-		clusterPlanRequest(customerRouted, omitted),
-		&firstResponse,
-	))
+	require.NoError(t, conditionalClusterReplacement(customerRouted, omitted))
 
 	awsManaged := cloneClusterResource(t, omitted)
 	awsManaged.VPCConfig.ControlPlaneEgressMode = stringPointer("AWS_MANAGED")
 	currentTags := map[string]string{"new": "tag"}
 	awsManaged.Tags = &currentTags
-	var secondResponse runtime.ResourcePlanResponse
-	err := awsManaged.ModifyResourcePlan(
-		clusterPlanRequest(omitted, awsManaged),
-		&secondResponse,
-	)
+	err := conditionalClusterReplacement(omitted, awsManaged)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "vpc-config.control-plane-egress-mode")
 	assert.ErrorContains(t, err, "requires replacement")
@@ -182,7 +167,7 @@ func TestClusterEgressReplacementGuardSurvivesOmittedPlan(t *testing.T) {
 	_, err = awsManaged.updateWithClient(
 		context.Background(),
 		client,
-		runtime.Prior[ClusterResource, *ClusterResourceOutput]{
+		runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]{
 			Inputs: omitted,
 			Outputs: &ClusterResourceOutput{
 				Name: "example",
@@ -194,17 +179,6 @@ func TestClusterEgressReplacementGuardSurvivesOmittedPlan(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "requires replacement")
 	assert.Empty(t, client.calls)
-}
-
-func clusterPlanRequest(
-	prior ClusterResource,
-	current ClusterResource,
-) runtime.ResourcePlanRequest[ClusterResource, *ClusterResourceOutput, *awsCfg] {
-	return runtime.ResourcePlanRequest[ClusterResource, *ClusterResourceOutput, *awsCfg]{
-		PriorInputs:   prior,
-		CurrentInputs: current,
-		HasPriorState: true,
-	}
 }
 
 func clusterWithAccessBootstrap(enabled bool) ClusterResource {

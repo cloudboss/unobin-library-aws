@@ -168,8 +168,9 @@ func (r *KeyResource) Create(ctx context.Context, cfg *awsCfg) (*KeyResourceOutp
 func (r *KeyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *KeyResourceOutput,
+	recordedPrior runtime.Prior[KeyResource, *KeyResourceOutput, *awsCfg],
 ) (*KeyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -225,7 +226,7 @@ func (r *KeyResource) read(
 }
 
 func (r *KeyResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyResource, *KeyResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[KeyResource, *KeyResourceOutput, *awsCfg],
 ) (*KeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -285,7 +286,8 @@ func (r *KeyResource) Update(
 	return r.read(ctx, client, keyID, false)
 }
 
-func (r *KeyResource) Delete(ctx context.Context, cfg *awsCfg, prior *KeyResourceOutput) error {
+func (r *KeyResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[KeyResource, *KeyResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

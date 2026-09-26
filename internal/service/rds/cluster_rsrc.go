@@ -649,7 +649,7 @@ func (r *ClusterResource) validate() error {
 }
 
 func (r *ClusterResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *ClusterResourceOutput) (*ClusterResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg]) (*ClusterResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -715,7 +715,7 @@ func (r *ClusterResource) readGlobalMembership(
 }
 
 func (r *ClusterResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*ClusterResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -787,7 +787,7 @@ func (r *ClusterResource) Update(
 // enable/disable diff rather than a whole set. The HTTP endpoint rides this call
 // only when the engine mode is not provisioned.
 func (r *ClusterResource) modifyInput(
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput],
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) (*rds.ModifyDBClusterInput, bool) {
 	p := prior.Inputs
 	in := &rds.ModifyDBClusterInput{
@@ -906,8 +906,9 @@ func (r *ClusterResource) modifyInput(
 func (r *ClusterResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ClusterResourceOutput,
+	recordedPrior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -1067,7 +1068,7 @@ func (r *ClusterResource) promoteReadReplica(ctx context.Context, client *rds.Cl
 // removal the cluster is unjoined and waited on; any other change is an error.
 func (r *ClusterResource) updateGlobalMembership(
 	ctx context.Context, client *rds.Client,
-	prior runtime.Prior[ClusterResource, *ClusterResourceOutput], arn string,
+	prior runtime.Prior[ClusterResource, *ClusterResourceOutput, *awsCfg], arn string,
 ) error {
 	desired := aws.ToString(r.GlobalClusterIdentifier)
 	priorID := prior.Outputs.GlobalClusterIdentifier

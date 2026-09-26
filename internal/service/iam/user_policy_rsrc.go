@@ -61,8 +61,9 @@ func (r *UserPolicyResource) Create(
 func (r *UserPolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPolicyResourceOutput,
+	recordedPrior runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg],
 ) (*UserPolicyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func (r *UserPolicyResource) Read(
 func (r *UserPolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput],
+	prior runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg],
 ) (*UserPolicyResourceOutput, error) {
 	desiredDocument, err := normalizeIAMPolicyJSON(r.PolicyDocument)
 	if err != nil {
@@ -98,8 +99,9 @@ func (r *UserPolicyResource) Update(
 func (r *UserPolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPolicyResourceOutput,
+	recordedPrior runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

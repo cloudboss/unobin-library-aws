@@ -207,8 +207,9 @@ func cleanupFailedUserPoolCreate(
 func (r *UserPoolResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolResourceOutput,
+	recordedPrior runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg],
 ) (*UserPoolResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	id, err := priorUserPoolID(prior)
 	if err != nil {
 		return nil, err
@@ -282,7 +283,7 @@ func (r *UserPoolResource) read(
 func (r *UserPoolResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[UserPoolResource, *UserPoolResourceOutput],
+	prior runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg],
 ) (*UserPoolResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -295,7 +296,7 @@ func (r *UserPoolResource) update(
 	ctx context.Context,
 	client cognitoClient,
 	region string,
-	prior runtime.Prior[UserPoolResource, *UserPoolResourceOutput],
+	prior runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg],
 	clock userPoolClock,
 ) (*UserPoolResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
@@ -354,8 +355,9 @@ func (r *UserPoolResource) update(
 func (r *UserPoolResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserPoolResourceOutput,
+	recordedPrior runtime.Prior[UserPoolResource, *UserPoolResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	id, err := priorUserPoolID(prior)
 	if err != nil {
 		return err

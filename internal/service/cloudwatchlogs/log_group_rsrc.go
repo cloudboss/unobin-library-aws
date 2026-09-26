@@ -140,7 +140,7 @@ func (r *LogGroupResource) Create(
 }
 
 func (r *LogGroupResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *LogGroupResourceOutput) (*LogGroupResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[LogGroupResource, *LogGroupResourceOutput, *awsCfg]) (*LogGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (r *LogGroupResource) read(
 }
 
 func (r *LogGroupResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LogGroupResource, *LogGroupResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[LogGroupResource, *LogGroupResourceOutput, *awsCfg],
 ) (*LogGroupResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -254,7 +254,7 @@ func (r *LogGroupResource) Update(
 func (r *LogGroupResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LogGroupResourceOutput,
+	recordedPrior runtime.Prior[LogGroupResource, *LogGroupResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

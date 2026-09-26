@@ -66,7 +66,7 @@ func TestStreamCreateLimitChecks(t *testing.T) {
 
 func TestStreamUpdateLimitUsesObservedShardDelta(t *testing.T) {
 	resource := validProvisionedStream(4)
-	prior := runtime.Prior[StreamResource, *StreamResourceOutput]{
+	prior := runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 		Inputs:  validProvisionedStream(3),
 		Outputs: &StreamResourceOutput{OpenShardCount: 3},
 		Observed: &StreamResourceOutput{
@@ -87,7 +87,7 @@ func TestStreamUpdateLimitUsesObservedShardDelta(t *testing.T) {
 
 func TestStreamUpdateLimitSkipsExistingOnDemandStream(t *testing.T) {
 	resource := validProvisionedStream(2)
-	prior := runtime.Prior[StreamResource, *StreamResourceOutput]{
+	prior := runtime.Prior[StreamResource, *StreamResourceOutput, *awsCfg]{
 		Observed: &StreamResourceOutput{
 			StreamModeDetails: &StreamModeDetails{StreamMode: "ON_DEMAND"},
 		},

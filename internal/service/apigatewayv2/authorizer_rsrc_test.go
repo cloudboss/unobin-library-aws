@@ -425,8 +425,8 @@ func TestValidAuthorizerARN(t *testing.T) {
 
 func authorizerPrior(
 	inputs AuthorizerResource,
-) runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput] {
-	return runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput]{
+) runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg] {
+	return runtime.Prior[AuthorizerResource, *AuthorizerResourceOutput, *awsCfg]{
 		Inputs: inputs,
 		Outputs: &AuthorizerResourceOutput{
 			ApiId:        "api-123",

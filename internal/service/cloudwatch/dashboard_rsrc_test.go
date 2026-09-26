@@ -575,7 +575,7 @@ func TestDashboardUpdate(t *testing.T) {
 				Tags: fakeDashboardTags(tt.currentTags),
 			}
 			out, err := tt.current.update(context.Background(), client,
-				runtime.Prior[DashboardResource, *DashboardResourceOutput]{
+				runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg]{
 					Inputs:  prior,
 					Outputs: priorOutput,
 				})
@@ -608,7 +608,7 @@ func TestDashboardUpdate(t *testing.T) {
 		current.Body = `{"widgets":[]}`
 
 		out, err := current.update(context.Background(), client,
-			runtime.Prior[DashboardResource, *DashboardResourceOutput]{
+			runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg]{
 				Inputs: prior, Outputs: priorOutput,
 			})
 
@@ -624,7 +624,7 @@ func TestDashboardUpdate(t *testing.T) {
 		current.Tags = &map[string]string{"aws:managed": "value"}
 
 		out, err := current.update(context.Background(), client,
-			runtime.Prior[DashboardResource, *DashboardResourceOutput]{
+			runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg]{
 				Inputs: prior, Outputs: priorOutput,
 			})
 
@@ -677,7 +677,7 @@ func TestDashboardUpdate(t *testing.T) {
 				current.Tags = &map[string]string{"add": "yes"}
 
 				out, err := current.update(context.Background(), client,
-					runtime.Prior[DashboardResource, *DashboardResourceOutput]{
+					runtime.Prior[DashboardResource, *DashboardResourceOutput, *awsCfg]{
 						Inputs: prior, Outputs: priorOutput,
 					})
 

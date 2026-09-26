@@ -119,7 +119,7 @@ func (r *RoleResource) Create(ctx context.Context, cfg *awsCfg) (*RoleResourceOu
 func (r *RoleResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RoleResourceOutput,
+	recordedPrior runtime.Prior[RoleResource, *RoleResourceOutput, *awsCfg],
 ) (*RoleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -173,7 +173,7 @@ func (r *RoleResource) read(
 }
 
 func (r *RoleResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RoleResource, *RoleResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[RoleResource, *RoleResourceOutput, *awsCfg],
 ) (*RoleResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -249,7 +249,7 @@ func (r *RoleResource) Update(
 	return prior.Outputs, nil
 }
 
-func (r *RoleResource) Delete(ctx context.Context, cfg *awsCfg, prior *RoleResourceOutput) error {
+func (r *RoleResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RoleResource, *RoleResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

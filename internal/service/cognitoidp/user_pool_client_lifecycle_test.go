@@ -125,11 +125,11 @@ func userPoolClientResult(poolID, clientID, name string) *cognitotypes.UserPoolC
 func userPoolClientPrior(
 	inputs UserPoolClientResource,
 	outputName string,
-) runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput] {
+) runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg] {
 	output := &UserPoolClientResourceOutput{
 		ID: "client-id", Name: outputName, ClientSecret: aws.String("old-secret"),
 	}
-	return runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput]{
+	return runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg]{
 		Inputs: inputs, Outputs: output, Observed: output,
 	}
 }
@@ -710,7 +710,7 @@ func TestUserPoolClientUpdateSecretResolution(t *testing.T) {
 			resource := UserPoolClientResource{
 				UserPoolID: "us-east-1_example", Name: &currentName,
 			}
-			prior := runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput]{
+			prior := runtime.Prior[UserPoolClientResource, *UserPoolClientResourceOutput, *awsCfg]{
 				Inputs: priorResource,
 				Outputs: &UserPoolClientResourceOutput{
 					ID: "client-id", Name: priorName,

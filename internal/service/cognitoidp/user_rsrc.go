@@ -94,8 +94,9 @@ func (r *UserResource) Create(
 func (r *UserResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserResourceOutput,
+	recordedPrior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) (*UserResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -106,7 +107,7 @@ func (r *UserResource) Read(
 func (r *UserResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[UserResource, *UserResourceOutput],
+	prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) (*UserResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -118,8 +119,9 @@ func (r *UserResource) Update(
 func (r *UserResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *UserResourceOutput,
+	recordedPrior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -204,7 +206,7 @@ func (r *UserResource) readIdentity(
 func (r *UserResource) update(
 	ctx context.Context,
 	client userAPI,
-	prior runtime.Prior[UserResource, *UserResourceOutput],
+	prior runtime.Prior[UserResource, *UserResourceOutput, *awsCfg],
 ) (*UserResourceOutput, error) {
 	if err := r.ValidateInputs(ctx, nil); err != nil {
 		return nil, err

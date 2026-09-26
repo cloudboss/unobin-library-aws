@@ -190,7 +190,7 @@ func TestCapacityProviderTagsNeedSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &CapacityProviderResource{Tags: &tt.desired}
-			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg]{
 				Inputs:   CapacityProviderResource{Tags: &tt.previous},
 				Observed: &CapacityProviderResourceOutput{Tags: tt.observed},
 			}
@@ -264,7 +264,7 @@ func TestCapacityProviderConfiguredASGDrift(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &CapacityProviderResource{AutoScalingGroupProvider: tt.desired}
-			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg]{
 				Inputs: CapacityProviderResource{
 					AutoScalingGroupProvider: tt.desired,
 				},
@@ -527,7 +527,7 @@ func TestCapacityProviderConfiguredManagedInstancesDrift(t *testing.T) {
 				outputs = tt.outputs()
 			}
 			r := &CapacityProviderResource{ManagedInstancesProvider: desired}
-			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput]{
+			prior := runtime.Prior[CapacityProviderResource, *CapacityProviderResourceOutput, *awsCfg]{
 				Inputs: CapacityProviderResource{
 					ManagedInstancesProvider: desired,
 				},

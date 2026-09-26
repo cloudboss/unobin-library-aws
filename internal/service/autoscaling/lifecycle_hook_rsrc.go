@@ -139,7 +139,7 @@ func (r *LifecycleHookResource) putInput() *autoscaling.PutLifecycleHookInput {
 func (r *LifecycleHookResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LifecycleHookResourceOutput,
+	recordedPrior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput, *awsCfg],
 ) (*LifecycleHookResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -170,7 +170,7 @@ func (r *LifecycleHookResource) read(
 func (r *LifecycleHookResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput],
+	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput, *awsCfg],
 ) (*LifecycleHookResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -191,7 +191,7 @@ func (r *LifecycleHookResource) Update(
 // prior inputs. The group name and hook name are not tested: a change to either
 // replaces the hook rather than updating it.
 func (r *LifecycleHookResource) changed(
-	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput],
+	prior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput, *awsCfg],
 ) bool {
 	p := prior.Inputs
 	return runtime.Changed(p.LifecycleTransition, r.LifecycleTransition) ||
@@ -205,8 +205,9 @@ func (r *LifecycleHookResource) changed(
 func (r *LifecycleHookResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *LifecycleHookResourceOutput,
+	recordedPrior runtime.Prior[LifecycleHookResource, *LifecycleHookResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

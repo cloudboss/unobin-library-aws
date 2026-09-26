@@ -133,7 +133,7 @@ func applyDomainFollowUp(
 func (r DomainResource) update(
 	ctx context.Context,
 	client domainClient,
-	prior runtime.Prior[DomainResource, *DomainResourceOutput],
+	prior runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg],
 	options domainOperationOptions,
 ) (*DomainResourceOutput, error) {
 	options = options.withDefaults()
@@ -230,7 +230,7 @@ func domainIdentity(desired string, prior *DomainResourceOutput) string {
 }
 
 func domainARN(
-	prior runtime.Prior[DomainResource, *DomainResourceOutput],
+	prior runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg],
 ) string {
 	if prior.Outputs != nil && prior.Outputs.ARN != "" {
 		return prior.Outputs.ARN

@@ -17,34 +17,91 @@ import (
 
 type nodeGroupPlanProbe NodeGroupResource
 
-func (*nodeGroupPlanProbe) SchemaVersion() int { return 1 }
+type nodeGroupPlanOutput struct {
+	ARN string `ub:"arn"`
+}
 
-func (*nodeGroupPlanProbe) Create(context.Context, any) (map[string]any, error) {
-	return map[string]any{"arn": "arn:new"}, nil
+func (*nodeGroupPlanProbe) Create(context.Context, any) (*nodeGroupPlanOutput, error) {
+	return &nodeGroupPlanOutput{ARN: "arn:new"}, nil
 }
 
 func (*nodeGroupPlanProbe) Read(
 	_ context.Context,
 	_ any,
-	prior map[string]any,
-) (map[string]any, error) {
-	return prior, nil
+	prior runtime.Prior[nodeGroupPlanProbe, *nodeGroupPlanOutput, any],
+) (*nodeGroupPlanOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*nodeGroupPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[nodeGroupPlanProbe, map[string]any],
-) (map[string]any, error) {
+	prior runtime.Prior[nodeGroupPlanProbe, *nodeGroupPlanOutput, any],
+) (*nodeGroupPlanOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*nodeGroupPlanProbe) Delete(context.Context, any, map[string]any) error {
+func (*nodeGroupPlanProbe) Delete(
+	context.Context, any, runtime.Prior[nodeGroupPlanProbe, *nodeGroupPlanOutput, any],
+) error {
 	return nil
 }
 
-func (*nodeGroupPlanProbe) ReplaceFields() []string {
-	return (&NodeGroupResource{}).ReplaceFields()
+func (*nodeGroupPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	nodeGroupPlanProbe, *nodeGroupPlanOutput, any,
+] {
+	equalField := func(field string, prior, desired NodeGroupResource) bool {
+		return (&NodeGroupResource{}).EquivalentInput(field, prior, desired)
+	}
+	return runtime.ResourceDefinition[nodeGroupPlanProbe, *nodeGroupPlanOutput, any]{
+		SchemaVersion: 1,
+		Equality: []runtime.InputEqualityRule[nodeGroupPlanProbe]{
+			runtime.EqualBy(
+				runtime.InputField(func(input *nodeGroupPlanProbe) *[]string {
+					return &input.SubnetIDs
+				}),
+				func(prior, desired []string) bool {
+					return equalField("subnet-ids",
+						NodeGroupResource{SubnetIDs: prior}, NodeGroupResource{SubnetIDs: desired})
+				},
+			),
+			runtime.EqualBy(
+				runtime.InputField(func(input *nodeGroupPlanProbe) **NodeGroupRemoteAccess {
+					return &input.RemoteAccess
+				}),
+				func(prior, desired *NodeGroupRemoteAccess) bool {
+					return equalField("remote-access",
+						NodeGroupResource{RemoteAccess: prior}, NodeGroupResource{RemoteAccess: desired})
+				},
+			),
+			runtime.EqualBy(
+				runtime.InputField(func(input *nodeGroupPlanProbe) **[]NodeGroupTaint {
+					return &input.Taints
+				}),
+				func(prior, desired *[]NodeGroupTaint) bool {
+					return equalField("taints",
+						NodeGroupResource{Taints: prior}, NodeGroupResource{Taints: desired})
+				},
+			),
+		},
+		Replace: runtime.Replacement[nodeGroupPlanProbe, *nodeGroupPlanOutput, any]{
+			Fields: []runtime.AnyInputField[nodeGroupPlanProbe]{
+				runtime.InputField(func(input *nodeGroupPlanProbe) *string { return &input.ClusterName }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) *string { return &input.NodeGroupName }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) *string { return &input.NodeRoleARN }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) *[]string { return &input.SubnetIDs }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **string { return &input.AMIType }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **string { return &input.CapacityType }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **int64 { return &input.DiskSize }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **[]string { return &input.InstanceTypes }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **NodeGroupRemoteAccess {
+					return &input.RemoteAccess
+				}),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **string { return &input.LaunchTemplateID }),
+				runtime.InputField(func(input *nodeGroupPlanProbe) **string { return &input.LaunchTemplateName }),
+			},
+		},
+	}
 }
 
 func (*nodeGroupPlanProbe) EquivalentInput(
@@ -120,7 +177,7 @@ func TestNodeGroupRuntimePlanReplacesEveryStaticField(t *testing.T) {
 			step := planNodeGroupChange(t, prior, current)
 
 			assert.Equal(t, runtime.DecisionReplace, step.Decision)
-			assert.Equal(t, []string{tt.trigger}, step.ReplaceTriggers)
+			assert.Equal(t, []string{tt.trigger}, step.ReplacementReasons)
 		})
 	}
 }
@@ -135,7 +192,7 @@ func TestNodeGroupRuntimePlanUpdatesLaunchTemplateVersion(t *testing.T) {
 	step := planNodeGroupChange(t, prior, current)
 
 	assert.Equal(t, runtime.DecisionUpdate, step.Decision)
-	assert.Empty(t, step.ReplaceTriggers)
+	assert.Empty(t, step.ReplacementReasons)
 }
 
 func TestNodeGroupRuntimePlanCollectionOrder(t *testing.T) {
@@ -199,7 +256,7 @@ func TestNodeGroupRuntimePlanCollectionOrder(t *testing.T) {
 			step := planNodeGroupChange(t, prior, current)
 
 			assert.Equal(t, tt.decision, step.Decision)
-			assert.Equal(t, tt.triggers, step.ReplaceTriggers)
+			assert.Equal(t, tt.triggers, step.ReplacementReasons)
 		})
 	}
 }
@@ -222,9 +279,9 @@ func planNodeGroupChange(
 			Resources: map[string]runtime.ResourceRegistration{
 				"node-group": runtime.MakeResource[
 					nodeGroupPlanProbe,
-					map[string]any,
+					*nodeGroupPlanOutput,
 					any,
-				](),
+				]((&nodeGroupPlanProbe{}).ResourceDefinition()),
 			},
 		},
 	}

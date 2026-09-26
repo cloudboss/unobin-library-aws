@@ -124,8 +124,9 @@ func (r *AccessKeyResource) Create(
 func (r *AccessKeyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AccessKeyResourceOutput,
+	recordedPrior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg],
 ) (*AccessKeyResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -141,7 +142,7 @@ func (r *AccessKeyResource) Read(
 }
 
 func (r *AccessKeyResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg],
 ) (*AccessKeyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -167,8 +168,9 @@ func (r *AccessKeyResource) Update(
 func (r *AccessKeyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *AccessKeyResourceOutput,
+	recordedPrior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -217,7 +219,7 @@ func (r *AccessKeyResource) outputFromCreate(
 func (r *AccessKeyResource) readAfterUpdate(
 	ctx context.Context,
 	client *iam.Client,
-	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput],
+	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg],
 ) (*AccessKeyResourceOutput, error) {
 	secretPrior := prior.Outputs
 	if secretPrior == nil {
@@ -329,7 +331,7 @@ func accessKeyOutputUserName(out *AccessKeyResourceOutput, fallback string) stri
 	return fallback
 }
 
-func accessKeyPriorID(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]) string {
+func accessKeyPriorID(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]) string {
 	if prior.Outputs != nil && prior.Outputs.AccessKeyId != "" {
 		return prior.Outputs.AccessKeyId
 	}
@@ -340,7 +342,7 @@ func accessKeyPriorID(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceO
 }
 
 func accessKeyPriorUserName(
-	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput], fallback string,
+	prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg], fallback string,
 ) string {
 	if prior.Outputs != nil && prior.Outputs.UserName != "" {
 		return prior.Outputs.UserName
@@ -354,7 +356,7 @@ func accessKeyPriorUserName(
 	return fallback
 }
 
-func accessKeyPriorStatus(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput]) string {
+func accessKeyPriorStatus(prior runtime.Prior[AccessKeyResource, *AccessKeyResourceOutput, *awsCfg]) string {
 	if prior.Observed != nil && prior.Observed.Status != "" {
 		return prior.Observed.Status
 	}

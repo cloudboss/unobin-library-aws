@@ -69,7 +69,7 @@ func TestGroupPolicyUpdateOnlyPutsWhenDocumentChanged(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", document)
 	})
 
-	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{
 		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
@@ -108,7 +108,7 @@ func TestGroupPolicyUpdateNormalizesChangedDocument(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", newDocument)
 	})
 
-	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{
 		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
@@ -141,7 +141,7 @@ func TestGroupPolicyUpdateReconcilesDocumentDrift(t *testing.T) {
 		return 200, getGroupPolicyResponseXML("test-group", "test-inline", desiredDocument)
 	})
 
-	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput]{
+	prior := runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{
 		Inputs: GroupPolicyResource{
 			GroupName:      "test-group",
 			PolicyName:     "test-inline",
@@ -176,10 +176,10 @@ func TestGroupPolicyReadMapsMissingPolicyToNotFound(t *testing.T) {
 	_, err := (&GroupPolicyResource{}).Read(
 		context.Background(),
 		fake.configuration(),
-		&GroupPolicyResourceOutput{
+		runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{Outputs: &GroupPolicyResourceOutput{
 			GroupName:  "test-group",
 			PolicyName: "test-inline",
-		},
+		}},
 	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
@@ -193,10 +193,10 @@ func TestGroupPolicyReadMapsNilPolicyDocumentToNotFound(t *testing.T) {
 	_, err := (&GroupPolicyResource{}).Read(
 		context.Background(),
 		fake.configuration(),
-		&GroupPolicyResourceOutput{
+		runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{Outputs: &GroupPolicyResourceOutput{
 			GroupName:  "test-group",
 			PolicyName: "test-inline",
-		},
+		}},
 	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
@@ -211,7 +211,7 @@ func TestGroupPolicyDeleteUsesPriorIdentityAndIgnoresNotFound(t *testing.T) {
 
 	err := (&GroupPolicyResource{GroupName: "new-group", PolicyName: "new-inline"}).Delete(
 		context.Background(), fake.configuration(),
-		&GroupPolicyResourceOutput{GroupName: "old-group", PolicyName: "old-inline"})
+		runtime.Prior[GroupPolicyResource, *GroupPolicyResourceOutput, *awsCfg]{Outputs: &GroupPolicyResourceOutput{GroupName: "old-group", PolicyName: "old-inline"}})
 	require.NoError(t, err)
 }
 

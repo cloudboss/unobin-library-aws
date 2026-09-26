@@ -242,8 +242,9 @@ func (r *InstanceResource) Create(
 func (r *InstanceResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InstanceResourceOutput,
+	recordedPrior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) (*InstanceResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -254,7 +255,7 @@ func (r *InstanceResource) Read(
 func (r *InstanceResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) (*InstanceResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -270,8 +271,9 @@ func (r *InstanceResource) Update(
 func (r *InstanceResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *InstanceResourceOutput,
+	recordedPrior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
@@ -523,7 +525,7 @@ func (r *InstanceResource) applyCreateFollowOns(
 // so a re-apply with no change makes no write.
 func (r *InstanceResource) updateInPlace(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
 	if runtime.Changed(ptr.Value(prior.Inputs.VolumeTags), ptr.Value(r.VolumeTags)) {
 		if err := r.reconcileVolumeTags(ctx, client, id); err != nil {
@@ -823,7 +825,7 @@ func (r *InstanceResource) setSecurityGroups(
 // when the other moves.
 func (r *InstanceResource) reconcileStoppedAttributes(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
 	typeChanged := runtime.Changed(prior.Inputs.InstanceType, r.InstanceType)
 	userDataChanged := runtime.Changed(prior.Inputs.UserData, r.UserData) ||
@@ -894,7 +896,7 @@ func (r *InstanceResource) setUserData(
 // each on its own change and each through its own single-attribute call.
 func (r *InstanceResource) reconcileProtections(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
 	if runtime.Changed(prior.Inputs.DisableApiStop, r.DisableApiStop) {
 		if err := r.setProtection(ctx, client, id,
@@ -1034,7 +1036,7 @@ func (r *InstanceResource) metadataModifyInput(id string) *ec2.ModifyInstanceMet
 // reads back; the tags are reconciled as a set.
 func (r *InstanceResource) reconcileRootBlockDevice(
 	ctx context.Context, client *ec2.Client, id string,
-	prior runtime.Prior[InstanceResource, *InstanceResourceOutput],
+	prior runtime.Prior[InstanceResource, *InstanceResourceOutput, *awsCfg],
 ) error {
 	desired := r.RootBlockDevice
 	if desired == nil {

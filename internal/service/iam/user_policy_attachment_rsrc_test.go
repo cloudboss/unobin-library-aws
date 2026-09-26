@@ -65,10 +65,10 @@ func TestUserPolicyAttachmentReadUsesPriorIdentityAndPaginates(t *testing.T) {
 	out, err := (&UserPolicyAttachmentResource{
 		User:      "desired-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/desired-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: policyArn,
-	})
+	}})
 	require.NoError(t, err)
 	assert.Equal(t, &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
@@ -85,10 +85,10 @@ func TestUserPolicyAttachmentReadMapsMissingUserToNotFound(t *testing.T) {
 	_, err := (&UserPolicyAttachmentResource{
 		User:      "missing-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &UserPolicyAttachmentResourceOutput{
 		User:      "missing-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	})
+	}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -102,10 +102,10 @@ func TestUserPolicyAttachmentReadMapsAbsentPolicyToNotFound(t *testing.T) {
 	_, err := (&UserPolicyAttachmentResource{
 		User:      "test-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	}).Read(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
+	}).Read(context.Background(), fake.configuration(), runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &UserPolicyAttachmentResourceOutput{
 		User:      "test-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/test-policy",
-	})
+	}})
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
 
@@ -121,10 +121,10 @@ func TestUserPolicyAttachmentDeleteUsesPriorIdentityAndTreatsNotFoundAsSuccess(t
 	err := (&UserPolicyAttachmentResource{
 		User:      "new-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/new-policy",
-	}).Delete(context.Background(), fake.configuration(), &UserPolicyAttachmentResourceOutput{
+	}).Delete(context.Background(), fake.configuration(), runtime.Prior[UserPolicyAttachmentResource, *UserPolicyAttachmentResourceOutput, *awsCfg]{Outputs: &UserPolicyAttachmentResourceOutput{
 		User:      "old-user",
 		PolicyArn: "arn:aws:iam::123456789012:policy/old-policy",
-	})
+	}})
 	require.NoError(t, err)
 }
 

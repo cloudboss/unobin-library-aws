@@ -18,28 +18,44 @@ type accessPointPlanProbe struct {
 	Tags         *map[string]string `ub:"tags"`
 }
 
-func (*accessPointPlanProbe) SchemaVersion() int { return 1 }
-
-func (*accessPointPlanProbe) Create(context.Context, any) (any, error) {
-	return map[string]any{"access-point-id": testAccessPointID}, nil
+func (*accessPointPlanProbe) Create(context.Context, any) (*AccessPointResourceOutput, error) {
+	return &AccessPointResourceOutput{AccessPointId: testAccessPointID}, nil
 }
 
-func (*accessPointPlanProbe) Read(_ context.Context, _ any, prior any) (any, error) {
-	return prior, nil
+func (*accessPointPlanProbe) Read(
+	_ context.Context, _ any,
+	prior runtime.Prior[accessPointPlanProbe, *AccessPointResourceOutput, any],
+) (*AccessPointResourceOutput, error) {
+	return prior.Outputs, nil
 }
 
 func (*accessPointPlanProbe) Update(
 	_ context.Context,
 	_ any,
-	prior runtime.Prior[accessPointPlanProbe, any],
-) (any, error) {
+	prior runtime.Prior[accessPointPlanProbe, *AccessPointResourceOutput, any],
+) (*AccessPointResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
-func (*accessPointPlanProbe) Delete(context.Context, any, any) error { return nil }
+func (*accessPointPlanProbe) Delete(
+	context.Context, any, runtime.Prior[accessPointPlanProbe, *AccessPointResourceOutput, any],
+) error {
+	return nil
+}
 
-func (*accessPointPlanProbe) ReplaceFields() []string {
-	return (&AccessPointResource{}).ReplaceFields()
+func (*accessPointPlanProbe) ResourceDefinition() runtime.ResourceDefinition[
+	accessPointPlanProbe, *AccessPointResourceOutput, any,
+] {
+	return runtime.ResourceDefinition[accessPointPlanProbe, *AccessPointResourceOutput, any]{
+		SchemaVersion: 1,
+		Replace: runtime.Replacement[accessPointPlanProbe, *AccessPointResourceOutput, any]{
+			Fields: []runtime.AnyInputField[accessPointPlanProbe]{
+				runtime.InputField(func(input *accessPointPlanProbe) *string {
+					return &input.FileSystemId
+				}),
+			},
+		},
+	}
 }
 
 func TestAccessPointPlanDistinguishesUpdateAndReplacement(t *testing.T) {
@@ -87,9 +103,9 @@ func TestAccessPointPlanDistinguishesUpdateAndReplacement(t *testing.T) {
 					Resources: map[string]runtime.ResourceRegistration{
 						"access-point": runtime.MakeResource[
 							accessPointPlanProbe,
+							*AccessPointResourceOutput,
 							any,
-							any,
-						](),
+						]((&accessPointPlanProbe{}).ResourceDefinition()),
 					},
 				},
 			}
@@ -128,7 +144,7 @@ func TestAccessPointPlanDistinguishesUpdateAndReplacement(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, plan.Steps, 1)
 			assert.Equal(t, tt.wantDecision, plan.Steps[0].Decision)
-			assert.Equal(t, tt.wantReplacement, plan.Steps[0].ReplaceTriggers)
+			assert.Equal(t, tt.wantReplacement, plan.Steps[0].ReplacementReasons)
 		})
 	}
 }

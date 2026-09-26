@@ -273,8 +273,9 @@ func (r *ApiResource) Create(ctx context.Context, cfg *awsCfg) (*ApiResourceOutp
 func (r *ApiResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ApiResourceOutput,
+	recordedPrior runtime.Prior[ApiResource, *ApiResourceOutput, *awsCfg],
 ) (*ApiResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -311,7 +312,7 @@ func (r *ApiResource) read(
 }
 
 func (r *ApiResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ApiResource, *ApiResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ApiResource, *ApiResourceOutput, *awsCfg],
 ) (*ApiResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -358,7 +359,8 @@ func (r *ApiResource) Update(
 	return prior.Outputs, nil
 }
 
-func (r *ApiResource) Delete(ctx context.Context, cfg *awsCfg, prior *ApiResourceOutput) error {
+func (r *ApiResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ApiResource, *ApiResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

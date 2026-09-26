@@ -216,7 +216,7 @@ func TestWebACLAssociationUpdateReturnsPriorIdentityWithoutAWSCalls(t *testing.T
 
 	out, err := validWebACLAssociationResource().Update(
 		context.Background(), nil,
-		runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput]{
+		runtime.Prior[WebACLAssociationResource, *WebACLAssociationResourceOutput, *awsCfg]{
 			Outputs: priorOutput,
 		},
 	)

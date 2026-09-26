@@ -165,8 +165,9 @@ func (r *MountTargetResource) Create(
 func (r *MountTargetResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MountTargetResourceOutput,
+	recordedPrior runtime.Prior[MountTargetResource, *MountTargetResourceOutput, *awsCfg],
 ) (*MountTargetResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	clients, err := newMountTargetClients(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -177,7 +178,7 @@ func (r *MountTargetResource) Read(
 func (r *MountTargetResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[MountTargetResource, *MountTargetResourceOutput],
+	prior runtime.Prior[MountTargetResource, *MountTargetResourceOutput, *awsCfg],
 ) (*MountTargetResourceOutput, error) {
 	clients, err := newMountTargetClients(ctx, cfg)
 	if err != nil {
@@ -189,8 +190,9 @@ func (r *MountTargetResource) Update(
 func (r *MountTargetResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *MountTargetResourceOutput,
+	recordedPrior runtime.Prior[MountTargetResource, *MountTargetResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	clients, err := newMountTargetClients(ctx, cfg)
 	if err != nil {
 		return err
@@ -290,7 +292,7 @@ func (r *MountTargetResource) read(
 func (r *MountTargetResource) update(
 	ctx context.Context,
 	clients mountTargetClientProvider,
-	prior runtime.Prior[MountTargetResource, *MountTargetResourceOutput],
+	prior runtime.Prior[MountTargetResource, *MountTargetResourceOutput, *awsCfg],
 ) (*MountTargetResourceOutput, error) {
 	if prior.Outputs == nil || prior.Outputs.MountTargetId == "" {
 		return nil, errors.New("update mount target requires prior mount-target-id")

@@ -197,8 +197,9 @@ func (r *SecretResource) Create(ctx context.Context, cfg *awsCfg) (*SecretResour
 func (r *SecretResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecretResourceOutput) (*SecretResourceOutput, error,
+	recordedPrior runtime.Prior[SecretResource, *SecretResourceOutput, *awsCfg]) (*SecretResourceOutput, error,
 ) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -261,7 +262,7 @@ func (r *SecretResource) readVersionID(
 }
 
 func (r *SecretResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SecretResource, *SecretResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[SecretResource, *SecretResourceOutput, *awsCfg],
 ) (*SecretResourceOutput, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
@@ -317,8 +318,9 @@ func (r *SecretResource) Update(
 func (r *SecretResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecretResourceOutput,
+	recordedPrior runtime.Prior[SecretResource, *SecretResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

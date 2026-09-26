@@ -178,7 +178,7 @@ func TestUpdateDomainPropagatesSnapshotPauseServiceError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	prior := runtime.Prior[DomainResource, *DomainResourceOutput]{
+	prior := runtime.Prior[DomainResource, *DomainResourceOutput, *awsCfg]{
 		Inputs:  DomainResource{DomainName: "example"},
 		Outputs: &DomainResourceOutput{DomainName: "example"},
 	}

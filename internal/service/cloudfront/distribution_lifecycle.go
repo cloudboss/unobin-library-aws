@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	cloudfront "github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	cloudfronttypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
+	"github.com/cloudboss/unobin/pkg/runtime"
 
 	"github.com/cloudboss/unobin-library-aws/internal/partition"
 	"github.com/cloudboss/unobin-library-aws/internal/retry"
@@ -67,8 +68,9 @@ const loggingBucketGoneMessage = "The S3 bucket that you specified for CloudFron
 func (r *DistributionResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *DistributionResourceOutput,
+	recordedPrior runtime.Prior[DistributionResource, *DistributionResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

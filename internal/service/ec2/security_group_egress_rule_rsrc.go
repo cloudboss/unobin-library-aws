@@ -96,8 +96,9 @@ func (r *SecurityGroupEgressRuleResource) Create(
 func (r *SecurityGroupEgressRuleResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *SecurityGroupEgressRuleResourceOutput,
+	recordedPrior runtime.Prior[SecurityGroupEgressRuleResource, *SecurityGroupEgressRuleResourceOutput, *awsCfg],
 ) (*SecurityGroupEgressRuleResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	if err := sgRuleRead(ctx, cfg, prior.SecurityGroupRuleId, true); err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (r *SecurityGroupEgressRuleResource) Read(
 
 func (r *SecurityGroupEgressRuleResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[SecurityGroupEgressRuleResource, *SecurityGroupEgressRuleResourceOutput],
+	prior runtime.Prior[SecurityGroupEgressRuleResource, *SecurityGroupEgressRuleResourceOutput, *awsCfg],
 ) (*SecurityGroupEgressRuleResourceOutput, error) {
 	err := sgRuleUpdate(ctx, cfg, r.rule(), prior.Inputs.rule(),
 		prior.Outputs.SecurityGroupRuleId)
@@ -117,6 +118,7 @@ func (r *SecurityGroupEgressRuleResource) Update(
 }
 
 func (r *SecurityGroupEgressRuleResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *SecurityGroupEgressRuleResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[SecurityGroupEgressRuleResource, *SecurityGroupEgressRuleResourceOutput, *awsCfg]) error {
+	prior := recordedPrior.Outputs
 	return sgRuleDelete(ctx, cfg, prior.SecurityGroupRuleId, true)
 }

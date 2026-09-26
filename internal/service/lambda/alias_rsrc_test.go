@@ -50,7 +50,7 @@ func TestAliasUpdateUsesPriorIdentityAndClearsRemovedMutableState(t *testing.T) 
 		return 200, `{"AliasArn":"` + aliasArn + `","Name":"live","FunctionVersion":"2"}`
 	})
 	weights := map[string]float64{"3": 0.2}
-	prior := runtime.Prior[AliasResource, *AliasResourceOutput]{
+	prior := runtime.Prior[AliasResource, *AliasResourceOutput, *awsCfg]{
 		Inputs: AliasResource{
 			Name:            "live",
 			FunctionName:    "old-fn",

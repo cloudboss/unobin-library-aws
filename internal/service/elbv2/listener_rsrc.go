@@ -213,7 +213,8 @@ func (r *ListenerResource) Create(
 }
 
 func (r *ListenerResource) Read(
-	ctx context.Context, cfg *awsCfg, prior *ListenerResourceOutput) (*ListenerResourceOutput, error) {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ListenerResource, *ListenerResourceOutput, *awsCfg]) (*ListenerResourceOutput, error) {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -222,7 +223,7 @@ func (r *ListenerResource) Read(
 }
 
 func (r *ListenerResource) Update(
-	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ListenerResource, *ListenerResourceOutput],
+	ctx context.Context, cfg *awsCfg, prior runtime.Prior[ListenerResource, *ListenerResourceOutput, *awsCfg],
 ) (*ListenerResourceOutput, error) {
 	if err := validateDefaultActions(r.DefaultAction); err != nil {
 		return nil, err
@@ -254,8 +255,9 @@ func (r *ListenerResource) Update(
 func (r *ListenerResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ListenerResourceOutput,
+	recordedPrior runtime.Prior[ListenerResource, *ListenerResourceOutput, *awsCfg],
 ) error {
+	prior := recordedPrior.Outputs
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

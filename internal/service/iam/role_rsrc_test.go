@@ -38,7 +38,7 @@ func TestRoleUpdateLeavesRemovedOptionsToAWS(t *testing.T) {
 	priorInputs.MaxSessionDuration = aws.Int64(7200)
 
 	current := base
-	prior := runtime.Prior[RoleResource, *RoleResourceOutput]{
+	prior := runtime.Prior[RoleResource, *RoleResourceOutput, *awsCfg]{
 		Inputs: priorInputs,
 		Outputs: &RoleResourceOutput{
 			Arn:    "arn:aws:iam::123456789012:role/test-role",

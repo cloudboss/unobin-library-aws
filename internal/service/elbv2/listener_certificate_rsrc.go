@@ -77,7 +77,7 @@ func (r *ListenerCertificateResource) Create(
 func (r *ListenerCertificateResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *ListenerCertificateResourceOutput,
+	recordedPrior runtime.Prior[ListenerCertificateResource, *ListenerCertificateResourceOutput, *awsCfg],
 ) (*ListenerCertificateResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -92,13 +92,13 @@ func (r *ListenerCertificateResource) Read(
 func (r *ListenerCertificateResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[ListenerCertificateResource, *ListenerCertificateResourceOutput],
+	prior runtime.Prior[ListenerCertificateResource, *ListenerCertificateResourceOutput, *awsCfg],
 ) (*ListenerCertificateResourceOutput, error) {
 	return prior.Outputs, nil
 }
 
 func (r *ListenerCertificateResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *ListenerCertificateResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[ListenerCertificateResource, *ListenerCertificateResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err

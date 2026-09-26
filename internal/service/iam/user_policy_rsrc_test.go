@@ -69,7 +69,7 @@ func TestUserPolicyUpdateOnlyPutsWhenDocumentUnchanged(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", document)
 	})
 
-	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{
 		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
@@ -108,7 +108,7 @@ func TestUserPolicyUpdateNormalizesChangedDocument(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", newDocument)
 	})
 
-	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{
 		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
@@ -142,7 +142,7 @@ func TestUserPolicyUpdateReconcilesDocumentDrift(t *testing.T) {
 		return 200, getUserPolicyResponseXML("test-user", "test-inline", desiredDocument)
 	})
 
-	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput]{
+	prior := runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{
 		Inputs: UserPolicyResource{
 			UserName:       "test-user",
 			PolicyName:     "test-inline",
@@ -177,10 +177,10 @@ func TestUserPolicyReadMapsMissingPolicyToNotFound(t *testing.T) {
 	_, err := (&UserPolicyResource{}).Read(
 		context.Background(),
 		fake.configuration(),
-		&UserPolicyResourceOutput{
+		runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{Outputs: &UserPolicyResourceOutput{
 			UserName:   "test-user",
 			PolicyName: "test-inline",
-		},
+		}},
 	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
@@ -194,10 +194,10 @@ func TestUserPolicyReadMapsNilPolicyDocumentToNotFound(t *testing.T) {
 	_, err := (&UserPolicyResource{}).Read(
 		context.Background(),
 		fake.configuration(),
-		&UserPolicyResourceOutput{
+		runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{Outputs: &UserPolicyResourceOutput{
 			UserName:   "test-user",
 			PolicyName: "test-inline",
-		},
+		}},
 	)
 	assert.True(t, errors.Is(err, runtime.ErrNotFound))
 }
@@ -212,7 +212,7 @@ func TestUserPolicyDeleteUsesPriorIdentityAndIgnoresNotFound(t *testing.T) {
 
 	err := (&UserPolicyResource{UserName: "new-user", PolicyName: "new-inline"}).Delete(
 		context.Background(), fake.configuration(),
-		&UserPolicyResourceOutput{UserName: "old-user", PolicyName: "old-inline"})
+		runtime.Prior[UserPolicyResource, *UserPolicyResourceOutput, *awsCfg]{Outputs: &UserPolicyResourceOutput{UserName: "old-user", PolicyName: "old-inline"}})
 	require.NoError(t, err)
 }
 

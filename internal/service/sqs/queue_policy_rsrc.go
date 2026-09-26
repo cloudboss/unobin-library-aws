@@ -77,7 +77,7 @@ func (r *QueuePolicyResource) Create(
 func (r *QueuePolicyResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *QueuePolicyResourceOutput,
+	recordedPrior runtime.Prior[QueuePolicyResource, *QueuePolicyResourceOutput, *awsCfg],
 ) (*QueuePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -99,7 +99,7 @@ func (r *QueuePolicyResource) Read(
 func (r *QueuePolicyResource) Update(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior runtime.Prior[QueuePolicyResource, *QueuePolicyResourceOutput],
+	prior runtime.Prior[QueuePolicyResource, *QueuePolicyResourceOutput, *awsCfg],
 ) (*QueuePolicyResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *QueuePolicyResource) Update(
 func (r *QueuePolicyResource) Delete(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *QueuePolicyResourceOutput,
+	recordedPrior runtime.Prior[QueuePolicyResource, *QueuePolicyResourceOutput, *awsCfg],
 ) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {

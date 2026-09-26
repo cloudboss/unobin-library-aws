@@ -66,7 +66,7 @@ func (r *RolePolicyAttachmentResource) Create(
 func (r *RolePolicyAttachmentResource) Read(
 	ctx context.Context,
 	cfg *awsCfg,
-	prior *RolePolicyAttachmentResourceOutput,
+	recordedPrior runtime.Prior[RolePolicyAttachmentResource, *RolePolicyAttachmentResourceOutput, *awsCfg],
 ) (*RolePolicyAttachmentResourceOutput, error) {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *RolePolicyAttachmentResource) Read(
 
 func (r *RolePolicyAttachmentResource) Update(
 	ctx context.Context, cfg *awsCfg,
-	prior runtime.Prior[RolePolicyAttachmentResource, *RolePolicyAttachmentResourceOutput],
+	prior runtime.Prior[RolePolicyAttachmentResource, *RolePolicyAttachmentResourceOutput, *awsCfg],
 ) (*RolePolicyAttachmentResourceOutput, error) {
 	return prior.Outputs, nil
 }
@@ -104,7 +104,7 @@ func (r *RolePolicyAttachmentResource) Update(
 // that is already gone returns NoSuchEntity, which is treated as success
 // so delete is idempotent.
 func (r *RolePolicyAttachmentResource) Delete(
-	ctx context.Context, cfg *awsCfg, prior *RolePolicyAttachmentResourceOutput) error {
+	ctx context.Context, cfg *awsCfg, recordedPrior runtime.Prior[RolePolicyAttachmentResource, *RolePolicyAttachmentResourceOutput, *awsCfg]) error {
 	client, err := newClient(ctx, cfg)
 	if err != nil {
 		return err
