@@ -26,13 +26,16 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 3)
+	require.Len(t, library.Resources, 4)
 	require.Contains(t, library.Resources, "addon")
 	assert.Equal(t, reflect.TypeFor[*svc.AddonResourceOutput](),
 		library.Resources["addon"].OutputType())
 	require.Contains(t, library.Resources, "cluster")
 	assert.Equal(t, reflect.TypeFor[*svc.ClusterResourceOutput](),
 		library.Resources["cluster"].OutputType())
+	require.Contains(t, library.Resources, "fargate-profile")
+	assert.Equal(t, reflect.TypeFor[*svc.FargateProfileResourceOutput](),
+		library.Resources["fargate-profile"].OutputType())
 	require.Contains(t, library.Resources, "node-group")
 	assert.Equal(t, reflect.TypeFor[*svc.NodeGroupResourceOutput](),
 		library.Resources["node-group"].OutputType())

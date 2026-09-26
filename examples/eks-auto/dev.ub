@@ -1,0 +1,17 @@
+stack: {
+  factory: {
+    inputs: {
+      aws-config: {
+        region: 'us-east-1'
+      }
+      name-prefix:        'unobin-eks-auto-demo'
+      private-subnet-ids: ['subnet-0123456789abcdef0', 'subnet-abcdef01234567890']
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

@@ -12,7 +12,7 @@ import (
 
 func TestClusterSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	cluster := schema.Resources["cluster"]
 	require.NotNil(t, cluster)
 
@@ -47,7 +47,7 @@ func TestClusterSchema(t *testing.T) {
 
 func TestNodeGroupSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	nodeGroup := schema.Resources["node-group"]
 	require.NotNil(t, nodeGroup)
 
@@ -85,9 +85,38 @@ func TestNodeGroupSchema(t *testing.T) {
 	assert.Len(t, nodeGroup.Defaults, 2)
 }
 
+func TestFargateProfileSchema(t *testing.T) {
+	schema := readLibrarySchema(t)
+	require.Len(t, schema.Resources, 4)
+	profile := schema.Resources["fargate-profile"]
+	require.NotNil(t, profile)
+
+	assert.Equal(t, typecheck.TString(), profile.Inputs["cluster-name"])
+	assert.Equal(t, typecheck.TString(), profile.Inputs["fargate-profile-name"])
+	assert.Equal(t, typecheck.TString(), profile.Inputs["pod-execution-role-arn"])
+	assert.Equal(t, profile.Outputs["selector"], profile.Inputs["selector"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TList(typecheck.TString())),
+		profile.Inputs["subnet-ids"])
+	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
+		profile.Inputs["tags"])
+	assert.Equal(t, map[string]typecheck.Type{
+		"cluster-name":           typecheck.TString(),
+		"fargate-profile-name":   typecheck.TString(),
+		"arn":                    typecheck.TString(),
+		"pod-execution-role-arn": typecheck.TString(),
+		"selector":               profile.Inputs["selector"],
+		"status":                 typecheck.TString(),
+		"subnet-ids":             typecheck.TList(typecheck.TString()),
+	}, profile.Outputs)
+	assert.NotContains(t, profile.Outputs, "tags-all")
+	assert.Empty(t, profile.SensitiveInputs)
+	assert.Empty(t, profile.SensitiveOutputs)
+	assert.Empty(t, profile.Defaults)
+}
+
 func TestAddonSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 3)
+	require.Len(t, schema.Resources, 4)
 	addon := schema.Resources["addon"]
 	require.NotNil(t, addon)
 
@@ -141,5 +170,16 @@ func TestNodeGroupReplacementFields(t *testing.T) {
 		"remote-access",
 		"launch-template-id",
 		"launch-template-name",
+	}, resource.ReplaceFields())
+}
+
+func TestFargateProfileReplacementFields(t *testing.T) {
+	resource := &svc.FargateProfileResource{}
+	assert.Equal(t, []string{
+		"cluster-name",
+		"fargate-profile-name",
+		"pod-execution-role-arn",
+		"selector",
+		"subnet-ids",
 	}, resource.ReplaceFields())
 }

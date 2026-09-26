@@ -16,6 +16,11 @@ stack: {
         change: 'new'
         keep:   '1'
       }
+      fargate-profile-tags: {
+        add:    'yes'
+        change: 'new'
+        keep:   '1'
+      }
     }
   }
 

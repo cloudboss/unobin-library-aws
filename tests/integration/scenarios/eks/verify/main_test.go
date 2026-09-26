@@ -24,7 +24,7 @@ func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) 
 	initialTags := map[string]string{
 		"change": "old", "keep": "1", "remove": "yes",
 	}
-	applied := scenarioClient(initialTags, initialTags, initialTags)
+	applied := scenarioClient(initialTags, initialTags, initialTags, initialTags)
 	require.NoError(t, verifyApplied(context.Background(), applied))
 
 	updated := scenarioClient(map[string]string{
@@ -33,6 +33,9 @@ func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) 
 	}, map[string]string{
 		"add": "yes", "change": "new", "keep": "1",
 		"aws:node-group": "service",
+	}, map[string]string{
+		"add": "yes", "change": "new", "keep": "1",
+		"aws:fargate-profile": "service",
 	}, map[string]string{
 		"add": "yes", "change": "new", "keep": "1",
 		"aws:addon": "service",
@@ -45,7 +48,7 @@ func TestVerifyAppliedAllowsEmptyAddonVersion(t *testing.T) {
 	initialTags := map[string]string{
 		"change": "old", "keep": "1", "remove": "yes",
 	}
-	client := scenarioClient(initialTags, initialTags, initialTags)
+	client := scenarioClient(initialTags, initialTags, initialTags, initialTags)
 	client.addon.AddonVersion = nil
 
 	require.NoError(t, verifyApplied(context.Background(), client))
@@ -58,10 +61,12 @@ func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 		CreatedAt:          scenarioCreatedAt.Format(time.RFC3339Nano),
 		NodeGroupARN:       "arn:node-group",
 		NodeGroupCreatedAt: scenarioCreatedAt.Format(time.RFC3339Nano),
+		FargateProfileARN:  "arn:fargate-profile",
 		AddonARN:           "arn:addon",
 		AddonCreatedAt:     scenarioCreatedAt.Format(time.RFC3339Nano),
 	}))
 	client := scenarioClient(
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
@@ -98,6 +103,7 @@ func TestVerifyDestroyedPropagatesUnrelatedError(t *testing.T) {
 type fakeVerifierClient struct {
 	cluster        *ekstypes.Cluster
 	nodeGroup      *ekstypes.Nodegroup
+	fargateProfile *ekstypes.FargateProfile
 	addon          *ekstypes.Addon
 	describeError  error
 	nodeGroupError error
@@ -121,6 +127,14 @@ func (c *fakeVerifierClient) DescribeNodegroup(
 		return nil, c.nodeGroupError
 	}
 	return &eks.DescribeNodegroupOutput{Nodegroup: c.nodeGroup}, nil
+}
+
+func (c *fakeVerifierClient) DescribeFargateProfile(
+	context.Context,
+	*eks.DescribeFargateProfileInput,
+	...func(*eks.Options),
+) (*eks.DescribeFargateProfileOutput, error) {
+	return &eks.DescribeFargateProfileOutput{FargateProfile: c.fargateProfile}, nil
 }
 
 func (c *fakeVerifierClient) DescribeCluster(
@@ -147,16 +161,19 @@ func (c *fakeVerifierClient) ListTagsForResource(
 func scenarioClient(
 	clusterTags map[string]string,
 	nodeGroupTags map[string]string,
+	fargateProfileTags map[string]string,
 	addonTags map[string]string,
 ) *fakeVerifierClient {
 	clusterARN := "arn:aws:eks:us-east-1:123456789012:cluster/example"
 	nodeGroupARN := "arn:aws:eks:us-east-1:123456789012:nodegroup/example/workers/id"
+	fargateProfileARN := "arn:aws:eks:us-east-1:123456789012:fargateprofile/example/pods/id"
 	addonARN := "arn:aws:eks:us-east-1:123456789012:addon/example/vpc-cni/id"
 	return &fakeVerifierClient{
 		tagsByARN: map[string]map[string]string{
-			clusterARN:   clusterTags,
-			nodeGroupARN: nodeGroupTags,
-			addonARN:     addonTags,
+			clusterARN:        clusterTags,
+			nodeGroupARN:      nodeGroupTags,
+			fargateProfileARN: fargateProfileTags,
+			addonARN:          addonTags,
 		},
 		cluster: &ekstypes.Cluster{
 			Name:            aws.String(clusterName),
@@ -177,6 +194,17 @@ func scenarioClient(
 				DesiredSize: aws.Int32(0), MinSize: aws.Int32(0), MaxSize: aws.Int32(1),
 			},
 			Status:  ekstypes.NodegroupStatusActive,
+			Subnets: []string{"subnet-a", "subnet-b"},
+		},
+		fargateProfile: &ekstypes.FargateProfile{
+			ClusterName:         aws.String(clusterName),
+			FargateProfileArn:   aws.String(fargateProfileARN),
+			FargateProfileName:  aws.String(fargateProfileName),
+			PodExecutionRoleArn: aws.String("arn:aws:iam::123456789012:role/fargate"),
+			Selectors: []ekstypes.FargateProfileSelector{{
+				Namespace: aws.String("unobin-fargate"),
+			}},
+			Status:  ekstypes.FargateProfileStatusActive,
 			Subnets: []string{"subnet-a", "subnet-b"},
 		},
 		addon: &ekstypes.Addon{

@@ -1,0 +1,215 @@
+factory: {
+  description: '''>-
+    Creates an EKS Auto Mode cluster with built-in node pools and one Fargate profile.
+    '''
+
+  imports: {
+    eks:  'github.com/cloudboss/unobin-library-aws//service/eks'
+    iam:  'github.com/cloudboss/unobin-library-aws//service/iam'
+    meta: 'github.com/cloudboss/unobin-library-aws//meta'
+  }
+
+  library-configs: {
+    eks:  input.aws-config
+    iam:  input.aws-config
+    meta: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    name-prefix: {
+      type:        string
+      default:     'unobin-eks-auto'
+      description: 'Prefix for IAM roles and EKS resources'
+    }
+    kubernetes-version: {
+      type:        optional(string)
+      description: 'EKS Kubernetes version; omit it to let EKS choose the default'
+    }
+    private-subnet-ids: {
+      type:        list(string)
+      description: 'Private subnet IDs used by Auto Mode nodes and the Fargate profile'
+    }
+    tags: {
+      type: map(string)
+      default: {
+        project: 'unobin-eks-auto-example'
+      }
+    }
+  }
+
+  data-sources: {
+    partition: meta.partition {}
+  }
+
+  resources: {
+    cluster-role: iam.role {
+      role-name: $'{{ input.name-prefix }}-cluster'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'eks.amazonaws.com' }
+              Action:    ['sts:AssumeRole', 'sts:TagSession']
+            },
+          ]
+        },
+      )
+      tags: input.tags
+    }
+    cluster-policy: iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSClusterPolicy
+        '''
+    }
+    cluster-compute-policy: iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSComputePolicy
+        '''
+    }
+    cluster-block-storage-policy: iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSBlockStoragePolicyV2
+        '''
+    }
+    cluster-load-balancing-policy: iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSLoadBalancingPolicy
+        '''
+    }
+    cluster-networking-policy: iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSNetworkingPolicy
+        '''
+    }
+    node-role: iam.role {
+      role-name: $'{{ input.name-prefix }}-node'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'ec2.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+      tags: input.tags
+    }
+    node-worker-policy: iam.role-policy-attachment {
+      role-name: resource.node-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSWorkerNodeMinimalPolicy
+        '''
+    }
+    node-ecr-policy: iam.role-policy-attachment {
+      role-name: resource.node-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly
+        '''
+    }
+    cluster: eks.cluster {
+      @depends-on: [
+        resource.cluster-policy,
+        resource.cluster-compute-policy,
+        resource.cluster-block-storage-policy,
+        resource.cluster-load-balancing-policy,
+        resource.cluster-networking-policy,
+        resource.node-worker-policy,
+        resource.node-ecr-policy,
+      ]
+      name:                          $'{{ input.name-prefix }}-cluster'
+      role-arn:                      resource.cluster-role.arn
+      version:                       input.kubernetes-version
+      bootstrap-self-managed-addons: false
+      access-config: {
+        authentication-mode: 'API'
+      }
+      compute-config: {
+        enabled:       true
+        node-pools:    ['general-purpose', 'system']
+        node-role-arn: resource.node-role.arn
+      }
+      kubernetes-network-config: {
+        elastic-load-balancing: {
+          enabled: true
+        }
+      }
+      storage-config: {
+        block-storage: {
+          enabled: true
+        }
+      }
+      vpc-config: {
+        subnet-ids:              input.private-subnet-ids
+        endpoint-private-access: true
+        endpoint-public-access:  true
+      }
+      tags: input.tags
+    }
+    coredns: eks.addon {
+      @depends-on:  [resource.cluster]
+      cluster-name: resource.cluster.name
+      addon-name:   'coredns'
+      tags:         input.tags
+    }
+    fargate-role: iam.role {
+      role-name: $'{{ input.name-prefix }}-fargate'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'eks-fargate-pods.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+      tags: input.tags
+    }
+    fargate-pod-policy: iam.role-policy-attachment {
+      role-name: resource.fargate-role.role-name
+      policy-arn: $'''>-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy
+        '''
+    }
+    fargate-profile: eks.fargate-profile {
+      @depends-on: [
+        resource.cluster,
+        resource.coredns,
+        resource.fargate-pod-policy,
+      ]
+      cluster-name:           resource.cluster.name
+      fargate-profile-name:   $'{{ input.name-prefix }}-pods'
+      pod-execution-role-arn: resource.fargate-role.arn
+      selector: [
+        {
+          namespace: 'default'
+          labels:    { compute: 'fargate' }
+        },
+      ]
+      subnet-ids: input.private-subnet-ids
+      tags:       input.tags
+    }
+  }
+
+  outputs: {
+    cluster-name:         { value: resource.cluster.name }
+    node-role-arn:        { value: resource.node-role.arn }
+    fargate-profile-name: { value: resource.fargate-profile.fargate-profile-name }
+  }
+}

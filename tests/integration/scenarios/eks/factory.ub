@@ -49,6 +49,14 @@ factory: {
         remove: 'yes'
       }
     }
+    fargate-profile-tags: {
+      type: map(string)
+      default: {
+        change: 'old'
+        keep:   '1'
+        remove: 'yes'
+      }
+    }
   }
 
   data-sources: {
@@ -154,6 +162,41 @@ factory: {
       }
       tags: input.node-group-tags
     }
+    fargate-role: aws-iam.role {
+      role-name: 'unobin-it-eks-fargate'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'eks-fargate-pods.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+    }
+    fargate-pod-policy: aws-iam.role-policy-attachment {
+      role-name:  resource.fargate-role.role-name
+      policy-arn: $'''\-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy
+        '''
+    }
+    fargate-profile: aws-eks.fargate-profile {
+      @depends-on: [
+        resource.cluster,
+        resource.fargate-pod-policy,
+      ]
+      cluster-name:           resource.cluster.name
+      fargate-profile-name:   'unobin-it-eks-pods'
+      pod-execution-role-arn: resource.fargate-role.arn
+      selector: [
+        { namespace: 'unobin-fargate' },
+      ]
+      subnet-ids: [resource.subnet-a.id, resource.subnet-b.id]
+      tags:       input.fargate-profile-tags
+    }
     addon: aws-eks.addon {
       @depends-on: [resource.cluster]
       cluster-name: resource.cluster.name
@@ -178,6 +221,10 @@ factory: {
     node-group-arn:    { value: resource.node-group.arn }
     node-group-status: { value: resource.node-group.status }
     node-role-arn:     { value: resource.node-role.arn }
+    fargate-profile-name:   { value: resource.fargate-profile.fargate-profile-name }
+    fargate-profile-arn:    { value: resource.fargate-profile.arn }
+    fargate-profile-status: { value: resource.fargate-profile.status }
+    fargate-role-arn:       { value: resource.fargate-role.arn }
     addon-name:        { value: resource.addon.addon-name }
     addon-arn:         { value: resource.addon.arn }
     addon-version:     { value: resource.addon.addon-version }

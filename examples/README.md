@@ -5,3 +5,5 @@ Each subdirectory has its own `project.ub`, stack file, and README.
 
 - [lambdamicrovms-http](lambdamicrovms-http/) creates a Lambda MicroVM image,
   starts a MicroVM, sends an authenticated HTTP request, and terminates it.
+- [eks-auto](eks-auto/) creates an EKS Auto Mode cluster with built-in node pools and a
+  Fargate profile.

@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	clusterName   = "unobin-it-eks-cluster"
-	nodeGroupName = "unobin-it-eks-workers"
-	addonName     = "vpc-cni"
+	clusterName        = "unobin-it-eks-cluster"
+	nodeGroupName      = "unobin-it-eks-workers"
+	fargateProfileName = "unobin-it-eks-pods"
+	addonName          = "vpc-cni"
 )
 
 type verifierClient interface {
@@ -29,6 +30,8 @@ type verifierClient interface {
 		...func(*eks.Options)) (*eks.DescribeClusterOutput, error)
 	DescribeNodegroup(context.Context, *eks.DescribeNodegroupInput,
 		...func(*eks.Options)) (*eks.DescribeNodegroupOutput, error)
+	DescribeFargateProfile(context.Context, *eks.DescribeFargateProfileInput,
+		...func(*eks.Options)) (*eks.DescribeFargateProfileOutput, error)
 	DescribeAddon(context.Context, *eks.DescribeAddonInput,
 		...func(*eks.Options)) (*eks.DescribeAddonOutput, error)
 	ListTagsForResource(context.Context, *eks.ListTagsForResourceInput,
@@ -40,6 +43,7 @@ type clusterIdentity struct {
 	CreatedAt          string `json:"created_at"`
 	NodeGroupARN       string `json:"node_group_arn"`
 	NodeGroupCreatedAt string `json:"node_group_created_at"`
+	FargateProfileARN  string `json:"fargate_profile_arn"`
 	AddonARN           string `json:"addon_arn"`
 	AddonCreatedAt     string `json:"addon_created_at"`
 }
@@ -71,7 +75,7 @@ func run() error {
 
 func verifyApplied(ctx context.Context, client verifierClient) error {
 	initialTags := map[string]string{"change": "old", "keep": "1", "remove": "yes"}
-	identity, err := verifyPresent(ctx, client, initialTags, initialTags, initialTags)
+	identity, err := verifyPresent(ctx, client, initialTags, initialTags, initialTags, initialTags)
 	if err != nil {
 		return err
 	}
@@ -86,6 +90,7 @@ func verifyUpdated(ctx context.Context, client verifierClient) error {
 	current, err := verifyPresent(
 		ctx,
 		client,
+		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
@@ -114,6 +119,13 @@ func verifyDestroyed(ctx context.Context, client verifierClient) error {
 	if nodeGroup != nil {
 		return fmt.Errorf("node group %s still exists", nodeGroupName)
 	}
+	profile, err := findFargateProfile(ctx, client)
+	if err != nil {
+		return err
+	}
+	if profile != nil {
+		return fmt.Errorf("fargate profile %s still exists", fargateProfileName)
+	}
 	cluster, err := findCluster(ctx, client)
 	if err != nil {
 		return err
@@ -129,6 +141,7 @@ func verifyPresent(
 	client verifierClient,
 	expectedClusterTags map[string]string,
 	expectedNodeGroupTags map[string]string,
+	expectedFargateProfileTags map[string]string,
 	expectedAddonTags map[string]string,
 ) (clusterIdentity, error) {
 	cluster, err := findCluster(ctx, client)
@@ -208,6 +221,50 @@ func verifyPresent(
 	); err != nil {
 		return clusterIdentity{}, err
 	}
+	profile, err := findFargateProfile(ctx, client)
+	if err != nil {
+		return clusterIdentity{}, err
+	}
+	if profile == nil {
+		return clusterIdentity{}, fmt.Errorf("fargate profile %s not found", fargateProfileName)
+	}
+	if aws.ToString(profile.ClusterName) != clusterName {
+		return clusterIdentity{}, fmt.Errorf(
+			"fargate profile cluster is %q", aws.ToString(profile.ClusterName),
+		)
+	}
+	if aws.ToString(profile.FargateProfileName) != fargateProfileName {
+		return clusterIdentity{}, fmt.Errorf(
+			"fargate profile name is %q", aws.ToString(profile.FargateProfileName),
+		)
+	}
+	if profile.Status != ekstypes.FargateProfileStatusActive {
+		return clusterIdentity{}, fmt.Errorf(
+			"fargate profile status is %s, want ACTIVE", profile.Status,
+		)
+	}
+	profileARN := aws.ToString(profile.FargateProfileArn)
+	if profileARN == "" {
+		return clusterIdentity{}, errors.New("fargate profile ARN is empty")
+	}
+	if aws.ToString(profile.PodExecutionRoleArn) == "" {
+		return clusterIdentity{}, errors.New("fargate profile pod execution role is empty")
+	}
+	if len(profile.Selectors) != 1 ||
+		aws.ToString(profile.Selectors[0].Namespace) != "unobin-fargate" {
+		return clusterIdentity{}, fmt.Errorf("fargate profile selectors are %v",
+			profile.Selectors)
+	}
+	if len(profile.Subnets) != 2 {
+		return clusterIdentity{}, fmt.Errorf(
+			"fargate profile has %d subnets, want 2", len(profile.Subnets),
+		)
+	}
+	if err := verifyTags(
+		ctx, client, "Fargate profile", profileARN, expectedFargateProfileTags,
+	); err != nil {
+		return clusterIdentity{}, err
+	}
 	addon, err := findAddon(ctx, client)
 	if err != nil {
 		return clusterIdentity{}, err
@@ -245,6 +302,7 @@ func verifyPresent(
 		CreatedAt:          cluster.CreatedAt.UTC().Format(time.RFC3339Nano),
 		NodeGroupARN:       nodeGroupARN,
 		NodeGroupCreatedAt: nodeGroup.CreatedAt.UTC().Format(time.RFC3339Nano),
+		FargateProfileARN:  profileARN,
 		AddonARN:           addonARN,
 		AddonCreatedAt:     addon.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}, nil
@@ -335,6 +393,27 @@ func findAddon(
 	return output.Addon, nil
 }
 
+func findFargateProfile(
+	ctx context.Context,
+	client verifierClient,
+) (*ekstypes.FargateProfile, error) {
+	output, err := client.DescribeFargateProfile(ctx, &eks.DescribeFargateProfileInput{
+		ClusterName:        aws.String(clusterName),
+		FargateProfileName: aws.String(fargateProfileName),
+	})
+	if err != nil {
+		var notFound *ekstypes.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("describe EKS Fargate profile: %w", err)
+	}
+	if output == nil {
+		return nil, nil
+	}
+	return output.FargateProfile, nil
+}
+
 func verifyTags(
 	ctx context.Context,
 	client verifierClient,
@@ -385,6 +464,7 @@ func readIdentity() (clusterIdentity, error) {
 	}
 	if identity.ARN == "" || identity.CreatedAt == "" ||
 		identity.NodeGroupARN == "" || identity.NodeGroupCreatedAt == "" ||
+		identity.FargateProfileARN == "" ||
 		identity.AddonARN == "" || identity.AddonCreatedAt == "" {
 		return clusterIdentity{}, errors.New("recorded cluster identity is incomplete")
 	}
