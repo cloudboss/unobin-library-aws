@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -24,7 +25,8 @@ import (
 )
 
 const (
-	bucketNotificationTimeout = 2 * time.Minute
+	bucketNotificationTimeout  = 2 * time.Minute
+	bucketNotificationInterval = time.Second
 
 	bucketNotificationDirectoryBucketMessage = "NotificationConfiguration is not valid, " +
 		"expected CreateBucketConfiguration"
@@ -189,20 +191,7 @@ func (r *BucketNotificationResource) Create(
 	if err := r.put(ctx, client, r.Bucket, desired.notification); err != nil {
 		return nil, err
 	}
-	if err := wait.Until(ctx, fmt.Sprintf("bucket notification %s", r.Bucket),
-		func(ctx context.Context) (bool, error) {
-			_, err := bucketNotificationFind(ctx, client, r.Bucket)
-			if errors.Is(err, runtime.ErrNotFound) {
-				return false, nil
-			}
-			if err != nil {
-				return false, err
-			}
-			return true, nil
-		}, wait.WithTimeout(bucketNotificationTimeout)); err != nil {
-		return nil, err
-	}
-	return r.read(ctx, client, r.Bucket)
+	return r.waitForObservedNotification(ctx, client, r.Bucket, desired)
 }
 
 func (r *BucketNotificationResource) Read(
@@ -239,6 +228,7 @@ func (r *BucketNotificationResource) Update(
 		if err := r.put(ctx, client, bucket, desired.notification); err != nil {
 			return nil, err
 		}
+		return r.waitForObservedNotification(ctx, client, bucket, desired)
 	}
 	return r.read(ctx, client, bucket)
 }
@@ -290,33 +280,99 @@ func (r *BucketNotificationResource) changed(prior BucketNotificationResource) b
 func (r *BucketNotificationResource) observedDrifted(
 	observed *BucketNotificationResourceOutput, desired bucketNotificationDesired,
 ) bool {
-	if observed == nil {
-		return false
-	}
-	return aws.ToBool(r.Eventbridge) != observed.Eventbridge ||
-		!bucketNotificationLambdaSummariesEqual(
-			desired.lambdaFunctionSummaries, observed.LambdaFunctionSummaries,
-		) ||
-		!bucketNotificationQueueSummariesEqual(
-			desired.queueSummaries, observed.QueueSummaries,
-		) ||
-		!bucketNotificationTopicSummariesEqual(
-			desired.topicSummaries, observed.TopicSummaries,
-		)
+	return observed != nil && !bucketNotificationDesiredMatches(desired, observed)
 }
 
 func bucketNotificationLambdaSummariesEqual(
 	a, b []BucketNotificationLambdaSummary,
 ) bool {
-	return (len(a) == 0 && len(b) == 0) || reflect.DeepEqual(a, b)
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	a = bucketNotificationSortedByKey(a, bucketNotificationLambdaSummaryKey)
+	b = bucketNotificationSortedByKey(b, bucketNotificationLambdaSummaryKey)
+	return reflect.DeepEqual(a, b)
 }
 
 func bucketNotificationQueueSummariesEqual(a, b []BucketNotificationQueueSummary) bool {
-	return (len(a) == 0 && len(b) == 0) || reflect.DeepEqual(a, b)
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	a = bucketNotificationSortedByKey(a, bucketNotificationQueueSummaryKey)
+	b = bucketNotificationSortedByKey(b, bucketNotificationQueueSummaryKey)
+	return reflect.DeepEqual(a, b)
 }
 
 func bucketNotificationTopicSummariesEqual(a, b []BucketNotificationTopicSummary) bool {
-	return (len(a) == 0 && len(b) == 0) || reflect.DeepEqual(a, b)
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	a = bucketNotificationSortedByKey(a, bucketNotificationTopicSummaryKey)
+	b = bucketNotificationSortedByKey(b, bucketNotificationTopicSummaryKey)
+	return reflect.DeepEqual(a, b)
+}
+
+func bucketNotificationDesiredMatches(
+	desired bucketNotificationDesired, observed *BucketNotificationResourceOutput,
+) bool {
+	return observed != nil &&
+		(desired.notification.EventBridgeConfiguration != nil) == observed.Eventbridge &&
+		bucketNotificationLambdaSummariesEqual(
+			desired.lambdaFunctionSummaries, observed.LambdaFunctionSummaries,
+		) &&
+		bucketNotificationQueueSummariesEqual(
+			desired.queueSummaries, observed.QueueSummaries,
+		) &&
+		bucketNotificationTopicSummariesEqual(
+			desired.topicSummaries, observed.TopicSummaries,
+		)
+}
+
+func bucketNotificationSortedByKey[T any](in []T, key func(T) string) []T {
+	out := slices.Clone(in)
+	slices.SortFunc(out, func(a, b T) int {
+		return cmp.Compare(key(a), key(b))
+	})
+	return out
+}
+
+func bucketNotificationLambdaSummaryKey(summary BucketNotificationLambdaSummary) string {
+	return strings.Join([]string{
+		summary.Id,
+		summary.LambdaFunctionArn,
+		strings.Join(bucketNotificationNormalizeEvents(summary.Events), "\x01"),
+		summary.FilterPrefix,
+		summary.FilterSuffix,
+	}, "\x00")
+}
+
+func bucketNotificationQueueSummaryKey(summary BucketNotificationQueueSummary) string {
+	return strings.Join([]string{
+		summary.Id,
+		summary.QueueArn,
+		strings.Join(bucketNotificationNormalizeEvents(summary.Events), "\x01"),
+		summary.FilterPrefix,
+		summary.FilterSuffix,
+	}, "\x00")
+}
+
+func bucketNotificationTopicSummaryKey(summary BucketNotificationTopicSummary) string {
+	return strings.Join([]string{
+		summary.Id,
+		summary.TopicArn,
+		strings.Join(bucketNotificationNormalizeEvents(summary.Events), "\x01"),
+		summary.FilterPrefix,
+		summary.FilterSuffix,
+	}, "\x00")
 }
 
 func (r *BucketNotificationResource) put(
@@ -351,6 +407,35 @@ func (r *BucketNotificationResource) read(
 		return nil, err
 	}
 	return bucketNotificationOutput(bucket, resp), nil
+}
+
+func (r *BucketNotificationResource) waitForObservedNotification(
+	ctx context.Context, client *s3.Client, bucket string, desired bucketNotificationDesired,
+) (*BucketNotificationResourceOutput, error) {
+	var observed *BucketNotificationResourceOutput
+	err := wait.Until(ctx, fmt.Sprintf("bucket notification %s", bucket),
+		func(ctx context.Context) (bool, error) {
+			resp, err := bucketNotificationFind(ctx, client, bucket)
+			if errors.Is(err, runtime.ErrNotFound) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			out := bucketNotificationOutput(bucket, resp)
+			if !bucketNotificationDesiredMatches(desired, out) {
+				return false, nil
+			}
+			observed = out
+			return true, nil
+		},
+		wait.WithTimeout(bucketNotificationTimeout),
+		wait.WithInterval(bucketNotificationInterval),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return observed, nil
 }
 
 type bucketNotificationDesired struct {
