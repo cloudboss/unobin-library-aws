@@ -1,0 +1,15 @@
+{
+  "name": "library-compatibility",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/aws-library-compatibility",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": ["validate", "-c", "stacks/dev.ub"],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

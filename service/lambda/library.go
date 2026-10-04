@@ -29,8 +29,12 @@ func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-lambda",
-		Description:   "AWS Lambda library for Unobin.",
+		Name:        "aws-lambda",
+		Description: "AWS Lambda library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"function":   makeResource[svc.FunctionResource, *svc.FunctionResourceOutput](),

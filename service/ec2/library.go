@@ -29,8 +29,12 @@ func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRe
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-ec2",
-		Description:   "AWS EC2 library for Unobin.",
+		Name:        "aws-ec2",
+		Description: "AWS EC2 library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"vpc":            makeResource[svc.VpcResource, *svc.VpcResourceOutput](),

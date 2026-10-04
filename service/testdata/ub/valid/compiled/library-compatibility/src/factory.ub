@@ -1,0 +1,35 @@
+factory: {
+  imports: {
+    aws-sqs:  'github.com/cloudboss/unobin-library-aws//service/sqs'
+    aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
+  }
+
+  inputs: {
+    aws-config: {
+      type: library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: { region: 'us-east-1' }
+    }
+  }
+
+  library-configs: {
+    aws-sqs:  input.aws-config
+    aws-meta: input.aws-config
+  }
+
+  resources: {
+    queue: aws-sqs.queue {
+      name: 'compatibility-queue'
+    }
+  }
+
+  data-sources: {
+    arn: aws-meta.arn {
+      arn: 'arn:aws:sqs:us-east-1:123456789012:compatibility-queue'
+    }
+  }
+
+  outputs: {
+    queue-arn: { value: resource.queue.arn }
+    account:   { value: data-source.arn.account }
+  }
+}

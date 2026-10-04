@@ -29,8 +29,12 @@ func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRe
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-acm",
-		Description:   "AWS ACM library for Unobin.",
+		Name:        "aws-acm",
+		Description: "AWS ACM library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"certificate": makeResource[svc.CertificateResource, *svc.CertificateResourceOutput](),

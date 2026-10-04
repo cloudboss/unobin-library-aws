@@ -29,8 +29,12 @@ func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRe
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-secretsmanager",
-		Description:   "AWS Secrets Manager library for Unobin.",
+		Name:        "aws-secretsmanager",
+		Description: "AWS Secrets Manager library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"secret":         makeResource[svc.SecretResource, *svc.SecretResourceOutput](),

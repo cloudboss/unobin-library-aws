@@ -20,8 +20,12 @@ func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistra
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-cognitoidp",
-		Description:   "AWS Cognito Identity Provider library for Unobin.",
+		Name:        "aws-cognitoidp",
+		Description: "AWS Cognito Identity Provider library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"user":      makeResource[svc.UserResource, *svc.UserResourceOutput](),

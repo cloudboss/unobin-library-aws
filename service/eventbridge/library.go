@@ -20,8 +20,12 @@ func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistra
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-eventbridge",
-		Description:   "AWS EventBridge library for Unobin.",
+		Name:        "aws-eventbridge",
+		Description: "AWS EventBridge library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"event-bus": makeResource[svc.EventBusResource, *svc.EventBusResourceOutput](),

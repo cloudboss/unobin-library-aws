@@ -38,8 +38,12 @@ func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-lambdamicrovms",
-		Description:   "AWS Lambda MicroVMs library for Unobin.",
+		Name:        "aws-lambdamicrovms",
+		Description: "AWS Lambda MicroVMs library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"microvm-image": makeResource[svc.MicrovmImageResource, *svc.MicrovmImageResourceOutput](),

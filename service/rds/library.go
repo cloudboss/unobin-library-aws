@@ -20,8 +20,12 @@ func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistra
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-rds",
-		Description:   "AWS RDS library for Unobin.",
+		Name:        "aws-rds",
+		Description: "AWS RDS library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"subnet-group":    makeResource[svc.SubnetGroupResource, *svc.SubnetGroupResourceOutput](),

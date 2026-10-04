@@ -20,8 +20,12 @@ func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistra
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-cloudwatch",
-		Description:   "AWS CloudWatch library for Unobin.",
+		Name:        "aws-cloudwatch",
+		Description: "AWS CloudWatch library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"dashboard":    makeResource[svc.DashboardResource, *svc.DashboardResourceOutput](),

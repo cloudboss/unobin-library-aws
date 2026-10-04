@@ -29,8 +29,12 @@ func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRe
 
 func Library() *runtime.Library {
 	return &runtime.Library{
-		Name:          "aws-ssm",
-		Description:   "AWS SSM library for Unobin.",
+		Name:        "aws-ssm",
+		Description: "AWS SSM library for Unobin.",
+		Compatibility: runtime.LibraryCompatibility{
+			RequiredAPI:            "1.0",
+			SuggestedUnobinVersion: "v0.12.0",
+		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"parameter": makeResource[svc.ParameterResource, *svc.ParameterResourceOutput](),
