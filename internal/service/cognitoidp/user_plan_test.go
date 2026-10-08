@@ -143,7 +143,7 @@ func planUserChange(
 	}
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.user",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-cognitoidp", Export: "user"},
 		SchemaVersion: 1,

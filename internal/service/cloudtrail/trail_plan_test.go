@@ -98,7 +98,7 @@ func TestTrailNameChangePlansAndAppliesReplacement(t *testing.T) {
 	snapshot := state.NewSnapshot(factory, store.Stack())
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.trail",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-cloudtrail", Export: "trail"},
 		SchemaVersion: 1,

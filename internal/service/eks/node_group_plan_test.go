@@ -291,7 +291,7 @@ func planNodeGroupChange(
 	snapshot := state.NewSnapshot(factory, store.Stack())
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.workers",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-eks", Export: "node-group"},
 		SchemaVersion: 1,

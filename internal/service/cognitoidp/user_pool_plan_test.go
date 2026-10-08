@@ -290,7 +290,7 @@ func planUserPoolClientChange(
 	maps.Copy(inputs, prior)
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.client",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-cognitoidp", Export: "user-pool-client"},
 		SchemaVersion: 1,
@@ -534,7 +534,7 @@ func planUserPoolChange(
 	snapshot.Entries = []*state.Entry{
 		{
 			Address:       "resource.pool",
-			Type:          state.EntryLeaf,
+			Composite:     false,
 			Category:      "resource",
 			Binding:       &state.Binding{Alias: "aws-cognitoidp", Export: "user-pool"},
 			SchemaVersion: 1,

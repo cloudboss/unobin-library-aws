@@ -196,7 +196,7 @@ func planAddonChange(
 	snapshot := state.NewSnapshot(factory, store.Stack())
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.addon",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-eks", Export: "addon"},
 		SchemaVersion: 1,

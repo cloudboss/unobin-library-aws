@@ -118,7 +118,7 @@ func TestAccessPointPlanDistinguishesUpdateAndReplacement(t *testing.T) {
 			snapshot := state.NewSnapshot(factory, store.Stack())
 			snapshot.Entries = []*state.Entry{{
 				Address:       "resource.access",
-				Type:          state.EntryLeaf,
+				Composite:     false,
 				Category:      "resource",
 				Binding:       &state.Binding{Alias: "aws-efs", Export: "access-point"},
 				SchemaVersion: 1,

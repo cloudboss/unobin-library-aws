@@ -283,7 +283,7 @@ func planDomainChange(
 	snapshot := state.NewSnapshot(factory, store.Stack())
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.domain",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-opensearch", Export: "domain"},
 		SchemaVersion: 1,

@@ -220,7 +220,7 @@ func webACLAssociationPlanExecutor(
 	snapshot := state.NewSnapshot(factory, store.Stack())
 	snapshot.Entries = []*state.Entry{{
 		Address:       "resource.association",
-		Type:          state.EntryLeaf,
+		Composite:     false,
 		Category:      "resource",
 		Binding:       &state.Binding{Alias: "aws-wafv2", Export: "web-acl-association"},
 		SchemaVersion: 1,

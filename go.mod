@@ -42,7 +42,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
 	github.com/aws/aws-sdk-go-v2/service/wafv2 v1.73.0
 	github.com/aws/smithy-go v1.27.3
-	github.com/cloudboss/unobin v0.12.0-a.8
+	github.com/cloudboss/unobin v0.12.0
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73
 	github.com/hashicorp/awspolicyequivalence v1.7.0
 	github.com/stretchr/testify v1.11.1
