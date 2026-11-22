@@ -62,6 +62,19 @@ func TestSqsSchemas(t *testing.T) {
 			},
 			Constraints: []lang.ConstraintSpec{
 				{
+					Kind:    "predicate",
+					When:    "(input.fifo-queue == true)",
+					Require: `(@core.is-match(input.name, '^[0-9A-Za-z_-]{1,75}\\.fifo$'))`,
+					Message: "FIFO queue name must use letters, digits, underscores, or hyphens " +
+						"and end in .fifo, with a maximum length of 80 characters",
+				},
+				{
+					Kind:    "predicate",
+					When:    "!(input.fifo-queue == true)",
+					Require: `(@core.is-match(input.name, '^[0-9A-Za-z_-]{1,80}$'))`,
+					Message: "standard queue name must be 1 to 80 letters, digits, underscores, or hyphens",
+				},
+				{
 					Kind:   "at-most-one-of",
 					Fields: []string{"input.kms-master-key-id", "input.sqs-managed-sse-enabled"},
 				},

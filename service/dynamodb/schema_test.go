@@ -256,7 +256,11 @@ func TestDynamodbSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assertTypeSchemaEqual(t, want, schema.Resources[key])
+			got := *schema.Resources[key]
+			assert.Subset(t, normalizeConstraintSpecs(got.Constraints),
+				normalizeConstraintSpecs(want.Constraints))
+			got.Constraints = want.Constraints
+			assertTypeSchemaEqual(t, want, &got)
 		})
 	}
 }

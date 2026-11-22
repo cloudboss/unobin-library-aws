@@ -74,6 +74,19 @@ func TestSnsSchemas(t *testing.T) {
 			Constraints: []lang.ConstraintSpec{
 				{
 					Kind:    "predicate",
+					When:    "(input.fifo-topic == true)",
+					Require: `(@core.is-match(input.name, '^[0-9A-Za-z_-]{1,251}\\.fifo$'))`,
+					Message: "FIFO topic name must use letters, digits, underscores, or hyphens " +
+						"and end in .fifo, with a maximum length of 256 characters",
+				},
+				{
+					Kind:    "predicate",
+					When:    "!(input.fifo-topic == true)",
+					Require: `(@core.is-match(input.name, '^[0-9A-Za-z_-]{1,256}$'))`,
+					Message: "standard topic name must be 1 to 256 letters, digits, underscores, or hyphens",
+				},
+				{
+					Kind:    "predicate",
 					When:    "(input.archive-policy != null)",
 					Require: "(input.fifo-topic == true)",
 					Message: "archive-policy requires fifo-topic to be true",

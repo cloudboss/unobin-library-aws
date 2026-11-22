@@ -9,6 +9,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestValidateMetricQuerySource(t *testing.T) {
+	metric := &MetricAlarmMetricStat{}
+	for _, tt := range []struct {
+		name  string
+		query MetricAlarmMetricQuery
+		valid bool
+	}{
+		{"expression", MetricAlarmMetricQuery{Expression: aws.String("m1 + m2")}, true},
+		{"metric", MetricAlarmMetricQuery{Metric: metric}, true},
+		{"neither", MetricAlarmMetricQuery{}, false},
+		{"both", MetricAlarmMetricQuery{Expression: aws.String("m1"), Metric: metric}, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			alarm := MetricAlarmResource{MetricQuery: &[]MetricAlarmMetricQuery{tt.query}}
+			err := alarm.validateMetricQuery()
+			if tt.valid {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, "requires exactly one of expression or metric")
+			}
+		})
+	}
+}
+
 func TestValidatePeriod(t *testing.T) {
 	cases := []struct {
 		name           string

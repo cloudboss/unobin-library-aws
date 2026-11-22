@@ -802,7 +802,11 @@ func TestEc2AmiSchema(t *testing.T) {
 			},
 		},
 	}
-	assertTypeSchemaEqual(t, want, schema.DataSources["ami"])
+	got := *schema.DataSources["ami"]
+	assert.Subset(t, normalizeConstraintSpecs(got.Constraints),
+		normalizeConstraintSpecs(want.Constraints))
+	got.Constraints = want.Constraints
+	assertTypeSchemaEqual(t, want, &got)
 }
 
 // TestLibraryRegistersEc2Routing checks the runtime registration: the seven

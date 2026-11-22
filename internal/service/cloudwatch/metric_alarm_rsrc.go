@@ -28,18 +28,17 @@ const treatMissingDataDefault = "missing"
 // so an omitted actions-enabled is sent as this default.
 const actionsEnabledDefault = true
 
-// percentilePattern matches the extended statistics CloudWatch accepts for an
+// extendedStatisticPattern matches the extended statistics CloudWatch accepts for an
 // extended-statistic or a metric-query stat: a pXX.X percentile or one of the
-// trimmed/winsorized/interquartile families. It mirrors the values the API
-// validates and is checked in code because the constraint vocabulary cannot
-// match a string against a pattern.
-var percentilePattern = regexp.MustCompile(
-	`^p(\d{1,3}(\.\d{1,2})?)$|` +
-		`^(tm|wm|tc|ts)(\d{1,3}(\.\d{1,2})?)$|` +
-		`^IQM$|` +
-		`^(TM|WM|PR|TC|TS)\(\d+(\.\d+)?%?:\d+(\.\d+)?%?\)$|` +
-		`^(TM|WM|PR|TC|TS)\(\d+(\.\d+)?%?:\)$|` +
-		`^(TM|WM|PR|TC|TS)\(:\d+(\.\d+)?%?\)$`)
+// trimmed/winsorized/interquartile families.
+const extendedStatisticPattern = `^p(\d{1,3}(\.\d{1,2})?)$|` +
+	`^(tm|wm|tc|ts)(\d{1,3}(\.\d{1,2})?)$|` +
+	`^IQM$|` +
+	`^(TM|WM|PR|TC|TS)\(\d+(\.\d+)?%?:\d+(\.\d+)?%?\)$|` +
+	`^(TM|WM|PR|TC|TS)\(\d+(\.\d+)?%?:\)$|` +
+	`^(TM|WM|PR|TC|TS)\(:\d+(\.\d+)?%?\)$`
+
+var percentilePattern = regexp.MustCompile(extendedStatisticPattern)
 
 // standardStatistics are the non-percentile statistics CloudWatch accepts for a
 // metric-query stat. A metric-query stat may be one of these or a percentile,
@@ -54,7 +53,7 @@ var standardStatistics = map[string]bool{
 
 // ec2AutomatePattern matches the EC2-automate action ARNs CloudWatch accepts in
 // an alarm action list in addition to ordinary service ARNs. It is checked in
-// code because an action value is validated against a pattern, not a value set.
+// the Go validator alongside ordinary action ARNs.
 var ec2AutomatePattern = regexp.MustCompile(
 	`^arn:[\w-]+:(automate|swf):[\w-]+:.*:.+$`)
 
@@ -67,13 +66,8 @@ var ec2AutomatePattern = regexp.MustCompile(
 // the result of a metric-math expression (the metric-query array); the two
 // forms are mutually exclusive. Tags are reconciled separately by ARN.
 //
-// Several rules cannot be expressed as constraints and are checked in code:
-// alarm-name is 1-255 and alarm-description 0-1024 characters (the length
-// function counts bytes, not characters); a namespace is 1-255 characters and
-// cannot contain a colon; an extended-statistic and a metric-query stat must
-// match a percentile or statistic pattern; a period is 10, 20, or 30 seconds
-// or a multiple of 60 (a metric-query period also allows 1 and 5); and an
-// action ARN must be an ordinary ARN or an EC2-automate ARN.
+// A period is 10, 20, or 30 seconds or a positive multiple of 60 seconds.
+// Metric-query periods also accept 1 and 5 seconds.
 type MetricAlarmResource struct {
 	AlarmName                        string                    `ub:"alarm-name"`
 	ActionsEnabled                   *bool                     `ub:"actions-enabled"`
@@ -129,9 +123,7 @@ func (r *MetricAlarmResource) ReplaceFields() []string {
 // either a static threshold or an anomaly-detection threshold-metric-id but not
 // both. The comparison-operator and evaluation-periods are required for either
 // form, and a single-metric alarm must set exactly one of statistic or
-// extended-statistic. The enums fix their value sets, and the counts and bounds
-// are enforced. The pattern-based and divisible-by rules are checked in code
-// (see the type doc) because the constraint vocabulary cannot express them.
+// extended-statistic.
 func (r MetricAlarmResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.Any(
@@ -211,9 +203,33 @@ func (r MetricAlarmResource) Constraints() []constraint.Constraint {
 			Message("insufficient-data-actions allows at most 5 actions"),
 		constraint.ForEach(r.MetricQuery, func(q MetricAlarmMetricQuery) []constraint.Constraint {
 			return []constraint.Constraint{
-				constraint.AtMostOneOf(q.Expression, q.Metric),
+				constraint.ExactlyOneOf(q.Expression, q.Metric).
+					Message("metric-query requires exactly one of expression or metric"),
+				constraint.When(constraint.Present(q.Period)).Require(constraint.Any(
+					constraint.OneOf(q.Period, 1, 5, 10, 20, 30),
+					constraint.All(constraint.Above(q.Period, 0),
+						constraint.Equals(constraint.Remainder(q.Period, 60), 0)),
+				)).Message("metric-query period must be 1, 5, 10, 20, 30, " +
+					"or a positive multiple of 60"),
+				constraint.When(constraint.Present(q.Metric.Period)).Require(constraint.Any(
+					constraint.OneOf(q.Metric.Period, 1, 5, 10, 20, 30),
+					constraint.All(constraint.Above(q.Metric.Period, 0),
+						constraint.Equals(constraint.Remainder(q.Metric.Period, 60), 0)),
+				)).Message("metric-query metric period must be 1, 5, 10, 20, 30, " +
+					"or a positive multiple of 60"),
+				constraint.Must(constraint.Any(
+					constraint.OneOf(q.Metric.Stat, "SampleCount", "Average", "Sum", "Minimum", "Maximum"),
+					constraint.IsMatch(q.Metric.Stat, extendedStatisticPattern),
+				)).Message("metric-query metric stat must be a valid statistic or percentile"),
 			}
 		}),
+		constraint.When(constraint.Present(r.Period)).Require(constraint.Any(
+			constraint.OneOf(r.Period, 10, 20, 30),
+			constraint.All(constraint.Above(r.Period, 0),
+				constraint.Equals(constraint.Remainder(r.Period, 60), 0)),
+		)).Message("period must be 10, 20, 30, or a positive multiple of 60"),
+		constraint.Must(constraint.IsMatch(r.ExtendedStatistic, extendedStatisticPattern)).
+			Message("extended-statistic must be a valid percentile or extended statistic"),
 	}
 }
 
@@ -499,11 +515,6 @@ func metricAlarmTags(tags map[string]string) []cloudwatchtypes.Tag {
 	return out
 }
 
-// validate checks the rules the constraint vocabulary cannot express: the
-// character-count limits (the length function counts bytes, not characters),
-// the colon-free namespace, the percentile and statistic patterns, the
-// divisible-by period values, and the action ARN forms. CloudWatch enforces
-// these as well; checking them here turns a server rejection into a clear error.
 func (r *MetricAlarmResource) validate() error {
 	if n := len(r.AlarmName); n < 1 || n > 255 {
 		return fmt.Errorf("alarm-name must be 1 to 255 characters, got %d", n)
@@ -534,12 +545,11 @@ func (r *MetricAlarmResource) validate() error {
 	return r.validateMetricQuery()
 }
 
-// validateMetricQuery checks the per-element rules of the metric-math array that
-// cannot be expressed as constraints: each element period and each metric block
-// period, the metric block namespace, and the metric block statistic, which may
-// be a standard statistic or a percentile.
 func (r *MetricAlarmResource) validateMetricQuery() error {
 	for i, q := range ptr.Value(r.MetricQuery) {
+		if (q.Expression == nil) == (q.Metric == nil) {
+			return fmt.Errorf("metric-query[%d] requires exactly one of expression or metric", i)
+		}
 		if err := validatePeriod(
 			fmt.Sprintf("metric-query[%d].period", i), q.Period, true); err != nil {
 			return err

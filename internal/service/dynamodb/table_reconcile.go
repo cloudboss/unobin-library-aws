@@ -130,10 +130,7 @@ func updateWarmThroughput(
 // validateAttributesIndexed checks that every attribute definition is used by a
 // key and every key references a defined attribute. DynamoDB rejects a create
 // or update that defines an attribute no key uses, and one whose key names an
-// attribute that is not defined. The set-membership rule spans the table key,
-// every local secondary index, and every global secondary index, so it cannot
-// be expressed as a field constraint and is checked here. The returned error
-// lists the offending names so the operator can see which to add or remove.
+// attribute that is not defined. The error lists the names to add or remove.
 func validateAttributesIndexed(
 	attributes []TableAttribute,
 	hashKey string,

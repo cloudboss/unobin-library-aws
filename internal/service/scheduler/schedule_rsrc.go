@@ -133,6 +133,10 @@ func (r *ScheduleResource) ReplaceFields() []string {
 
 func (r ScheduleResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
+		constraint.Must(constraint.IsFormat(r.StartDate, constraint.FormatDateTime)).
+			Message("start-date must be RFC3339"),
+		constraint.Must(constraint.IsFormat(r.EndDate, constraint.FormatDateTime)).
+			Message("end-date must be RFC3339"),
 		constraint.When(constraint.Present(r.ActionAfterCompletion)).
 			Require(constraint.OneOf(r.ActionAfterCompletion, "DELETE", "NONE")).
 			Message("action-after-completion must be DELETE or NONE"),
@@ -193,6 +197,19 @@ func (r ScheduleResource) Constraints() []constraint.Constraint {
 		constraint.Must(constraint.MaxItems(
 			r.Target.ECSParameters.CapacityProviderStrategy, 6)).
 			Message("capacity-provider-strategy holds at most 6 entries"),
+		constraint.Must(constraint.AtMost(constraint.CountWhere(
+			r.Target.ECSParameters.CapacityProviderStrategy,
+			func(s ScheduleECSCapacityProviderStrategy) constraint.Condition {
+				return constraint.All(constraint.Present(s.Base), constraint.Above(s.Base, 0))
+			},
+		), 1)).Message("capacity-provider-strategy permits at most one positive base"),
+		constraint.When(constraint.NotEmpty(r.Target.ECSParameters.CapacityProviderStrategy)).
+			Require(constraint.AtLeast(constraint.CountWhere(
+				r.Target.ECSParameters.CapacityProviderStrategy,
+				func(s ScheduleECSCapacityProviderStrategy) constraint.Condition {
+					return constraint.All(constraint.Present(s.Weight), constraint.Above(s.Weight, 0))
+				},
+			), 1)).Message("capacity-provider-strategy requires at least one positive weight"),
 		constraint.ForEach(r.Target.ECSParameters.CapacityProviderStrategy,
 			func(s ScheduleECSCapacityProviderStrategy) []constraint.Constraint {
 				return []constraint.Constraint{

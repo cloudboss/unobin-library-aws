@@ -47,9 +47,14 @@ const attributeReusePeriodDefault = "300"
 // name of up to 80 name characters. SQS counts these lengths in characters,
 // and the character class is ASCII, so the byte length the regexp enforces
 // equals the character length.
+const (
+	fifoQueueNamePattern     = `^[0-9A-Za-z_-]{1,75}\.fifo$`
+	standardQueueNamePattern = `^[0-9A-Za-z_-]{1,80}$`
+)
+
 var (
-	fifoNameRegexp     = regexp.MustCompile(`^[0-9A-Za-z_-]{1,75}\.fifo$`)
-	standardNameRegexp = regexp.MustCompile(`^[0-9A-Za-z_-]{1,80}$`)
+	fifoNameRegexp     = regexp.MustCompile(fifoQueueNamePattern)
+	standardNameRegexp = regexp.MustCompile(standardQueueNamePattern)
 )
 
 // QueueResource manages an SQS queue, standard or FIFO. The queue name and the FIFO
@@ -62,8 +67,7 @@ var (
 // Name is required, since SQS does not generate a queue name and CreateQueue
 // rejects an empty one. It must match the SQS name rules, which depend on the
 // queue type: a FIFO name must match ^[0-9A-Za-z_-]{1,75}\.fifo$ and a standard
-// name ^[0-9A-Za-z_-]{1,80}$. That rule is a regular-expression and byte-length
-// check enforced in Create rather than a declarative constraint.
+// name ^[0-9A-Za-z_-]{1,80}$.
 type QueueResource struct {
 	Name                          string             `ub:"name"`
 	FifoQueue                     *bool              `ub:"fifo-queue"`
@@ -112,11 +116,17 @@ func (r *QueueResource) ReplaceFields() []string {
 // at most one server-side encryption scheme, so a KMS key and SQS-managed
 // encryption are mutually exclusive. Content-based deduplication and the two
 // high-throughput attributes apply only to FIFO queues. The enum and numeric
-// attributes each accept a fixed set or range of values; the name rules are a
-// regular-expression check in Create rather than a constraint, since they
-// depend on the queue type and count bytes.
+// attributes each accept a fixed set or range of values. The name pattern
+// depends on the queue type.
 func (r QueueResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
+		constraint.When(constraint.IsTrue(r.FifoQueue)).
+			Require(constraint.IsMatch(r.Name, fifoQueueNamePattern)).
+			Message("FIFO queue name must use letters, digits, underscores, or hyphens " +
+				"and end in .fifo, with a maximum length of 80 characters"),
+		constraint.When(constraint.Not(constraint.IsTrue(r.FifoQueue))).
+			Require(constraint.IsMatch(r.Name, standardQueueNamePattern)).
+			Message("standard queue name must be 1 to 80 letters, digits, underscores, or hyphens"),
 		constraint.AtMostOneOf(r.KmsMasterKeyId, r.SqsManagedSseEnabled),
 		constraint.When(constraint.IsTrue(r.ContentBasedDeduplication)).
 			Require(constraint.IsTrue(r.FifoQueue)).

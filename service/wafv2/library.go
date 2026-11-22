@@ -23,8 +23,8 @@ func Library() *runtime.Library {
 		Name:        "aws-wafv2",
 		Description: "AWS WAFv2 library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
-			SuggestedUnobinVersion: "v0.12.0",
+			RequiredAPI:            "1.1",
+			SuggestedUnobinVersion: "v0.13.0-a.4",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{

@@ -30,6 +30,8 @@ func TestScheduleSchema(t *testing.T) {
 		messages[value.Message] = value
 	}
 	for _, message := range []string{
+		"start-date must be RFC3339",
+		"end-date must be RFC3339",
 		"action-after-completion must be DELETE or NONE",
 		"flexible-time-window mode must be OFF or FLEXIBLE",
 		"maximum-window-in-minutes must be between 1 and 1440",
@@ -41,6 +43,8 @@ func TestScheduleSchema(t *testing.T) {
 		"task-count must be between 1 and 10",
 		"launch-type must be EC2, FARGATE, or EXTERNAL",
 		"capacity-provider-strategy holds at most 6 entries",
+		"capacity-provider-strategy permits at most one positive base",
+		"capacity-provider-strategy requires at least one positive weight",
 		"capacity provider base must be between 0 and 100000",
 		"capacity provider weight must be between 0 and 1000",
 		"FARGATE requires networking and forbids placement constraints",

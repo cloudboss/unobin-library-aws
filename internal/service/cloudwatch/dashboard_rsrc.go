@@ -22,10 +22,15 @@ import (
 	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
 
+const (
+	dashboardTagKeyRegexp   = `^[\p{L}\p{Z}\p{N}_.:/=+@-]+$`
+	dashboardTagValueRegexp = `^[\p{L}\p{Z}\p{N}_.:/=+@-]*$`
+)
+
 var (
 	dashboardNamePattern     = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-	dashboardTagKeyPattern   = regexp.MustCompile(`^[\p{L}\p{Z}\p{N}_.:/=+@-]+$`)
-	dashboardTagValuePattern = regexp.MustCompile(`^[\p{L}\p{Z}\p{N}_.:/=+@-]*$`)
+	dashboardTagKeyPattern   = regexp.MustCompile(dashboardTagKeyRegexp)
+	dashboardTagValuePattern = regexp.MustCompile(dashboardTagValueRegexp)
 )
 
 type DashboardResource struct {
@@ -49,6 +54,21 @@ func (r DashboardResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.Must(constraint.MaxItems(r.Tags, 50)).
 			Message("tags holds at most 50 entries"),
+		constraint.ForEach(r.Tags, func(tag constraint.MapEntry[string]) []constraint.Constraint {
+			return []constraint.Constraint{
+				constraint.Must(constraint.AtLeast(constraint.Length(tag.Key), 1),
+					constraint.AtMost(constraint.Length(tag.Key), 128)).
+					Message("tag key must be 1 to 128 characters"),
+				constraint.Must(constraint.Not(constraint.IsMatch(tag.Key, `^aws:`))).
+					Message("tag key must not begin with aws:"),
+				constraint.Must(constraint.IsMatch(tag.Key, dashboardTagKeyRegexp)).
+					Message("tag key contains invalid characters"),
+				constraint.Must(constraint.AtMost(constraint.Length(tag.Value), 256)).
+					Message("tag value must be at most 256 characters"),
+				constraint.Must(constraint.IsMatch(tag.Value, dashboardTagValueRegexp)).
+					Message("tag value contains invalid characters"),
+			}
+		}),
 	}
 }
 

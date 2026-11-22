@@ -30,10 +30,8 @@ import (
 // scoped by an owner or an explicit id -- owners is empty, image-ids is empty,
 // and no filter is named image-id or owner-id -- a third party could publish a
 // newer image that the lookup would then select, so the lookup errors unless
-// allow-unsafe-filter is set. This is list-content logic over the filter names,
-// not a per-field rule, so it lives in Read rather than in Constraints. The
-// owners list, when given, must hold no empty-string element; that element check
-// is likewise enforced in Read.
+// allow-unsafe-filter is set. The owners list, when given, must hold no
+// empty-string element.
 //
 // Terraform's separate best-effort GetInstanceUefiData call is declined: it is a
 // second request per read for a niche UEFI value, it passes an image id where an
@@ -86,23 +84,38 @@ type AMIDataSourceOutput struct {
 	State              string `ub:"state"`
 }
 
-// Constraints declares the input rules expressible as a derived schema. The
-// owners list, when given, must hold at least one element. The no-empty-element
-// rule on owners and the requirement that name-regex compile are runtime checks
-// enforced in Read, since neither an element-value test nor a regex-validity
-// test is a derivable constraint.
 func (r AMIDataSource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.When(constraint.Present(r.Owners)).
 			Require(constraint.MinItems(r.Owners, 1)).
 			Message("owners must list at least one owner when given"),
+		constraint.ForEach(r.Owners, func(owner string) []constraint.Constraint {
+			return []constraint.Constraint{
+				constraint.Must(constraint.NotEmpty(owner)).
+					Message("owners must not contain an empty value"),
+			}
+		}),
+		constraint.Must(constraint.IsFormat(r.NameRegex, constraint.FormatRegex)).
+			Message("name-regex must be a valid regular expression"),
+		constraint.When(constraint.All(
+			constraint.IsTrue(r.MostRecent), constraint.Not(constraint.IsTrue(r.AllowUnsafeFilter)),
+		)).Require(constraint.Any(
+			constraint.NotEmpty(r.Owners),
+			constraint.NotEmpty(r.ImageIds),
+			constraint.HasItem(constraint.Project(r.Filters, func(f AMIFilter) any {
+				return f.Name
+			}), "image-id"),
+			constraint.HasItem(constraint.Project(r.Filters, func(f AMIFilter) any {
+				return f.Name
+			}), "owner-id"),
+		)).Message("most-recent requires owners, image-ids, or an image-id or owner-id " +
+			"filter unless allow-unsafe-filter is true"),
 	}
 }
 
-// Read resolves the AMI. It validates the inputs that the schema cannot, runs
-// the unsafe-filter guard, paginates DescribeImages in full, applies the
-// client-side name-regex filter, then selects the single result -- erroring on
-// no match or, without most-recent, on more than one.
+// Read guards the lookup inputs, paginates DescribeImages, applies name-regex,
+// and selects a result. It errors on no match or on multiple matches when
+// most-recent is disabled.
 func (r *AMIDataSource) Read(ctx context.Context, cfg *awsCfg) (*AMIDataSourceOutput, error) {
 	nameRegex, err := r.compileNameRegex()
 	if err != nil {
@@ -150,9 +163,6 @@ func (r *AMIDataSource) compileNameRegex() (*regexp.Regexp, error) {
 	return re, nil
 }
 
-// checkOwnersElements rejects an owners list that holds an empty-string element,
-// the second half of Terraform's owners validation that a derived constraint
-// cannot express.
 func (r *AMIDataSource) checkOwnersElements() error {
 	if r.Owners != nil && slices.Contains(*r.Owners, "") {
 		return errors.New("owners must not contain an empty value")

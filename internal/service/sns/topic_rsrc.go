@@ -73,11 +73,16 @@ const topicNotFoundCode = "NotFound"
 // fifoNamePattern matches a valid FIFO topic name: up to 251 of the allowed
 // characters followed by the required .fifo suffix. SNS appends nothing on its
 // own, so a FIFO topic's name must already end with the suffix.
-var fifoNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,251}\.fifo$`)
+var fifoNamePattern = regexp.MustCompile(fifoTopicNamePattern)
 
 // standardNamePattern matches a valid standard (non-FIFO) topic name: 1 to 256
 // of the allowed characters with no .fifo suffix.
-var standardNamePattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,256}$`)
+var standardNamePattern = regexp.MustCompile(standardTopicNamePattern)
+
+const (
+	fifoTopicNamePattern     = `^[0-9A-Za-z_-]{1,251}\.fifo$`
+	standardTopicNamePattern = `^[0-9A-Za-z_-]{1,256}$`
+)
 
 // TopicResource is an SNS topic: a named publish/subscribe channel plus the attributes
 // that govern delivery, encryption, access, and FIFO behavior. CreateTopic
@@ -145,11 +150,17 @@ func (r *TopicResource) ReplaceFields() []string {
 // policy, the FIFO throughput scope, and content-based deduplication apply only
 // to FIFO topics, so each requires fifo-topic to be true. The throughput scope,
 // tracing config, and signature version each accept a fixed set of values, and
-// the five success-feedback sample rates are percentages between 0 and 100. The
-// name pattern is checked in code rather than here because it depends on the
-// FIFO flag.
+// the five success-feedback sample rates are percentages between 0 and 100.
+// The name pattern depends on the FIFO flag.
 func (r TopicResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
+		constraint.When(constraint.IsTrue(r.FifoTopic)).
+			Require(constraint.IsMatch(r.Name, fifoTopicNamePattern)).
+			Message("FIFO topic name must use letters, digits, underscores, or hyphens " +
+				"and end in .fifo, with a maximum length of 256 characters"),
+		constraint.When(constraint.Not(constraint.IsTrue(r.FifoTopic))).
+			Require(constraint.IsMatch(r.Name, standardTopicNamePattern)).
+			Message("standard topic name must be 1 to 256 letters, digits, underscores, or hyphens"),
 		constraint.When(constraint.Present(r.ArchivePolicy)).
 			Require(constraint.IsTrue(r.FifoTopic)).
 			Message("archive-policy requires fifo-topic to be true"),

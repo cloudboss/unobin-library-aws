@@ -82,9 +82,8 @@ func (r *TableResource) ReplaceFields() []string {
 // every global secondary index need read and write capacity, and the on-demand
 // throughput block conflicts with capacity. The stream view type requires a
 // stream and the time-to-live attribute name requires time-to-live. The enums
-// fix the value sets, and the recovery period is bounded. The all-attributes-
-// indexed rule spans the table key and every index and cannot be expressed
-// here, so it is checked in Create and Update.
+// fix the value sets, and the recovery period is bounded. Every key uses a
+// defined attribute, and every declared attribute belongs to a key.
 func (r TableResource) Constraints() []constraint.Constraint {
 	return []constraint.Constraint{
 		constraint.AtMostOneOf(r.ReadCapacity, r.OnDemandThroughput),
@@ -122,10 +121,27 @@ func (r TableResource) Constraints() []constraint.Constraint {
 			Require(constraint.AtLeast(r.PointInTimeRecovery.RecoveryPeriodInDays, 1),
 				constraint.AtMost(r.PointInTimeRecovery.RecoveryPeriodInDays, 35)).
 			Message("point-in-time-recovery recovery-period-in-days must be between 1 and 35"),
+		constraint.Must(constraint.HasItem(constraint.Project(r.Attribute, func(a TableAttribute) any {
+			return a.Name
+		}), r.HashKey)).Message("hash-key must name a declared attribute"),
+		constraint.When(constraint.Present(r.RangeKey)).
+			Require(constraint.HasItem(constraint.Project(r.Attribute, func(a TableAttribute) any {
+				return a.Name
+			}), r.RangeKey)).Message("range-key must name a declared attribute"),
 		constraint.ForEach(r.Attribute, func(a TableAttribute) []constraint.Constraint {
 			return []constraint.Constraint{
 				constraint.Must(constraint.OneOf(a.Type, "S", "N", "B")).
 					Message("attribute type must be S, N, or B"),
+				constraint.Must(constraint.Any(
+					constraint.Equals(a.Name, r.HashKey),
+					constraint.Equals(a.Name, r.RangeKey),
+					constraint.HasItem(constraint.Project(r.LocalSecondaryIndex,
+						func(lsi TableLocalSecondaryIndex) any { return lsi.RangeKey }), a.Name),
+					constraint.HasItem(constraint.Project(r.GlobalSecondaryIndex,
+						func(gsi TableGlobalSecondaryIndex) any { return gsi.HashKey }), a.Name),
+					constraint.HasItem(constraint.Project(r.GlobalSecondaryIndex,
+						func(gsi TableGlobalSecondaryIndex) any { return gsi.RangeKey }), a.Name),
+				)).Message("attribute must be used by a table or index key"),
 			}
 		}),
 		constraint.ForEach(r.LocalSecondaryIndex,
@@ -135,6 +151,9 @@ func (r TableResource) Constraints() []constraint.Constraint {
 						"ALL", "INCLUDE", "KEYS_ONLY")).
 						Message("local-secondary-index projection-type must be " +
 							"ALL, INCLUDE, or KEYS_ONLY"),
+					constraint.Must(constraint.HasItem(constraint.Project(r.Attribute,
+						func(a TableAttribute) any { return a.Name }), lsi.RangeKey)).
+						Message("local-secondary-index range-key must name a declared attribute"),
 				}
 			}),
 		constraint.ForEach(r.GlobalSecondaryIndex,
@@ -144,6 +163,13 @@ func (r TableResource) Constraints() []constraint.Constraint {
 						"ALL", "INCLUDE", "KEYS_ONLY")).
 						Message("global-secondary-index projection-type must be " +
 							"ALL, INCLUDE, or KEYS_ONLY"),
+					constraint.Must(constraint.HasItem(constraint.Project(r.Attribute,
+						func(a TableAttribute) any { return a.Name }), gsi.HashKey)).
+						Message("global-secondary-index hash-key must name a declared attribute"),
+					constraint.When(constraint.Present(gsi.RangeKey)).Require(
+						constraint.HasItem(constraint.Project(r.Attribute,
+							func(a TableAttribute) any { return a.Name }), gsi.RangeKey)).
+						Message("global-secondary-index range-key must name a declared attribute"),
 					constraint.AtMostOneOf(gsi.ReadCapacity, gsi.OnDemandThroughput),
 					constraint.AtMostOneOf(gsi.WriteCapacity, gsi.OnDemandThroughput),
 					constraint.When(constraint.Equals(r.BillingMode, "PROVISIONED")).
@@ -320,9 +346,6 @@ func (r *TableResource) Delete(ctx context.Context, cfg *awsCfg, recordedPrior r
 	return waitTableDeleted(ctx, client, handle)
 }
 
-// validate checks the cross-collection rule the constraint vocabulary cannot
-// express: every attribute definition must be used by a key, and every key must
-// reference a defined attribute.
 func (r *TableResource) validate() error {
 	return validateAttributesIndexed(
 		ptr.Value(r.Attribute), r.HashKey, r.RangeKey, ptr.Value(r.LocalSecondaryIndex),

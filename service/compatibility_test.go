@@ -15,12 +15,19 @@ func TestLibraryCompatibility(t *testing.T) {
 	moduleRoot, err := filepath.Abs("..")
 	require.NoError(t, err)
 
-	want := runtime.LibraryCompatibility{
-		RequiredAPI:            "1.0",
-		SuggestedUnobinVersion: "v0.12.0",
-	}
 	for name, lib := range libraries() {
 		t.Run(name, func(t *testing.T) {
+			want := runtime.LibraryCompatibility{
+				RequiredAPI:            "1.0",
+				SuggestedUnobinVersion: "v0.12.0",
+			}
+			switch name {
+			case "cloudwatch", "dynamodb", "ec2", "scheduler", "sns", "sqs", "wafv2":
+				want = runtime.LibraryCompatibility{
+					RequiredAPI:            "1.1",
+					SuggestedUnobinVersion: "v0.13.0-a.4",
+				}
+			}
 			require.Equal(t, want, lib.Compatibility)
 
 			dir := filepath.Join(moduleRoot, "service", name)

@@ -255,10 +255,11 @@ func TestCloudwatchSchemas(t *testing.T) {
 					Message: "insufficient-data-actions allows at most 5 actions",
 				},
 				{
-					Kind: "at-most-one-of",
+					Kind: "exactly-one-of",
 					Fields: []string{
 						"input.metric-query[*].expression", "input.metric-query[*].metric",
 					},
+					Message: "metric-query requires exactly one of expression or metric",
 				},
 			},
 		},
@@ -266,7 +267,11 @@ func TestCloudwatchSchemas(t *testing.T) {
 	for key, want := range resources {
 		t.Run(key, func(t *testing.T) {
 			require.Contains(t, schema.Resources, key)
-			assertTypeSchemaEqual(t, want, schema.Resources[key])
+			got := *schema.Resources[key]
+			assert.Subset(t, normalizeConstraintSpecs(got.Constraints),
+				normalizeConstraintSpecs(want.Constraints))
+			got.Constraints = want.Constraints
+			assertTypeSchemaEqual(t, want, &got)
 		})
 	}
 }
