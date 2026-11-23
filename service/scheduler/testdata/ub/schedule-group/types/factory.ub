@@ -1,0 +1,18 @@
+factory: {
+  imports:         { aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler' }
+  library-configs: { aws-scheduler: {} }
+  resources: {
+    nonstring-name: aws-scheduler.schedule-group {
+      name: 12
+    }
+    nonstring-prefix: aws-scheduler.schedule-group {
+      name-prefix: true
+    }
+    nonmap-tags: aws-scheduler.schedule-group {
+      tags: ['tag']
+    }
+    nonstring-tag: aws-scheduler.schedule-group {
+      tags: { tag: 12 }
+    }
+  }
+}

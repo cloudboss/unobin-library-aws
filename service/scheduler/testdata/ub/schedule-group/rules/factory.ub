@@ -1,0 +1,28 @@
+factory: {
+  imports:         { aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler' }
+  library-configs: { aws-scheduler: {} }
+  resources: {
+    both: aws-scheduler.schedule-group {
+      name:        'group'
+      name-prefix: 'prefix'
+    }
+    empty-name: aws-scheduler.schedule-group {
+      name: ''
+    }
+    invalid-name: aws-scheduler.schedule-group {
+      name: 'name!'
+    }
+    overflow-name: aws-scheduler.schedule-group {
+      name: '123456789012345678901234567890123456789012345678901234567890123456789'
+    }
+    empty-prefix: aws-scheduler.schedule-group {
+      name-prefix: ''
+    }
+    invalid-prefix: aws-scheduler.schedule-group {
+      name-prefix: 'préfix'
+    }
+    overflow-prefix: aws-scheduler.schedule-group {
+      name-prefix: '123456789012345678901234567890123456789'
+    }
+  }
+}

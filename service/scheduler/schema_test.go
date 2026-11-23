@@ -13,7 +13,6 @@ import (
 
 func TestScheduleSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 1)
 	require.Contains(t, schema.Resources, "schedule")
 	got := schema.Resources["schedule"]
 

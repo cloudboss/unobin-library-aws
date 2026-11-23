@@ -29,6 +29,9 @@ func Library() *runtime.Library {
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"schedule": makeResource[svc.ScheduleResource, *svc.ScheduleResourceOutput](),
+			"schedule-group": makeResource[
+				svc.ScheduleGroupResource, *svc.ScheduleGroupResourceOutput,
+			](),
 		},
 	}
 }

@@ -26,7 +26,6 @@ func TestLibraryRegistersScheduleResource(t *testing.T) {
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 1)
 	require.Contains(t, library.Resources, "schedule")
 	assert.Equal(t, reflect.TypeFor[*svc.ScheduleResourceOutput](),
 		library.Resources["schedule"].OutputType())

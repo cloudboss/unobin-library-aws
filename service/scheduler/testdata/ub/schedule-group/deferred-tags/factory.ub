@@ -1,0 +1,27 @@
+factory: {
+  imports: {
+    aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler'
+    fixture:       'example.test/scheduler-fixture'
+  }
+  library-configs: { aws-scheduler: input.aws-config }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    name:       { type: optional(string) }
+    tag-value:  { type: string }
+  }
+  actions: {
+    seed: fixture.seed {
+      next-tag: input.tag-value
+    }
+  }
+  resources: {
+    group: aws-scheduler.schedule-group {
+      name: input.name
+      tags: { empty: action.seed.tag }
+    }
+  }
+  outputs: {
+    name: { value: resource.group.name }
+    tags: { value: resource.group.tags }
+  }
+}

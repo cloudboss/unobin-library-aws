@@ -1,0 +1,21 @@
+factory: {
+  imports:         { aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler' }
+  library-configs: { aws-scheduler: input.aws-config }
+  inputs: {
+    aws-config:  { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    name:        { type: optional(string) }
+    name-prefix: { type: optional(string) }
+    tags:        { type: optional(map(string)) }
+  }
+  resources: {
+    group: aws-scheduler.schedule-group {
+      name:        input.name
+      name-prefix: input.name-prefix
+      tags:        input.tags
+    }
+  }
+  outputs: {
+    name: { value: resource.group.name }
+    tags: { value: resource.group.tags }
+  }
+}

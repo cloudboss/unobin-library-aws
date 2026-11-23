@@ -1,0 +1,32 @@
+factory: {
+  imports:         { aws-scheduler: 'github.com/cloudboss/unobin-library-aws//service/scheduler' }
+  library-configs: { aws-scheduler: {} }
+  resources: {
+    exact: aws-scheduler.schedule-group {
+      name: 'aBcD0123._-56789012345678901234567890123456789012345678901234567'
+      tags: { empty: '', owner: 'ops' }
+    }
+    prefix: aws-scheduler.schedule-group {
+      name-prefix: 'aBcD0123._-567890123456789012345678901'
+    }
+    generated: aws-scheduler.schedule-group {}
+    schedule: aws-scheduler.schedule {
+      group-name:           resource.exact.name
+      schedule-expression:  'rate(1 day)'
+      flexible-time-window: { mode: 'OFF' }
+      target: {
+        arn:      'arn:aws:sqs:us-west-2:123456789012:queue'
+        role-arn: 'arn:aws:iam::123456789012:role/scheduler'
+      }
+    }
+  }
+  outputs: {
+    arn:          { value: resource.exact.arn }
+    creation:     { value: resource.exact.creation-date }
+    modification: { value: resource.exact.last-modification-date }
+    prefix:       { value: resource.prefix.name-prefix }
+    state:        { value: resource.exact.state }
+    region:       { value: resource.generated.region }
+    tag:          { value: resource.exact.tags.empty }
+  }
+}
