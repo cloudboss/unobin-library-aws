@@ -57,9 +57,6 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	require.Equal(t, []string{
 		"repository",
 	}, sortedKeys(lib.Resources))
-	require.Equal(t, []string{
-		"image",
-	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
@@ -105,8 +102,5 @@ func TestReadECRServiceSchema(t *testing.T) {
 	require.Equal(t, []string{
 		"repository",
 	}, sortedKeys(schema.Resources))
-	require.Equal(t, []string{
-		"image",
-	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

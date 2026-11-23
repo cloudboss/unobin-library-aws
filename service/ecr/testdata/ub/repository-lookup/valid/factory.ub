@@ -1,0 +1,34 @@
+factory: {
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: { region: 'us-gov-west-1', endpoint-url: 'https://ecr.example.test' } }
+  data-sources: {
+    omitted: ecr.repository {
+      name: ''
+    }
+    null: ecr.repository {
+      name:        'Mixed_selector!'
+      registry-id: null
+    }
+    empty: ecr.repository {
+      name:        'repo'
+      registry-id: ''
+    }
+    explicit: ecr.repository {
+      name:        'repo'
+      registry-id: 'registry'
+    }
+  }
+  outputs: {
+    arn:         { value: data-source.omitted.arn }
+    name:        { value: data-source.omitted.name }
+    registry-id: { value: data-source.omitted.registry-id }
+    uri:         { value: data-source.omitted.repository-uri }
+    encryption:  { value: data-source.omitted.encryption-configuration?.encryption-type }
+    key:         { value: data-source.omitted.encryption-configuration?.kms-key }
+    scanning:    { value: data-source.omitted.image-scanning-configuration?.scan-on-push }
+    mutability:  { value: data-source.omitted.image-tag-mutability }
+    filters:     { value: data-source.omitted.image-tag-mutability-exclusion-filters }
+    newest:      { value: data-source.omitted.most-recent-image-tags }
+    tags:        { value: data-source.omitted.tags }
+  }
+}

@@ -1,0 +1,8 @@
+factory: {
+  imports: { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  data-sources: {
+    lookup: ecr.repository {
+      name: null
+    }
+  }
+}

@@ -40,7 +40,8 @@ func Library() *runtime.Library {
 			"repository": makeResource[svc.RepositoryResource, *svc.RepositoryResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
-			"image": makeDataSource[svc.ImageDataSource, *svc.ImageDataSourceOutput](),
+			"image":      makeDataSource[svc.ImageDataSource, *svc.ImageDataSourceOutput](),
+			"repository": makeDataSource[svc.RepositoryDataSource, *svc.RepositoryDataSourceOutput](),
 		},
 	}
 }

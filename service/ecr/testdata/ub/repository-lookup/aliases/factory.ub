@@ -1,0 +1,18 @@
+factory: {
+  imports: { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  data-sources: {
+    lookup: ecr.repository {
+      name:     'repo'
+      region:   'us-east-1'
+      id:       'id'
+      tags-all: {}
+    }
+  }
+  outputs: {
+    id:       { value: data-source.lookup.id }
+    region:   { value: data-source.lookup.region }
+    tags-all: { value: data-source.lookup.tags-all }
+    url:      { value: data-source.lookup.repository-url }
+    singular: { value: data-source.lookup.image-tag-mutability-exclusion-filter }
+  }
+}

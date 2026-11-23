@@ -1,0 +1,32 @@
+factory: {
+  imports: { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  inputs:  { endpoint: { type: string }, lookup: { type: string } }
+  library-configs: {
+    ecr: { region: 'us-gov-west-1', endpoint-url: input.endpoint, max-attempts: 1 }
+  }
+
+  data-sources: {
+    lookup: ecr.repository {
+      name: input.lookup
+    }
+  }
+  resources: {
+    consumer: test.value {
+      uri: data-source.lookup.repository-uri
+    }
+  }
+  outputs: {
+    name:                         { value: data-source.lookup.name }
+    arn:                          { value: data-source.lookup.arn }
+    registry-id:                  { value: data-source.lookup.registry-id }
+    repository-uri:               { value: data-source.lookup.repository-uri }
+    encryption-configuration:     { value: data-source.lookup.encryption-configuration }
+    image-scanning-configuration: { value: data-source.lookup.image-scanning-configuration }
+    image-tag-mutability:         { value: data-source.lookup.image-tag-mutability }
+    image-tag-mutability-exclusion-filters: {
+      value: data-source.lookup.image-tag-mutability-exclusion-filters
+    }
+    most-recent-image-tags: { value: data-source.lookup.most-recent-image-tags }
+    tags:                   { value: data-source.lookup.tags }
+  }
+}

@@ -1,0 +1,32 @@
+factory: {
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    scan-on-push: { type: boolean, default: false }
+    marker:       { type: string, default: 'initial' }
+  }
+  resources: {
+    fixture: ecr.repository {
+      name:                 'unobin-it-ecr-repository'
+      scan-on-push:         input.scan-on-push
+      image-tag-mutability: 'MUTABLE'
+      force-delete:         true
+      tags:                 { unobin: input.marker }
+    }
+  }
+  data-sources: {
+    lookup: ecr.repository {
+      name: resource.fixture.name
+    }
+  }
+  outputs: {
+    uri:    { value: data-source.lookup.repository-uri }
+    scan:   { value: data-source.lookup.image-scanning-configuration?.scan-on-push }
+    newest: { value: data-source.lookup.most-recent-image-tags }
+    tags:   { value: data-source.lookup.tags }
+  }
+}
