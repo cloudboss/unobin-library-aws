@@ -1,1 +1,1 @@
-the scenario's example.com domain is reserved by AWS, so live never assigns its DNS validation records; runs on the emulator tier only
+The scenario's example.com domain is reserved by AWS, so the live tier never assigns its DNS validation records.
