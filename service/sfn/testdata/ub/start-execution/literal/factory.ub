@@ -1,0 +1,46 @@
+factory: {
+  imports: { sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn' }
+  library-configs: {
+    sfn: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint: { type: string }
+  }
+  actions: {
+    omitted: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example'
+    }
+    explicit-null: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example:4'
+      input:             null
+      name:              null
+      trace-header:      null
+      region:            null
+    }
+    empty-optionals: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example:live'
+      input:             ' { "items": [] } '
+      name:              ''
+      trace-header:      ''
+      region:            ''
+    }
+    array: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example'
+      input:             ' [1, true] '
+      name:              'example'
+      trace-header:      'Root=1-67891233-abcdef012345678912345678'
+    }
+    scalar: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example'
+      input:             'true'
+    }
+    json-null: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example'
+      input:             'null'
+    }
+  }
+  outputs: {
+    execution-arn: { value: action.omitted.execution-arn }
+    start-date:    { value: action.omitted.start-date }
+  }
+}

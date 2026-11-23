@@ -31,7 +31,6 @@ func TestLibraryRegistersStateMachineResource(t *testing.T) {
 	assert.Equal(t, reflect.TypeFor[*svc.StateMachineResourceOutput](),
 		library.Resources["state-machine"].OutputType())
 	assert.Empty(t, library.DataSources)
-	assert.Empty(t, library.Actions)
 }
 
 func TestLibraryConfigurationView(t *testing.T) {

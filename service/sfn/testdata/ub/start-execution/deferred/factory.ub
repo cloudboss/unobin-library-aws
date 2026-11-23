@@ -1,0 +1,29 @@
+factory: {
+  imports: { sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn' }
+  library-configs: {
+    sfn: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:          { type: string }
+    state-machine-arn: { type: optional(string) }
+    payload:           { type: optional(string) }
+    trigger:           { type: string }
+  }
+  actions: {
+    seed-arn: test.seed {
+      echo: input.state-machine-arn
+    }
+    seed-payload: test.seed {
+      echo: input.payload
+    }
+    start: sfn.start-execution {
+      @trigger:          input.trigger
+      state-machine-arn: action.seed-arn.value
+      input:             action.seed-payload.value
+    }
+  }
+  outputs: {
+    execution-arn: { value: action.start.execution-arn }
+    start-date:    { value: action.start.start-date }
+  }
+}

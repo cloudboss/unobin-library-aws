@@ -1,0 +1,9 @@
+factory: {
+  imports:         { sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn' }
+  library-configs: { sfn: {} }
+  actions: {
+    start: sfn.start-execution {
+      input: '{}'
+    }
+  }
+}

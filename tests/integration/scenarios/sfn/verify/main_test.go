@@ -142,3 +142,38 @@ func (c *fakeVerifierClient) ListTagsForResource(
 		}},
 	}, nil
 }
+
+func TestVerifyExecutionChecksCloudValues(t *testing.T) {
+	const executionARN = "arn:aws:states:us-east-1:123456789012:" +
+		"execution:unobin-it-state-machine:updated"
+	startDate := time.Date(2026, time.July, 16, 12, 0, 0, 123000000, time.UTC)
+	outputs := map[string]any{
+		"state-machine-arn": initialStateMachineARN,
+		"execution-arn":     executionARN,
+		"start-date":        startDate.Format(time.RFC3339Nano),
+	}
+	client := &fakeExecutionDescriber{output: &sfn.DescribeExecutionOutput{
+		StateMachineArn: aws.String(initialStateMachineARN),
+		ExecutionArn:    aws.String(executionARN),
+		Input:           aws.String(`{"phase":"updated"}`),
+		StartDate:       &startDate,
+	}}
+	require.NoError(t, verifyExecution(t.Context(), client, "updated", outputs))
+	assert.Equal(t, &sfn.DescribeExecutionInput{ExecutionArn: aws.String(executionARN)},
+		client.request)
+
+	client.output.Input = aws.String(`{"phase":"initial"}`)
+	require.ErrorContains(t, verifyExecution(t.Context(), client, "updated", outputs), "input")
+}
+
+type fakeExecutionDescriber struct {
+	request *sfn.DescribeExecutionInput
+	output  *sfn.DescribeExecutionOutput
+}
+
+func (c *fakeExecutionDescriber) DescribeExecution(
+	_ context.Context, request *sfn.DescribeExecutionInput, _ ...func(*sfn.Options),
+) (*sfn.DescribeExecutionOutput, error) {
+	c.request = request
+	return c.output, nil
+}

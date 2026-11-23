@@ -5,6 +5,7 @@ stack: {
         {"StartAt":"Updated","States":{"Updated":{"Type":"Pass","Result":"updated","End":true}}}
         '''
       tracing-enabled: false
+      execution-input: '{"phase":"updated"}'
       tag-value:       'updated'
     }
   }

@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	sfntypes "github.com/aws/aws-sdk-go-v2/service/sfn/types"
+	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/state/local"
 )
 
 const (
@@ -41,9 +43,15 @@ func run() error {
 	client := sfn.NewFromConfig(configuration)
 	switch phase := os.Getenv("VERIFY_PHASE"); phase {
 	case "applied":
-		return verifyApplied(ctx, client)
+		if err := verifyApplied(ctx, client); err != nil {
+			return err
+		}
+		return verifyCurrentExecution(ctx, client, "initial")
 	case "updated":
-		return verifyUpdated(ctx, client)
+		if err := verifyUpdated(ctx, client); err != nil {
+			return err
+		}
+		return verifyCurrentExecution(ctx, client, "updated")
 	case "destroyed":
 		return verifyDestroyed(ctx, client)
 	default:
@@ -174,6 +182,60 @@ func verifyPresent(
 		}
 	}
 	return time.Time{}, fmt.Errorf("state machine tag unobin is not %q", tagValue)
+}
+
+func verifyCurrentExecution(ctx context.Context, client *sfn.Client, phase string) error {
+	buildDir := os.Getenv("VERIFY_BUILD_DIR")
+	if buildDir == "" {
+		return errors.New("VERIFY_BUILD_DIR must be set")
+	}
+	store, err := local.NewStore(
+		filepath.Join(buildDir, ".unobin", "state"), "sfn", "config", encrypters.Noop{},
+	)
+	if err != nil {
+		return fmt.Errorf("open sfn scenario state: %w", err)
+	}
+	snapshot, err := store.Current()
+	if err != nil {
+		return fmt.Errorf("read sfn scenario state: %w", err)
+	}
+	return verifyExecution(ctx, client, phase, snapshot.Outputs)
+}
+
+type executionDescriber interface {
+	DescribeExecution(
+		context.Context, *sfn.DescribeExecutionInput, ...func(*sfn.Options),
+	) (*sfn.DescribeExecutionOutput, error)
+}
+
+func verifyExecution(
+	ctx context.Context, client executionDescriber, phase string, outputs map[string]any,
+) error {
+	stateMachineARN, _ := outputs["state-machine-arn"].(string)
+	executionARN, _ := outputs["execution-arn"].(string)
+	wantARN := strings.Replace(stateMachineARN, ":stateMachine:", ":execution:", 1) + ":" + phase
+	if stateMachineARN == "" || executionARN != wantARN {
+		return fmt.Errorf("execution output ARN is %q, want %q", executionARN, wantARN)
+	}
+	startDate, _ := outputs["start-date"].(string)
+	execution, err := client.DescribeExecution(ctx, &sfn.DescribeExecutionInput{
+		ExecutionArn: aws.String(executionARN),
+	})
+	if err != nil {
+		return fmt.Errorf("describe execution %s: %w", executionARN, err)
+	}
+	if aws.ToString(execution.ExecutionArn) != executionARN ||
+		aws.ToString(execution.StateMachineArn) != stateMachineARN {
+		return fmt.Errorf("execution %s has unexpected identity", executionARN)
+	}
+	if execution.StartDate == nil || execution.StartDate.UTC().Format(time.RFC3339Nano) != startDate {
+		return fmt.Errorf("execution %s has an unexpected start date", executionARN)
+	}
+	if !sameJSON(aws.ToString(execution.Input), fmt.Sprintf(`{"phase":%q}`, phase)) {
+		return fmt.Errorf("execution %s has unexpected input", executionARN)
+	}
+	fmt.Printf("ok: execution %s matches the %s configuration\n", executionARN, phase)
+	return nil
 }
 
 func verifyDestroyed(ctx context.Context, client *sfn.Client) error {

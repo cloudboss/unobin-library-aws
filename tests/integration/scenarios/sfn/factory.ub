@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages a Step Functions state machine and its trusted IAM role. The definition,
-    tracing setting, and tag value come from inputs so the update pass changes them
-    in place.
+    Manages a Step Functions state machine and its trusted IAM role. The
+    definition, tracing setting, and tag value come from inputs so the update
+    pass changes them in place. Starts a named execution on each pass.
     '''
 
   imports: {
@@ -32,6 +32,10 @@ factory: {
       default:     true
       description: 'Whether X-Ray tracing is enabled'
     }
+    execution-input: {
+      type:    string
+      default: '{"phase":"initial"}'
+    }
     tag-value: {
       type:        string
       default:     'initial'
@@ -48,17 +52,28 @@ factory: {
         '''
     }
     state-machine-it: aws-sfn.state-machine {
-      name:       'unobin-it-state-machine'
-      definition: input.definition
-      role-arn:   resource.iam-role-it.arn
-      type:       'STANDARD'
+      name:                  'unobin-it-state-machine'
+      definition:            input.definition
+      role-arn:              resource.iam-role-it.arn
+      type:                  'STANDARD'
       tracing-configuration: { enabled: input.tracing-enabled }
-      tags: { unobin: input.tag-value }
+      tags:                  { unobin: input.tag-value }
+    }
+  }
+
+  actions: {
+    start: aws-sfn.start-execution {
+      @trigger:          input.tag-value
+      state-machine-arn: resource.state-machine-it.arn
+      name:              input.tag-value
+      input:             input.execution-input
     }
   }
 
   outputs: {
+    execution-arn:     { value: action.start.execution-arn }
+    start-date:        { value: action.start.start-date }
     state-machine-arn: { value: resource.state-machine-it.arn }
-    revision-id:      { value: resource.state-machine-it.revision-id }
+    revision-id:       { value: resource.state-machine-it.revision-id }
   }
 }

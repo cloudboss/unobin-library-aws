@@ -1,0 +1,10 @@
+factory: {
+  imports:         { sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn' }
+  library-configs: { sfn: {} }
+  actions: {
+    start: sfn.start-execution {
+      state-machine-arn: 'arn:aws:states:us-east-1:123456789012:stateMachine:example'
+      payload:           '{}'
+    }
+  }
+}

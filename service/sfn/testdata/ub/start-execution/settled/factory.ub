@@ -1,0 +1,23 @@
+factory: {
+  imports: { sfn: 'github.com/cloudboss/unobin-library-aws//service/sfn' }
+  library-configs: {
+    sfn: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:          { type: string }
+    state-machine-arn: { type: string }
+    payload:           { type: optional(string) }
+    trigger:           { type: string }
+  }
+  actions: {
+    start: sfn.start-execution {
+      @trigger:          input.trigger
+      state-machine-arn: input.state-machine-arn
+      input:             input.payload
+    }
+  }
+  outputs: {
+    execution-arn: { value: action.start.execution-arn }
+    start-date:    { value: action.start.start-date }
+  }
+}
