@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    inputs: {
+      scope-type: 'namespace'
+      namespaces: ['kube-system', 'default']
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

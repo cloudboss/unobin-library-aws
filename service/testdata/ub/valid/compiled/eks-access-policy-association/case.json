@@ -1,0 +1,15 @@
+{
+  "name": "eks-access-policy-association",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/aws-eks-access-policy-association",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": ["validate", "-c", "stacks/dev.ub"],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

@@ -1,0 +1,35 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    one: aws-eks.access-policy-association {
+      cluster-name:  'A'
+      principal-arn: 'arn:aws:custom:::principal'
+      policy-arn:    'arn:aws-cn:custom:cn-north-1::policy'
+      access-scope:  { type: 'future', namespaces: ['mixed-*', 'Upper', 'upper', ''] }
+    }
+    hundred: aws-eks.access-policy-association {
+      cluster-name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_9
+        '''
+      principal-arn: 'arn:aws-iso-b:iam::123456789012:role/Example'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'namespace' }
+    }
+    empty-arns: aws-eks.access-policy-association {
+      cluster-name:  '0'
+      principal-arn: ''
+      policy-arn:    ''
+      access-scope:  { type: '', namespaces: [] }
+    }
+  }
+  outputs: {
+    cluster:       { value: resource.one.cluster-name }
+    principal:     { value: resource.one.principal-arn }
+    policy:        { value: resource.one.policy-arn }
+    scope:         { value: resource.one.access-scope }
+    associated-at: { value: resource.one.associated-at }
+    modified-at:   { value: resource.one.modified-at }
+  }
+}

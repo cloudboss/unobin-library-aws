@@ -1,0 +1,75 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    long-name: aws-eks.access-policy-association {
+      cluster-name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        '''
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    bad-start: aws-eks.access-policy-association {
+      cluster-name:  '_example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    bad-character: aws-eks.access-policy-association {
+      cluster-name:  'bad!example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    principal-partition: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:bad:custom::123456789012:item'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    principal-region: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:custom:wrong:123456789012:item'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    principal-account: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:custom::123:item'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    principal-resource: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:custom::123456789012:'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    policy-partition: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:bad:custom::123456789012:item'
+      access-scope:  { type: 'cluster' }
+    }
+    policy-region: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:custom:wrong:123456789012:item'
+      access-scope:  { type: 'cluster' }
+    }
+    policy-account: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:custom::123:item'
+      access-scope:  { type: 'cluster' }
+    }
+    policy-resource: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:custom::123456789012:'
+      access-scope:  { type: 'cluster' }
+    }
+  }
+}

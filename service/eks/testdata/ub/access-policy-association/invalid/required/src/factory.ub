@@ -1,0 +1,50 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    missing-cluster-name: aws-eks.access-policy-association {
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: 'cluster' }
+    }
+    missing-principal-arn: aws-eks.access-policy-association {
+      cluster-name: 'example'
+      policy-arn:   'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope: { type: 'cluster' }
+    }
+    missing-policy-arn: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      access-scope:  { type: 'cluster' }
+    }
+    missing-access-scope: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+    }
+    null-scope: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  null
+    }
+    wrong-scope: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  [{ type: 'cluster' }]
+    }
+    missing-type: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { namespaces: [] }
+    }
+    null-type: aws-eks.access-policy-association {
+      cluster-name:  'example'
+      principal-arn: 'arn:aws:iam::123456789012:role/demo'
+      policy-arn:    'arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy'
+      access-scope:  { type: null }
+    }
+  }
+}

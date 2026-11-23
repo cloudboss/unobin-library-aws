@@ -1,0 +1,23 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:   { type: string }
+    region:     { type: string }
+    cluster:    { type: string }
+    principal:  { type: string }
+    policy:     { type: string }
+    scope-type: { type: string }
+    namespaces: { type: optional(list(string)) }
+  }
+  resources: {
+    association: aws-eks.access-policy-association {
+      cluster-name:  input.cluster
+      principal-arn: input.principal
+      policy-arn:    input.policy
+      access-scope:  { type: input.scope-type, namespaces: input.namespaces }
+    }
+  }
+}

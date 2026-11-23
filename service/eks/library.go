@@ -32,6 +32,10 @@ func Library() *runtime.Library {
 				svc.AccessEntryResource,
 				*svc.AccessEntryResourceOutput,
 			](),
+			"access-policy-association": makeResource[
+				svc.AccessPolicyAssociationResource,
+				*svc.AccessPolicyAssociationResourceOutput,
+			](),
 			"addon":   makeResource[svc.AddonResource, *svc.AddonResourceOutput](),
 			"cluster": makeResource[svc.ClusterResource, *svc.ClusterResourceOutput](),
 			"fargate-profile": makeResource[

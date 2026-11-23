@@ -1,0 +1,27 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:   { type: string }
+    region:     { type: string }
+    cluster:    { type: string }
+    principal:  { type: string }
+    policy:     { type: string }
+    scope-type: { type: string }
+    namespaces: { type: optional(list(string)) }
+  }
+  resources: {
+    seed: aws-eks.access-entry {
+      cluster-name:  'seed'
+      principal-arn: 'arn:aws:iam::123456789012:role/seed'
+    }
+    association: aws-eks.access-policy-association {
+      cluster-name:  resource.seed.user-name
+      principal-arn: resource.seed.arn
+      policy-arn:    resource.seed.kubernetes-groups[0]
+      access-scope:  { type: input.scope-type, namespaces: input.namespaces }
+    }
+  }
+}

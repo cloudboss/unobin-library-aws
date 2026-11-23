@@ -1,0 +1,22 @@
+{
+  "name": "required",
+  "rootPath": "src",
+  "executor": "root",
+  "cliVersion": "v0.13.0-a.4",
+  "commands": [
+    {
+      "name": "compile",
+      "args": [
+        "compile",
+        "--out",
+        "out",
+        "--format",
+        "json"
+      ],
+      "stdout": "want/compile.json",
+      "stderr": "want/compile.stderr",
+      "exitCode": 1,
+      "normalize": "json"
+    }
+  ]
+}
