@@ -1,22 +1,91 @@
 factory: {
   imports: {
+    aws-ec2:  'github.com/cloudboss/unobin-library-aws//service/ec2'
     aws-sqs:  'github.com/cloudboss/unobin-library-aws//service/sqs'
     aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
   }
 
   inputs: {
     aws-config: {
-      type: library-config('github.com/cloudboss/unobin-library-aws//config')
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: { region: 'us-east-1' }
     }
   }
 
   library-configs: {
+    aws-ec2:  input.aws-config
     aws-sqs:  input.aws-config
     aws-meta: input.aws-config
   }
 
   resources: {
+    peering-true-omitted: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: true
+      accepter:    {}
+      requester:   { allow-remote-vpc-dns-resolution: true }
+      tags:        { purpose: 'compatibility' }
+    }
+    peering-true-null: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: true
+      peer-region: null
+    }
+    peering-true-empty: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: true
+      peer-region: ''
+    }
+    peering-false-omitted: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: false
+    }
+    peering-false-null: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: false
+      peer-region: null
+    }
+    peering-false-empty: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: false
+      peer-region: ''
+    }
+    peering-false-explicit: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: false
+      peer-region: 'us-west-2'
+    }
+    peering-null-omitted: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: null
+    }
+    peering-null-null: aws-ec2.vpc-peering-connection {
+      vpc-id:        'vpc-1'
+      peer-vpc-id:   'vpc-2'
+      auto-accept:   null
+      peer-region:   null
+      peer-owner-id: null
+    }
+    peering-null-empty: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: null
+      peer-region: ''
+    }
+    peering-null-explicit: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-1'
+      peer-vpc-id: 'vpc-2'
+      auto-accept: null
+      peer-region: 'us-west-2'
+    }
     queue: aws-sqs.queue {
       name: 'compatibility-queue'
     }
@@ -29,7 +98,17 @@ factory: {
   }
 
   outputs: {
-    queue-arn: { value: resource.queue.arn }
-    account:   { value: data-source.arn.account }
+    vpc-peering-connection-id: { value: resource.peering-true-omitted.vpc-peering-connection-id }
+    vpc-id:                    { value: resource.peering-true-omitted.vpc-id }
+    peer-vpc-id:               { value: resource.peering-true-omitted.peer-vpc-id }
+    peer-owner-id:             { value: resource.peering-true-omitted.peer-owner-id }
+    peer-region:               { value: resource.peering-true-omitted.peer-region }
+    region:                    { value: resource.peering-true-omitted.region }
+    accept-status:             { value: resource.peering-true-omitted.accept-status }
+    accepter:                  { value: resource.peering-true-omitted.accepter }
+    requester:                 { value: resource.peering-true-omitted.requester }
+    tags:                      { value: resource.peering-true-omitted.tags }
+    queue-arn:                 { value: resource.queue.arn }
+    account:                   { value: data-source.arn.account }
   }
 }

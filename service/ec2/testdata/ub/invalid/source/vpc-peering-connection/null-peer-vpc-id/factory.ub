@@ -1,0 +1,16 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  resources: {
+    connection: aws-ec2.vpc-peering-connection {
+      vpc-id:      'vpc-a'
+      peer-vpc-id: null
+    }
+  }
+}

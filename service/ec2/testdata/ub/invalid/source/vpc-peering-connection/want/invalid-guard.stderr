@@ -1,0 +1,1 @@
+factory.ub:11:48: schema: resource.connection: constraints[2] (predicate): auto-accept requires peer-region to be omitted, null, or empty

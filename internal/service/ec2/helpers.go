@@ -81,7 +81,7 @@ func syncTags(
 	resourceID string,
 	desired map[string]string,
 ) error {
-	return tagsync.Sync(ctx, desired,
+	return syncEC2Tags(ctx, client, resourceID, desired,
 		func(ctx context.Context) (map[string]string, error) {
 			resp, err := client.DescribeTags(ctx, &ec2.DescribeTagsInput{
 				Filters: []ec2types.Filter{{
@@ -98,6 +98,17 @@ func syncTags(
 			}
 			return current, nil
 		},
+	)
+}
+
+func syncEC2Tags(
+	ctx context.Context,
+	client *ec2.Client,
+	resourceID string,
+	desired map[string]string,
+	read func(context.Context) (map[string]string, error),
+) error {
+	return tagsync.Sync(ctx, desired, read,
 		func(ctx context.Context, upsert map[string]string) error {
 			if _, err := client.CreateTags(ctx, &ec2.CreateTagsInput{
 				Resources: []string{resourceID},

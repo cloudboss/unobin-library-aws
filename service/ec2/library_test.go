@@ -55,24 +55,6 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
 	require.Equal(t, []string{
-		"eip",
-		"instance",
-		"internet-gateway",
-		"key-pair",
-		"launch-template",
-		"nat-gateway",
-		"route",
-		"route-table",
-		"route-table-association",
-		"security-group",
-		"security-group-egress-rule",
-		"security-group-ingress-rule",
-		"subnet",
-		"volume",
-		"vpc",
-		"vpc-endpoint",
-	}, sortedKeys(lib.Resources))
-	require.Equal(t, []string{
 		"ami",
 		"availability-zones",
 		"security-group",
@@ -142,24 +124,6 @@ func TestReadEC2ServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"eip",
-		"instance",
-		"internet-gateway",
-		"key-pair",
-		"launch-template",
-		"nat-gateway",
-		"route",
-		"route-table",
-		"route-table-association",
-		"security-group",
-		"security-group-egress-rule",
-		"security-group-ingress-rule",
-		"subnet",
-		"volume",
-		"vpc",
-		"vpc-endpoint",
-	}, sortedKeys(schema.Resources))
 	require.Equal(t, []string{
 		"ami",
 		"availability-zones",

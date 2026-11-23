@@ -1,0 +1,36 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+
+  library-configs: { aws-ec2: input.aws-config }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    accept: { type: boolean, default: false }
+    stage:  { type: string, default: 'initial' }
+  }
+
+  resources: {
+    requester: aws-ec2.vpc {
+      cidr-block: '10.63.0.0/16'
+    }
+    accepter: aws-ec2.vpc {
+      cidr-block: '10.64.0.0/16'
+    }
+    peering: aws-ec2.vpc-peering-connection {
+      vpc-id:      resource.requester.vpc-id
+      peer-vpc-id: resource.accepter.vpc-id
+      auto-accept: input.accept
+      tags:        { unobin: 'vpc-peering-connection-it', stage: input.stage }
+    }
+  }
+
+  outputs: {
+    connection-id: { value: resource.peering.vpc-peering-connection-id }
+    accept-status: { value: resource.peering.accept-status }
+    requester-id:  { value: resource.peering.vpc-id }
+    accepter-id:   { value: resource.peering.peer-vpc-id }
+  }
+}

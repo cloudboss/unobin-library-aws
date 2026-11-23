@@ -1,0 +1,1 @@
+factory.ub:11:48: resolve: missing required input "peer-vpc-id" on aws-ec2.vpc-peering-connection

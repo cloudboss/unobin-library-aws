@@ -58,8 +58,10 @@ func Library() *runtime.Library {
 			"eip":          makeResource[svc.EipResource, *svc.EipResourceOutput](),
 			"nat-gateway":  makeResource[svc.NatGatewayResource, *svc.NatGatewayResourceOutput](),
 			"vpc-endpoint": makeResource[svc.VpcEndpointResource, *svc.VpcEndpointResourceOutput](),
-			"key-pair":     makeResource[svc.KeyPairResource, *svc.KeyPairResourceOutput](),
-			"instance":     makeResource[svc.InstanceResource, *svc.InstanceResourceOutput](),
+			"vpc-peering-connection": makeResource[
+				svc.VpcPeeringConnectionResource, *svc.VpcPeeringConnectionResourceOutput](),
+			"key-pair": makeResource[svc.KeyPairResource, *svc.KeyPairResourceOutput](),
+			"instance": makeResource[svc.InstanceResource, *svc.InstanceResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"ami": makeDataSource[svc.AMIDataSource, *svc.AMIDataSourceOutput](),

@@ -1,0 +1,113 @@
+{
+  "name": "vpc-peering-connection",
+  "rootPath": ".",
+  "executor": "root",
+  "cliVersion": "v0.13.0-a.4",
+  "commands": [
+    {
+      "name": "invalid-accepter",
+      "dir": "invalid-accepter",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/invalid-accepter.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "invalid-guard",
+      "dir": "invalid-guard",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/invalid-guard.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "invalid-requester",
+      "dir": "invalid-requester",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/invalid-requester.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "missing-peer-vpc-id",
+      "dir": "missing-peer-vpc-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/missing-peer-vpc-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "missing-vpc-id",
+      "dir": "missing-vpc-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/missing-vpc-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "null-peer-vpc-id",
+      "dir": "null-peer-vpc-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/null-peer-vpc-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "null-vpc-id",
+      "dir": "null-vpc-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/null-vpc-id.stderr",
+      "exitCode": 1
+    }
+  ]
+}
