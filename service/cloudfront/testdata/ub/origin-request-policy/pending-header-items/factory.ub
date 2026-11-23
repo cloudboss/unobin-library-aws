@@ -1,0 +1,26 @@
+factory: {
+  library-configs: { aws-cloudfront: input.aws-config }
+  actions: {
+    seed: fixture.seed {
+      next-mode:  input.cookie-mode
+      next-items: input.cookie-items
+    }
+  }
+  resources: {
+    policy: aws-cloudfront.origin-request-policy {
+      name:           input.name
+      comment:        input.comment
+      cookies-config: { cookie-behavior: 'None', cookies: { items: input.cookie-items } }
+      headers-config: { header-behavior: input.header-mode, headers: { items: action.seed.items } }
+      query-strings-config: {
+        query-string-behavior: input.query-mode
+        query-strings:         { items: input.query-items }
+      }
+    }
+  }
+  outputs: {
+    name:           { value: resource.policy.name }
+    comment:        { value: resource.policy.comment }
+    cookies-config: { value: resource.policy.cookies-config }
+  }
+}

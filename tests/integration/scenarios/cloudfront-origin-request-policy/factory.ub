@@ -1,0 +1,45 @@
+factory: {
+  description: 'Manages a custom CloudFront origin request policy.'
+
+  imports: {
+    aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront'
+  }
+  library-configs: {
+    aws-cloudfront: input.aws-config
+  }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    update: { type: boolean, default: false }
+  }
+  resources: {
+    policy: aws-cloudfront.origin-request-policy {
+      name: if input.update
+        then 'unobin-it-origin-request-policy-renamed'
+        else 'unobin-it-origin-request-policy'
+      comment: if input.update then null else 'origin request policy integration test'
+      cookies-config: {
+        cookie-behavior: if input.update then 'none' else 'whitelist'
+        cookies:         if input.update then null else { items: ['theme', 'session', 'theme', ''] }
+      }
+      headers-config: {
+        header-behavior: if input.update then 'whitelist' else 'allViewerAndWhitelistCloudFront'
+        headers: if input.update
+          then { items: ['X-Request-ID'] }
+          else { items: ['CloudFront-Viewer-Country', 'CloudFront-Is-Mobile-Viewer'] }
+      }
+      query-strings-config: {
+        query-string-behavior: if input.update then 'allExcept' else 'whitelist'
+        query-strings: if input.update
+          then { items: ['internal'] }
+          else { items: ['version', 'preview', 'version', ''] }
+      }
+    }
+  }
+  outputs: {
+    id:   { value: resource.policy.id }
+    etag: { value: resource.policy.etag }
+  }
+}

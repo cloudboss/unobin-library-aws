@@ -1,0 +1,34 @@
+factory: {
+  imports: { aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront' }
+  inputs: {
+    aws-config:   { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    name:         { type: string }
+    comment:      { type: optional(string) }
+    cookie-mode:  { type: string }
+    header-mode:  { type: string }
+    query-mode:   { type: string }
+    cookie-items: { type: list(string) }
+    header-items: { type: list(string) }
+    query-items:  { type: list(string) }
+  }
+  library-configs: { aws-cloudfront: input.aws-config }
+  resources: {
+    policy: aws-cloudfront.origin-request-policy {
+      name:           input.name
+      comment:        input.comment
+      cookies-config: { cookie-behavior: input.cookie-mode, cookies: { items: input.cookie-items } }
+      headers-config: { header-behavior: input.header-mode, headers: { items: input.header-items } }
+      query-strings-config: {
+        query-string-behavior: input.query-mode
+        query-strings:         { items: input.query-items }
+      }
+    }
+  }
+  outputs: {
+    name:                 { value: resource.policy.name }
+    comment:              { value: resource.policy.comment }
+    cookies-config:       { value: resource.policy.cookies-config }
+    headers-config:       { value: resource.policy.headers-config }
+    query-strings-config: { value: resource.policy.query-strings-config }
+  }
+}

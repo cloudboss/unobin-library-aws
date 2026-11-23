@@ -1,0 +1,69 @@
+factory: {
+  imports:         { aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront' }
+  library-configs: { aws-cloudfront: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+  }
+  resources: {
+    none: aws-cloudfront.origin-request-policy {
+      name:                 'none'
+      cookies-config:       { cookie-behavior: 'none' }
+      headers-config:       { header-behavior: 'none' }
+      query-strings-config: { query-string-behavior: 'none' }
+    }
+    lists: aws-cloudfront.origin-request-policy {
+      name:           'lists'
+      comment:        'forward selected values'
+      cookies-config: { cookie-behavior: 'whitelist', cookies: { items: ['session'] } }
+      headers-config: { header-behavior: 'whitelist', headers: { items: ['Accept'] } }
+      query-strings-config: {
+        query-string-behavior: 'whitelist'
+        query-strings:         { items: ['version'] }
+      }
+    }
+    all-except: aws-cloudfront.origin-request-policy {
+      name:                 'all-except'
+      cookies-config:       { cookie-behavior: 'allExcept', cookies: { items: [] } }
+      headers-config:       { header-behavior: 'allExcept', headers: {} }
+      query-strings-config: { query-string-behavior: 'allExcept', query-strings: null }
+    }
+    all: aws-cloudfront.origin-request-policy {
+      name:                 'all'
+      cookies-config:       { cookie-behavior: 'all' }
+      headers-config:       { header-behavior: 'allViewer' }
+      query-strings-config: { query-string-behavior: 'all' }
+    }
+    cloudfront-headers: aws-cloudfront.origin-request-policy {
+      name:           'cloudfront-headers'
+      cookies-config: { cookie-behavior: 'none' }
+      headers-config: {
+        header-behavior: 'allViewerAndWhitelistCloudFront'
+        headers:         { items: ['CloudFront-Viewer-Country'] }
+      }
+      query-strings-config: { query-string-behavior: 'none' }
+    }
+  }
+  data-sources: {
+    existing: aws-cloudfront.origin-request-policy {
+      id: resource.lists.id
+    }
+  }
+  outputs: {
+    policy: {
+      value: {
+        id:                   resource.lists.id
+        arn:                  resource.lists.arn
+        etag:                 resource.lists.etag
+        name:                 resource.lists.name
+        comment:              resource.lists.comment
+        cookies-config:       resource.lists.cookies-config
+        headers-config:       resource.lists.headers-config
+        query-strings-config: resource.lists.query-strings-config
+        looked-up:            data-source.existing.name
+      }
+    }
+  }
+}

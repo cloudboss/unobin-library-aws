@@ -47,6 +47,8 @@ func Library() *runtime.Library {
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"cache-policy": makeResource[svc.CachePolicyResource, *svc.CachePolicyResourceOutput](),
+			"origin-request-policy": makeResource[
+				svc.OriginRequestPolicyResource, *svc.OriginRequestPolicyResourceOutput](),
 			"origin-access-control": makeResource[
 				svc.OriginAccessControlResource,
 				*svc.OriginAccessControlResourceOutput](),
