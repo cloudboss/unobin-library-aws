@@ -1,0 +1,33 @@
+factory: {
+  imports: { eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  inputs: {
+    endpoint: { type: string }
+    lookup:   { type: optional(string) }
+  }
+  library-configs: {
+    eks: { region: 'us-gov-west-1', endpoint-url: input.endpoint, max-attempts: 2 }
+  }
+  actions: {
+    seed: test.seed {
+      name: input.lookup
+    }
+  }
+  data-sources: {
+    lookup: eks.cluster {
+      name: action.seed.value
+    }
+  }
+  resources: {
+    consumer: test.value {
+      status: data-source.lookup.status
+    }
+  }
+  outputs: {
+    name:       { value: data-source.lookup.name }
+    arn:        { value: data-source.lookup.arn }
+    status:     { value: data-source.lookup.status }
+    logs:       { value: data-source.lookup.enabled-cluster-log-types }
+    vpc-config: { value: data-source.lookup.vpc-config }
+    tags:       { value: data-source.lookup.tags }
+  }
+}

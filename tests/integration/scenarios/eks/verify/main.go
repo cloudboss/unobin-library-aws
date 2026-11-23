@@ -9,6 +9,8 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks"
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/state/local"
 )
 
 const (
@@ -176,6 +180,9 @@ func verifyPresent(
 	if err := verifyTags(ctx, client, "cluster", arn, expectedClusterTags); err != nil {
 		return clusterIdentity{}, err
 	}
+	if err := verifyClusterLookup(cluster); err != nil {
+		return clusterIdentity{}, err
+	}
 	nodeGroup, err := findNodeGroup(ctx, client)
 	if err != nil {
 		return clusterIdentity{}, err
@@ -306,6 +313,67 @@ func verifyPresent(
 		AddonARN:           addonARN,
 		AddonCreatedAt:     addon.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}, nil
+}
+
+func verifyClusterLookup(cluster *ekstypes.Cluster) error {
+	root := filepath.Join(os.Getenv("VERIFY_BUILD_DIR"), ".unobin", "state")
+	store, err := local.NewStore(root, "eks", "config", encrypters.Noop{})
+	if err != nil {
+		return fmt.Errorf("open scenario state: %w", err)
+	}
+	snapshot, err := store.Current()
+	if err != nil {
+		return fmt.Errorf("read scenario state: %w", err)
+	}
+	lookup := snapshot.Find("data-source.cluster-lookup")
+	if lookup == nil {
+		return errors.New("scenario state has no EKS cluster lookup")
+	}
+	if got := lookup.Inputs["name"]; got != aws.ToString(cluster.Name) {
+		return fmt.Errorf("cluster lookup name input is %v, want %q", got, aws.ToString(cluster.Name))
+	}
+
+	tags := make(map[string]any)
+	for key, value := range cluster.Tags {
+		if !strings.HasPrefix(key, "aws:") {
+			tags[key] = value
+		}
+	}
+	for field, want := range map[string]any{
+		"name":             aws.ToString(cluster.Name),
+		"arn":              aws.ToString(cluster.Arn),
+		"created-at":       cluster.CreatedAt.Format(time.RFC3339),
+		"endpoint":         aws.ToString(cluster.Endpoint),
+		"platform-version": aws.ToString(cluster.PlatformVersion),
+		"status":           string(cluster.Status),
+		"version":          aws.ToString(cluster.Version),
+		"tags":             tags,
+	} {
+		if got := lookup.Outputs[field]; !reflect.DeepEqual(want, got) {
+			return fmt.Errorf("cluster lookup %s is %v, want %v", field, got, want)
+		}
+	}
+	vpc := cluster.ResourcesVpcConfig
+	if vpc == nil || aws.ToString(vpc.VpcId) == "" || len(vpc.SubnetIds) == 0 {
+		return errors.New("cluster VPC or subnets are missing from DescribeCluster")
+	}
+	observed, ok := lookup.Outputs["vpc-config"].(map[string]any)
+	if !ok {
+		return errors.New("cluster lookup VPC configuration is missing")
+	}
+	if got, want := observed["vpc-id"], aws.ToString(vpc.VpcId); got != want {
+		return fmt.Errorf("cluster lookup vpc-id is %v, want %q", got, want)
+	}
+	subnets := slices.Clone(vpc.SubnetIds)
+	slices.Sort(subnets)
+	want := make([]any, 0, len(subnets))
+	for _, subnet := range slices.Compact(subnets) {
+		want = append(want, subnet)
+	}
+	if got := observed["subnet-ids"]; !reflect.DeepEqual(want, got) {
+		return fmt.Errorf("cluster lookup subnet-ids are %v, want %v", got, want)
+	}
+	return nil
 }
 
 func verifyNodeGroupScaling(config *ekstypes.NodegroupScalingConfig) error {

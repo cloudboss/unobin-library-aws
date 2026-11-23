@@ -1,0 +1,16 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-east-1' }
+  }
+  data-sources: {
+    region: aws-eks.cluster {
+      name:   'cluster'
+      region: 'us-west-2'
+    }
+    tags: aws-eks.cluster {
+      name: 'cluster'
+      tags: { environment: 'test' }
+    }
+  }
+}

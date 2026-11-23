@@ -1,0 +1,67 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-gov-west-1', endpoint-url: 'https://eks.example.test' }
+  }
+  resources: {
+    cluster: aws-eks.cluster {
+      name:     'Managed'
+      role-arn: 'arn:aws-us-gov:iam::123456789012:role/example'
+      vpc-config: {
+        subnet-ids:              ['subnet-123']
+        endpoint-private-access: true
+        endpoint-public-access:  false
+      }
+    }
+  }
+  data-sources: {
+    one: aws-eks.cluster {
+      name: 'Z'
+    }
+    hundred: aws-eks.cluster {
+      name: '''\-
+        1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_
+        '''
+    }
+    managed: aws-eks.cluster {
+      name: resource.cluster.name
+    }
+  }
+  outputs: {
+    one:                 { value: data-source.one.name }
+    hundred:             { value: data-source.hundred.name }
+    arn:                 { value: data-source.managed.arn }
+    cluster-id:          { value: data-source.managed.cluster-id }
+    created-at:          { value: data-source.managed.created-at }
+    deletion-protection: { value: data-source.managed.deletion-protection }
+    endpoint:            { value: data-source.managed.endpoint }
+    logs:                { value: data-source.managed.enabled-cluster-log-types }
+    platform-version:    { value: data-source.managed.platform-version }
+    role-arn:            { value: data-source.managed.role-arn }
+    status:              { value: data-source.managed.status }
+    tags:                { value: data-source.managed.tags }
+    version:             { value: data-source.managed.version }
+    auth-mode:           { value: data-source.managed.access-config?.authentication-mode }
+    bootstrap-admin: {
+      value: data-source.managed.access-config?.bootstrap-cluster-creator-admin-permissions
+    }
+    certificate: { value: data-source.managed.certificate-authority?.data }
+    compute:     { value: data-source.managed.compute-config }
+    tier:        { value: data-source.managed.control-plane-scaling-config?.tier }
+    issuer:      { value: data-source.managed.identity?.oidc?.issuer }
+    elb: { value: data-source.managed.kubernetes-network-config?.elastic-load-balancing?.enabled }
+    network: { value: data-source.managed.kubernetes-network-config }
+    control-plane-placement: {
+      value: data-source.managed.outpost-config?.control-plane-placement?.spread-level
+    }
+    etcd-placement: { value: data-source.managed.outpost-config?.etcd-placement?.spread-level }
+    outpost:        { value: data-source.managed.outpost-config }
+    remote-nodes:   { value: data-source.managed.remote-network-config?.remote-node-networks }
+    remote-pods:    { value: data-source.managed.remote-network-config?.remote-pod-networks }
+    block-storage:  { value: data-source.managed.storage-config?.block-storage?.enabled }
+    support:        { value: data-source.managed.upgrade-policy?.support-type }
+    zonal-shift:    { value: data-source.managed.zonal-shift-config?.enabled }
+    vpc:            { value: data-source.managed.vpc-config }
+  }
+}

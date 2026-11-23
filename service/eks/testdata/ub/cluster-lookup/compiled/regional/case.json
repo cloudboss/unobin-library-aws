@@ -1,0 +1,19 @@
+{
+  "name": "regional",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/aws-eks-cluster-lookup",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/dev.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

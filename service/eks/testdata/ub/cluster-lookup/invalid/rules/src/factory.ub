@@ -1,0 +1,29 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-east-1' }
+  }
+  data-sources: {
+    empty: aws-eks.cluster {
+      name: ''
+    }
+    long: aws-eks.cluster {
+      name: '''\-
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        '''
+    }
+    leading-underscore: aws-eks.cluster {
+      name: '_alpha'
+    }
+    leading-hyphen: aws-eks.cluster {
+      name: '-alpha'
+    }
+    spaces: aws-eks.cluster {
+      name: 'a b'
+    }
+    non-ascii: aws-eks.cluster {
+      name: 'Aé'
+    }
+  }
+}

@@ -38,7 +38,6 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.Contains(t, library.Resources, "node-group")
 	assert.Equal(t, reflect.TypeFor[*svc.NodeGroupResourceOutput](),
 		library.Resources["node-group"].OutputType())
-	assert.Empty(t, library.DataSources)
 	assert.Empty(t, library.Actions)
 }
 

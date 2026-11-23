@@ -1,22 +1,21 @@
 factory: {
   description: '''>-
     Manages an EKS cluster, zero-capacity managed node group, and VPC CNI add-on with their IAM
-    roles, policy attachments, VPC, and two availability-zone subnets. The update changes only
-    tags so the scenario runs against the default Ministack backend while remaining usable
-    against AWS.
+    roles, policy attachments, VPC, and two availability-zone subnets. The update changes only tags
+    so the scenario runs against the default Ministack backend while remaining usable against AWS.
     '''
 
   imports: {
-    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
-    aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks'
-    aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-ec2:  'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-eks:  'github.com/cloudboss/unobin-library-aws//service/eks'
+    aws-iam:  'github.com/cloudboss/unobin-library-aws//service/iam'
     aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
   }
 
   library-configs: {
-    aws-ec2: input.aws-config
-    aws-eks: input.aws-config
-    aws-iam: input.aws-config
+    aws-ec2:  input.aws-config
+    aws-eks:  input.aws-config
+    aws-iam:  input.aws-config
     aws-meta: input.aws-config
   }
 
@@ -61,6 +60,9 @@ factory: {
 
   data-sources: {
     partition: aws-meta.partition {}
+    cluster-lookup: aws-eks.cluster {
+      name: resource.cluster.name
+    }
     availability-zones: aws-ec2.availability-zones {
       state: 'available'
     }
@@ -98,7 +100,7 @@ factory: {
       )
     }
     cluster-role-policy: aws-iam.role-policy-attachment {
-      role-name:  resource.cluster-role.role-name
+      role-name: resource.cluster-role.role-name
       policy-arn: $'''\-
         arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSClusterPolicy
         '''
@@ -130,13 +132,13 @@ factory: {
       )
     }
     node-worker-policy: aws-iam.role-policy-attachment {
-      role-name:  resource.node-role.role-name
+      role-name: resource.node-role.role-name
       policy-arn: $'''\-
         arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSWorkerNodePolicy
         '''
     }
     node-ecr-policy: aws-iam.role-policy-attachment {
-      role-name:  resource.node-role.role-name
+      role-name: resource.node-role.role-name
       policy-arn: $'''\-
         arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         '''
@@ -178,9 +180,10 @@ factory: {
       )
     }
     fargate-pod-policy: aws-iam.role-policy-attachment {
-      role-name:  resource.fargate-role.role-name
+      role-name: resource.fargate-role.role-name
       policy-arn: $'''\-
-        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy
+        arn:{{ data-source.partition.partition }}:iam::
+        aws:policy/AmazonEKSFargatePodExecutionRolePolicy
         '''
     }
     fargate-profile: aws-eks.fargate-profile {
@@ -198,36 +201,36 @@ factory: {
       tags:       input.fargate-profile-tags
     }
     addon: aws-eks.addon {
-      @depends-on: [resource.cluster]
-      cluster-name: resource.cluster.name
-      addon-name:   'vpc-cni'
+      @depends-on:                 [resource.cluster]
+      cluster-name:                resource.cluster.name
+      addon-name:                  'vpc-cni'
       resolve-conflicts-on-create: 'OVERWRITE'
-      tags:         input.addon-tags
+      tags:                        input.addon-tags
     }
   }
 
   outputs: {
-    cluster-name:      { value: resource.cluster.name }
-    cluster-arn:       { value: resource.cluster.arn }
-    endpoint:          { value: resource.cluster.endpoint }
-    platform-version:  { value: resource.cluster.platform-version }
-    status:            { value: resource.cluster.status }
-    version:           { value: resource.cluster.version }
-    vpc-id:            { value: resource.cluster.vpc-id }
-    subnet-a-id:       { value: resource.subnet-a.id }
-    subnet-b-id:       { value: resource.subnet-b.id }
-    role-arn:          { value: resource.cluster-role.arn }
-    node-group-name:   { value: resource.node-group.node-group-name }
-    node-group-arn:    { value: resource.node-group.arn }
-    node-group-status: { value: resource.node-group.status }
-    node-role-arn:     { value: resource.node-role.arn }
+    cluster-name:           { value: resource.cluster.name }
+    cluster-arn:            { value: resource.cluster.arn }
+    endpoint:               { value: resource.cluster.endpoint }
+    platform-version:       { value: resource.cluster.platform-version }
+    status:                 { value: resource.cluster.status }
+    version:                { value: resource.cluster.version }
+    vpc-id:                 { value: resource.cluster.vpc-id }
+    subnet-a-id:            { value: resource.subnet-a.id }
+    subnet-b-id:            { value: resource.subnet-b.id }
+    role-arn:               { value: resource.cluster-role.arn }
+    node-group-name:        { value: resource.node-group.node-group-name }
+    node-group-arn:         { value: resource.node-group.arn }
+    node-group-status:      { value: resource.node-group.status }
+    node-role-arn:          { value: resource.node-role.arn }
     fargate-profile-name:   { value: resource.fargate-profile.fargate-profile-name }
     fargate-profile-arn:    { value: resource.fargate-profile.arn }
     fargate-profile-status: { value: resource.fargate-profile.status }
     fargate-role-arn:       { value: resource.fargate-role.arn }
-    addon-name:        { value: resource.addon.addon-name }
-    addon-arn:         { value: resource.addon.arn }
-    addon-version:     { value: resource.addon.addon-version }
-    addon-status:      { value: resource.addon.status }
+    addon-name:             { value: resource.addon.addon-name }
+    addon-arn:              { value: resource.addon.arn }
+    addon-version:          { value: resource.addon.addon-version }
+    addon-status:           { value: resource.addon.status }
   }
 }

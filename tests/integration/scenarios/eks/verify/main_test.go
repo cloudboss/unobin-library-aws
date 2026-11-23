@@ -3,12 +3,17 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks"
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/sdk/state"
+	"github.com/cloudboss/unobin/pkg/state/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,6 +30,7 @@ func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) 
 		"change": "old", "keep": "1", "remove": "yes",
 	}
 	applied := scenarioClient(initialTags, initialTags, initialTags, initialTags)
+	writeClusterLookup(t, applied.cluster, initialTags)
 	require.NoError(t, verifyApplied(context.Background(), applied))
 
 	updated := scenarioClient(map[string]string{
@@ -40,6 +46,8 @@ func TestVerifyAppliedAndUpdatedKeepIdentityAndIgnoreReservedTags(t *testing.T) 
 		"add": "yes", "change": "new", "keep": "1",
 		"aws:addon": "service",
 	})
+	writeClusterLookup(t, updated.cluster,
+		map[string]string{"add": "yes", "change": "new", "keep": "1"})
 	require.NoError(t, verifyUpdated(context.Background(), updated))
 }
 
@@ -50,6 +58,7 @@ func TestVerifyAppliedAllowsEmptyAddonVersion(t *testing.T) {
 	}
 	client := scenarioClient(initialTags, initialTags, initialTags, initialTags)
 	client.addon.AddonVersion = nil
+	writeClusterLookup(t, client.cluster, initialTags)
 
 	require.NoError(t, verifyApplied(context.Background(), client))
 }
@@ -72,10 +81,47 @@ func TestVerifyUpdatedRejectsReplacement(t *testing.T) {
 		map[string]string{"add": "yes", "change": "new", "keep": "1"},
 	)
 
+	writeClusterLookup(t, client.cluster,
+		map[string]string{"add": "yes", "change": "new", "keep": "1"})
 	err := verifyUpdated(context.Background(), client)
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "identity changed")
+}
+
+func TestVerifyClusterLookupRejectsStaleLookup(t *testing.T) {
+	t.Setenv("VERIFY_BUILD_DIR", t.TempDir())
+	tags := map[string]string{"change": "new", "keep": "1"}
+	client := scenarioClient(tags, nil, nil, nil)
+	writeClusterLookup(t, client.cluster, map[string]string{"change": "old", "keep": "1"})
+
+	require.ErrorContains(t, verifyClusterLookup(client.cluster), "cluster lookup tags")
+}
+
+func writeClusterLookup(t *testing.T, cluster *ekstypes.Cluster, tags map[string]string) {
+	t.Helper()
+	root := filepath.Join(os.Getenv("VERIFY_BUILD_DIR"), ".unobin", "state")
+	store, err := local.NewStore(root, "eks", "config", encrypters.Noop{})
+	require.NoError(t, err)
+	snapshot := state.NewSnapshot(state.FactoryInfo{Name: "eks"}, "config")
+	snapshot.Entries = []*state.Entry{{
+		Address: "data-source.cluster-lookup", Category: "data-source",
+		Binding: &state.Binding{Alias: "aws-eks", Export: "cluster"},
+		Inputs:  map[string]any{"name": clusterName},
+		Outputs: map[string]any{
+			"name": clusterName, "arn": aws.ToString(cluster.Arn),
+			"created-at": scenarioCreatedAt.Format(time.RFC3339),
+			"endpoint":   "https://cluster.example", "status": "ACTIVE", "version": "1.33",
+			"platform-version": "eks.1",
+			"vpc-config": map[string]any{
+				"vpc-id": "vpc-example", "subnet-ids": []string{"subnet-a", "subnet-b"},
+			},
+			"tags": tags,
+		},
+	}}
+	rev, err := store.Write(snapshot)
+	require.NoError(t, err)
+	require.NoError(t, store.SetCurrent(rev))
 }
 
 func TestVerifyDestroyedAcceptsTypedNotFound(t *testing.T) {
@@ -183,6 +229,10 @@ func scenarioClient(
 			PlatformVersion: aws.String("eks.1"),
 			Status:          ekstypes.ClusterStatusActive,
 			Version:         aws.String("1.33"),
+			Tags:            clusterTags,
+			ResourcesVpcConfig: &ekstypes.VpcConfigResponse{
+				VpcId: aws.String("vpc-example"), SubnetIds: []string{"subnet-b", "subnet-a"},
+			},
 		},
 		nodeGroup: &ekstypes.Nodegroup{
 			ClusterName:   aws.String(clusterName),
