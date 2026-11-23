@@ -1,0 +1,26 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: {} }
+  resources: {
+    connection: aws-ec2.flow-log {
+      vpc-id:              'vpc-1'
+      destination-options: {}
+      tags:                { blank: '' }
+    }
+  }
+  outputs: {
+    flow-log-id:                 { value: resource.connection.flow-log-id }
+    arn:                         { value: resource.connection.arn }
+    region:                      { value: resource.connection.region }
+    deliver-cross-account-role:  { value: resource.connection.deliver-cross-account-role }
+    deliver-logs-permission-arn: { value: resource.connection.deliver-logs-permission-arn }
+    destination-options:         { value: resource.connection.destination-options }
+    log-destination:             { value: resource.connection.log-destination }
+    log-destination-type:        { value: resource.connection.log-destination-type }
+    log-format:                  { value: resource.connection.log-format }
+    max-aggregation-interval:    { value: resource.connection.max-aggregation-interval }
+    resource-id:                 { value: resource.connection.resource-id }
+    traffic-type:                { value: resource.connection.traffic-type }
+    tags:                        { value: resource.connection.tags }
+  }
+}

@@ -1,0 +1,62 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: input.aws-config }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    eni-id:     { type: optional(string) }
+    regional-nat-gateway-id:       { type: optional(string) }
+    subnet-id:                     { type: optional(string) }
+    vpc-id:                        { type: optional(string) }
+    transit-gateway-id:            { type: optional(string) }
+    transit-gateway-attachment-id: { type: optional(string) }
+    deliver-cross-account-role:    { type: optional(string) }
+    iam-role-arn:                  { type: optional(string) }
+    log-destination:               { type: optional(string) }
+    log-destination-type:          { type: optional(string) }
+    log-format:                    { type: optional(string) }
+    max-aggregation-interval:      { type: optional(integer) }
+    traffic-type:                  { type: optional(string) }
+    destination-options: {
+      type: optional(
+        object(
+          {
+            file-format:                optional(string)
+            hive-compatible-partitions: optional(boolean)
+            per-hour-partition:         optional(boolean)
+          },
+        ),
+      )
+    }
+    tags: { type: optional(map(string)) }
+  }
+  actions: {
+    seed: fixture.seed {
+      value:            input.vpc-id
+      traffic:          input.traffic-type
+      aggregate:        input.max-aggregation-interval
+      format:           input.log-format
+      destination:      input.log-destination
+      destination-type: input.log-destination-type
+      options:          input.destination-options
+    }
+  }
+  resources: {
+    connection: aws-ec2.flow-log {
+      eni-id:                        input.eni-id
+      regional-nat-gateway-id:       input.regional-nat-gateway-id
+      subnet-id:                     input.subnet-id
+      vpc-id:                        action.seed.resolved-vpc
+      transit-gateway-id:            input.transit-gateway-id
+      transit-gateway-attachment-id: input.transit-gateway-attachment-id
+      deliver-cross-account-role:    input.deliver-cross-account-role
+      iam-role-arn:                  input.iam-role-arn
+      log-destination:               action.seed.resolved-destination
+      log-destination-type:          action.seed.resolved-type
+      log-format:                    action.seed.resolved-format
+      max-aggregation-interval:      action.seed.resolved-aggregate
+      traffic-type:                  action.seed.resolved-traffic
+      destination-options:           action.seed.resolved-options
+      tags:                          input.tags
+    }
+  }
+}

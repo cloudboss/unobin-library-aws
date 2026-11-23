@@ -37,6 +37,7 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"flow-log":       makeResource[svc.FlowLogResource, *svc.FlowLogResourceOutput](),
 			"vpc":            makeResource[svc.VpcResource, *svc.VpcResourceOutput](),
 			"security-group": makeResource[svc.SecurityGroupResource, *svc.SecurityGroupResourceOutput](),
 			"security-group-ingress-rule": makeResource[

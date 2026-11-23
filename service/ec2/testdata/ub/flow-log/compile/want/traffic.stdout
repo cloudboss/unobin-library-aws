@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.connection: constraints[3] (predicate): traffic-type must be ACCEPT, REJECT, or ALL","path":"traffic/factory.ub","span":{"start":{"line":5,"column":34,"offset":181}}}],"files":[]}

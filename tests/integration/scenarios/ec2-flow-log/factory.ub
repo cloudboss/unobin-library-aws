@@ -1,0 +1,39 @@
+factory: {
+  imports: {
+    aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-s3:  'github.com/cloudboss/unobin-library-aws//service/s3'
+  }
+  library-configs: { aws-ec2: input.aws-config, aws-s3: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    stage:        { type: string, default: 'initial' }
+    traffic-type: { type: string, default: 'ALL' }
+  }
+  resources: {
+    network: aws-ec2.vpc {
+      cidr-block: '10.67.0.0/16'
+    }
+    logs: aws-s3.bucket {
+      bucket:           'unobin-it-ec2-flow-log'
+      empty-on-destroy: true
+    }
+    flow: aws-ec2.flow-log {
+      vpc-id:                   resource.network.vpc-id
+      log-destination:          resource.logs.arn
+      log-destination-type:     's3'
+      traffic-type:             input.traffic-type
+      max-aggregation-interval: 60
+      tags:                     { unobin: 'ec2-flow-log-it', stage: input.stage }
+    }
+  }
+  outputs: {
+    flow-log-id:   { value: resource.flow.flow-log-id }
+    arn:           { value: resource.flow.arn }
+    destination:   { value: resource.flow.log-destination }
+    resource-id:   { value: resource.flow.resource-id }
+    observed-tags: { value: resource.flow.tags }
+  }
+}
