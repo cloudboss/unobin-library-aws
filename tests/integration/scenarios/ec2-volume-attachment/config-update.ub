@@ -1,0 +1,7 @@
+stack: {
+  factory: { inputs: { updated: true, fixed-force-detach: null } }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

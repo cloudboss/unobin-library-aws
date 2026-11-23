@@ -1,0 +1,83 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    updated:            { type: boolean, default: false }
+    fixed-force-detach: { type: optional(boolean) }
+  }
+
+  data-sources: {
+    image: aws-ec2.ami {
+      owners:      ['amazon']
+      most-recent: true
+      filters:     [{ name: 'name', values: ['al2023-ami-2023.*-kernel-*-x86_64'] }]
+    }
+    zones: aws-ec2.availability-zones {
+      state: 'available'
+    }
+  }
+
+  locals: {
+    zone:   data-source.zones.names[0]
+    marker: 'ec2-volume-attachment-it'
+  }
+
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.86.0.0/16'
+    }
+    subnet: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.86.1.0/24'
+      availability-zone: local.zone
+    }
+    instance: aws-ec2.instance {
+      ami:           data-source.image.image-id
+      instance-type: 't3.micro'
+      subnet-id:     resource.subnet.id
+      tags:          { unobin: local.marker }
+    }
+    fixed-volume: aws-ec2.volume {
+      availability-zone: local.zone
+      size:              1
+      type:              'gp3'
+      tags:              { unobin: local.marker, role: 'fixed' }
+    }
+    old-volume: aws-ec2.volume {
+      availability-zone: local.zone
+      size:              1
+      type:              'gp3'
+      tags:              { unobin: local.marker, role: 'old' }
+    }
+    new-volume: aws-ec2.volume {
+      availability-zone: local.zone
+      size:              1
+      type:              'gp3'
+      tags:              { unobin: local.marker, role: 'new' }
+    }
+    fixed-attachment: aws-ec2.volume-attachment {
+      device-name:  '/dev/sdf'
+      instance-id:  resource.instance.instance-id
+      volume-id:    resource.fixed-volume.volume-id
+      force-detach: input.fixed-force-detach
+    }
+    changing-attachment: aws-ec2.volume-attachment {
+      device-name: if input.updated then '/dev/sdh' else '/dev/sdg'
+      instance-id: resource.instance.instance-id
+      volume-id: if input.updated
+        then resource.new-volume.volume-id
+        else resource.old-volume.volume-id
+    }
+  }
+
+  outputs: {
+    device-name: { value: resource.changing-attachment.device-name }
+    instance-id: { value: resource.changing-attachment.instance-id }
+    volume-id:   { value: resource.changing-attachment.volume-id }
+    region:      { value: resource.changing-attachment.region }
+  }
+}

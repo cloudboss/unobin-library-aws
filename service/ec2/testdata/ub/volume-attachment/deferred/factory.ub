@@ -1,0 +1,30 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: {
+      type: library-config('github.com/cloudboss/unobin-library-aws//config')
+    }
+    tuple: {
+      type: object(
+        {
+          device-name: optional(string)
+          instance-id: optional(string)
+          volume-id:   optional(string)
+        },
+      )
+    }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  actions: {
+    seed: fixture.seed {
+      source: input.tuple
+    }
+  }
+  resources: {
+    attachment: aws-ec2.volume-attachment {
+      device-name: @core.lookup(action.seed.tuple, 'device-name')
+      instance-id: @core.lookup(input.tuple, 'instance-id')
+      volume-id:   @core.lookup(input.tuple, 'volume-id')
+    }
+  }
+}

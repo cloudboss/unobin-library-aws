@@ -1,0 +1,16 @@
+stack: {
+  factory: {
+    inputs: {
+      aws-config: { region: 'us-east-1' }
+      tuple: {
+        device-name: '/dev/sdf'
+        instance-id: 'i-one'
+        volume-id:   'vol-one'
+      }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

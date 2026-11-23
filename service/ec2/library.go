@@ -45,6 +45,8 @@ func Library() *runtime.Library {
 				svc.SecurityGroupEgressRuleResource, *svc.SecurityGroupEgressRuleResourceOutput](),
 			"subnet": makeResource[svc.SubnetResource, *svc.SubnetResourceOutput](),
 			"volume": makeResource[svc.VolumeResource, *svc.VolumeResourceOutput](),
+			"volume-attachment": makeResource[
+				svc.VolumeAttachmentResource, *svc.VolumeAttachmentResourceOutput](),
 			"launch-template": makeResource[
 				svc.LaunchTemplateResource,
 				*svc.LaunchTemplateResourceOutput](),

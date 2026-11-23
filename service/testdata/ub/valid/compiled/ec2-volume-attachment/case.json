@@ -1,0 +1,19 @@
+{
+  "name": "ec2-volume-attachment",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/ec2-volume-attachment",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/dev.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

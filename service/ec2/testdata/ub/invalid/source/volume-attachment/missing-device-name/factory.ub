@@ -1,0 +1,16 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: {} }
+  resources: {
+    attachment: aws-ec2.volume-attachment {
+      instance-id: 'i-one'
+      volume-id:   'vol-one'
+    }
+  }
+  outputs: {
+    device:   { value: resource.attachment.device-name }
+    instance: { value: resource.attachment.instance-id }
+    volume:   { value: resource.attachment.volume-id }
+    region:   { value: resource.attachment.region }
+  }
+}

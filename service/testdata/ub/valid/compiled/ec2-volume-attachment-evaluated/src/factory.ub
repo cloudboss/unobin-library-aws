@@ -1,0 +1,41 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: {
+      type: library-config('github.com/cloudboss/unobin-library-aws//config')
+    }
+    tuple: {
+      type: object(
+        {
+          device-name: optional(string)
+          instance-id: optional(string)
+          volume-id:   optional(string)
+        },
+      )
+    }
+    force-detach:                   { type: optional(boolean) }
+    skip-destroy:                   { type: optional(boolean) }
+    stop-instance-before-detaching: { type: optional(boolean) }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  resources: {
+    attachment: aws-ec2.volume-attachment {
+      device-name:                    @core.lookup(input.tuple, 'device-name')
+      instance-id:                    @core.lookup(input.tuple, 'instance-id')
+      volume-id:                      @core.lookup(input.tuple, 'volume-id')
+      force-detach:                   input.force-detach
+      skip-destroy:                   input.skip-destroy
+      stop-instance-before-detaching: input.stop-instance-before-detaching
+    }
+  }
+  outputs: {
+    tuple: {
+      value: [
+        resource.attachment.device-name,
+        resource.attachment.instance-id,
+        resource.attachment.volume-id,
+        resource.attachment.region,
+      ]
+    }
+  }
+}

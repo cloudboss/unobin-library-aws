@@ -1,0 +1,203 @@
+{
+  "name": "volume-attachment",
+  "rootPath": ".",
+  "executor": "root",
+  "cliVersion": "v0.13.0-a.4",
+  "commands": [
+    {
+      "name": "missing-device-name",
+      "dir": "missing-device-name",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/missing-device-name.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "missing-instance-id",
+      "dir": "missing-instance-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/missing-instance-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "missing-volume-id",
+      "dir": "missing-volume-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/missing-volume-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "null-device-name",
+      "dir": "null-device-name",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/null-device-name.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "null-instance-id",
+      "dir": "null-instance-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/null-instance-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "null-volume-id",
+      "dir": "null-volume-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/null-volume-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "undefined-attachment-id",
+      "dir": "undefined-attachment-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/undefined-attachment-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-device-name",
+      "dir": "wrong-type-device-name",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-device-name.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-force-detach",
+      "dir": "wrong-type-force-detach",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-force-detach.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-instance-id",
+      "dir": "wrong-type-instance-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-instance-id.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-skip-destroy",
+      "dir": "wrong-type-skip-destroy",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-skip-destroy.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-stop-instance-before-detaching",
+      "dir": "wrong-type-stop-instance-before-detaching",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-stop-instance-before-detaching.stderr",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type-volume-id",
+      "dir": "wrong-type-volume-id",
+      "args": [
+        "compile",
+        "-p",
+        "factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin=$REPO_ROOT",
+        "--replace-go-module=github.com/cloudboss/unobin-library-aws=$WORKSPACE/replacements/library/target"
+      ],
+      "stderr": "want/wrong-type-volume-id.stderr",
+      "exitCode": 1
+    }
+  ]
+}
