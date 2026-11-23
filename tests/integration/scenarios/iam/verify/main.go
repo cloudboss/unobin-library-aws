@@ -3,8 +3,7 @@
 // stable name because the test driver does not pass plan outputs into verify.
 // It only reads cloud state: applied requires the role, group, policies,
 // attachment, instance profile, and OIDC provider to be present and joined
-// together; destroyed requires them all to be gone. Tearing resources down is
-// the destroy plan's job, not the verifier's.
+// together; updated checks the role tag; destroyed requires the resources gone.
 package main
 
 import (
@@ -55,18 +54,46 @@ func run() error {
 	switch phase {
 	case "applied":
 		return verifyApplied(ctx, client)
+	case "updated":
+		duration := int32(3600)
+		if os.Getenv("UB_INPUT_max_session_duration") == "7200" {
+			duration = 7200
+		}
+		return verifyRole(ctx, client, "updated", duration)
 	case "destroyed":
 		return verifyDestroyed(ctx, client)
 	default:
-		return fmt.Errorf("VERIFY_PHASE must be applied or destroyed, got %q", phase)
+		return fmt.Errorf("VERIFY_PHASE must be applied, updated, or destroyed, got %q", phase)
 	}
 }
 
-func verifyApplied(ctx context.Context, client *iam.Client) error {
-	if _, err := client.GetRole(ctx, &iam.GetRoleInput{
+func verifyRole(ctx context.Context, client *iam.Client, wantTag string, wantDuration int32) error {
+	out, err := client.GetRole(ctx, &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("get role %s: %w", roleName, err)
+	}
+	if out.Role == nil {
+		return fmt.Errorf("get role %s returned no role", roleName)
+	}
+	if got := aws.ToInt32(out.Role.MaxSessionDuration); got != wantDuration {
+		return fmt.Errorf("role %s max session duration is %d, want %d",
+			roleName, got, wantDuration)
+	}
+	for _, tag := range out.Role.Tags {
+		if aws.ToString(tag.Key) == "Mutable" && aws.ToString(tag.Value) == wantTag {
+			fmt.Printf("ok: role %s has Mutable tag %q and session duration %d\n",
+				roleName, wantTag, wantDuration)
+			return nil
+		}
+	}
+	return fmt.Errorf("role %s has no Mutable tag with value %q", roleName, wantTag)
+}
+
+func verifyApplied(ctx context.Context, client *iam.Client) error {
+	if err := verifyRole(ctx, client, "initial", 3600); err != nil {
+		return err
 	}
 
 	group, err := client.GetGroup(ctx, &iam.GetGroupInput{

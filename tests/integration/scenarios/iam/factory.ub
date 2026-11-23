@@ -1,10 +1,8 @@
 factory: {
   description: '''>-
     Manages an IAM role, group, user, managed policy, attachments, instance profile, and OIDC
-    provider. The session duration, group and user identities, policy document, and provider
-    thumbprints come from inputs so the update pass can change them in place: the role through
-    UpdateRole, the group through UpdateGroup, the policy through a new default version,
-    inline policies through Put calls, and the thumbprints through the rotation call.
+    provider. The update changes role tags, group and user identities, the managed policy's
+    default version, inline policy documents, and the OIDC provider's thumbprints.
     '''
 
   imports: { aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
@@ -20,6 +18,11 @@ factory: {
       type:        integer
       default:     3600
       description: 'Maximum session duration of the role in seconds'
+    }
+    role-tag-value: {
+      type:        string
+      default:     'initial'
+      description: 'IAM role tag value; the update pass changes it in place'
     }
     policy-document: { type: string, description: 'JSON document of the managed policy' }
     inline-policy-document: {
@@ -71,6 +74,7 @@ factory: {
         {"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
         '''
       max-session-duration: input.max-session-duration
+      tags:                 { Mutable: input.role-tag-value }
     }
     iam-policy-it: aws-iam.policy {
       policy-name:     'unobin-it-policy'
