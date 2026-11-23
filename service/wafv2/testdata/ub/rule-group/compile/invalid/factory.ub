@@ -1,0 +1,300 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    unsupported-rule-members: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      tags-all: {}
+      rules: [
+        {
+          name:             'rule name!'
+          priority:         0
+          challenge-config: {}
+          override-action:  { none: {} }
+          action:           { allow: {} }
+          statement:        { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    encoded-search: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            byte-match-statement: {
+              search-string-base64:  'YQ=='
+              positional-constraint: 'EXACTLY'
+              field-to-match:        { uri-path: {} }
+              text-transformations:  [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-priority: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:      'rule name!'
+          action:    { allow: {} }
+          statement: { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    null-priority: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:      'rule name!'
+          priority:  null
+          action:    { allow: {} }
+          statement: { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-action: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:      'rule name!'
+          priority:  0
+          statement: { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-visibility-flag: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:              'rule name!'
+          priority:          0
+          action:            { allow: {} }
+          statement:         { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: { cloudwatch-metrics-enabled: false, metric-name: 'rule' }
+        },
+      ]
+    }
+    missing-byte-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            byte-match-statement: {
+              search-string:         'a'
+              positional-constraint: 'EXACTLY'
+              text-transformations:  [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-regex-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            regex-match-statement: {
+              regex-string:         'a'
+              text-transformations: [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-regex-set-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            regex-pattern-set-reference-statement: {
+              arn:                  ''
+              text-transformations: [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-size-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            size-constraint-statement: {
+              comparison-operator:  'GT'
+              size:                 0
+              text-transformations: [{ priority: 0, type: 'NONE' }]
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-sqli-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            sqli-match-statement: { text-transformations: [{ priority: 0, type: 'NONE' }] }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    missing-xss-field: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            xss-match-statement: { text-transformations: [{ priority: 0, type: 'NONE' }] }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+  }
+}

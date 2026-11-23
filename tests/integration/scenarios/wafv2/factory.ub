@@ -2,8 +2,8 @@ factory: {
   description: '''>-
     Manages regional WAFv2 web ACLs and associations to Cognito user pools. The
     update changes one ACL in place, replaces each association identity field,
-    and repairs an out-of-band reassociation introduced by the verifier.
-    Regional IP sets exercise specification and tag updates and clearing.
+    and repairs an out-of-band reassociation introduced by the verifier. Regional
+    IP sets and a rule group exercise specification and tag updates and clearing.
     '''
 
   imports: {
@@ -37,6 +37,10 @@ factory: {
         keep:   '1'
         remove: 'yes'
       }
+    }
+    clear-rule-group: {
+      type:    boolean
+      default: false
     }
     ip-set-description: {
       type:    optional(string)
@@ -72,6 +76,53 @@ factory: {
       description:        input.description
       addresses: if input.replace-resource-association then ['203.0.113.0/24'] else ['192.0.2.0/24']
       tags:      input.tags
+    }
+    rule-group: aws-wafv2.rule-group {
+      capacity:    50
+      name:        'unobin-it-wafv2-rule-group'
+      scope:       'REGIONAL'
+      description: if input.clear-rule-group then null else input.description
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name: if input.clear-rule-group then 'unobin-it-group-updated' else 'unobin-it-group'
+        sampled-requests-enabled: false
+      }
+      custom-response-bodies: if input.clear-rule-group
+        then null
+        else {
+          blocked: { content: 'blocked by rule group', content-type: 'TEXT_PLAIN' }
+        }
+      rules: if input.clear-rule-group
+        then null
+        else [
+          {
+            action: {
+              block: {
+                custom-response: { response-code: 403, custom-response-body-key: 'blocked' }
+              }
+            }
+            name:     'rule-group-byte'
+            priority: 0
+            statement: {
+              not-statement: {
+                statement: {
+                  byte-match-statement: {
+                    field-to-match:        { uri-path: {} }
+                    positional-constraint: 'EXACTLY'
+                    search-string:         input.search-string
+                    text-transformations:  [{ priority: 0, type: 'NONE' }]
+                  }
+                }
+              }
+            }
+            visibility-config: {
+              cloudwatch-metrics-enabled: false
+              metric-name:                'unobin-it-group-rule'
+              sampled-requests-enabled:   true
+            }
+          },
+        ]
+      tags: input.tags
     }
     web-acl-it: aws-wafv2.web-acl {
       name:           'unobin-it-wafv2'
@@ -147,6 +198,8 @@ factory: {
   }
 
   outputs: {
+    rule-group-id:           { value: resource.rule-group.id }
+    rule-group-arn:          { value: resource.rule-group.arn }
     web-acl-id:              { value: resource.web-acl-it.id }
     web-acl-arn:             { value: resource.web-acl-it.arn }
     replacement-web-acl-arn: { value: resource.replacement-web-acl.arn }

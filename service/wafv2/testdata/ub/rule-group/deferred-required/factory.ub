@@ -1,0 +1,30 @@
+factory: {
+  imports: {
+    fixture:   'example.test/waf-fixture'
+    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+  }
+  library-configs: { aws-wafv2: input.aws-config }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    capacity:   { type: integer }
+    rules:      { type: opaque }
+    visibility: { type: opaque }
+  }
+  actions: {
+    rules: fixture.seed {
+      echo: input.rules
+    }
+    visibility: fixture.seed {
+      echo: input.visibility
+    }
+  }
+  resources: {
+    group: aws-wafv2.rule-group {
+      capacity:          input.capacity
+      scope:             'REGIONAL'
+      name:              'example'
+      visibility-config: action.visibility.value
+      rules:             action.rules.value
+    }
+  }
+}

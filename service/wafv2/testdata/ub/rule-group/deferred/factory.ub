@@ -1,0 +1,45 @@
+factory: {
+  imports: {
+    fixture:   'example.test/waf-fixture'
+    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+  }
+  library-configs: { aws-wafv2: input.aws-config }
+  inputs: {
+    aws-config:   { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    capacity:     { type: integer }
+    name:         { type: string }
+    metric:       { type: string }
+    pending-rule: { type: opaque }
+  }
+  actions: {
+    seed: fixture.seed {
+      echo: input.pending-rule
+    }
+  }
+  resources: {
+    group: aws-wafv2.rule-group {
+      capacity: input.capacity
+      scope:    'REGIONAL'
+      name:     input.name
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group-metric'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          name:      'known'
+          action:    { count: {} }
+          priority:  3
+          statement: { label-match-statement: { scope: 'LABEL', key: 'test:label' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                input.metric
+            sampled-requests-enabled:   false
+          }
+        },
+        action.seed.value,
+      ]
+    }
+  }
+}

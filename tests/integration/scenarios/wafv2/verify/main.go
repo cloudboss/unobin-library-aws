@@ -111,6 +111,9 @@ func run() error {
 	}
 	wafClient := wafv2.NewFromConfig(configuration)
 	cognitoClient := cognitoidentityprovider.NewFromConfig(configuration)
+	if err := verifyRuleGroup(ctx, wafClient, buildDir, mode); err != nil {
+		return err
+	}
 	if err := verifyIPSets(ctx, wafClient, buildDir, mode); err != nil {
 		return err
 	}

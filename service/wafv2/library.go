@@ -28,8 +28,9 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
-			"ip-set":  makeResource[svc.IPSetResource, *svc.IPSetResourceOutput](),
-			"web-acl": makeResource[svc.WebACLResource, *svc.WebACLResourceOutput](),
+			"ip-set":     makeResource[svc.IPSetResource, *svc.IPSetResourceOutput](),
+			"rule-group": makeRuleGroupResource[svc.RuleGroupResource, *svc.RuleGroupResourceOutput](),
+			"web-acl":    makeResource[svc.WebACLResource, *svc.WebACLResourceOutput](),
 			"web-acl-association": makeResource[
 				svc.WebACLAssociationResource,
 				*svc.WebACLAssociationResourceOutput,

@@ -1,0 +1,152 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    group: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      name-prefix:            'explicit-'
+      description:            'valid description'
+      custom-response-bodies: { blocked: { content: 'blocked', content-type: 'TEXT_PLAIN' } }
+      rules: [
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { allow: {} }
+          statement: {
+            not-statement: {
+              statement: {
+                or-statement: {
+                  statements: [
+                    {
+                      and-statement: {
+                        statements: [
+                          {
+                            regex-match-statement: {
+                              field-to-match: {
+                                json-body: {
+                                  match-pattern: {
+                                    included-paths: ['prefix/~2', '/repeat', '/repeat']
+                                  }
+                                  match-scope: 'ALL'
+                                }
+                              }
+                              regex-string:         'a+'
+                              text-transformations: [{ priority: 0, type: 'NONE' }]
+                            }
+                          },
+                          { label-match-statement: { key: ':label:', scope: 'LABEL' } },
+                        ]
+                      }
+                    },
+                    { label-match-statement: { key: ':label:', scope: 'LABEL' } },
+                  ]
+                }
+              }
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+        {
+          name:     'rule name!'
+          priority: 0
+          action:   { block: { custom-response: { response-code: 600, response-headers: [] } } }
+          statement: {
+            rate-based-statement: {
+              limit:              10
+              aggregate-key-type: 'CONSTANT'
+              scope-down-statement: {
+                not-statement: {
+                  statement: {
+                    or-statement: {
+                      statements: [
+                        { label-match-statement: { key: ':label:', scope: 'LABEL' } },
+                        { label-match-statement: { key: ':label:', scope: 'LABEL' } },
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+        {
+          name:           'rule name!'
+          priority:       0
+          captcha-config: { immunity-time-property: {} }
+          action:         { captcha: {} }
+          statement:      { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+        {
+          name:      'rule name!'
+          priority:  0
+          action:    { challenge: {} }
+          statement: { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+        {
+          name:      'rule name!'
+          priority:  0
+          action:    { count: {} }
+          statement: { label-match-statement: { key: ':label:', scope: 'LABEL' } }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+    raw: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules-json: '[{"ChallengeConfig":{"ImmunityTimeProperty":{"ImmunityTime":9}}}]'
+    }
+    empty: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+    }
+  }
+  outputs: {
+    id:         { value: resource.group.id }
+    arn:        { value: resource.group.arn }
+    token:      { value: resource.group.lock-token }
+    region:     { value: resource.group.region }
+    visibility: { value: resource.group.visibility-config }
+    structured: { value: resource.group.rules }
+    json:       { value: resource.raw.rules-json }
+  }
+}

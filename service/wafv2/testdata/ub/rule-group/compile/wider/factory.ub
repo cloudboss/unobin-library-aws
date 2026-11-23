@@ -1,0 +1,40 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    group: aws-wafv2.rule-group {
+      capacity: 1
+      scope:    'REGIONAL'
+      name:     'schema-width'
+      visibility-config: {
+        cloudwatch-metrics-enabled: false
+        metric-name:                'group'
+        sampled-requests-enabled:   false
+      }
+      rules: [
+        {
+          action:           { count: {} }
+          name:             'rule'
+          priority:         0
+          challenge-config: {}
+          override-action:  { none: {} }
+          statement: {
+            not-statement: {
+              statement: {
+                label-match-statement: { scope: 'LABEL', key: 'valid' }
+                rate-based-statement:  { limit: 10 }
+              }
+            }
+            managed-rule-group-statement:   {}
+            rule-group-reference-statement: {}
+          }
+          visibility-config: {
+            cloudwatch-metrics-enabled: false
+            metric-name:                'rule'
+            sampled-requests-enabled:   false
+          }
+        },
+      ]
+    }
+  }
+}

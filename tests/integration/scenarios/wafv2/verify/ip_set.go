@@ -65,7 +65,7 @@ func verifyIPSets(ctx context.Context, client *wafv2.Client, buildDir, mode stri
 		}
 		return os.WriteFile(path, data, 0o600)
 	case "updated":
-		return verifyIPSetNoOp(ctx, buildDir)
+		return verifyWAFNoOp(ctx, buildDir)
 	default:
 		return nil
 	}
@@ -126,7 +126,7 @@ func verifyIPSet(
 	return nil
 }
 
-func verifyIPSetNoOp(ctx context.Context, buildDir string) error {
+func verifyWAFNoOp(ctx context.Context, buildDir string) error {
 	command := exec.CommandContext(
 		ctx, "./wafv2", "plan", "-c", "./update/config.ub", "--format", "json",
 	)
@@ -135,15 +135,16 @@ func verifyIPSetNoOp(ctx context.Context, buildDir string) error {
 	command.Stderr = &stderr
 	data, err := command.Output()
 	if err != nil {
-		return fmt.Errorf("plan after clearing IP set: %w: %s", err, &stderr)
+		return fmt.Errorf("plan after clearing WAF resources: %w: %s", err, &stderr)
 	}
 	var plan runtime.PlanFile
 	if err := json.Unmarshal(data, &plan); err != nil {
-		return fmt.Errorf("decode plan after clearing IP set: %w", err)
+		return fmt.Errorf("decode plan after clearing WAF resources: %w", err)
 	}
 	want := map[string]runtime.Decision{
 		"resource.ip-set-clear": runtime.DecisionNoOp,
 		"resource.ip-set-edit":  runtime.DecisionNoOp,
+		"resource.rule-group":   runtime.DecisionNoOp,
 	}
 	got := map[string]runtime.Decision{}
 	for _, step := range plan.Steps {
@@ -152,7 +153,7 @@ func verifyIPSetNoOp(ctx context.Context, buildDir string) error {
 		}
 	}
 	if !maps.Equal(got, want) {
-		return fmt.Errorf("IP set decisions %v, want %v", got, want)
+		return fmt.Errorf("WAF decisions %v, want %v", got, want)
 	}
 	return nil
 }

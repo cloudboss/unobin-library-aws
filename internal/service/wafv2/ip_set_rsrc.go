@@ -3,13 +3,11 @@ package wafv2
 import (
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"maps"
 	"net"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,13 +17,9 @@ import (
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
-	"github.com/cloudboss/unobin-library-aws/internal/partition"
 	"github.com/cloudboss/unobin-library-aws/internal/ptr"
 	awsretry "github.com/cloudboss/unobin-library-aws/internal/retry"
-	"github.com/cloudboss/unobin-library-aws/internal/tagsync"
 )
-
-const ipSetNameSuffixBytes = 13
 
 type IPSetResource struct {
 	Scope            string             `ub:"scope"`
@@ -55,6 +49,7 @@ type ipSetPrior = runtime.Prior[IPSetResource, *IPSetResourceOutput, *awsCfg]
 type ipSetDefinition = runtime.ResourceDefinition[IPSetResource, *IPSetResourceOutput, *awsCfg]
 
 type ipSetClient interface {
+	wafTagClient
 	CreateIPSet(context.Context, *awssvc.CreateIPSetInput,
 		...func(*awssvc.Options)) (*awssvc.CreateIPSetOutput, error)
 	GetIPSet(context.Context, *awssvc.GetIPSetInput,
@@ -63,12 +58,6 @@ type ipSetClient interface {
 		...func(*awssvc.Options)) (*awssvc.UpdateIPSetOutput, error)
 	DeleteIPSet(context.Context, *awssvc.DeleteIPSetInput,
 		...func(*awssvc.Options)) (*awssvc.DeleteIPSetOutput, error)
-	ListTagsForResource(context.Context, *awssvc.ListTagsForResourceInput,
-		...func(*awssvc.Options)) (*awssvc.ListTagsForResourceOutput, error)
-	TagResource(context.Context, *awssvc.TagResourceInput,
-		...func(*awssvc.Options)) (*awssvc.TagResourceOutput, error)
-	UntagResource(context.Context, *awssvc.UntagResourceInput,
-		...func(*awssvc.Options)) (*awssvc.UntagResourceOutput, error)
 }
 
 func (r IPSetResource) Constraints() []constraint.Constraint {
@@ -115,7 +104,7 @@ func (r *IPSetResource) ResourceDefinition() ipSetDefinition {
 				return aws.ToString(prior) == aws.ToString(desired)
 			}),
 			runtime.EqualBy(tags, func(prior, desired *map[string]string) bool {
-				return maps.Equal(ipSetUserTags(ptr.Value(prior)), ipSetUserTags(ptr.Value(desired)))
+				return maps.Equal(wafUserTags(ptr.Value(prior)), wafUserTags(ptr.Value(desired)))
 			}),
 		},
 		Replace: runtime.Replacement[IPSetResource, *IPSetResourceOutput, *awsCfg]{
@@ -232,29 +221,11 @@ func (r *IPSetResource) createIPSet(
 }
 
 func (r *IPSetResource) ipSetName(random io.Reader) (string, error) {
-	if r.Name != nil {
-		return *r.Name, nil
-	}
-	prefix := "unobin-"
-	if r.NamePrefix != nil {
-		prefix = *r.NamePrefix
-	}
-	var suffix [ipSetNameSuffixBytes]byte
-	if _, err := io.ReadFull(random, suffix[:]); err != nil {
+	name, err := resolveWAFName(r.Name, r.NamePrefix, random)
+	if err != nil {
 		return "", fmt.Errorf("generate IP set name: %w", err)
 	}
-	return prefix + hex.EncodeToString(suffix[:]), nil
-}
-
-func ipSetNamePrefix(name string) *string {
-	split := len(name) - hex.EncodedLen(ipSetNameSuffixBytes)
-	if split <= 0 {
-		return nil
-	}
-	if _, err := hex.DecodeString(name[split:]); err != nil {
-		return nil
-	}
-	return aws.String(name[:split])
+	return name, nil
 }
 
 func (r *IPSetResource) prepareIPSet() ([]string, *string, map[string]string) {
@@ -268,7 +239,7 @@ func (r *IPSetResource) prepareIPSet() ([]string, *string, map[string]string) {
 		unique[address] = struct{}{}
 		prepared = append(prepared, address)
 	}
-	return prepared, r.Description, ipSetUserTags(ptr.Value(r.Tags))
+	return prepared, r.Description, wafUserTags(ptr.Value(r.Tags))
 }
 
 func ipSetAddressesEqual(prior, desired []string) bool {
@@ -328,7 +299,7 @@ func readIPSet(
 	if identity.LockToken == "" {
 		return nil, fmt.Errorf("get IP set %s: response has no lock token", identity.ID)
 	}
-	identity.NamePrefix = ipSetNamePrefix(identity.Name)
+	identity.NamePrefix = wafNamePrefix(identity.Name)
 	identity.IPAddressVersion = string(set.IPAddressVersion)
 	identity.Description = set.Description
 	identity.Addresses = append([]string{}, set.Addresses...)
@@ -434,56 +405,14 @@ func deleteIPSet(
 	return nil
 }
 
-func ipSetUserTags(tags map[string]string) map[string]string {
-	filtered := make(map[string]string, len(tags))
-	for key, value := range tags {
-		if !strings.HasPrefix(key, "aws:") {
-			filtered[key] = value
-		}
-	}
-	return filtered
-}
-
 func listIPSetTags(
 	ctx context.Context, client ipSetClient, identity IPSetResourceOutput,
 ) (map[string]string, error) {
-	result, err := client.ListTagsForResource(ctx, &awssvc.ListTagsForResourceInput{
-		ResourceARN: aws.String(identity.ARN),
-	})
-	if err != nil && !partition.UnsupportedOperation(identity.Region, err) {
-		return nil, fmt.Errorf("list IP set tags %s: %w", identity.ARN, err)
-	}
-	tags := map[string]string{}
-	if err == nil && result != nil && result.TagInfoForResource != nil {
-		for _, tag := range result.TagInfoForResource.TagList {
-			tags[aws.ToString(tag.Key)] = aws.ToString(tag.Value)
-		}
-	}
-	return ipSetUserTags(tags), nil
+	return listWAFTags(ctx, client, identity.ARN, identity.Region, "IP set")
 }
 
 func syncIPSetTags(
 	ctx context.Context, client ipSetClient, current *IPSetResourceOutput, desired map[string]string,
 ) error {
-	upserts, removals := tagsync.Diff(current.Tags, desired)
-	if len(removals) > 0 {
-		_, err := client.UntagResource(ctx, &awssvc.UntagResourceInput{
-			ResourceARN: aws.String(current.ARN), TagKeys: removals,
-		})
-		if err != nil {
-			if partition.UnsupportedOperation(current.Region, err) {
-				return nil
-			}
-			return fmt.Errorf("untag IP set %s: %w", current.ARN, err)
-		}
-	}
-	if len(upserts) > 0 {
-		_, err := client.TagResource(ctx, &awssvc.TagResourceInput{
-			ResourceARN: aws.String(current.ARN), Tags: expandTags(upserts),
-		})
-		if err != nil && !partition.UnsupportedOperation(current.Region, err) {
-			return fmt.Errorf("tag IP set %s: %w", current.ARN, err)
-		}
-	}
-	return nil
+	return syncWAFTags(ctx, client, current.ARN, current.Region, "IP set", current.Tags, desired)
 }
