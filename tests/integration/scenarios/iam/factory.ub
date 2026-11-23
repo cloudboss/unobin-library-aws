@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages an IAM role, group, user, managed policy, attachments, instance profile, and OIDC
-    provider. The update changes role tags, group and user identities, the managed policy's
-    default version, inline policy documents, and the OIDC provider's thumbprints.
+    Manages an IAM role, group, user, managed policy, attachments, instance profile, and
+    OIDC provider. The update changes role tags, group and user identities, the managed
+    policy's default version, inline policy documents, and the OIDC provider's thumbprints.
     '''
 
   imports: { aws-iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
@@ -139,6 +139,9 @@ factory: {
   }
 
   data-sources: {
+    iam-role-lookup: aws-iam.role {
+      role-name: resource.iam-role-it.role-name
+    }
     iam-openid-connect-provider-lookup: aws-iam.openid-connect-provider {
       url: resource.iam-openid-connect-provider-it.url
     }

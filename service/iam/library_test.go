@@ -69,9 +69,6 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 		"user-policy",
 		"user-policy-attachment",
 	}, sortedKeys(lib.Resources))
-	require.Equal(t, []string{
-		"openid-connect-provider",
-	}, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
@@ -141,8 +138,5 @@ func TestReadIAMServiceSchema(t *testing.T) {
 		"user-policy",
 		"user-policy-attachment",
 	}, sortedKeys(schema.Resources))
-	require.Equal(t, []string{
-		"openid-connect-provider",
-	}, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

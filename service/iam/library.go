@@ -32,8 +32,8 @@ func Library() *runtime.Library {
 		Name:        "aws-iam",
 		Description: "AWS IAM library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
-			SuggestedUnobinVersion: "v0.12.0",
+			RequiredAPI:            "1.1",
+			SuggestedUnobinVersion: "v0.13.0-a.4",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
@@ -58,6 +58,7 @@ func Library() *runtime.Library {
 			"user-policy":  makeResource[svc.UserPolicyResource, *svc.UserPolicyResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
+			"role": makeDataSource[svc.RoleDataSource, *svc.RoleDataSourceOutput](),
 			"openid-connect-provider": makeDataSource[
 				svc.OpenIDConnectProviderDataSource, *svc.OpenIDConnectProviderDataSourceOutput](),
 		},

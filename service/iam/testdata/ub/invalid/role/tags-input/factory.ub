@@ -1,0 +1,10 @@
+factory: {
+  imports:         { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  library-configs: { iam: {} }
+  data-sources: {
+    bad: iam.role {
+      role-name: 'test'
+      tags:      { env: 'dev' }
+    }
+  }
+}

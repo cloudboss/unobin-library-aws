@@ -1,9 +1,5 @@
-// verify checks the IAM resources the scenario applied against the phase named
-// in the VERIFY_PHASE environment variable, looking each resource up by its
-// stable name because the test driver does not pass plan outputs into verify.
-// It only reads cloud state: applied requires the role, group, policies,
-// attachment, instance profile, and OIDC provider to be present and joined
-// together; updated checks the role tag; destroyed requires the resources gone.
+// verify checks the IAM resources for the phase in VERIFY_PHASE.
+// After apply and update, it compares the role lookup in local state with IAM.
 package main
 
 import (
@@ -11,13 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/state/local"
 )
 
 const (
@@ -85,10 +86,50 @@ func verifyRole(ctx context.Context, client *iam.Client, wantTag string, wantDur
 		if aws.ToString(tag.Key) == "Mutable" && aws.ToString(tag.Value) == wantTag {
 			fmt.Printf("ok: role %s has Mutable tag %q and session duration %d\n",
 				roleName, wantTag, wantDuration)
-			return nil
+			return verifyRoleLookup(out.Role)
 		}
 	}
 	return fmt.Errorf("role %s has no Mutable tag with value %q", roleName, wantTag)
+}
+
+func verifyRoleLookup(role *iamtypes.Role) error {
+	root := filepath.Join(os.Getenv("VERIFY_BUILD_DIR"), ".unobin", "state")
+	store, err := local.NewStore(root, "iam", "config", encrypters.Noop{})
+	if err != nil {
+		return fmt.Errorf("open scenario state: %w", err)
+	}
+	snapshot, err := store.Current()
+	if err != nil {
+		return fmt.Errorf("read scenario state: %w", err)
+	}
+	lookup := snapshot.Find("data-source.iam-role-lookup")
+	if lookup == nil {
+		return fmt.Errorf("scenario state has no IAM role lookup")
+	}
+	policy, err := url.QueryUnescape(aws.ToString(role.AssumeRolePolicyDocument))
+	if err != nil {
+		return fmt.Errorf("decode role trust policy: %w", err)
+	}
+	tags := make(map[string]any)
+	for _, tag := range role.Tags {
+		key := aws.ToString(tag.Key)
+		if !strings.HasPrefix(key, "aws:") {
+			tags[key] = aws.ToString(tag.Value)
+		}
+	}
+	for field, want := range map[string]any{
+		"role-name":                   aws.ToString(role.RoleName),
+		"role-id":                     aws.ToString(role.RoleId),
+		"arn":                         aws.ToString(role.Arn),
+		"assume-role-policy-document": policy,
+		"max-session-duration":        float64(aws.ToInt32(role.MaxSessionDuration)),
+		"tags":                        tags,
+	} {
+		if got := lookup.Outputs[field]; !reflect.DeepEqual(want, got) {
+			return fmt.Errorf("role lookup %s is %v, want %v", field, got, want)
+		}
+	}
+	return nil
 }
 
 func verifyApplied(ctx context.Context, client *iam.Client) error {

@@ -1,0 +1,26 @@
+factory: {
+  imports:         { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  library-configs: { iam: {} }
+  data-sources: {
+    lookup: iam.role {
+      role-name: 'MiXeD_+=,.@-123'
+    }
+    empty: iam.role {
+      role-name: ''
+    }
+  }
+  outputs: {
+    role-name:        { value: data-source.lookup.role-name }
+    arn:              { value: data-source.lookup.arn }
+    path:             { value: data-source.lookup.path }
+    role-id:          { value: data-source.lookup.role-id }
+    description:      { value: data-source.lookup.description }
+    create-date:      { value: data-source.lookup.create-date }
+    trust-policy:     { value: data-source.lookup.assume-role-policy-document }
+    session-duration: { value: data-source.lookup.max-session-duration }
+    boundary:         { value: data-source.lookup.permissions-boundary }
+    last-used-region: { value: data-source.lookup.role-last-used?.region }
+    last-used-date:   { value: data-source.lookup.role-last-used?.last-used-date }
+    tags:             { value: data-source.lookup.tags }
+  }
+}

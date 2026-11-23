@@ -1,0 +1,26 @@
+factory: {
+  imports: { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+
+  inputs: {
+    endpoint: { type: string }
+    lookup:   { type: string }
+  }
+
+  library-configs: { iam: { region: 'us-east-1', endpoint-url: input.endpoint } }
+
+  data-sources: {
+    lookup: iam.role {
+      role-name: input.lookup
+    }
+  }
+
+  resources: {
+    consumer: test.value {
+      name: data-source.lookup.role-name
+    }
+  }
+
+  outputs: {
+    name: { value: data-source.lookup.role-name }
+  }
+}
