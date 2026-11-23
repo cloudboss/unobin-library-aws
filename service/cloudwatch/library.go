@@ -28,6 +28,9 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"composite-alarm": makeResource[
+				svc.CompositeAlarmResource, *svc.CompositeAlarmResourceOutput,
+			](),
 			"dashboard":    makeResource[svc.DashboardResource, *svc.DashboardResourceOutput](),
 			"metric-alarm": makeResource[svc.MetricAlarmResource, *svc.MetricAlarmResourceOutput](),
 		},

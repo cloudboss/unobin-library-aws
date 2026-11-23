@@ -1,0 +1,15 @@
+  + resource.configured
+      actions-enabled: false
+      actions-suppressor: {alarm: 'mute', extension-period: 0, wait-period: 30}
+      alarm-actions: ['', 'arn:aws-us-gov:sns:us-gov-west-1:123456789012:operations', 'arn:aws:automate:us-east-1::ec2:stop', 'arn:aws:iam::aws-managed:policy/operations', 'arn:aws:sns:us-east-1:cw1234567890:notify', 'arn:aws:sns:us-east-1:cw1234567890:notify']
+      alarm-description: 'aggregates member alarms'
+      alarm-name: 'aggregate'
+      alarm-rule: 'ALARM("member")'
+      insufficient-data-actions: ['arn:aws:sns:us-east-1:123456789012:topic']
+      ok-actions: []
+      tags: {empty: '', environment: 'test'}
+  + resource.defaults
+      alarm-name: 'standalone'
+      alarm-rule: 'TRUE'
+
+Plan: 2 to create, 0 to update, 0 to replace, 0 to destroy, 0 to rerun.

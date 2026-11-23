@@ -1,0 +1,45 @@
+factory: {
+  imports:         { cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
+  library-configs: { cloudwatch: { region: 'us-east-1' } }
+  resources: {
+    defaults: cloudwatch.composite-alarm {
+      alarm-name: 'standalone'
+      alarm-rule: 'TRUE'
+    }
+    configured: cloudwatch.composite-alarm {
+      alarm-name:        'aggregate'
+      alarm-rule:        'ALARM("member")'
+      alarm-description: 'aggregates member alarms'
+      actions-enabled:   false
+      actions-suppressor: {
+        alarm:            'mute'
+        extension-period: 0
+        wait-period:      30
+      }
+      alarm-actions: [
+        '', 'arn:aws-us-gov:sns:us-gov-west-1:123456789012:operations',
+        'arn:aws:automate:us-east-1::ec2:stop', 'arn:aws:iam::aws-managed:policy/operations',
+        'arn:aws:sns:us-east-1:cw1234567890:notify', 'arn:aws:sns:us-east-1:cw1234567890:notify',
+      ]
+      ok-actions:                []
+      insufficient-data-actions: ['arn:aws:sns:us-east-1:123456789012:topic']
+      tags:                      { environment: 'test', empty: '' }
+    }
+  }
+  outputs: {
+    contents: {
+      value: {
+        arn:         resource.configured.arn
+        name:        resource.configured.alarm-name
+        rule:        resource.configured.alarm-rule
+        description: resource.configured.alarm-description
+        enabled:     resource.configured.actions-enabled
+        suppressor:  resource.configured.actions-suppressor
+        alarm:       resource.configured.alarm-actions
+        ok:          resource.configured.ok-actions
+        missing:     resource.configured.insufficient-data-actions
+        tags:        resource.configured.tags
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "compile-cloudwatch-composite-alarm",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "structure",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "structure/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/structure.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "rules",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "rules/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/rules.stdout",
+      "exitCode": 1
+    }
+  ]
+}

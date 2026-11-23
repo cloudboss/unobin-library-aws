@@ -1,0 +1,39 @@
+factory: {
+  imports: { cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
+
+  inputs: {
+    endpoint:                  { type: string }
+    region:                    { type: optional(string) }
+    name-key:                  { type: string }
+    rule-key:                  { type: string }
+    enabled:                   { type: optional(boolean) }
+    actions:                   { type: optional(list(string)) }
+    ok-actions:                { type: optional(list(string)) }
+    insufficient-data-actions: { type: optional(list(string)) }
+    suppressor: {
+      type: optional(object({ alarm: string, extension-period: integer, wait-period: integer }))
+    }
+    tags: { type: optional(map(string)) }
+  }
+
+  library-configs: {
+    cloudwatch: {
+      region:       input.region
+      endpoint-url: input.endpoint
+      max-attempts: 1
+    }
+  }
+
+  resources: {
+    alarm: cloudwatch.composite-alarm {
+      alarm-name: @core.lookup({ configured: 'old', next: 'next', empty: '' }, input.name-key)
+      alarm-rule: @core.lookup({ configured: 'TRUE', changed: 'FALSE', empty: '' }, input.rule-key)
+      actions-enabled:           input.enabled
+      actions-suppressor:        input.suppressor
+      alarm-actions:             input.actions
+      ok-actions:                input.ok-actions
+      insufficient-data-actions: input.insufficient-data-actions
+      tags:                      input.tags
+    }
+  }
+}

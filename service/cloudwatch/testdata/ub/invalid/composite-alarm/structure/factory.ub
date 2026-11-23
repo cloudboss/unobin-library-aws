@@ -1,0 +1,27 @@
+factory: {
+  imports:         { cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
+  library-configs: { cloudwatch: {} }
+  resources: {
+    missing: cloudwatch.composite-alarm {}
+    wrong-list: cloudwatch.composite-alarm {
+      alarm-name:    'test'
+      alarm-rule:    'TRUE'
+      alarm-actions: [1]
+    }
+    wrong-object: cloudwatch.composite-alarm {
+      alarm-name:         'test'
+      alarm-rule:         'TRUE'
+      actions-suppressor: [{ alarm: 'mute', extension-period: 0, wait-period: 0 }]
+    }
+    missing-period: cloudwatch.composite-alarm {
+      alarm-name:         'test'
+      alarm-rule:         'TRUE'
+      actions-suppressor: { alarm: 'mute', extension-period: 0 }
+    }
+    wrong-tags: cloudwatch.composite-alarm {
+      alarm-name: 'test'
+      alarm-rule: 'TRUE'
+      tags:       { status: true }
+    }
+  }
+}

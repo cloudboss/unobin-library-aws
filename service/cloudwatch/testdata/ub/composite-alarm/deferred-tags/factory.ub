@@ -1,0 +1,28 @@
+factory: {
+  imports: { cloudwatch: 'github.com/cloudboss/unobin-library-aws//service/cloudwatch' }
+
+  inputs: {
+    endpoint: { type: string }
+    region:   { type: string }
+  }
+
+  library-configs: {
+    cloudwatch: {
+      region:       input.region
+      endpoint-url: input.endpoint
+      max-attempts: 1
+    }
+  }
+
+  resources: {
+    seed: cloudwatch.composite-alarm {
+      alarm-name: 'seed'
+      alarm-rule: 'TRUE'
+    }
+    alarm: cloudwatch.composite-alarm {
+      alarm-name: 'old'
+      alarm-rule: 'FALSE'
+      tags:       { env: '', seed: resource.seed.arn }
+    }
+  }
+}
