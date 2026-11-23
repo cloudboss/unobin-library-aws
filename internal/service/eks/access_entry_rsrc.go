@@ -44,6 +44,12 @@ func (r AccessEntryResource) Constraints() []constraint.Constraint {
 				"EC2", "EC2_LINUX", "EC2_WINDOWS", "FARGATE_LINUX", "HYBRID_LINUX", "STANDARD",
 			),
 		),
+		constraint.Must(constraint.NotEquals(r.ClusterName, nil)).
+			Message("cluster-name must be a non-null string"),
+		constraint.Must(
+			constraint.NotEquals(r.PrincipalARN, nil),
+			constraint.NotEquals(r.PrincipalARN, ""),
+		).Message("principal-arn must be a nonempty string"),
 	}
 }
 

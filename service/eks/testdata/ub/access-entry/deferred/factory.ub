@@ -17,9 +17,9 @@ factory: {
       principal-arn: 'arn:aws:iam::123456789012:role/seed'
     }
     entry: aws-eks.access-entry {
-      cluster-name:      resource.seed.user-name
-      principal-arn:     input.principal
-      type:              resource.seed.kubernetes-groups[0]
+      cluster-name:  @core.lookup({ configured: input.cluster }, resource.seed.user-name)
+      principal-arn: @core.lookup({ configured: input.principal }, resource.seed.tags.principal-key)
+      type:          resource.seed.kubernetes-groups[0]
       kubernetes-groups: input.groups
       user-name:         input.username
     }

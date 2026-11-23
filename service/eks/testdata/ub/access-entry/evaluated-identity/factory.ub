@@ -1,0 +1,20 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:      { type: string }
+    cluster-key:   { type: string }
+    principal-key: { type: string }
+  }
+  resources: {
+    entry: aws-eks.access-entry {
+      cluster-name: @core.lookup({ configured: 'demo' }, input.cluster-key)
+      principal-arn: @core.lookup(
+        { configured: 'arn:aws:iam::123456789012:role/old', empty: '' },
+        input.principal-key,
+      )
+    }
+  }
+}

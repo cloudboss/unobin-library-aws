@@ -33,14 +33,15 @@ type accessEntryCall struct {
 }
 
 type accessEntryAPI struct {
-	mu          sync.Mutex
-	calls       []accessEntryCall
-	entries     map[string]map[string]any
-	updateBody  map[string]any
-	seedCluster string
-	seedType    string
-	tagRemovals []string
-	tagBody     map[string]map[string]string
+	mu               sync.Mutex
+	calls            []accessEntryCall
+	entries          map[string]map[string]any
+	updateBody       map[string]any
+	seedClusterKey   string
+	seedPrincipalKey string
+	seedType         string
+	tagRemovals      []string
+	tagBody          map[string]map[string]string
 }
 
 func (api *accessEntryAPI) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -86,8 +87,9 @@ func (api *accessEntryAPI) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			entry["username"] = "remote-user"
 		}
 		if cluster == "seed" {
-			entry["username"] = api.seedCluster
+			entry["username"] = api.seedClusterKey
 			entry["kubernetesGroups"] = []string{api.seedType}
+			entry["tags"] = map[string]any{"principal-key": api.seedPrincipalKey}
 		}
 		api.entries[key] = entry
 	case entry == nil:
@@ -376,14 +378,105 @@ func requireAccessEntryConstraint(t *testing.T, err error, rule string) {
 	require.ErrorContains(t, err, entryAddress+": schema: "+rule+" (predicate)")
 }
 
+func TestAccessEntryNativeRequiredIdentityOnEvaluatedAndSavedPlans(t *testing.T) {
+	const key = "demo/" + oldPrincipal
+	for _, tc := range []struct {
+		name, selector, selectorValue string
+		field, rule, message          string
+		invalidValue                  any
+	}{
+		{
+			name: "null cluster", selector: "cluster-key", selectorValue: "missing",
+			field: "cluster-name", rule: "constraints[2]",
+			message: "cluster-name must be a non-null string",
+		},
+		{
+			name: "null principal", selector: "principal-key", selectorValue: "missing",
+			field: "principal-arn", rule: "constraints[3]",
+			message: "principal-arn must be a nonempty string",
+		},
+		{
+			name: "empty principal", selector: "principal-key", selectorValue: "empty",
+			field: "principal-arn", rule: "constraints[3]",
+			message: "principal-arn must be a nonempty string", invalidValue: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			library := accessEntryLibrary(t)
+			api, endpoint := accessEntryEndpoint(t)
+			exec := accessEntryExecutor(t, library, "evaluated-identity", endpoint, nil)
+			exec.Inputs["cluster-key"], exec.Inputs["principal-key"] = "configured", "configured"
+			exec.Inputs[tc.selector] = tc.selectorValue
+			_, err := exec.Plan(t.Context())
+			requireAccessEntryConstraint(t, err, tc.rule)
+			require.ErrorContains(t, err, tc.message)
+			assert.Empty(t, api.takeCalls())
+
+			exec.Inputs[tc.selector] = "configured"
+			applyAccessEntryPlan(t, exec, saveAccessEntryPlan(t, exec))
+			assert.Equal(t, []accessEntryCall{{"POST", key}, {"GET", key}}, api.takeCalls())
+
+			exec.Inputs[tc.selector] = tc.selectorValue
+			_, err = exec.Plan(t.Context())
+			requireAccessEntryConstraint(t, err, tc.rule)
+			assert.Equal(t, []accessEntryCall{{"GET", key}}, api.takeCalls())
+
+			const export = "resource.access-entry"
+			rules := library.Constraints[export]
+			delete(library.Constraints, export)
+			replace := saveAccessEntryPlan(t, exec)
+			step := accessEntryPlanStep(t, replace)
+			assert.Equal(t, runtime.DecisionReplace, step.Decision)
+			assert.Equal(t, []string{tc.field}, step.ReplacementReasons)
+			assert.Equal(t, []accessEntryCall{{"GET", key}}, api.takeCalls())
+			library.Constraints[export] = rules
+
+			applyExec := accessEntryExecutor(t, library, "evaluated-identity", endpoint, exec.Store)
+			applyExec.Inputs = nil
+			_, err = applyExec.ApplyPlan(t.Context(), replace)
+			requireAccessEntryConstraint(t, err, tc.rule)
+			assert.Empty(t, api.takeCalls())
+
+			prior, err := exec.Store.Current()
+			require.NoError(t, err)
+			prior.Find(entryAddress).Inputs[tc.field] = tc.invalidValue
+			revision, err := exec.Store.Write(prior)
+			require.NoError(t, err)
+			require.NoError(t, exec.Store.SetCurrent(revision))
+			delete(library.Constraints, export)
+			noOp := saveAccessEntryPlan(t, exec)
+			assert.Equal(t, runtime.DecisionNoOp, accessEntryPlanStep(t, noOp).Decision)
+			assert.Equal(t, []accessEntryCall{{"GET", key}}, api.takeCalls())
+			library.Constraints[export] = rules
+
+			_, err = exec.Plan(t.Context())
+			requireAccessEntryConstraint(t, err, tc.rule)
+			assert.Equal(t, []accessEntryCall{{"GET", key}}, api.takeCalls())
+
+			_, err = applyExec.ApplyPlan(t.Context(), noOp)
+			requireAccessEntryConstraint(t, err, tc.rule)
+			assert.Empty(t, api.takeCalls())
+
+			exec.Destroy = true
+			applyAccessEntryPlan(t, exec, saveAccessEntryPlan(t, exec))
+			assert.Equal(t, []accessEntryCall{{"GET", key}, {"GET", key}, {"DELETE", key}},
+				api.takeCalls())
+		})
+	}
+}
+
 func TestAccessEntryNativeRulesOnDeferredReplacement(t *testing.T) {
 	library := accessEntryLibrary(t)
 	for _, tc := range []struct {
-		name, cluster, entryType, rule string
+		name, cluster, principal, entryType, rule string
+		missingSelector                           string
 	}{
-		{"valid", "next", "EC2_LINUX", ""},
-		{"invalid name", "_invalid", "STANDARD", "constraints[0]"},
-		{"invalid type", "next", "standard", "constraints[1]"},
+		{"valid", "next", newPrincipal, "EC2_LINUX", "", ""},
+		{"invalid name", "_invalid", newPrincipal, "STANDARD", "constraints[0]", ""},
+		{"invalid type", "next", newPrincipal, "standard", "constraints[1]", ""},
+		{"null cluster", "next", newPrincipal, "STANDARD", "constraints[2]", "cluster"},
+		{"null principal", "next", newPrincipal, "STANDARD", "constraints[3]", "principal"},
+		{"empty principal", "next", "", "STANDARD", "constraints[3]", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			api, endpoint := accessEntryEndpoint(t)
@@ -391,33 +484,45 @@ func TestAccessEntryNativeRulesOnDeferredReplacement(t *testing.T) {
 			applyAccessEntryPlan(t, initial, saveAccessEntryPlan(t, initial))
 			api.takeCalls()
 			exec := accessEntryExecutor(t, library, "deferred", endpoint, initial.Store)
+			exec.Inputs["cluster"], exec.Inputs["principal"] = tc.cluster, tc.principal
+			selectors := map[string]string{"cluster": "configured", "principal": "configured"}
+			if tc.missingSelector != "" {
+				selectors[tc.missingSelector] = "missing"
+			}
 			api.mu.Lock()
-			api.seedCluster, api.seedType = tc.cluster, tc.entryType
+			api.seedClusterKey = selectors["cluster"]
+			api.seedPrincipalKey = selectors["principal"]
+			api.seedType = tc.entryType
 			api.mu.Unlock()
 			saved := saveAccessEntryPlan(t, exec)
 			step := accessEntryPlanStep(t, saved)
 			assert.Equal(t, map[string][]string{
-				"cluster-name": {"resource.seed.user-name"},
-				"type":         {"resource.seed.kubernetes-groups[...]"},
+				"cluster-name":  {"resource.seed.user-name"},
+				"principal-arn": {"resource.seed.tags.principal-key"},
+				"type":          {"resource.seed.kubernetes-groups[...]"},
 			}, step.UnresolvedInputs)
-			assert.Equal(t, []string{"cluster-name", "type"}, step.PendingReplacementReasons)
+			assert.Equal(t, []string{"cluster-name", "principal-arn", "type"},
+				step.PendingReplacementReasons)
 			oldKey, seedKey := "demo/"+oldPrincipal, "seed/"+seedPrincipal
 			assert.Equal(t, []accessEntryCall{{"GET", oldKey}}, api.takeCalls())
 			exec.Inputs = nil
 			_, err := exec.ApplyPlan(t.Context(), saved)
+			got := api.takeCalls()
 			calls := []accessEntryCall{{"POST", seedKey}, {"GET", seedKey}}
 			if tc.rule == "" {
 				require.NoError(t, err)
-				nextKey := tc.cluster + "/" + oldPrincipal
+				nextKey := tc.cluster + "/" + tc.principal
 				calls = append(calls,
 					accessEntryCall{"GET", oldKey}, accessEntryCall{"DELETE", oldKey},
 					accessEntryCall{"POST", nextKey}, accessEntryCall{"GET", nextKey},
 					accessEntryCall{"GET", seedKey},
 				)
 			} else {
+				assert.Equal(t, calls, got)
 				requireAccessEntryConstraint(t, err, tc.rule)
+				return
 			}
-			assert.Equal(t, calls, api.takeCalls())
+			assert.Equal(t, calls, got)
 		})
 	}
 }

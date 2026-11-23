@@ -40,13 +40,15 @@ func accessEntryLibrary(t *testing.T) *runtime.Library {
 	return library
 }
 
-func TestAccessEntryInvalidFactoryLiterals(t *testing.T) {
+func TestAccessEntryFactoryCompilation(t *testing.T) {
 	module := moduleRoot(t, ".")
 	core := unobinRoot(t)
 	for _, tc := range []struct {
 		fixture string
 		errors  []string
 	}{
+		{fixture: "evaluated-identity"},
+		{fixture: "deferred"},
 		{fixture: "required", errors: []string{
 			`missing required input "cluster-name" on aws-eks.access-entry`,
 			`missing required input "principal-arn" on aws-eks.access-entry`,
@@ -59,6 +61,7 @@ func TestAccessEntryInvalidFactoryLiterals(t *testing.T) {
 			"resource.empty-name: constraints[0]", "resource.leading-underscore: constraints[0]",
 			"resource.long-name: constraints[0]", "resource.lower-type: constraints[1]",
 			"resource.empty-type: constraints[1]", "resource.new-type: constraints[1]",
+			"resource.empty-principal: constraints[3] (predicate): principal-arn must be a nonempty string",
 		}},
 	} {
 		t.Run(tc.fixture, func(t *testing.T) {
@@ -76,7 +79,10 @@ func TestAccessEntryInvalidFactoryLiterals(t *testing.T) {
 				Stderr: io.Discard,
 			}
 			err := compile.Run(options)
-			require.Error(t, err)
+			if len(tc.errors) == 0 {
+				require.NoError(t, err)
+				return
+			}
 			for _, want := range tc.errors {
 				require.ErrorContains(t, err, want)
 			}
