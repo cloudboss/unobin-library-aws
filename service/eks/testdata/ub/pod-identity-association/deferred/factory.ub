@@ -1,0 +1,41 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:  { type: string }
+    region:    { type: string }
+    cluster:   { type: string }
+    namespace: { type: string }
+    account:   { type: string }
+    role:      { type: string }
+    target:    { type: optional(string) }
+    selectors: { type: map(string) }
+  }
+  resources: {
+    seed: aws-eks.pod-identity-association {
+      cluster-name:    'seed'
+      namespace:       'default'
+      service-account: 'seed'
+      role-arn:        'arn:aws:iam::123456789012:role/seed'
+    }
+    association: aws-eks.pod-identity-association {
+      cluster-name: if resource.seed.association-id != ''
+        then @core.lookup({ preferred: input.cluster }, input.selectors.cluster)
+        else 'unused'
+      namespace: if resource.seed.association-id != ''
+        then @core.lookup({ preferred: input.namespace }, input.selectors.namespace)
+        else 'unused'
+      service-account: if resource.seed.association-id != ''
+        then @core.lookup({ preferred: input.account }, input.selectors.account)
+        else 'unused'
+      role-arn: if resource.seed.association-id != ''
+        then @core.lookup({ preferred: input.role }, input.selectors.role)
+        else 'arn:::::'
+      target-role-arn: if resource.seed.association-id != ''
+        then @core.lookup({ preferred: input.target }, input.selectors.target)
+        else null
+    }
+  }
+}

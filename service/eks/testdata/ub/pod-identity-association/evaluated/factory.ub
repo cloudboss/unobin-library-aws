@@ -1,0 +1,29 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:  { type: string }
+    region:    { type: string }
+    cluster:   { type: string }
+    namespace: { type: string }
+    account:   { type: string }
+    role:      { type: string }
+    missing:   { type: string }
+    disabled:  { type: optional(boolean) }
+    target:    { type: optional(string) }
+    tags:      { type: optional(map(string)) }
+  }
+  resources: {
+    association: aws-eks.pod-identity-association {
+      cluster-name:         @core.lookup({ preferred: input.cluster }, input.missing)
+      namespace:            @core.lookup({ preferred: input.namespace }, input.missing)
+      service-account:      @core.lookup({ preferred: input.account }, input.missing)
+      role-arn:             @core.lookup({ preferred: input.role }, input.missing)
+      disable-session-tags: input.disabled
+      target-role-arn:      input.target
+      tags:                 input.tags
+    }
+  }
+}

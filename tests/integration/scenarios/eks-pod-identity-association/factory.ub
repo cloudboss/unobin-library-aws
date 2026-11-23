@@ -1,0 +1,140 @@
+factory: {
+  description: 'Creates and updates a Pod Identity association on an EKS cluster.'
+
+  imports: {
+    aws-ec2:  'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-eks:  'github.com/cloudboss/unobin-library-aws//service/eks'
+    aws-iam:  'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
+  }
+
+  library-configs: {
+    aws-ec2:  input.aws-config
+    aws-eks:  input.aws-config
+    aws-iam:  input.aws-config
+    aws-meta: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    updated: { type: boolean, default: false }
+  }
+
+  data-sources: {
+    partition: aws-meta.partition {}
+    availability-zones: aws-ec2.availability-zones {
+      state: 'available'
+    }
+  }
+
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.94.0.0/16'
+    }
+    subnet-a: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.94.1.0/24'
+      availability-zone: data-source.availability-zones.names[0]
+    }
+    subnet-b: aws-ec2.subnet {
+      vpc-id:            resource.vpc.vpc-id
+      cidr-block:        '10.94.2.0/24'
+      availability-zone: data-source.availability-zones.names[1]
+    }
+    cluster-role: aws-iam.role {
+      role-name: 'unobin-it-eks-pod-id-cluster'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'eks.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+    }
+    cluster-policy: aws-iam.role-policy-attachment {
+      role-name: resource.cluster-role.role-name
+      policy-arn: $'''\-
+        arn:{{ data-source.partition.partition }}:iam::aws:policy/AmazonEKSClusterPolicy
+        '''
+    }
+    cluster: aws-eks.cluster {
+      @depends-on:   [resource.cluster-policy]
+      name:          'unobin-it-eks-pod-id'
+      role-arn:      resource.cluster-role.arn
+      access-config: { authentication-mode: 'API' }
+      vpc-config: {
+        subnet-ids:              [resource.subnet-a.id, resource.subnet-b.id]
+        endpoint-private-access: false
+        endpoint-public-access:  true
+      }
+    }
+    pod-role: aws-iam.role {
+      role-name:                   'unobin-it-eks-pod-id-workload'
+      assume-role-policy-document: local.pod-trust
+    }
+    next-pod-role: aws-iam.role {
+      role-name:                   'unobin-it-eks-pod-id-workload-next'
+      assume-role-policy-document: local.pod-trust
+    }
+    target-role: aws-iam.role {
+      role-name:                   'unobin-it-eks-pod-id-target'
+      assume-role-policy-document: local.target-trust
+    }
+    next-target-role: aws-iam.role {
+      role-name:                   'unobin-it-eks-pod-id-target-next'
+      assume-role-policy-document: local.target-trust
+    }
+    association: aws-eks.pod-identity-association {
+      cluster-name:    resource.cluster.name
+      namespace:       'unobin'
+      service-account: 'workload'
+      role-arn:        if input.updated then resource.next-pod-role.arn else resource.pod-role.arn
+      target-role-arn: if input.updated
+        then resource.next-target-role.arn
+        else resource.target-role.arn
+      disable-session-tags: input.updated
+      tags:                 { scenario: 'pod-identity-association', empty: '' }
+    }
+  }
+
+  locals: {
+    pod-trust: @core.to-json(
+      {
+        Version: '2012-10-17'
+        Statement: [
+          {
+            Effect:    'Allow'
+            Principal: { Service: 'pods.eks.amazonaws.com' }
+            Action:    ['sts:AssumeRole', 'sts:TagSession']
+          },
+        ]
+      },
+    )
+    target-trust: @core.to-json(
+      {
+        Version: '2012-10-17'
+        Statement: [
+          {
+            Effect:    'Allow'
+            Principal: { AWS: [resource.pod-role.arn, resource.next-pod-role.arn] }
+            Action:    ['sts:AssumeRole', 'sts:TagSession']
+          },
+        ]
+      },
+    )
+  }
+
+  outputs: {
+    association-id:  { value: resource.association.association-id }
+    association-arn: { value: resource.association.association-arn }
+    external-id:     { value: resource.association.external-id }
+  }
+}

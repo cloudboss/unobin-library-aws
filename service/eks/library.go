@@ -43,6 +43,10 @@ func Library() *runtime.Library {
 				*svc.FargateProfileResourceOutput,
 			](),
 			"node-group": makeResource[svc.NodeGroupResource, *svc.NodeGroupResourceOutput](),
+			"pod-identity-association": makeResource[
+				svc.PodIdentityAssociationResource,
+				*svc.PodIdentityAssociationResourceOutput,
+			](),
 		},
 	}
 }

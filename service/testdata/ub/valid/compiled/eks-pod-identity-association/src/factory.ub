@@ -1,0 +1,42 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    minimal: aws-eks.pod-identity-association {
+      cluster-name:    'demo'
+      namespace:       'default'
+      service-account: 'workload'
+      role-arn:        'arn:aws:iam::123456789012:role/workload'
+    }
+    explicit: aws-eks.pod-identity-association {
+      cluster-name:         '_demo'
+      namespace:            'namespace:one'
+      service-account:      'name/name'
+      role-arn:             'arn:::::'
+      disable-session-tags: true
+      target-role-arn:      'arn:aws:iam::999999999999:role/target'
+      tags:                 { empty: '' }
+    }
+    nullable: aws-eks.pod-identity-association {
+      cluster-name:         'demo'
+      namespace:            'default'
+      service-account:      'other'
+      role-arn:             'arn:aws:iam::123456789012:role/workload'
+      disable-session-tags: null
+      target-role-arn:      null
+      tags:                 null
+    }
+  }
+  outputs: {
+    id:              { value: resource.minimal.association-id }
+    arn:             { value: resource.minimal.association-arn }
+    cluster:         { value: resource.minimal.cluster-name }
+    namespace:       { value: resource.minimal.namespace }
+    service-account: { value: resource.minimal.service-account }
+    role:            { value: resource.minimal.role-arn }
+    disabled:        { value: resource.explicit.disable-session-tags }
+    target:          { value: resource.explicit.target-role-arn }
+    external:        { value: resource.nullable.external-id }
+    tags:            { value: resource.nullable.tags }
+  }
+}

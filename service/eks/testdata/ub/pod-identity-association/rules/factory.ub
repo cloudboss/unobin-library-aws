@@ -1,0 +1,19 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    names: aws-eks.pod-identity-association {
+      cluster-name:    ''
+      namespace:       ''
+      service-account: ''
+      role-arn:        'arn:aws:iam::123456789012:role/workload'
+    }
+    roles: aws-eks.pod-identity-association {
+      cluster-name:    'demo'
+      namespace:       'default'
+      service-account: 'workload'
+      role-arn:        'arn:aws:iam:short:'
+      target-role-arn: 'urn:aws:iam::999999999999:role/target'
+    }
+  }
+}

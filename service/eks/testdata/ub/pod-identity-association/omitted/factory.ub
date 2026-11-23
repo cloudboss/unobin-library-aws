@@ -1,0 +1,18 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 }
+  }
+  inputs: {
+    endpoint: { type: string }
+    region:   { type: string }
+  }
+  resources: {
+    association: aws-eks.pod-identity-association {
+      cluster-name:    'demo'
+      namespace:       'default'
+      service-account: 'workload'
+      role-arn:        'arn:aws:iam::123456789012:role/workload'
+    }
+  }
+}

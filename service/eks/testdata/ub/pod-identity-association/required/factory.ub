@@ -1,0 +1,7 @@
+factory: {
+  imports:         { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { aws-eks: {} }
+  resources: {
+    required: aws-eks.pod-identity-association {}
+  }
+}
