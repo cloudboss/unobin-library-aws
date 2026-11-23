@@ -1,0 +1,56 @@
+factory: {
+  description: 'Publishes a message to a topic with an SQS subscriber'
+
+  imports: {
+    sns: 'github.com/cloudboss/unobin-library-aws//service/sns'
+    sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
+
+  library-configs: {
+    sns: input.aws-config
+    sqs: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    batch: { type: string, default: 'applied' }
+  }
+
+  resources: {
+    topic: sns.topic {
+      name: 'unobin-it-sns-publish'
+    }
+    queue: sqs.queue {
+      name: 'unobin-it-sns-publish'
+    }
+    policy: sqs.queue-policy {
+      queue-url: resource.queue.url
+      policy: $'''>-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
+        "Principal":{"Service":"sns.amazonaws.com"},"Action":"sqs:SendMessage",
+        "Resource":"{{ resource.queue.arn }}",
+        "Condition":{"ArnEquals":{"aws:SourceArn":"{{ resource.topic.arn }}"}}}]}
+        '''
+    }
+    subscription: sns.topic-subscription {
+      topic-arn: resource.topic.arn
+      protocol:  'sqs'
+      endpoint:  resource.queue.arn
+    }
+  }
+
+  actions: {
+    send: sns.publish {
+      @depends-on: [resource.policy, resource.subscription]
+      @trigger:    input.batch
+      topic-arn:   resource.topic.arn
+      message:     $'SNS publish {{ input.batch }}'
+      message-attributes: [
+        { name: 'batch', data-type: 'String', string-value: input.batch },
+      ]
+    }
+  }
+}

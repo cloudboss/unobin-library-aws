@@ -1,6 +1,7 @@
 factory: {
   imports: {
     aws-ec2:  'github.com/cloudboss/unobin-library-aws//service/ec2'
+    aws-sns:  'github.com/cloudboss/unobin-library-aws//service/sns'
     aws-sqs:  'github.com/cloudboss/unobin-library-aws//service/sqs'
     aws-meta: 'github.com/cloudboss/unobin-library-aws//meta'
   }
@@ -14,6 +15,7 @@ factory: {
 
   library-configs: {
     aws-ec2:  input.aws-config
+    aws-sns:  input.aws-config
     aws-sqs:  input.aws-config
     aws-meta: input.aws-config
   }
@@ -88,6 +90,21 @@ factory: {
     }
     queue: aws-sqs.queue {
       name: 'compatibility-queue'
+    }
+  }
+
+  actions: {
+    publish: aws-sns.publish {
+      topic-arn:         'arn:aws:sns:us-east-1:123456789012:compatibility-topic'
+      message:           '{"default":"test"}'
+      message-structure: 'json'
+      subject:           ''
+      region:            null
+      message-attributes: [
+        { name: 'label', data-type: 'String', string-value: 'test' },
+        { name: 'ratio', data-type: 'Number', string-value: '001.20' },
+        { name: 'blob', data-type: 'Binary', string-value: 'YWJj' },
+      ]
     }
   }
 

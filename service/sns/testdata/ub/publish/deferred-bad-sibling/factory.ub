@@ -1,0 +1,21 @@
+factory: {
+  imports:         { sns: 'github.com/cloudboss/unobin-library-aws//service/sns' }
+  library-configs: { sns: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint: { type: string }
+    value:    { type: opaque }
+  }
+  actions: {
+    seed: test.seed {
+      echo: input.value
+    }
+    send: sns.publish {
+      topic-arn: 'arn:aws:sns:us-east-1:012345678901:topic'
+      message:   'deferred message'
+      message-attributes: [
+        { name: 'first', data-type: 'String', string-value: action.seed.value },
+        { name: 'second', data-type: 'not-valid', string-value: '0001' },
+      ]
+    }
+  }
+}

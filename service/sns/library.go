@@ -34,5 +34,9 @@ func Library() *runtime.Library {
 				svc.TopicSubscriptionResource,
 				*svc.TopicSubscriptionResourceOutput](),
 		},
+		Actions: map[string]runtime.ActionRegistration{
+			"publish": runtime.MakeAction[
+				svc.PublishAction, *svc.PublishActionOutput, *awscfg.Configuration](),
+		},
 	}
 }

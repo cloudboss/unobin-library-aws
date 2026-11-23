@@ -1,0 +1,12 @@
+factory: {
+  imports:         { sns: 'github.com/cloudboss/unobin-library-aws//service/sns' }
+  library-configs: { sns: {} }
+  actions: {
+    no-topic: sns.publish {
+      message: 'example'
+    }
+    no-message: sns.publish {
+      topic-arn: 'example'
+    }
+  }
+}

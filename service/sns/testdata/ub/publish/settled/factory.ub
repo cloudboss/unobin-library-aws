@@ -1,0 +1,33 @@
+factory: {
+  imports:         { sns: 'github.com/cloudboss/unobin-library-aws//service/sns' }
+  library-configs: { sns: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint: { type: string }
+    arguments: {
+      type: object(
+        {
+          topic-arn:         string
+          message:           string
+          subject:           optional(string)
+          message-structure: optional(string)
+          message-attributes: optional(
+            list(object({ name: string, data-type: string, string-value: string })),
+          )
+          region: optional(string)
+        },
+      )
+    }
+    trigger: { type: string }
+  }
+  actions: {
+    send: sns.publish {
+      @trigger:           input.trigger
+      topic-arn:          input.arguments.topic-arn
+      message:            input.arguments.message
+      subject:            input.arguments.subject
+      message-structure:  input.arguments.message-structure
+      message-attributes: input.arguments.message-attributes
+      region:             input.arguments.region
+    }
+  }
+}

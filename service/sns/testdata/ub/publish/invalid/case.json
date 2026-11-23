@@ -1,0 +1,83 @@
+{
+  "name": "compile-sns-publish",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "missing-required",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "missing-required/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing-required.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-types",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong-types/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-types.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "nested-fields",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "nested-fields/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/nested-fields.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "invalid-enums",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid-enums/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/invalid-enums.stdout",
+      "exitCode": 1
+    }
+  ]
+}

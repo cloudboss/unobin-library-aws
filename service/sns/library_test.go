@@ -60,7 +60,6 @@ func TestLibraryRegistersSNSLocalKinds(t *testing.T) {
 		"topic-subscription",
 	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.DataSources))
-	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
 		"topic":              reflect.TypeFor[*svc.TopicResourceOutput](),
@@ -101,5 +100,4 @@ func TestReadSNSServiceSchema(t *testing.T) {
 		"topic-subscription",
 	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.DataSources))
-	require.Empty(t, sortedKeys(schema.Actions))
 }
