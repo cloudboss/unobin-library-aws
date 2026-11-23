@@ -1,8 +1,8 @@
 factory: {
   description: '''>-
-    Manages a CloudTrail trail and its S3 destination. The update changes direct
-    trail settings, stops logging, switches from standard to advanced selectors,
-    changes Insights categories, clears event aggregation, and reconciles tags.
+    Manages a CloudTrail trail and its S3 destination. The update changes direct trail
+    settings, stops logging, switches from standard to advanced selectors, and
+    reconciles tags. The live tier also updates Insights and clears event aggregation.
     '''
 
   imports: {
@@ -22,9 +22,10 @@ factory: {
       type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
-    enable-logging:             { type: boolean, default: true }
-    enable-log-file-validation: { type: boolean, default: false }
-    s3-key-prefix:              { type: string, default: 'initial' }
+    enable-logging:                  { type: boolean, default: true }
+    enable-log-file-validation:      { type: boolean, default: false }
+    enable-insights-and-aggregation: { type: boolean, default: false }
+    s3-key-prefix:                   { type: string, default: 'initial' }
     event-selectors: {
       type: optional(
         list(
@@ -143,9 +144,13 @@ factory: {
       include-global-service-events: true
       event-selectors:               input.event-selectors
       advanced-event-selectors:      input.advanced-event-selectors
-      insight-selectors:             input.insight-selectors
-      aggregation-configurations:    input.aggregation-configurations
-      tags:                          input.trail-tags
+      insight-selectors: if input.enable-insights-and-aggregation
+        then input.insight-selectors
+        else null
+      aggregation-configurations: if input.enable-insights-and-aggregation
+        then input.aggregation-configurations
+        else null
+      tags: input.trail-tags
     }
   }
 

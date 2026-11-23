@@ -80,11 +80,13 @@ func verifyTrail(
 	if err := verifySelectors(ctx, client, initial); err != nil {
 		return err
 	}
-	if err := verifyInsights(ctx, client, initial); err != nil {
-		return err
-	}
-	if err := verifyAggregation(ctx, client, initial); err != nil {
-		return err
+	if os.Getenv("UB_INPUT_enable_insights_and_aggregation") == "true" {
+		if err := verifyInsights(ctx, client, initial); err != nil {
+			return err
+		}
+		if err := verifyAggregation(ctx, client, initial); err != nil {
+			return err
+		}
 	}
 	tags, err := client.ListTags(ctx, &cloudtrail.ListTagsInput{
 		ResourceIdList: []string{aws.ToString(trail.TrailARN)},
