@@ -1,0 +1,32 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: {} }
+  actions: {
+    omitted: eventbridge.put-events {}
+    empty: eventbridge.put-events {
+      entries: []
+      region:  ''
+    }
+    batch: eventbridge.put-events {
+      region: 'us-west-2'
+      entries: [
+        { source: '', detail: '{malformed', time: null },
+        {
+          source:         'example.first'
+          detail:         '{}'
+          detail-type:    'First event'
+          event-bus-name: 'sample-bus'
+          resources:      ['resource-2', '', 'resource-1']
+          time:           '2026-11-22T23:45:00Z'
+        },
+        {
+          source:         'example.second'
+          detail-type:    ''
+          event-bus-name: 'arn:aws:events:us-east-1:123456789012:event-bus/sample-bus'
+          resources:      []
+          time:           '2026-11-22T23:45:00.123+02:30'
+        },
+      ]
+    }
+  }
+}

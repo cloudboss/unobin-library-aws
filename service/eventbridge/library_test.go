@@ -60,7 +60,6 @@ func TestLibraryRegistersEventBridgeLocalKinds(t *testing.T) {
 		"target",
 	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.DataSources))
-	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
 		"event-bus": reflect.TypeFor[*svc.EventBusResourceOutput](),
@@ -101,5 +100,4 @@ func TestReadEventBridgeServiceSchema(t *testing.T) {
 		"target",
 	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.DataSources))
-	require.Empty(t, sortedKeys(schema.Actions))
 }

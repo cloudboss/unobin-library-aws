@@ -20,9 +20,13 @@ func newClient(ctx context.Context, cfg *awsCfg) (*eventbridge.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return eventbridge.NewFromConfig(awsCfg, func(o *eventbridge.Options) {
+	return newClientFromConfig(awsCfg), nil
+}
+
+func newClientFromConfig(cfg aws.Config) *eventbridge.Client {
+	return eventbridge.NewFromConfig(cfg, func(o *eventbridge.Options) {
 		o.Retryer = eventbridgeLimitRetryer{Retryer: o.Retryer}
-	}), nil
+	})
 }
 
 // isNotFound reports whether err is EventBridge's ResourceNotFound error.

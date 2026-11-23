@@ -128,6 +128,7 @@ func TestEventbridgeLimitRetryer(t *testing.T) {
 		Message: aws.String("The requested resource exceeds the maximum number allowed"),
 	}
 	assert.False(t, retryer.IsErrorRetryable(limitErr))
+	assert.True(t, retryer.IsErrorRetryable(errors.New(limitErr.ErrorMessage())))
 
 	throttleErr := &eventbridgetypes.LimitExceededException{Message: aws.String("Rate exceeded")}
 	assert.True(t, retryer.IsErrorRetryable(throttleErr))

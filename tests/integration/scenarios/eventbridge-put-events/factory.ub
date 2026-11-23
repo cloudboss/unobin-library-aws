@@ -1,0 +1,72 @@
+factory: {
+  description: 'Sends a batch of custom events to a bus that routes them to SQS'
+
+  imports: {
+    eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge'
+    sqs:         'github.com/cloudboss/unobin-library-aws//service/sqs'
+  }
+
+  library-configs: {
+    eventbridge: input.aws-config
+    sqs:         input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    batch: { type: string, default: 'applied' }
+  }
+
+  resources: {
+    bus: eventbridge.event-bus {
+      name: 'unobin-it-put-events'
+    }
+    queue: sqs.queue {
+      name:               'unobin-it-put-events'
+      visibility-timeout: 120
+    }
+    rule: eventbridge.rule {
+      name:           'unobin-it-put-events'
+      event-bus-name: resource.bus.name
+      event-pattern:  '{"source":["unobin.integration.put-events"]}'
+    }
+    policy: sqs.queue-policy {
+      queue-url: resource.queue.url
+      policy: $'''>-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
+        "Principal":{"Service":"events.amazonaws.com"},"Action":"sqs:SendMessage",
+        "Resource":"{{ resource.queue.arn }}",
+        "Condition":{"ArnEquals":{"aws:SourceArn":"{{ resource.rule.arn }}"}}}]}
+        '''
+    }
+    target: eventbridge.target {
+      event-bus-name: resource.bus.name
+      rule:           resource.rule.name
+      target-id:      'queue'
+      arn:            resource.queue.arn
+    }
+  }
+
+  actions: {
+    send: eventbridge.put-events {
+      @depends-on: [resource.policy, resource.target]
+      @trigger:    input.batch
+      entries: [
+        {
+          event-bus-name: resource.bus.name
+          source:         'unobin.integration.put-events'
+          detail-type:    'first'
+          detail:         $'{"batch":"{{ input.batch }}","position":1}'
+        },
+        {
+          event-bus-name: resource.bus.arn
+          source:         'unobin.integration.put-events'
+          detail-type:    'second'
+          detail:         $'{"batch":"{{ input.batch }}","position":2}'
+        },
+      ]
+    }
+  }
+}

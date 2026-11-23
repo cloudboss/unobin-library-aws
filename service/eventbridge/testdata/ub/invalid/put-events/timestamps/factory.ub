@@ -1,0 +1,14 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: {} }
+  actions: {
+    invalid: eventbridge.put-events {
+      entries: [
+        { source: 'test', time: '' },
+        { source: 'test', time: '2026-02-30T23:45:00Z' },
+        { source: 'test', time: '2026-11-22T23:45:00' },
+        { source: 'test', time: 'tomorrow' },
+      ]
+    }
+  }
+}

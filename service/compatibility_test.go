@@ -22,7 +22,7 @@ func TestLibraryCompatibility(t *testing.T) {
 				SuggestedUnobinVersion: "v0.12.0",
 			}
 			switch name {
-			case "cloudwatch", "dynamodb", "ec2", "eks",
+			case "cloudwatch", "dynamodb", "ec2", "eks", "eventbridge",
 				"lambda", "scheduler", "sns", "sqs", "wafv2":
 				want = runtime.LibraryCompatibility{
 					RequiredAPI:            "1.1",

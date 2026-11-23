@@ -1,0 +1,15 @@
+{
+  "name": "eventbridge-put-events",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/eventbridge-put-events",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": ["validate", "-c", "stacks/dev.ub"],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

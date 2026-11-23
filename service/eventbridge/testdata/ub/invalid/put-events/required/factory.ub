@@ -1,0 +1,18 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: {} }
+  actions: {
+    missing: eventbridge.put-events {
+      entries: [{ detail: '{}' }]
+    }
+    null-source: eventbridge.put-events {
+      entries: [{ source: null }]
+    }
+    wrong-resources: eventbridge.put-events {
+      entries: [{ source: 'test', resources: [1] }]
+    }
+    null-resource: eventbridge.put-events {
+      entries: [{ source: 'test', resources: ['valid', null] }]
+    }
+  }
+}

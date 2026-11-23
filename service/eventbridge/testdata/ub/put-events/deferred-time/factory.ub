@@ -1,0 +1,16 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { endpoint-url: input.endpoint, region: 'us-east-1' } }
+  inputs: {
+    endpoint: { type: string }
+    value:    { type: string }
+  }
+  actions: {
+    seed: test.seed {
+      echo: input.value
+    }
+    send: eventbridge.put-events {
+      entries: [{ source: 'test.deferred', time: action.seed.value }]
+    }
+  }
+}

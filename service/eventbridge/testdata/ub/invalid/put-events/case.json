@@ -1,0 +1,45 @@
+{
+  "name": "compile-eventbridge-put-events",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "required-source",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "required/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/required-source.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "timestamps",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "timestamps/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/timestamps.stdout",
+      "exitCode": 1
+    }
+  ]
+}
