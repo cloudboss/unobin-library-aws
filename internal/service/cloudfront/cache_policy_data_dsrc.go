@@ -120,7 +120,7 @@ func (r *CachePolicyDataSource) Read(
 	if err != nil {
 		return nil, err
 	}
-	accountID, err := cachePolicyDataAccountID(ctx, cfg, sdkCfg)
+	accountID, err := cachePolicyAccountID(ctx, cfg, sdkCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func getCachePolicyDataSource(
 	return resp.CachePolicy, aws.ToString(resp.ETag), nil
 }
 
-func cachePolicyDataAccountID(
+func cachePolicyAccountID(
 	ctx context.Context,
 	cfg *awsCfg,
 	sdkCfg aws.Config,
@@ -254,7 +254,7 @@ func cachePolicyDataOutput(
 	}
 	return &CachePolicyDataSourceOutput{
 		Id:         id,
-		Arn:        cachePolicyDataARN(region, accountID, id),
+		Arn:        cachePolicyARN(region, accountID, id),
 		Comment:    aws.ToString(config.Comment),
 		DefaultTTL: aws.ToInt64(config.DefaultTTL),
 		ETag:       etag,
@@ -266,7 +266,7 @@ func cachePolicyDataOutput(
 	}
 }
 
-func cachePolicyDataARN(region, accountID, id string) string {
+func cachePolicyARN(region, accountID, id string) string {
 	return fmt.Sprintf("arn:%s:cloudfront::%s:cache-policy/%s",
 		partition.Of(region), accountID, id)
 }

@@ -41,11 +41,12 @@ func Library() *runtime.Library {
 		Name:        "aws-cloudfront",
 		Description: "AWS CloudFront library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
-			SuggestedUnobinVersion: "v0.12.0",
+			RequiredAPI:            "1.1",
+			SuggestedUnobinVersion: "v0.13.0-a.4",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"cache-policy": makeResource[svc.CachePolicyResource, *svc.CachePolicyResourceOutput](),
 			"origin-access-control": makeResource[
 				svc.OriginAccessControlResource,
 				*svc.OriginAccessControlResourceOutput](),

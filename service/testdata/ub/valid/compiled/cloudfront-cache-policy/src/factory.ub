@@ -1,0 +1,77 @@
+factory: {
+  imports: { aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront' }
+  library-configs: {
+    aws-cloudfront: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+  }
+
+  resources: {
+    all-none: aws-cloudfront.cache-policy {
+      name: 'example'
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config:       { cookie-behavior: 'none' }
+        headers-config:       { header-behavior: 'none' }
+        query-strings-config: { query-string-behavior: 'none' }
+      }
+    }
+    lists: aws-cloudfront.cache-policy {
+      name:        'example'
+      default-ttl: 0
+      max-ttl:     0
+      min-ttl:     0
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config: { cookie-behavior: 'whitelist', cookies: { items: ['session'] } }
+        headers-config: { header-behavior: 'whitelist', headers: { items: ['Accept'] } }
+        query-strings-config: {
+          query-string-behavior: 'whitelist'
+          query-strings:         { items: ['version'] }
+        }
+        enable-accept-encoding-gzip:   null
+        enable-accept-encoding-brotli: true
+      }
+    }
+    all-except: aws-cloudfront.cache-policy {
+      name: 'example'
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config:       { cookie-behavior: 'allExcept', cookies: { items: [] } }
+        headers-config:       { header-behavior: 'none' }
+        query-strings-config: { query-string-behavior: 'allExcept', query-strings: {} }
+      }
+    }
+    all: aws-cloudfront.cache-policy {
+      name: 'example'
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config:       { cookie-behavior: 'all' }
+        headers-config:       { header-behavior: 'none' }
+        query-strings-config: { query-string-behavior: 'all' }
+      }
+    }
+  }
+  data-sources: {
+    existing: aws-cloudfront.cache-policy {
+      id: resource.lists.id
+    }
+  }
+  outputs: {
+    policy: {
+      value: {
+        id:          resource.lists.id
+        arn:         resource.lists.arn
+        etag:        resource.lists.etag
+        name:        resource.lists.name
+        comment:     resource.lists.comment
+        default-ttl: resource.lists.default-ttl
+        max-ttl:     resource.lists.max-ttl
+        min-ttl:     resource.lists.min-ttl
+        params:      resource.lists.parameters-in-cache-key-and-forwarded-to-origin
+        looked-up:   data-source.existing.name
+      }
+    }
+  }
+}

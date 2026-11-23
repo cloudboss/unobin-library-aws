@@ -1,0 +1,46 @@
+factory: {
+  description: 'Manages the lifecycle of a custom CloudFront cache policy.'
+
+  imports: {
+    aws-cloudfront: 'github.com/cloudboss/unobin-library-aws//service/cloudfront'
+  }
+
+  library-configs: {
+    aws-cloudfront: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    update:      { type: boolean, default: false }
+    default-ttl: { type: integer, default: 86400 }
+    max-ttl:     { type: integer, default: 31536000 }
+  }
+
+  resources: {
+    policy: aws-cloudfront.cache-policy {
+      name:    if input.update then 'unobin-it-cache-policy-renamed' else 'unobin-it-cache-policy'
+      comment: if input.update then null else 'cache policy integration test'
+      default-ttl: input.default-ttl
+      max-ttl:     input.max-ttl
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config: {
+          cookie-behavior: if input.update then 'none' else 'whitelist'
+          cookies: if input.update then null else { items: ['theme', 'session', 'theme', ''] }
+        }
+        headers-config:                { header-behavior: 'none' }
+        query-strings-config:          { query-string-behavior: 'none' }
+        enable-accept-encoding-gzip:   !input.update
+        enable-accept-encoding-brotli: input.update
+      }
+    }
+  }
+
+  outputs: {
+    id:   { value: resource.policy.id }
+    arn:  { value: resource.policy.arn }
+    etag: { value: resource.policy.etag }
+  }
+}

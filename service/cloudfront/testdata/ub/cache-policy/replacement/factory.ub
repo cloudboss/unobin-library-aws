@@ -1,0 +1,25 @@
+factory: {
+  library-configs: {
+    aws-cloudfront:    input.aws-config
+    aws-cloudfront-v2: input.aws-config
+  }
+  actions: {
+    seed: fixture.seed {
+      next-mode: input.cookie-mode
+      next-gzip: true
+    }
+  }
+  resources: {
+    policy: aws-cloudfront-v2.cache-policy {
+      name:    input.name
+      comment: input.comment
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config:       { cookie-behavior: action.seed.mode, cookies: { items: input.items } }
+        headers-config:       { header-behavior: input.header-mode }
+        query-strings-config: { query-string-behavior: input.query-mode }
+        enable-accept-encoding-gzip:   input.gzip
+        enable-accept-encoding-brotli: input.brotli
+      }
+    }
+  }
+}

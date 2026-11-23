@@ -55,12 +55,6 @@ func TestLibraryRegistersCloudFrontLocalKinds(t *testing.T) {
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
 	require.Equal(t, []string{
-		"distribution",
-		"function",
-		"origin-access-control",
-		"response-headers-policy",
-	}, sortedKeys(lib.Resources))
-	require.Equal(t, []string{
 		"cache-policy",
 		"origin-request-policy",
 	}, sortedKeys(lib.DataSources))
@@ -121,12 +115,6 @@ func TestReadCloudFrontServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"distribution",
-		"function",
-		"origin-access-control",
-		"response-headers-policy",
-	}, sortedKeys(schema.Resources))
 	require.Equal(t, []string{
 		"cache-policy",
 		"origin-request-policy",

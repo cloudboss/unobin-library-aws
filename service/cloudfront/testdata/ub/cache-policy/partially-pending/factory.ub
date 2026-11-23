@@ -1,0 +1,23 @@
+factory: {
+  library-configs: {
+    aws-cloudfront: input.aws-config
+  }
+  actions: {
+    seed: fixture.seed {
+      next-mode: 'none'
+      next-gzip: true
+    }
+  }
+  resources: {
+    policy: aws-cloudfront.cache-policy {
+      name:    input.name
+      comment: input.comment
+      parameters-in-cache-key-and-forwarded-to-origin: {
+        cookies-config:              { cookie-behavior: 'None', cookies: { items: input.items } }
+        headers-config:              { header-behavior: input.header-mode }
+        query-strings-config:        { query-string-behavior: input.query-mode }
+        enable-accept-encoding-gzip: action.seed.gzip
+      }
+    }
+  }
+}

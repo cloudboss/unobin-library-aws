@@ -1,0 +1,15 @@
+{
+  "name": "cloudfront-cache-policy",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/aws-cloudfront-cache-policy",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": ["validate", "-c", "stacks/dev.ub"],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

@@ -35,7 +35,7 @@ func TestCachePolicyDataSourceARN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, cachePolicyDataARN(tt.region, tt.accountID, tt.id))
+			assert.Equal(t, tt.want, cachePolicyARN(tt.region, tt.accountID, tt.id))
 		})
 	}
 }
