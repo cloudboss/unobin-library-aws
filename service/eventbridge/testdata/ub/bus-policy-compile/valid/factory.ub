@@ -1,0 +1,35 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { region: 'us-east-1' } }
+  resources: {
+    default: eventbridge.event-bus-policy {
+      policy: '{}'
+    }
+    small: eventbridge.event-bus-policy {
+      event-bus-name: 'a'
+      policy:         '[]'
+    }
+    large: eventbridge.event-bus-policy {
+      event-bus-name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        '''
+      policy: 'true'
+    }
+    partner: eventbridge.event-bus-policy {
+      event-bus-name: 'aws.partner/a.b/c_d-e'
+      policy:         'null'
+    }
+    number: eventbridge.event-bus-policy {
+      policy: '42'
+    }
+    text: eventbridge.event-bus-policy {
+      policy: '"text"'
+    }
+    duplicate: eventbridge.event-bus-policy {
+      policy: '{"a":1,"a":2}'
+    }
+  }
+  outputs: { name: { value: resource.default.name }, policy: { value: resource.default.policy } }
+}

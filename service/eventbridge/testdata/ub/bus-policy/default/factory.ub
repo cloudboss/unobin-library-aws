@@ -1,0 +1,16 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { endpoint-url: input.endpoint, region: 'us-east-1' } }
+  inputs: {
+    endpoint: { type: string }
+    bus:      { type: string }
+    policy:   { type: string }
+    trigger:  { type: string, default: 'first' }
+  }
+  resources: {
+    policy: eventbridge.event-bus-policy {
+      policy: input.policy
+    }
+  }
+  outputs: { name: { value: resource.policy.name }, policy: { value: resource.policy.policy } }
+}

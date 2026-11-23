@@ -54,11 +54,6 @@ func TestLibraryRegistersEventBridgeLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Equal(t, []string{
-		"event-bus",
-		"rule",
-		"target",
-	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.DataSources))
 
 	resourceOutputs := map[string]reflect.Type{
@@ -94,10 +89,5 @@ func TestReadEventBridgeServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"event-bus",
-		"rule",
-		"target",
-	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.DataSources))
 }

@@ -1,0 +1,33 @@
+factory: {
+  imports: {
+    eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge'
+    sts:         'github.com/cloudboss/unobin-library-aws//service/sts'
+  }
+  library-configs: { eventbridge: input.aws-config, sts: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    statement-id: { type: string, default: 'InitialPermission' }
+    policies:     { type: map(boolean), default: { managed: true } }
+  }
+  data-sources: {
+    caller: sts.caller-identity {}
+  }
+  resources: {
+    bus: eventbridge.event-bus {
+      name: 'unobin-it-event-bus-policy'
+    }
+    policy: eventbridge.event-bus-policy {
+      @for-each:      input.policies
+      event-bus-name: resource.bus.name
+      policy: $'''>-
+        {"Version":"2012-10-17","Statement":[{"Sid":"{{ input.statement-id }}",
+        "Effect":"Allow","Principal":{"AWS":"{{ data-source.caller.account }}"},
+        "Action":"events:PutEvents", "Resource":"{{ resource.bus.arn }}"}]}
+        '''
+    }
+  }
+  outputs: { name: { value: resource.bus.name } }
+}
