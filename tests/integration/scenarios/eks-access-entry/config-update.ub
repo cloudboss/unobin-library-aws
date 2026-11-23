@@ -1,0 +1,15 @@
+stack: {
+  factory: {
+    inputs: {
+      user-name: 'unobin-editor'
+      groups:    ['unobin-editors', 'unobin-readers']
+      tags:      { add: '', change: 'new', keep: '1' }
+    }
+  }
+
+  state: local {
+    path: '.unobin/state'
+  }
+
+  encryption: noop {}
+}

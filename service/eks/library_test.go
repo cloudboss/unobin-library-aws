@@ -26,7 +26,6 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Len(t, library.Resources, 4)
 	require.Contains(t, library.Resources, "addon")
 	assert.Equal(t, reflect.TypeFor[*svc.AddonResourceOutput](),
 		library.Resources["addon"].OutputType())

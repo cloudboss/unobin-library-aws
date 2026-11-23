@@ -1,0 +1,38 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-east-1' }
+  }
+  resources: {
+    empty-name: aws-eks.access-entry {
+      cluster-name:  ''
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    leading-underscore: aws-eks.access-entry {
+      cluster-name:  '_demo'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    long-name: aws-eks.access-entry {
+      cluster-name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        '''
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    lower-type: aws-eks.access-entry {
+      cluster-name:  'demo'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'standard'
+    }
+    empty-type: aws-eks.access-entry {
+      cluster-name:  'demo'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          ''
+    }
+    new-type: aws-eks.access-entry {
+      cluster-name:  'demo'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'HYPERPOD_LINUX'
+    }
+  }
+}

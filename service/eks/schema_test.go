@@ -12,7 +12,6 @@ import (
 
 func TestClusterSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 4)
 	cluster := schema.Resources["cluster"]
 	require.NotNil(t, cluster)
 
@@ -47,7 +46,6 @@ func TestClusterSchema(t *testing.T) {
 
 func TestNodeGroupSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 4)
 	nodeGroup := schema.Resources["node-group"]
 	require.NotNil(t, nodeGroup)
 
@@ -87,7 +85,6 @@ func TestNodeGroupSchema(t *testing.T) {
 
 func TestFargateProfileSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 4)
 	profile := schema.Resources["fargate-profile"]
 	require.NotNil(t, profile)
 
@@ -116,7 +113,6 @@ func TestFargateProfileSchema(t *testing.T) {
 
 func TestAddonSchema(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Len(t, schema.Resources, 4)
 	addon := schema.Resources["addon"]
 	require.NotNil(t, addon)
 

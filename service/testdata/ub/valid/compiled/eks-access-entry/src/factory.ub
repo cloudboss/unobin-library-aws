@@ -1,0 +1,64 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-east-1' }
+  }
+  resources: {
+    one: aws-eks.access-entry {
+      cluster-name:  'A'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    hundred: aws-eks.access-entry {
+      cluster-name: '''\-
+        1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_
+        '''
+      principal-arn:     'arn:aws:iam::123456789012:role/example'
+      type:              null
+      kubernetes-groups: ['group']
+      user-name:         ''
+      tags:              { name: '' }
+    }
+    type-0: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'STANDARD'
+    }
+    type-1: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'EC2'
+    }
+    type-2: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'EC2_LINUX'
+    }
+    type-3: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'EC2_WINDOWS'
+    }
+    type-4: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'FARGATE_LINUX'
+    }
+    type-5: aws-eks.access-entry {
+      cluster-name:  'demo-1'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      type:          'HYBRID_LINUX'
+    }
+  }
+  outputs: {
+    arn:       { value: resource.one.arn }
+    cluster:   { value: resource.one.cluster-name }
+    principal: { value: resource.one.principal-arn }
+    username:  { value: resource.one.user-name }
+    groups:    { value: resource.one.kubernetes-groups }
+    type:      { value: resource.one.type }
+    tags:      { value: resource.one.tags }
+    created:   { value: resource.one.created-at }
+    modified:  { value: resource.one.modified-at }
+  }
+}

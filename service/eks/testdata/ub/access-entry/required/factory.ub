@@ -1,0 +1,32 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { region: 'us-east-1' }
+  }
+  resources: {
+    missing-name: aws-eks.access-entry {
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    missing-principal: aws-eks.access-entry {
+      cluster-name: 'demo'
+    }
+    wrong-name: aws-eks.access-entry {
+      cluster-name:  2
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+    }
+    wrong-principal: aws-eks.access-entry {
+      cluster-name:  'demo'
+      principal-arn: 2
+    }
+    wrong-groups: aws-eks.access-entry {
+      cluster-name:      'demo'
+      principal-arn:     'arn:aws:iam::123456789012:role/example'
+      kubernetes-groups: [2]
+    }
+    wrong-tags: aws-eks.access-entry {
+      cluster-name:  'demo'
+      principal-arn: 'arn:aws:iam::123456789012:role/example'
+      tags:          { x: 2 }
+    }
+  }
+}

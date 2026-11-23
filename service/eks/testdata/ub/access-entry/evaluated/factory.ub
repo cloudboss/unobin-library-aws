@@ -1,0 +1,25 @@
+factory: {
+  imports: { aws-eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    aws-eks: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint:   { type: string }
+    cluster:    { type: string }
+    principal:  { type: string }
+    entry-type: { type: optional(string) }
+    groups:     { type: optional(list(string)) }
+    username:   { type: optional(string) }
+    tags:       { type: optional(map(string)) }
+  }
+  resources: {
+    entry: aws-eks.access-entry {
+      cluster-name:      input.cluster
+      principal-arn:     input.principal
+      type:              input.entry-type
+      kubernetes-groups: input.groups
+      user-name:         input.username
+      tags:              input.tags
+    }
+  }
+}
