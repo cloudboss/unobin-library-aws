@@ -1,0 +1,39 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    accept:    { type: boolean, default: false }
+    stage:     { type: string, default: 'initial' }
+    adoptions: { type: map(boolean), default: { adopted: true } }
+  }
+  resources: {
+    requester: aws-ec2.vpc {
+      cidr-block: '10.65.0.0/16'
+    }
+    accepter: aws-ec2.vpc {
+      cidr-block: '10.66.0.0/16'
+    }
+    peering: aws-ec2.vpc-peering-connection {
+      vpc-id:      resource.requester.vpc-id
+      peer-vpc-id: resource.accepter.vpc-id
+      tags: { unobin: 'vpc-peering-connection-accepter-it', stage: input.stage, seed: 'preserve' }
+    }
+    connection: aws-ec2.vpc-peering-connection-accepter {
+      @for-each:                 input.adoptions
+      vpc-peering-connection-id: resource.peering.vpc-peering-connection-id
+      auto-accept:               input.accept
+      accepter:  if input.accept then { allow-remote-vpc-dns-resolution: true } else null
+      requester: if input.accept then { allow-remote-vpc-dns-resolution: true } else null
+      tags: { unobin: 'vpc-peering-connection-accepter-it', stage: input.stage, seed: 'preserve' }
+    }
+  }
+  outputs: {
+    connection-id: { value: resource.peering.vpc-peering-connection-id }
+    requester-id:  { value: resource.requester.vpc-id }
+    accepter-id:   { value: resource.accepter.vpc-id }
+  }
+}

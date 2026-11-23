@@ -62,6 +62,9 @@ func Library() *runtime.Library {
 			"vpc-endpoint": makeResource[svc.VpcEndpointResource, *svc.VpcEndpointResourceOutput](),
 			"vpc-peering-connection": makeResource[
 				svc.VpcPeeringConnectionResource, *svc.VpcPeeringConnectionResourceOutput](),
+			"vpc-peering-connection-accepter": makeResource[
+				svc.VpcPeeringConnectionAccepterResource,
+				*svc.VpcPeeringConnectionAccepterResourceOutput](),
 			"key-pair": makeResource[svc.KeyPairResource, *svc.KeyPairResourceOutput](),
 			"instance": makeResource[svc.InstanceResource, *svc.InstanceResourceOutput](),
 		},

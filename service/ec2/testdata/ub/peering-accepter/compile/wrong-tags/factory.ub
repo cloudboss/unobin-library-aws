@@ -1,0 +1,10 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: {} }
+  resources: {
+    connection: aws-ec2.vpc-peering-connection-accepter {
+      vpc-peering-connection-id: 'pcx-example'
+      tags:                      { wrong: true }
+    }
+  }
+}

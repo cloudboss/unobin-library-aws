@@ -1,0 +1,21 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    vpc-peering-connection-id: { type: optional(string) }
+    auto-accept:               { type: optional(boolean) }
+    accepter:  { type: optional(object({ allow-remote-vpc-dns-resolution: optional(boolean) })) }
+    requester: { type: optional(object({ allow-remote-vpc-dns-resolution: optional(boolean) })) }
+    tags:      { type: optional(map(string)) }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  resources: {
+    connection: aws-ec2.vpc-peering-connection-accepter {
+      vpc-peering-connection-id: input.vpc-peering-connection-id
+      auto-accept:               input.auto-accept
+      accepter:                  input.accepter
+      requester:                 input.requester
+      tags:                      input.tags
+    }
+  }
+}
