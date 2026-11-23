@@ -4,14 +4,9 @@ Integration tests that compile, plan, apply, verify, update, and destroy
 real unobin stacks using the `unobin-library-aws` module. Both `emulator` and
 `live` tiers run the same scenarios:
 
-- `emulator`: Runs against AWS emulators in containers. Each scenario runs
-  against ministack unless its directory holds a `.backend` file naming
-  `localstack`, which pins it to [LocalStack](https://localstack.cloud).
-  The two cover each other's gaps: LocalStack offers the ELB API only on
-  its paid tier, so the load-balancing scenarios need ministack; ministack
-  accepts `RevokeSecurityGroupEgress` without applying it and does not
-  implement `ListOpenIDConnectProviders`, so `ec2-vpc` and `iam` pin to
-  LocalStack. Both emulators must already be running before invoking.
+- `emulator`: Runs against Floci by default. The CloudWatch Logs, RDS, and
+  Scheduler scenarios select MiniStack with a `.backend` file. Both
+  emulators must be running when invoking the driver directly.
 - `live`: Runs against real AWS. `UNOBIN_AWS_LIVE=1` must be set so it
   does not incur costs by accident.
 
@@ -30,8 +25,7 @@ scenarios/
     factory.ub        # unobin factory -- imports aws and binds `aws-config`
     config.ub         # operator config; env supplies AWS settings by default
     config-update.ub  # same config with changed inputs for the update pass
-    .backend          # optional; pins the scenario's emulator (default is
-                      #   ministack)
+    .backend          # optional; set to ministack to select MiniStack
     verify/main.go    # `go run`-able Go program that reads AWS state and
                       #   asserts it matches the phase in VERIFY_PHASE
 ```
@@ -39,17 +33,20 @@ scenarios/
 ## Run
 
 ```sh
-# Local: needs LocalStack on http://localhost:4566 and ministack on
-# http://localhost:4567 (or LOCALSTACK_ENDPOINT / MINISTACK_ENDPOINT).
-# `make emulators-up` starts both; `make test-integration-emulator` does
-# all of this in containers.
+# Start both emulators and run the test driver in a container.
+make test-integration-emulator
+
+# Run the driver directly with Floci on http://localhost:4566 and
+# MiniStack on http://localhost:4567 (or FLOCI_ENDPOINT / MINISTACK_ENDPOINT).
+export UNOBIN_VERSION=$(awk '/github.com[/]cloudboss[/]unobin v/{print $2}' go.mod)
+export GOPATH=$(go env GOPATH)
 ./tests/integration/run.sh emulator
 
 # Live: needs real AWS credentials and region in env.
 UNOBIN_AWS_LIVE=1 ./tests/integration/run.sh live
 
 # Single scenario:
-SCENARIO=ec2-vpc ./tests/integration/run.sh emulator
+make test-integration-emulator SCENARIO=ec2-vpc
 ```
 
 ## What the driver does per scenario
@@ -88,5 +85,5 @@ and prints the failing step.
 ## Prerequisites
 
 - Go toolchain.
-- LocalStack (default port 4566) and ministack (default port 4567) for the
-  emulator tier; `make emulators-up` starts both.
+- Floci (default port 4566) and MiniStack (default port 4567) for the emulator
+  tier. `make emulators-up` starts both.

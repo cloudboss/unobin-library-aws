@@ -7,14 +7,13 @@
 # Environment:
 #   SCENARIO=<name>      Run only one scenario directory.
 #   UNOBIN_VERSION       Version of unobin to use for the test.
-#   LOCALSTACK_ENDPOINT  Endpoint of the LocalStack emulator, defaults to
+#   FLOCI_ENDPOINT       Endpoint of the Floci emulator, defaults to
 #                        http://localhost:4566.
-#   MINISTACK_ENDPOINT   Endpoint of the ministack emulator, defaults to
+#   MINISTACK_ENDPOINT   Endpoint of the MiniStack emulator, defaults to
 #                        http://localhost:4567.
 #
-# The emulator tier runs each scenario against ministack unless the scenario
-# directory holds a .backend file naming localstack, which pins a scenario
-# whose operations ministack does not support. The driver exports dummy AWS
+# The emulator tier runs each scenario against Floci. A .backend file can
+# select MiniStack. The driver exports dummy AWS
 # credentials, AWS_REGION, and the chosen emulator's endpoint as
 # AWS_ENDPOINT_URL before invoking each scenario. For the live tier, the
 # environment must already contain real credentials and region. A scenario with
@@ -81,7 +80,7 @@ if [ ${#} -eq 0 ]; then
 fi
 
 if [ "${TIER}" = "emulator" ]; then
-    LOCALSTACK_ENDPOINT="${LOCALSTACK_ENDPOINT:-http://localhost:4566}"
+    FLOCI_ENDPOINT="${FLOCI_ENDPOINT:-http://localhost:4566}"
     MINISTACK_ENDPOINT="${MINISTACK_ENDPOINT:-http://localhost:4567}"
     export AWS_ACCESS_KEY_ID=test
     export AWS_SECRET_ACCESS_KEY=test
@@ -119,7 +118,7 @@ for sdir in "${@}"; do
         continue
     fi
     if [ "${TIER}" = "emulator" ] && [ -z "${EMULATOR_CHECKED}" ]; then
-        for endpoint in "${LOCALSTACK_ENDPOINT}" "${MINISTACK_ENDPOINT}"; do
+        for endpoint in "${FLOCI_ENDPOINT}" "${MINISTACK_ENDPOINT}"; do
             if ! healthcheck "${endpoint}/_localstack/health"; then
                 echo "emulator is not reachable at ${endpoint}" >&2
                 exit 2
@@ -131,17 +130,14 @@ for sdir in "${@}"; do
         go install github.com/cloudboss/unobin/cmd/unobin@${UNOBIN_VERSION}
         UNOBIN=${GOPATH}/bin/unobin
     fi
-    # Each scenario picks its emulator: ministack unless a .backend file pins
-    # it to localstack. The endpoint is exported per scenario so one run
-    # serves scenarios on both emulators.
     if [ "${TIER}" = "emulator" ]; then
-        backend="ministack"
+        backend="floci"
         if [ -f "${sdir}/.backend" ]; then
             backend=$(cat "${sdir}/.backend")
         fi
         case "${backend}" in
+            floci) export AWS_ENDPOINT_URL="${FLOCI_ENDPOINT}" ;;
             ministack) export AWS_ENDPOINT_URL="${MINISTACK_ENDPOINT}" ;;
-            localstack) export AWS_ENDPOINT_URL="${LOCALSTACK_ENDPOINT}" ;;
             *)
                 echo "unknown backend ${backend} in ${sdir}/.backend" >&2
                 FAILED="${FAILED} ${name}(backend)"

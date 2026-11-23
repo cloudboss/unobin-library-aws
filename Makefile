@@ -6,11 +6,11 @@ GID := $(shell id -g)
 
 CTR_IMAGE_GO         := ghcr.io/cloudboss/docker.io/library/golang:1.26.2-alpine3.23
 CTR_IMAGE_LINT       := ghcr.io/cloudboss/docker.io/golangci/golangci-lint:v2.11.4-alpine
-CTR_IMAGE_LOCALSTACK := ghcr.io/cloudboss/docker.io/localstack/localstack:4.14.0
-CTR_IMAGE_MINISTACK  := ghcr.io/cloudboss/docker.io/ministackorg/ministack:1.3.66
+CTR_IMAGE_FLOCI      := ghcr.io/cloudboss/docker.io/docker.io/floci/floci:2.5.0
+CTR_IMAGE_MINISTACK  := ghcr.io/cloudboss/docker.io/ministackorg/ministack:1.5.43
 
 NETWORK         := $(PROJECT)-it
-LOCALSTACK_NAME := $(PROJECT)-localstack
+FLOCI_NAME      := $(PROJECT)-floci
 MINISTACK_NAME  := $(PROJECT)-ministack
 
 UNOBIN_VERSION := $(shell awk '/github.com[/]cloudboss[/]unobin v/{print $$2}' go.mod)
@@ -24,7 +24,7 @@ DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.3.0
 help:
 	@echo 'Targets:'
 	@echo '  emulators-down               Stop the emulator containers and remove the network.'
-	@echo '  emulators-up                 Start the pinned LocalStack and ministack containers.'
+	@echo '  emulators-up                 Start the pinned Floci and MiniStack containers.'
 	@echo '  docs                         Generate the reference manual.'
 	@echo '  test                         Run unit tests on the host.'
 	@echo '  test-integration-live        Run integration tests against real AWS (UNOBIN_AWS_LIVE=1).'
@@ -61,13 +61,13 @@ emulators-up: | $(HAS_COMMAND_CURL)
 	@docker network inspect $(NETWORK) >/dev/null 2>&1 \
 		|| docker network create $(NETWORK) >/dev/null
 	@docker run -d --rm \
-		--name $(LOCALSTACK_NAME) \
+		--name $(FLOCI_NAME) \
 		--network $(NETWORK) \
 		-p 4566:4566 \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		--security-opt label=type:container_runtime_t \
 		-e DEBUG=1 \
-		$(CTR_IMAGE_LOCALSTACK) >/dev/null
+		$(CTR_IMAGE_FLOCI) >/dev/null
 	@docker run -d --rm \
 		--name $(MINISTACK_NAME) \
 		--network $(NETWORK) \
@@ -85,12 +85,12 @@ emulators-up: | $(HAS_COMMAND_CURL)
 		sleep 1; \
 	done; \
 	echo 'emulators did not come up in 30s' >&2; \
-	docker logs $(LOCALSTACK_NAME); \
+	docker logs $(FLOCI_NAME); \
 	docker logs $(MINISTACK_NAME); \
 	exit 1
 
 emulators-down:
-	@docker rm -f $(LOCALSTACK_NAME) >/dev/null 2>&1 || true
+	@docker rm -f $(FLOCI_NAME) >/dev/null 2>&1 || true
 	@docker rm -f $(MINISTACK_NAME) >/dev/null 2>&1 || true
 	@docker network rm $(NETWORK) >/dev/null 2>&1 || true
 
@@ -134,7 +134,7 @@ test-integration-emulator: | $(DIR_OUT)/xdg-cache/
 			-e GOCACHE=/code/$(DIR_OUT)/gocache \
 			-e UNOBIN_VERSION=$(UNOBIN_VERSION) \
 			-e SCENARIO \
-			-e LOCALSTACK_ENDPOINT=http://$(LOCALSTACK_NAME):4566 \
+			-e FLOCI_ENDPOINT=http://$(FLOCI_NAME):4566 \
 			-e MINISTACK_ENDPOINT=http://$(MINISTACK_NAME):4566 \
 			$(CTR_IMAGE_GO) sh -c './tests/integration/run.sh emulator'; \
 		RC=$${?}; \
