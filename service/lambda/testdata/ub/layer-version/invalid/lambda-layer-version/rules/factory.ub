@@ -1,0 +1,69 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: {} }
+  resources: {
+    empty: lambda.layer-version {
+      layer-name: 'empty'
+      content:    {}
+    }
+    zip-empty: lambda.layer-version {
+      layer-name: 'zip-empty'
+      content:    { zip-file-path: '' }
+    }
+    missing-key: lambda.layer-version {
+      layer-name: 'missing-key'
+      content:    { s3-bucket: 'bucket' }
+    }
+    empty-bucket: lambda.layer-version {
+      layer-name: 'empty-bucket'
+      content:    { s3-bucket: '', s3-key: 'layer.zip' }
+    }
+    mixed-bucket: lambda.layer-version {
+      layer-name: 'mixed-bucket'
+      content:    { zip-file-path: './layer.zip', s3-bucket: 'bucket' }
+    }
+    mixed-key: lambda.layer-version {
+      layer-name: 'mixed-key'
+      content:    { zip-file-path: './layer.zip', s3-key: 'layer.zip' }
+    }
+    mixed-pin: lambda.layer-version {
+      layer-name: 'mixed-pin'
+      content:    { zip-file-path: './layer.zip', s3-object-version: '' }
+    }
+    bad-architecture: lambda.layer-version {
+      layer-name:               'bad-architecture'
+      content:                  { zip-file-path: './layer.zip' }
+      compatible-architectures: ['x86_64', 'ARM64', 'armv7']
+    }
+    bad-runtime: lambda.layer-version {
+      layer-name:          'bad-runtime'
+      content:             { zip-file-path: './layer.zip' }
+      compatible-runtimes: ['Python3.12', 'go2.x']
+    }
+    too-many-runtimes: lambda.layer-version {
+      layer-name: 'too-many-runtimes'
+      content:    { zip-file-path: './layer.zip' }
+      compatible-runtimes: [
+        'nodejs', 'nodejs4.3', 'nodejs6.10', 'nodejs8.10', 'nodejs10.x',
+        'nodejs12.x', 'nodejs14.x', 'nodejs16.x', 'nodejs18.x', 'nodejs20.x',
+        'nodejs22.x', 'nodejs24.x', 'java8', 'java8.al2', 'java11', 'java17',
+      ]
+    }
+    overlong-license: lambda.layer-version {
+      layer-name: 'overlong-license'
+      content:    { zip-file-path: './layer.zip' }
+      license-info: '''\-
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        '''
+    }
+    empty-layer-name: lambda.layer-version {
+      layer-name: ''
+      content:    { zip-file-path: './layer.zip' }
+    }
+  }
+}

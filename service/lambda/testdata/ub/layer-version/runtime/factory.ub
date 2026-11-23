@@ -1,0 +1,36 @@
+factory: {
+  imports: { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  inputs: {
+    endpoint:       { type: string }
+    region:         { type: string }
+    name:           { type: string }
+    zip:            { type: optional(string) }
+    bucket:         { type: optional(string) }
+    key:            { type: optional(string) }
+    object-version: { type: optional(string) }
+    description:    { type: optional(string) }
+    license:        { type: optional(string) }
+    hash:           { type: optional(string) }
+    architectures:  { type: optional(list(string)) }
+    runtimes:       { type: optional(list(string)) }
+    retain:         { type: boolean, default: false }
+  }
+  library-configs: { lambda: { endpoint-url: input.endpoint, region: input.region } }
+  resources: {
+    layer: lambda.layer-version {
+      layer-name: input.name
+      content: {
+        zip-file-path:     input.zip
+        s3-bucket:         input.bucket
+        s3-key:            input.key
+        s3-object-version: input.object-version
+      }
+      description:              input.description
+      license-info:             input.license
+      source-code-hash:         input.hash
+      compatible-architectures: input.architectures
+      compatible-runtimes:      input.runtimes
+      skip-destroy:             input.retain
+    }
+  }
+}

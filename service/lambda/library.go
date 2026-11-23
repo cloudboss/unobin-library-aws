@@ -46,6 +46,8 @@ func Library() *runtime.Library {
 			"function-event-invoke-config": makeResource[
 				svc.FunctionEventInvokeConfigResource,
 				*svc.FunctionEventInvokeConfigResourceOutput](),
+			"layer-version": makeResource[
+				svc.LayerVersionResource, *svc.LayerVersionResourceOutput](),
 			"function-url": makeResource[svc.FunctionUrlResource, *svc.FunctionUrlResourceOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{

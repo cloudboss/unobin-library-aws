@@ -1,0 +1,27 @@
+factory: {
+  imports: { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  inputs: {
+    endpoint:      { type: string }
+    status:        { type: integer }
+    source-status: { type: integer }
+  }
+  library-configs: { lambda: { endpoint-url: input.endpoint, region: 'us-east-1' } }
+  actions: {
+    seed: lambda.invoke {
+      function-name:   'seed'
+      payload-content: '{}'
+    }
+  }
+  resources: {
+    layer: lambda.layer-version {
+      layer-name: @core.lookup({ '200': 'replacement' }, @core.to-string(action.seed.status-code))
+      content: {
+        s3-bucket: if action.seed.status-code == input.source-status then 'bucket' else null
+        s3-key:    'layer.zip'
+      }
+      compatible-runtimes: if action.seed.status-code == input.status
+        then ['python3.14']
+        else ['Python3.14']
+    }
+  }
+}

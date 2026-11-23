@@ -1,0 +1,60 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: { region: 'us-east-1' } }
+  resources: {
+    local: lambda.layer-version {
+      layer-name:               'local'
+      content:                  { zip-file-path: './layer.zip' }
+      compatible-architectures: ['x86_64', 'arm64', 'x86_64']
+      compatible-runtimes: [
+        'nodejs', 'nodejs4.3', 'nodejs6.10', 'nodejs8.10', 'nodejs10.x',
+        'nodejs12.x', 'nodejs14.x', 'nodejs16.x', 'nodejs18.x', 'nodejs20.x',
+        'nodejs22.x', 'nodejs24.x', 'java8', 'java8.al2', 'java11', 'nodejs',
+      ]
+    }
+    unpinned: lambda.layer-version {
+      layer-name:   'unpinned'
+      content:      { s3-bucket: 'bucket', s3-key: 'layer.zip' }
+      description:  ''
+      license-info: ''
+      compatible-runtimes: [
+        'java17', 'java21', 'java25', 'python2.7', 'python3.6', 'python3.7',
+        'python3.8', 'python3.9', 'python3.10', 'python3.11', 'python3.12',
+        'python3.13', 'python3.14', 'dotnetcore1.0', 'dotnetcore2.0',
+      ]
+    }
+    pinned: lambda.layer-version {
+      layer-name:       'pinned'
+      content:          { s3-bucket: 'bucket', s3-key: 'layer.zip', s3-object-version: 'version' }
+      source-code-hash: 'opaque'
+      skip-destroy:     true
+      compatible-runtimes: [
+        'dotnetcore2.1', 'dotnetcore3.1', 'dotnet6', 'dotnet8', 'dotnet10',
+        'nodejs4.3-edge', 'go1.x', 'ruby2.5', 'ruby2.7', 'ruby3.2',
+        'ruby3.3', 'ruby3.4', 'ruby4.0', 'provided', 'provided.al2',
+      ]
+    }
+    remaining-runtimes: lambda.layer-version {
+      layer-name:               'remaining-runtimes'
+      content:                  { s3-bucket: 'bucket', s3-key: 'layer.zip', s3-object-version: '' }
+      compatible-architectures: []
+      compatible-runtimes: ['provided.al2023', 'java8.al2023', 'java11.al2023', 'java17.al2023']
+    }
+  }
+  outputs: {
+    version-arn:             { value: resource.local.layer-version-arn }
+    layer-arn:               { value: resource.local.layer-arn }
+    name:                    { value: resource.local.layer-name }
+    version:                 { value: resource.local.version }
+    region:                  { value: resource.local.region }
+    created-date:            { value: resource.local.created-date }
+    description:             { value: resource.local.description }
+    license:                 { value: resource.local.license-info }
+    architectures:           { value: resource.local.compatible-architectures }
+    runtimes:                { value: resource.local.compatible-runtimes }
+    sha:                     { value: resource.local.code-sha256 }
+    size:                    { value: resource.local.code-size }
+    signing-job:             { value: resource.local.signing-job-arn }
+    signing-profile-version: { value: resource.local.signing-profile-version-arn }
+  }
+}

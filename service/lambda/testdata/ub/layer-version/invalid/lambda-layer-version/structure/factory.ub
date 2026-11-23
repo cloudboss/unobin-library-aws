@@ -1,0 +1,22 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: {} }
+  resources: {
+    missing-content: lambda.layer-version {
+      layer-name: 'missing-content'
+    }
+    missing-name: lambda.layer-version {
+      content: { zip-file-path: './layer.zip' }
+    }
+    unsupported-source: lambda.layer-version {
+      layer-name: 'unsupported'
+      content:    { zip-file-content: 'inline bytes' }
+    }
+    wrong-types: lambda.layer-version {
+      layer-name:          'wrong-types'
+      content:             { zip-file-path: true }
+      compatible-runtimes: 'python3.12'
+      skip-destroy:        'true'
+    }
+  }
+}
