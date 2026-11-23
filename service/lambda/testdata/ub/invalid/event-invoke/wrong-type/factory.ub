@@ -1,0 +1,10 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: {} }
+  resources: {
+    bad: lambda.function-event-invoke-config {
+      function-name:      'fn'
+      destination-config: { on-failure: { destination: 123 } }
+    }
+  }
+}

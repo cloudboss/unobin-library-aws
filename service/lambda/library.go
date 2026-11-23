@@ -32,8 +32,8 @@ func Library() *runtime.Library {
 		Name:        "aws-lambda",
 		Description: "AWS Lambda library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
-			SuggestedUnobinVersion: "v0.12.0",
+			RequiredAPI:            "1.1",
+			SuggestedUnobinVersion: "v0.13.0-a.4",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
@@ -43,6 +43,9 @@ func Library() *runtime.Library {
 			"event-source-mapping": makeResource[
 				svc.EventSourceMappingResource,
 				*svc.EventSourceMappingResourceOutput](),
+			"function-event-invoke-config": makeResource[
+				svc.FunctionEventInvokeConfigResource,
+				*svc.FunctionEventInvokeConfigResourceOutput](),
 			"function-url": makeResource[svc.FunctionUrlResource, *svc.FunctionUrlResourceOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{

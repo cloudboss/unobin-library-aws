@@ -1,0 +1,13 @@
+factory: {
+  imports: { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  inputs: {
+    endpoint: { type: string }
+    name:     { type: string }
+  }
+  library-configs: { lambda: { endpoint-url: input.endpoint } }
+  resources: {
+    settings: lambda.function-event-invoke-config {
+      function-name: input.name
+    }
+  }
+}

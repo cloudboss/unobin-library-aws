@@ -1,0 +1,22 @@
+factory: {
+  imports: { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  inputs: {
+    endpoint:    { type: string }
+    region:      { type: optional(string) }
+    name:        { type: string }
+    status-base: { type: integer }
+  }
+  library-configs: { lambda: { endpoint-url: input.endpoint, region: input.region } }
+  actions: {
+    seed: lambda.invoke {
+      function-name:   'seed'
+      payload-content: '{}'
+    }
+  }
+  resources: {
+    settings: lambda.function-event-invoke-config {
+      function-name:          input.name
+      maximum-retry-attempts: action.seed.status-code - input.status-base
+    }
+  }
+}

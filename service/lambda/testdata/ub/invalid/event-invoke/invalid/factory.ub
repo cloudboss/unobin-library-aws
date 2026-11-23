@@ -1,0 +1,37 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: {} }
+  resources: {
+    empty-name: lambda.function-event-invoke-config {
+      function-name: ''
+    }
+    empty-qualifier: lambda.function-event-invoke-config {
+      function-name: 'fn'
+      qualifier:     ''
+    }
+    age-below: lambda.function-event-invoke-config {
+      function-name:                'fn'
+      maximum-event-age-in-seconds: 59
+    }
+    age-above: lambda.function-event-invoke-config {
+      function-name:                'fn'
+      maximum-event-age-in-seconds: 21601
+    }
+    retries-below: lambda.function-event-invoke-config {
+      function-name:          'fn'
+      maximum-retry-attempts: -1
+    }
+    retries-above: lambda.function-event-invoke-config {
+      function-name:          'fn'
+      maximum-retry-attempts: 3
+    }
+    empty-failure: lambda.function-event-invoke-config {
+      function-name:      'fn'
+      destination-config: { on-failure: {} }
+    }
+    empty-success: lambda.function-event-invoke-config {
+      function-name:      'fn'
+      destination-config: { on-success: {} }
+    }
+  }
+}

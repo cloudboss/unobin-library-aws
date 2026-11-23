@@ -1,0 +1,49 @@
+factory: {
+  imports: {
+    aws-iam:    'github.com/cloudboss/unobin-library-aws//service/iam'
+    aws-lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda'
+  }
+
+  assets: { code: './_output/function.zip' }
+
+  library-configs: {
+    aws-iam:    input.aws-config
+    aws-lambda: input.aws-config
+  }
+
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    event-age: { type: optional(integer) }
+    retries:   { type: optional(integer) }
+  }
+
+  resources: {
+    role: aws-iam.role {
+      role-name: 'unobin-it-event-invoke-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    function: aws-lambda.function {
+      function-name: 'unobin-it-event-invoke'
+      role:          resource.role.arn
+      runtime:       'python3.12'
+      handler:       'index.handler'
+      code:          { zip-file-path: asset.code.path }
+    }
+    settings: aws-lambda.function-event-invoke-config {
+      function-name:                resource.function.function-name
+      maximum-event-age-in-seconds: input.event-age
+      maximum-retry-attempts:       input.retries ?? 2
+    }
+  }
+
+  outputs: {
+    event-age: { value: resource.settings.maximum-event-age-in-seconds }
+    retries:   { value: resource.settings.maximum-retry-attempts }
+  }
+}

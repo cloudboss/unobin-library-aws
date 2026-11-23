@@ -1,0 +1,8 @@
+factory: {
+  resources: {
+    settings: lambda.function-event-invoke-config {
+      function-name:          'fn'
+      maximum-retry-attempts: 2
+    }
+  }
+}
