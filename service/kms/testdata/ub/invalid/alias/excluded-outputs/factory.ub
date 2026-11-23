@@ -1,0 +1,13 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  data-sources: {
+    lookup: kms.alias {
+      alias-name: 'alias/Acme'
+    }
+  }
+  outputs: {
+    id:     { value: data-source.lookup.id }
+    region: { value: data-source.lookup.region }
+  }
+}

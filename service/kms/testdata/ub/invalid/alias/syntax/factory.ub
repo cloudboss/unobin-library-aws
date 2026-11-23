@@ -1,0 +1,27 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  data-sources: {
+    empty: kms.alias {
+      alias-name: ''
+    }
+    empty-suffix: kms.alias {
+      alias-name: 'alias/'
+    }
+    missing-prefix: kms.alias {
+      alias-name: 'Acme'
+    }
+    wrong-case-prefix: kms.alias {
+      alias-name: 'Alias/Acme'
+    }
+    arn: kms.alias {
+      alias-name: 'arn:aws:kms:us-east-1:123456789012:alias/Acme'
+    }
+    punctuation: kms.alias {
+      alias-name: 'alias/acme.test'
+    }
+    non-ascii: kms.alias {
+      alias-name: 'alias/café'
+    }
+  }
+}

@@ -46,10 +46,20 @@ factory: {
     }
   }
 
+  data-sources: {
+    kms-alias-lookup: aws-kms.alias {
+      alias-name: resource.kms-alias-it.alias-name
+    }
+  }
+
   outputs: {
-    key-arn:              { value: resource.kms-key-it.arn }
-    key-id:               { value: resource.kms-key-it.key-id }
-    alias-arn:            { value: resource.kms-alias-it.arn }
-    alias-target-key-arn: { value: resource.kms-alias-it.target-key-arn }
+    key-arn:               { value: resource.kms-key-it.arn }
+    key-id:                { value: resource.kms-key-it.key-id }
+    alias-arn:             { value: resource.kms-alias-it.arn }
+    alias-target-key-arn:  { value: resource.kms-alias-it.target-key-arn }
+    lookup-alias-name:     { value: data-source.kms-alias-lookup.alias-name }
+    lookup-arn:            { value: data-source.kms-alias-lookup.arn }
+    lookup-target-key-arn: { value: data-source.kms-alias-lookup.target-key-arn }
+    lookup-target-key-id:  { value: data-source.kms-alias-lookup.target-key-id }
   }
 }

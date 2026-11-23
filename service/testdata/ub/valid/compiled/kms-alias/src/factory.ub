@@ -1,0 +1,34 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  resources: {
+    managed: kms.alias {
+      alias-name:    'alias/Managed'
+      target-key-id: '11111111-2222-3333-4444-555555555555'
+    }
+  }
+  data-sources: {
+    lookup: kms.alias {
+      alias-name: 'alias/MiXeD_12/app-test'
+    }
+    managed: kms.alias {
+      alias-name: 'alias/aws/SomeService'
+    }
+    long-name: kms.alias {
+      alias-name: '''\-
+        alias/Acme0123456789_/Acme0123456789_/Acme0123456789_/Acme0123456789_/
+        Acme0123456789_/Acme0123456789_/Acme0123456789_/Acme0123456789_/
+        Acme0123456789_/Acme0123456789_/Acme0123456789_/Acme0123456789_/
+        Acme0123456789_/Acme0123456789_/Acme0123456789_/Acme0123456789_/Acme0123456789_/K
+        '''
+    }
+  }
+  outputs: {
+    name:              { value: data-source.lookup.alias-name }
+    arn:               { value: data-source.lookup.arn }
+    target-key-arn:    { value: data-source.lookup.target-key-arn }
+    target-key-id:     { value: data-source.lookup.target-key-id }
+    aws-managed-key:   { value: data-source.managed.target-key-id }
+    managed-alias-arn: { value: resource.managed.arn }
+  }
+}

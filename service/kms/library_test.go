@@ -58,7 +58,6 @@ func TestLibraryRegistersKMSLocalKinds(t *testing.T) {
 		"alias",
 		"key",
 	}, sortedKeys(lib.Resources))
-	require.Empty(t, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
@@ -97,6 +96,5 @@ func TestReadKMSServiceSchema(t *testing.T) {
 		"alias",
 		"key",
 	}, sortedKeys(schema.Resources))
-	require.Empty(t, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

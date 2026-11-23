@@ -1,0 +1,31 @@
+factory: {
+  imports: { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  inputs: {
+    endpoint: { type: string }
+    lookup:   { type: optional(string) }
+  }
+  library-configs: {
+    kms: { region: 'us-gov-west-1', endpoint-url: input.endpoint, max-attempts: 2 }
+  }
+  actions: {
+    seed: test.seed {
+      name: input.lookup
+    }
+  }
+  data-sources: {
+    lookup: kms.alias {
+      alias-name: action.seed.value
+    }
+  }
+  resources: {
+    consumer: test.value {
+      key-id: data-source.lookup.target-key-id
+    }
+  }
+  outputs: {
+    alias-name:     { value: data-source.lookup.alias-name }
+    arn:            { value: data-source.lookup.arn }
+    target-key-arn: { value: data-source.lookup.target-key-arn }
+    target-key-id:  { value: data-source.lookup.target-key-id }
+  }
+}
