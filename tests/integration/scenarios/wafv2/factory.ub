@@ -3,16 +3,17 @@ factory: {
     Manages regional WAFv2 web ACLs and associations to Cognito user pools. The
     update changes one ACL in place, replaces each association identity field,
     and repairs an out-of-band reassociation introduced by the verifier.
+    Regional IP sets exercise specification and tag updates and clearing.
     '''
 
   imports: {
     aws-cognitoidp: 'github.com/cloudboss/unobin-library-aws//service/cognitoidp'
-    aws-wafv2:     'github.com/cloudboss/unobin-library-aws//service/wafv2'
+    aws-wafv2:      'github.com/cloudboss/unobin-library-aws//service/wafv2'
   }
 
   library-configs: {
     aws-cognitoidp: input.aws-config
-    aws-wafv2:     input.aws-config
+    aws-wafv2:      input.aws-config
   }
 
   inputs: {
@@ -37,6 +38,14 @@ factory: {
         remove: 'yes'
       }
     }
+    ip-set-description: {
+      type:    optional(string)
+      default: 'initial'
+    }
+    ip-set-addresses: {
+      type:    optional(list(string))
+      default: ['198.51.100.0/24', '192.0.2.0/24']
+    }
     replace-resource-association: {
       type:    boolean
       default: false
@@ -48,6 +57,22 @@ factory: {
   }
 
   resources: {
+    ip-set-clear: aws-wafv2.ip-set {
+      name:               'unobin-it-wafv2-ip-set-clear'
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      description:        input.ip-set-description
+      addresses:          input.ip-set-addresses
+      tags:               input.tags
+    }
+    ip-set-edit: aws-wafv2.ip-set {
+      name:               'unobin-it-wafv2-ip-set-edit'
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      description:        input.description
+      addresses: if input.replace-resource-association then ['203.0.113.0/24'] else ['192.0.2.0/24']
+      tags:      input.tags
+    }
     web-acl-it: aws-wafv2.web-acl {
       name:           'unobin-it-wafv2'
       scope:          'REGIONAL'
@@ -117,7 +142,7 @@ factory: {
     }
     drift-repair: aws-wafv2.web-acl-association {
       resource-arn: resource.association-drift-target.arn
-      web-acl-arn:   resource.web-acl-it.arn
+      web-acl-arn:  resource.web-acl-it.arn
     }
   }
 

@@ -1,0 +1,60 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    one: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name:               '_'
+      description:        'a'
+      addresses:          ['', '192.0.2.0/24', '192.0.2.0/24']
+      tags:               { test: 'value' }
+    }
+    largest-name: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV6'
+      name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-
+        '''
+      description: '''\-
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        éééééééééééééééééééééééééééééééééééééééééé
+        '''
+      addresses: null
+    }
+    one-prefix: aws-wafv2.ip-set {
+      scope:              'CLOUDFRONT'
+      ip-address-version: 'IPV6'
+      name-prefix:        '-'
+      addresses:          []
+    }
+    largest-prefix: aws-wafv2.ip-set {
+      scope:              'CLOUDFRONT'
+      ip-address-version: 'IPV4'
+      name-prefix: '''\-
+        ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+        ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ_
+        '''
+      description: null
+    }
+    generated: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+    }
+  }
+  outputs: {
+    id:                 { value: resource.one.id }
+    arn:                { value: resource.one.arn }
+    lock-token:         { value: resource.one.lock-token }
+    region:             { value: resource.one.region }
+    scope:              { value: resource.one.scope }
+    name:               { value: resource.one.name }
+    name-prefix:        { value: resource.one.name-prefix }
+    description:        { value: resource.one.description }
+    ip-address-version: { value: resource.one.ip-address-version }
+    addresses:          { value: resource.one.addresses }
+    tags:               { value: resource.one.tags }
+  }
+}

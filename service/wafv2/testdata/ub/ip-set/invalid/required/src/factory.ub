@@ -1,0 +1,35 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    missing-scope: aws-wafv2.ip-set {
+      ip-address-version: 'IPV4'
+    }
+    missing-version: aws-wafv2.ip-set {
+      scope: 'REGIONAL'
+    }
+    null-scope: aws-wafv2.ip-set {
+      scope:              null
+      ip-address-version: 'IPV4'
+    }
+    null-version: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: null
+    }
+    address-type: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      addresses:          [1]
+    }
+    null-address: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      addresses:          ['192.0.2.0/24', null]
+    }
+    tag-type: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      tags:               { key: 1 }
+    }
+  }
+}

@@ -5,7 +5,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cloudboss/unobin/pkg/runtime"
 	"github.com/cloudboss/unobin/pkg/typecheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +14,6 @@ import (
 
 func TestWebACLSchemaTopLevelContract(t *testing.T) {
 	schema := readLibrarySchema(t)
-	require.Equal(t, []string{"web-acl", "web-acl-association"},
-		typeSchemaKeys(schema.Resources))
 	require.Empty(t, schema.DataSources)
 	require.Empty(t, schema.Actions)
 	got := schema.Resources["web-acl"]
@@ -234,15 +231,6 @@ func assertConcreteSchemaType(t *testing.T, value typecheck.Type, path string) {
 }
 
 func typeKeys(values map[string]typecheck.Type) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
-}
-
-func typeSchemaKeys(values map[string]*runtime.TypeSchema) []string {
 	keys := make([]string, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)

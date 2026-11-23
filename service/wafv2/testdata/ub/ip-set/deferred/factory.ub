@@ -1,0 +1,31 @@
+factory: {
+  imports: {
+    fixture:   'example.test/waf-fixture'
+    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+  }
+  library-configs: { aws-wafv2: input.aws-config }
+  inputs: {
+    aws-config:         { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    scope:              { type: string }
+    ip-address-version: { type: string }
+    name:               { type: optional(string) }
+    name-prefix:        { type: optional(string) }
+    description:        { type: optional(string) }
+    addresses:          { type: optional(list(string)) }
+  }
+  actions: {
+    seed: fixture.seed {
+      next-name: input.name
+    }
+  }
+  resources: {
+    addresses: aws-wafv2.ip-set {
+      scope:              input.scope
+      ip-address-version: input.ip-address-version
+      name:               action.seed.name
+      name-prefix:        input.name-prefix
+      description:        input.description
+      addresses:          input.addresses
+    }
+  }
+}

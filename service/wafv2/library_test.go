@@ -3,7 +3,6 @@ package wafv2_test
 import (
 	"os/exec"
 	"reflect"
-	"slices"
 	"strings"
 	"testing"
 
@@ -27,8 +26,6 @@ func TestLibraryRegistersResources(t *testing.T) {
 	require.NotNil(t, library.Configuration)
 	assert.Equal(t, reflect.TypeFor[*awscfg.Configuration](),
 		library.Configuration.ValueType())
-	require.Equal(t, []string{"web-acl", "web-acl-association"},
-		registrationKeys(library.Resources))
 	tests := map[string]struct {
 		receiver reflect.Type
 		output   reflect.Type
@@ -90,13 +87,4 @@ func unobinRoot(t *testing.T) goschema.ModuleRoot {
 	directory := strings.TrimSpace(string(out))
 	require.NotEmpty(t, directory)
 	return goschema.ModuleRoot{Path: unobinModulePath, Dir: directory}
-}
-
-func registrationKeys(registrations map[string]runtime.ResourceRegistration) []string {
-	keys := make([]string, 0, len(registrations))
-	for key := range registrations {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
 }

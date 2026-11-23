@@ -1,0 +1,78 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: {} }
+  resources: {
+    both-names: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name:               'set'
+      name-prefix:        'pref-'
+    }
+    lower-scope: aws-wafv2.ip-set {
+      scope:              'regional'
+      ip-address-version: 'IPV4'
+    }
+    other-scope: aws-wafv2.ip-set {
+      scope:              'GLOBAL'
+      ip-address-version: 'IPV4'
+    }
+    lower-version: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'ipv4'
+    }
+    other-version: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV5'
+    }
+    empty-name: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name:               ''
+    }
+    bad-name: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name:               'bad.name'
+    }
+    long-name: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name: '''\-
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        '''
+    }
+    empty-prefix: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name-prefix:        ''
+    }
+    bad-prefix: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name-prefix:        'bad prefix'
+    }
+    long-prefix: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      name-prefix: '''\-
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        '''
+    }
+    empty-description: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      description:        ''
+    }
+    long-description: aws-wafv2.ip-set {
+      scope:              'REGIONAL'
+      ip-address-version: 'IPV4'
+      description: '''\-
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééa
+        '''
+    }
+  }
+}
