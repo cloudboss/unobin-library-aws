@@ -85,6 +85,12 @@ factory: {
     }
   }
 
+  data-sources: {
+    s3-bucket-lookup: aws-s3.bucket {
+      bucket: resource.s3-bucket-it.bucket
+    }
+  }
+
   outputs: {
     bucket-arn:    { value: resource.s3-bucket-it.arn }
     bucket-region: { value: resource.s3-bucket-it.bucket-region }

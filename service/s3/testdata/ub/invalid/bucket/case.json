@@ -1,0 +1,102 @@
+{
+  "name": "compile-s3-bucket",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "omitted",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "omitted/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/omitted.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "null/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong-type/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-type.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "synthetic-id-output",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "synthetic-id-output/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/synthetic-id-output.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "region-output",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "region-output/factory.ub",
+        "-o",
+        "build",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/region-output.stdout",
+      "exitCode": 1
+    }
+  ]
+}

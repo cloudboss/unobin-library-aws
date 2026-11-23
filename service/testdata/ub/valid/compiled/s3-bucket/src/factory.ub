@@ -1,0 +1,29 @@
+factory: {
+  imports:         { s3: 'github.com/cloudboss/unobin-library-aws//service/s3' }
+  library-configs: { s3: { region: 'us-east-1' } }
+
+  resources: {
+    bucket: s3.bucket {
+      bucket: 'demo.bucket'
+    }
+  }
+
+  data-sources: {
+    bucket: s3.bucket {
+      @depends-on: [resource.bucket]
+      bucket:      'demo.bucket'
+    }
+  }
+
+  outputs: {
+    managed-arn:                 { value: resource.bucket.arn }
+    bucket:                      { value: data-source.bucket.bucket }
+    arn:                         { value: data-source.bucket.arn }
+    bucket-region:               { value: data-source.bucket.bucket-region }
+    bucket-domain-name:          { value: data-source.bucket.bucket-domain-name }
+    bucket-regional-domain-name: { value: data-source.bucket.bucket-regional-domain-name }
+    hosted-zone-id:              { value: data-source.bucket.hosted-zone-id }
+    website-domain:              { value: data-source.bucket.website-domain }
+    website-endpoint:            { value: data-source.bucket.website-endpoint }
+  }
+}

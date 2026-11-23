@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/constraint"
 	"github.com/cloudboss/unobin/pkg/runtime"
 
@@ -864,11 +862,7 @@ func bucketIsGone(err error) bool {
 	if isNotFound(err, "NoSuchBucket", "NotFound", "NoSuchKey") {
 		return true
 	}
-	var respErr *smithyhttp.ResponseError
-	if errors.As(err, &respErr) && respErr.HTTPStatusCode() == http.StatusNotFound {
-		return true
-	}
-	return false
+	return isHTTPNotFound(err)
 }
 
 // bucketTagOnCreateRejected reports whether err is an endpoint refusing to tag

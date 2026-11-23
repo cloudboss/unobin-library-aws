@@ -12,8 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -22,6 +24,8 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	smithy "github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
+	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/state/local"
 )
 
 const (
@@ -62,10 +66,16 @@ func run() error {
 }
 
 func verifyApplied(ctx context.Context, client *s3.Client) error {
-	if _, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(bucketName),
-	}); err != nil {
+	head, err := client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(bucketName)})
+	if err != nil {
 		return fmt.Errorf("head bucket %s: %w", bucketName, err)
+	}
+	region := aws.ToString(head.BucketRegion)
+	if region == "" {
+		region = client.Options().Region
+	}
+	if err := verifyBucketLookup(region); err != nil {
+		return err
 	}
 
 	versioning, err := client.GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{
@@ -143,6 +153,42 @@ func verifyApplied(ctx context.Context, client *s3.Client) error {
 
 	fmt.Printf("ok: bucket %s versioned, locked down, policied, with object %s\n",
 		bucketName, objectKey)
+	return nil
+}
+
+func verifyBucketLookup(region string) error {
+	root := filepath.Join(os.Getenv("VERIFY_BUILD_DIR"), ".unobin", "state")
+	store, err := local.NewStore(root, "s3", "config", encrypters.Noop{})
+	if err != nil {
+		return fmt.Errorf("open scenario state: %w", err)
+	}
+	snapshot, err := store.Current()
+	if err != nil {
+		return fmt.Errorf("read scenario state: %w", err)
+	}
+	lookup := snapshot.Find("data-source.s3-bucket-lookup")
+	if lookup == nil {
+		return errors.New("scenario state has no S3 bucket lookup")
+	}
+	if !maps.Equal(lookup.Inputs, map[string]any{"bucket": bucketName}) {
+		return fmt.Errorf("unexpected bucket lookup inputs: %v", lookup.Inputs)
+	}
+	want := map[string]any{
+		"arn":                         "arn:aws:s3:::" + bucketName,
+		"bucket-region":               region,
+		"bucket-domain-name":          bucketName + ".s3.amazonaws.com",
+		"bucket-regional-domain-name": bucketName + ".s3." + region + ".amazonaws.com",
+		"website-domain":              nil,
+		"website-endpoint":            nil,
+	}
+	if region == "us-east-1" {
+		want["hosted-zone-id"] = "Z3AQBSTGFYJSTF"
+	}
+	for field, expected := range want {
+		if got, exists := lookup.Outputs[field]; !exists || got != expected {
+			return fmt.Errorf("bucket lookup %s is %v, want %v", field, got, expected)
+		}
+	}
 	return nil
 }
 

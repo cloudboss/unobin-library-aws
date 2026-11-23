@@ -3,11 +3,13 @@ package s3
 import (
 	"context"
 	"errors"
+	"net/http"
 	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	smithy "github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/cloudboss/unobin/pkg/awscfg"
 )
 
@@ -43,7 +45,9 @@ func directoryBucketAWSConfig(awsCfg aws.Config) aws.Config {
 	return awsCfg
 }
 
-func s3ClientFromConfig(awsCfg aws.Config) *s3.Client {
+func s3ClientFromConfig(
+	awsCfg aws.Config, options ...func(*s3.Options),
+) *s3.Client {
 	return s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		// A custom endpoint -- LocalStack or another S3-compatible server -- is
 		// reached by path (host/bucket), not by the virtual-hosted bucket.host
@@ -52,7 +56,15 @@ func s3ClientFromConfig(awsCfg aws.Config) *s3.Client {
 		if awsCfg.BaseEndpoint != nil {
 			o.UsePathStyle = true
 		}
+		for _, apply := range options {
+			apply(o)
+		}
 	})
+}
+
+func isHTTPNotFound(err error) bool {
+	var respErr *smithyhttp.ResponseError
+	return errors.As(err, &respErr) && respErr.HTTPStatusCode() == http.StatusNotFound
 }
 
 // isNotFound reports whether err is an AWS API error whose service code is

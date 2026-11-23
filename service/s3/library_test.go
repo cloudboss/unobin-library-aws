@@ -63,7 +63,6 @@ func TestLibraryRegistersS3LocalResources(t *testing.T) {
 		"bucket-policy",
 		"object",
 	}, sortedKeys(lib.Resources))
-	require.Empty(t, lib.DataSources)
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
@@ -111,7 +110,6 @@ func TestReadS3ServiceSchema(t *testing.T) {
 		"bucket-policy",
 		"object",
 	}, sortedKeys(schema.Resources))
-	require.Empty(t, schema.DataSources)
 	require.Empty(t, schema.Actions)
 }
 

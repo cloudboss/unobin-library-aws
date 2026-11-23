@@ -1,0 +1,29 @@
+factory: {
+  imports: { s3: 'github.com/cloudboss/unobin-library-aws//service/s3' }
+
+  inputs: {
+    endpoint: { type: string }
+    lookup:   { type: string }
+  }
+
+  library-configs: {
+    s3: { region: 'us-east-1', endpoint-url: input.endpoint, max-attempts: 1 }
+  }
+
+  data-sources: {
+    lookup: s3.bucket {
+      bucket: input.lookup
+    }
+  }
+
+  resources: {
+    consumer: test.value {
+      name: data-source.lookup.bucket-domain-name
+    }
+  }
+
+  outputs: {
+    bucket: { value: data-source.lookup.bucket }
+    domain: { value: resource.consumer.name }
+  }
+}

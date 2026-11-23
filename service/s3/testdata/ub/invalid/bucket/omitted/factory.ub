@@ -1,0 +1,7 @@
+factory: {
+  imports:         { s3: 'github.com/cloudboss/unobin-library-aws//service/s3' }
+  library-configs: { s3: { region: 'us-east-1' } }
+  data-sources: {
+    lookup: s3.bucket {}
+  }
+}

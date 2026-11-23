@@ -1,0 +1,80 @@
+{
+  "format-version": 2,
+  "factory": {
+    "name": "s3-bucket",
+    "version": "v0.0.0",
+    "content-revision": "<revision>"
+  },
+  "stack": "dev",
+  "steps": [
+    {
+      "address": "library-config.s3",
+      "kind": "library-config",
+      "decision": "eval",
+      "inputs": {
+        "region": "us-east-1"
+      }
+    },
+    {
+      "address": "resource.bucket",
+      "kind": "resource",
+      "decision": "create",
+      "inputs": {
+        "bucket": "demo.bucket"
+      }
+    },
+    {
+      "address": "data-source.bucket",
+      "kind": "data-source",
+      "decision": "read",
+      "inputs": {
+        "bucket": "demo.bucket"
+      }
+    },
+    {
+      "address": "output.arn",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.bucket",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.bucket-domain-name",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.bucket-region",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.bucket-regional-domain-name",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.hosted-zone-id",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.managed-arn",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.website-domain",
+      "kind": "output",
+      "decision": "eval"
+    },
+    {
+      "address": "output.website-endpoint",
+      "kind": "output",
+      "decision": "eval"
+    }
+  ]
+}

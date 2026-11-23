@@ -1,0 +1,18 @@
+{
+  "name": "s3-bucket",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/s3-bucket",
+  "build": true,
+  "commands": [
+    {
+      "name": "plan",
+      "args": ["plan", "-c", "stacks/dev.ub", "-o", "bucket-plan.json"],
+      "stdout": "want/plan.stdout",
+      "stderr": "want/plan.stderr"
+    }
+  ],
+  "planSummaries": [
+    {"path": "bucket-plan.json", "want": "want/plan.json", "includeInputs": true}
+  ],
+  "deterministic": true
+}
