@@ -62,7 +62,6 @@ func TestLibraryRegistersEC2LocalKinds(t *testing.T) {
 		"subnets",
 		"vpc",
 	}, sortedKeys(lib.DataSources))
-	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
 		"vpc":                         reflect.TypeFor[*svc.VpcResourceOutput](),
@@ -132,5 +131,4 @@ func TestReadEC2ServiceSchema(t *testing.T) {
 		"subnets",
 		"vpc",
 	}, sortedKeys(schema.DataSources))
-	require.Empty(t, sortedKeys(schema.Actions))
 }

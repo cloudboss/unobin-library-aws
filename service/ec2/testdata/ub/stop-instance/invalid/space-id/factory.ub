@@ -1,0 +1,9 @@
+factory: {
+  library-configs: { ec2: {} }
+  imports:         { ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  actions: {
+    stop: ec2.stop-instance {
+      instance-id: ' i-abcdef01'
+    }
+  }
+}

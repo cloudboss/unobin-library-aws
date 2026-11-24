@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"unknown field \"state\" on ec2.stop-instance","path":"invalid/output-field/factory.ub","span":{"start":{"line":9,"column":30,"offset":239}}}],"files":[]}

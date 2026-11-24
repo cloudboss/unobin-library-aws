@@ -1,0 +1,9 @@
+stack: {
+  factory: {
+    inputs: { endpoint: 'ENDPOINT', id: 'i-0123456789abcdef0', trigger: 'fixed' }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

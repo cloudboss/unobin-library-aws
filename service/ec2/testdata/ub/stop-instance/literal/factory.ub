@@ -1,0 +1,52 @@
+factory: {
+  library-configs: { ec2: {} }
+  imports:         { ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  actions: {
+    length-8: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaa'
+    }
+    length-9: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaa'
+    }
+    length-10: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaa'
+    }
+    length-11: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaa'
+    }
+    length-12: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaa'
+    }
+    length-13: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaaa'
+    }
+    length-14: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaaaa'
+    }
+    length-15: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaaaaa'
+    }
+    length-16: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaaaaaa'
+    }
+    length-17: ec2.stop-instance {
+      instance-id: 'i-aaaaaaaaaaaaaaaaa'
+    }
+    nulls: ec2.stop-instance {
+      instance-id: 'i-abcdef01'
+      force:       null
+      timeout:     null
+      region:      null
+    }
+    lower: ec2.stop-instance {
+      instance-id: 'i-abcdef01'
+      force:       false
+      timeout:     30
+    }
+    upper: ec2.stop-instance {
+      instance-id: 'i-abcdef01'
+      force:       true
+      timeout:     3600
+    }
+  }
+}

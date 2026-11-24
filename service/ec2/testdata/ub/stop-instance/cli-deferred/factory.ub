@@ -1,0 +1,19 @@
+factory: {
+  imports: {
+    ec2:     'github.com/cloudboss/unobin-library-aws//service/ec2'
+    fixture: 'github.com/cloudboss/unobin-library-aws//tests/integration/fixtures/ec2stop'
+  }
+  library-configs: { ec2: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint: { type: string }
+    id:       { type: string }
+  }
+  actions: {
+    seed: fixture.seed {
+      echo: input.id
+    }
+    stop: ec2.stop-instance {
+      instance-id: action.seed.value
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"action.stop: constraints[1] (predicate): instance-id must match ^i-[0-9a-f]{8,17}$","path":"invalid/space-id/factory.ub","span":{"start":{"line":5,"column":29,"offset":166}}}],"files":[]}

@@ -27,6 +27,15 @@ func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRe
 	return runtime.MakeDataSource[T, Out, *awscfg.Configuration, PT]()
 }
 
+type actionPtr[T, Out any] interface {
+	*T
+	runtime.TypedAction[Out, *awscfg.Configuration]
+}
+
+func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
+	return runtime.MakeAction[T, Out, *awscfg.Configuration, PT]()
+}
+
 func Library() *runtime.Library {
 	return &runtime.Library{
 		Name:        "aws-ec2",
@@ -36,6 +45,9 @@ func Library() *runtime.Library {
 			SuggestedUnobinVersion: "v0.13.0",
 		},
 		Configuration: config.LibraryConfiguration(),
+		Actions: map[string]runtime.ActionRegistration{
+			"stop-instance": makeAction[svc.StopInstanceAction, *svc.StopInstanceActionOutput](),
+		},
 		Resources: map[string]runtime.ResourceRegistration{
 			"network-acl":    makeResource[svc.NetworkACLResource, *svc.NetworkACLResourceOutput](),
 			"flow-log":       makeResource[svc.FlowLogResource, *svc.FlowLogResourceOutput](),

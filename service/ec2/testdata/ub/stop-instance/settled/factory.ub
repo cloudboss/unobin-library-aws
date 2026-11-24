@@ -1,0 +1,24 @@
+factory: {
+  imports: { ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: {
+    ec2: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint: { type: string }
+    id:       { type: string }
+    force:    { type: optional(boolean), default: null }
+    timeout:  { type: optional(integer), default: null }
+    region:   { type: optional(string), default: null }
+    trigger:  { type: string }
+  }
+  actions: {
+
+    stop: ec2.stop-instance {
+      @trigger:    input.trigger
+      instance-id: input.id
+      force:       input.force
+      timeout:     input.timeout
+      region:      input.region
+    }
+  }
+}
