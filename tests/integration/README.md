@@ -4,11 +4,17 @@ Integration tests that compile, plan, apply, verify, update, and destroy
 real unobin stacks using the `unobin-library-aws` module. Both `emulator` and
 `live` tiers run the same scenarios:
 
-- `emulator`: Runs against Floci by default. The CloudWatch Logs, RDS, and
+- `emulator`: Runs against Floci by default. The CodeBuild, CloudWatch Logs, RDS, and
   Scheduler scenarios select MiniStack with a `.backend` file. Both
   emulators must be running when invoking the driver directly.
 - `live`: Runs against real AWS. `UNOBIN_AWS_LIVE=1` must be set so it
   does not incur costs by accident.
+
+`make emulators-up` builds a local MiniStack image from the pinned 1.5.43 base.
+Its CodeBuild compatibility fix resolves DeleteProject ARNs through MiniStack's
+existing account and region checks. The installer in `emulators/ministack/`
+also accepts a module path for a native MiniStack setup. It accepts only the
+known original or patched function and retains the module's copyright notice.
 
 The tier only changes which environment variables `run.sh` exports before
 invoking the scenarios. For the emulator tier, dummy credentials, region, and

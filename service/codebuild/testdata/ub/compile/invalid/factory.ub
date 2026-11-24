@@ -1,0 +1,130 @@
+factory: {
+  imports:         { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  library-configs: { codebuild: {} }
+  resources: {
+    project: codebuild.project {
+      name:                   '-invalid'
+      service-role:           'arn:aws:iam::123456789012:role/build'
+      auto-retry-limit:       0
+      badge-enabled:          false
+      concurrent-build-limit: 0
+      description: '''\-
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        éééééééééééééééééééééééééééééééééééééééééé
+        '''
+      encryption-key:            ''
+      project-visibility:        'PRIVATE'
+      queued-timeout-in-minutes: 481
+      timeout-in-minutes:        4
+      resource-access-role:      ''
+      source-version:            ''
+      tags:                      { owner: 'test' }
+      artifacts: {
+        type:                   'S3'
+        artifact-identifier:    'primary'
+        bucket-owner-access:    'bad'
+        encryption-disabled:    false
+        location:               'bucket'
+        name:                   'out'
+        namespace-type:         'BUILD_ID'
+        override-artifact-name: false
+        packaging:              'ZIP'
+        path:                   'path'
+      }
+      build-batch-config: {
+        service-role:      ''
+        combine-artifacts: false
+        timeout-in-mins:   2161
+        restrictions: { compute-types-allowed: ['custom', 'custom'], maximum-builds-allowed: 101 }
+      }
+      cache: { type: 'S3', location: '', cache-namespace: 'ns', modes: [] }
+      environment: {
+        compute-type:  'small'
+        image:         'image'
+        type:          'LINUX_CONTAINER'
+        certificate:   'cert.PEM'
+        docker-server: { compute-type: 'BUILD_GENERAL1_LARGE', security-group-ids: ['sg'] }
+        fleet:         {}
+        environment-variables: [
+          { name: '', value: '' },
+          { name: 'secret', value: 'key', type: 'secret' },
+        ]
+        image-pull-credentials-type: 'SERVICE_ROLE'
+        privileged-mode:             false
+        registry-credential:         { credential: '', credential-provider: 'SECRETS_MANAGER' }
+      }
+      file-system-locations: [
+        {
+          identifier:    'fs'
+          location:      'server:/'
+          mount-options: 'ro'
+          mount-point:   '/mnt'
+          type:          'EFS'
+        },
+      ]
+      logs-config: {
+        cloud-watch-logs: { group-name: 'group', stream-name: 'stream', status: 'ENABLED' }
+        s3-logs: {
+          location:            'bucket/key'
+          status:              'DISABLED'
+          encryption-disabled: false
+          bucket-owner-access: 'NONE'
+        }
+      }
+      source: {
+        type:                  'GITHUB'
+        auth:                  { type: 'BASIC_AUTH', resource: '' }
+        build-status-config:   { context: 'context', target-url: 'target' }
+        buildspec:             'build'
+        git-clone-depth:       -1
+        git-submodules-config: { fetch-submodules: false }
+        insecure-ssl:          false
+        location:              'location'
+        report-build-status:   false
+      }
+      secondary-artifacts: [
+        {
+          type:                   'NO_ARTIFACTS'
+          artifact-identifier:    'secondary'
+          bucket-owner-access:    'NONE'
+          encryption-disabled:    false
+          location:               ''
+          name:                   'secondary-name'
+          namespace-type:         'NONE'
+          override-artifact-name: false
+          packaging:              'NONE'
+          path:                   ''
+        },
+      ]
+      secondary-sources: [
+        {
+          type:                  'bad'
+          source-identifier:     'secondary'
+          auth:                  { type: 'SECRETS_MANAGER', resource: '' }
+          build-status-config:   {}
+          buildspec:             ''
+          git-clone-depth:       0
+          git-submodules-config: { fetch-submodules: false }
+          insecure-ssl:          false
+          location:              'bucket/key'
+          report-build-status:   false
+        },
+      ]
+      secondary-source-versions: [{ source-identifier: 'secondary', source-version: '' }]
+      vpc-config:                { vpc-id: '', subnets: [], security-group-ids: [] }
+    }
+  }
+  outputs: {
+    arn:         { value: resource.project.arn }
+    badge:       { value: resource.project.badge.badge-request-url }
+    artifacts:   { value: resource.project.secondary-artifacts }
+    environment: { value: resource.project.environment.environment-variables }
+    source:      { value: resource.project.source }
+    batch:       { value: resource.project.build-batch-config }
+    logs:        { value: resource.project.logs-config }
+    vpc:         { value: resource.project.vpc-config }
+    tags:        { value: resource.project.tags }
+    alias:       { value: resource.project.public-project-alias }
+  }
+}

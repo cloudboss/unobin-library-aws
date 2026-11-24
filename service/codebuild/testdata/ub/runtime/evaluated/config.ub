@@ -1,0 +1,23 @@
+stack: {
+  factory: {
+    inputs: {
+      endpoint:        'ENDPOINT'
+      name:            'test'
+      image:           'image'
+      compute:         'BUILD_GENERAL1_SMALL'
+      certificate:     null
+      description:     null
+      timeout:         60
+      clone-depth:     null
+      source-type:     'NO_SOURCE'
+      source-location: null
+      buildspec:       'version: 0.2'
+      visibility:      null
+      cache:           null
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

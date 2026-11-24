@@ -8,6 +8,7 @@ CTR_IMAGE_GO         := ghcr.io/cloudboss/docker.io/library/golang:1.26.2-alpine
 CTR_IMAGE_LINT       := ghcr.io/cloudboss/docker.io/golangci/golangci-lint:v2.11.4-alpine
 CTR_IMAGE_FLOCI      := ghcr.io/cloudboss/docker.io/docker.io/floci/floci:2.5.0
 CTR_IMAGE_MINISTACK  := ghcr.io/cloudboss/docker.io/ministackorg/ministack:1.5.43
+CTR_IMAGE_MINISTACK_PATCHED := $(PROJECT)-ministack:1.5.43-codebuild
 
 NETWORK         := $(PROJECT)-it
 FLOCI_NAME      := $(PROJECT)-floci
@@ -58,6 +59,10 @@ lint:
 		-w /code $(CTR_IMAGE_LINT) golangci-lint run -v ./...
 
 emulators-up: | $(HAS_COMMAND_CURL)
+	@docker build \
+		--build-arg MINISTACK_IMAGE=$(CTR_IMAGE_MINISTACK) \
+		-t $(CTR_IMAGE_MINISTACK_PATCHED) \
+		tests/integration/emulators/ministack
 	@docker network inspect $(NETWORK) >/dev/null 2>&1 \
 		|| docker network create $(NETWORK) >/dev/null
 	@docker run -d --rm \
@@ -75,7 +80,7 @@ emulators-up: | $(HAS_COMMAND_CURL)
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		--security-opt label=type:container_runtime_t \
 		-e DEBUG=1 \
-		$(CTR_IMAGE_MINISTACK) >/dev/null
+		$(CTR_IMAGE_MINISTACK_PATCHED) >/dev/null
 	@i=0; while [ $${i} -lt 30 ]; do \
 		if curl -fsS http://localhost:4566/_localstack/health >/dev/null 2>&1 \
 			&& curl -fsS http://localhost:4567/_localstack/health >/dev/null 2>&1; then \

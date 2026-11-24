@@ -1,0 +1,179 @@
+{
+  "Name": "test",
+  "ServiceRole": "arn:aws:iam::123456789012:role/build",
+  "AutoRetryLimit": 3,
+  "BadgeEnabled": true,
+  "ConcurrentBuildLimit": 4,
+  "Description": "description",
+  "EncryptionKey": "key",
+  "ProjectVisibility": "PUBLIC_READ",
+  "QueuedTimeoutInMinutes": 100,
+  "TimeoutInMinutes": 90,
+  "ResourceAccessRole": "arn:aws:iam::123456789012:role/build",
+  "SourceVersion": "main",
+  "Tags": {
+    "z": "last",
+    "a": "",
+    "aws:system": "excluded"
+  },
+  "Artifacts": {
+    "Type": "S3",
+    "ArtifactIdentifier": "primary",
+    "BucketOwnerAccess": "FULL",
+    "EncryptionDisabled": true,
+    "Location": "bucket",
+    "Name": "artifact",
+    "NamespaceType": "BUILD_ID",
+    "OverrideArtifactName": true,
+    "Packaging": "ZIP",
+    "Path": "prefix"
+  },
+  "Environment": {
+    "ComputeType": "BUILD_GENERAL1_SMALL",
+    "Image": "image",
+    "Type": "LINUX_CONTAINER",
+    "Certificate": "cert.zip",
+    "DockerServer": {
+      "ComputeType": "BUILD_GENERAL1_LARGE",
+      "SecurityGroupIds": [
+        "b",
+        "a",
+        "b"
+      ]
+    },
+    "Fleet": {
+      "FleetArn": "arn:aws:codebuild:us-east-1:123456789012:fleet/f"
+    },
+    "EnvironmentVariables": [
+      {
+        "Name": "same",
+        "Value": ""
+      },
+      {
+        "Name": "same",
+        "Value": "second",
+        "Type": "PARAMETER_STORE"
+      }
+    ],
+    "ImagePullCredentialsType": "SERVICE_ROLE",
+    "PrivilegedMode": false,
+    "RegistryCredential": {
+      "Credential": "secret",
+      "CredentialProvider": "SECRETS_MANAGER"
+    }
+  },
+  "Source": {
+    "Type": "GITHUB",
+    "Auth": {
+      "Type": "BASIC_AUTH",
+      "Resource": "arn:aws:iam::123456789012:role/build"
+    },
+    "BuildStatusConfig": {
+      "Context": "context",
+      "TargetUrl": "url"
+    },
+    "Buildspec": "spec",
+    "GitCloneDepth": 2,
+    "GitSubmodulesConfig": {
+      "FetchSubmodules": false
+    },
+    "InsecureSsl": false,
+    "Location": "git",
+    "ReportBuildStatus": false
+  },
+  "BuildBatchConfig": {
+    "ServiceRole": "arn:aws:iam::123456789012:role/build",
+    "CombineArtifacts": false,
+    "Restrictions": {
+      "ComputeTypesAllowed": [
+        "BUILD_GENERAL1_SMALL",
+        "BUILD_GENERAL1_SMALL",
+        "BUILD_GENERAL1_SMALL"
+      ],
+      "MaximumBuildsAllowed": 2
+    },
+    "TimeoutInMins": 120
+  },
+  "Cache": {
+    "Type": "LOCAL",
+    "Location": "",
+    "Modes": [
+      "LOCAL_SOURCE_CACHE",
+      "LOCAL_SOURCE_CACHE",
+      "LOCAL_CUSTOM_CACHE"
+    ],
+    "CacheNamespace": "namespace"
+  },
+  "FileSystemLocations": [
+    {
+      "Identifier": "fs",
+      "Location": "server:/",
+      "MountOptions": "ro",
+      "MountPoint": "/mnt",
+      "Type": "EFS"
+    }
+  ],
+  "LogsConfig": {
+    "CloudWatchLogs": {
+      "GroupName": "group",
+      "StreamName": "stream",
+      "Status": "ENABLED"
+    },
+    "S3Logs": {
+      "BucketOwnerAccess": "READ_ONLY",
+      "EncryptionDisabled": false,
+      "Location": "bucket/key",
+      "Status": "DISABLED"
+    }
+  },
+  "SecondaryArtifacts": [
+    {
+      "Type": "S3",
+      "ArtifactIdentifier": "secondary",
+      "Name": "name",
+      "Location": "bucket",
+      "BucketOwnerAccess": "NONE",
+      "EncryptionDisabled": false,
+      "OverrideArtifactName": false
+    }
+  ],
+  "SecondarySources": [
+    {
+      "Type": "GITLAB",
+      "SourceIdentifier": "secondary",
+      "Auth": {
+        "Type": "SECRETS_MANAGER",
+        "Resource": "arn:aws:iam::123456789012:role/build"
+      },
+      "BuildStatusConfig": {
+        "Context": "status",
+        "TargetUrl": "target"
+      },
+      "Buildspec": "other",
+      "GitCloneDepth": 0,
+      "GitSubmodulesConfig": {
+        "FetchSubmodules": true
+      },
+      "InsecureSsl": false,
+      "Location": "other-git",
+      "ReportBuildStatus": false
+    }
+  ],
+  "SecondarySourceVersions": [
+    {
+      "SourceIdentifier": "secondary",
+      "SourceVersion": "branch"
+    }
+  ],
+  "VpcConfig": {
+    "VpcId": "vpc",
+    "Subnets": [
+      "a",
+      "b"
+    ],
+    "SecurityGroupIds": [
+      "a",
+      "b"
+    ]
+  }
+}

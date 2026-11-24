@@ -1,0 +1,62 @@
+factory: {
+  imports: { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  inputs: {
+    batch-compute-types: { type: optional(list(string)) }
+    vpc: {
+      type: optional(
+        object(
+          {
+            vpc-id:             string
+            subnets:            list(string)
+            security-group-ids: list(string)
+          },
+        ),
+      )
+    }
+    endpoint:        { type: string }
+    name:            { type: string }
+    image:           { type: string }
+    compute:         { type: string }
+    certificate:     { type: optional(string) }
+    description:     { type: optional(string) }
+    timeout:         { type: integer }
+    clone-depth:     { type: optional(integer) }
+    source-type:     { type: string }
+    source-location: { type: optional(string) }
+    buildspec:       { type: optional(string) }
+    visibility:      { type: optional(string) }
+    cache: { type: optional(object({ type: optional(string), location: optional(string) })) }
+  }
+  library-configs: { codebuild: { region: 'us-east-1', endpoint-url: input.endpoint } }
+  resources: {
+    project: codebuild.project {
+      name:               input.name
+      service-role:       'arn:aws:iam::123456789012:role/build'
+      vpc-config:         input.vpc
+      description:        input.description
+      timeout-in-minutes: input.timeout
+      project-visibility: input.visibility
+      cache:              input.cache
+      build-batch-config: if input.batch-compute-types == null
+        then null
+        else {
+          service-role: 'arn:aws:iam::123456789012:role/build'
+          restrictions: { compute-types-allowed: input.batch-compute-types }
+        }
+      artifacts: { type: 'NO_ARTIFACTS' }
+      environment: {
+        compute-type: input.compute
+        image:        input.image
+        type:         'LINUX_CONTAINER'
+        certificate:  input.certificate
+      }
+      source: {
+        type:            input.source-type
+        buildspec:       input.buildspec
+        location:        input.source-location
+        git-clone-depth: input.clone-depth
+      }
+    }
+  }
+  outputs: { arn: { value: resource.project.arn } }
+}

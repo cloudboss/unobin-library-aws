@@ -1,0 +1,13 @@
+factory: {
+  imports:         { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  library-configs: { codebuild: {} }
+  resources: {
+    project: codebuild.project {
+      name:         'test'
+      service-role: ''
+      artifacts:    { type: 1 }
+      environment:  { compute-type: 'BUILD_GENERAL1_SMALL', image: '', type: 'LINUX_CONTAINER' }
+      source:       { type: 'NO_SOURCE', buildspec: ' ' }
+    }
+  }
+}

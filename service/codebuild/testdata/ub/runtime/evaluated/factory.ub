@@ -1,0 +1,126 @@
+factory: {
+  imports: { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  inputs: {
+    batch-compute-types: { type: optional(list(string)) }
+    secondary-artifacts: {
+      type: optional(
+        list(
+          object(
+            {
+              type:                   string
+              artifact-identifier:    string
+              name:                   optional(string)
+              namespace-type:         optional(string)
+              packaging:              optional(string)
+              bucket-owner-access:    optional(string)
+              encryption-disabled:    optional(boolean)
+              override-artifact-name: optional(boolean)
+              location:               optional(string)
+              path:                   optional(string)
+            },
+          ),
+        ),
+      )
+    }
+    secondary-sources: {
+      type: optional(
+        list(
+          object(
+            {
+              type:                string
+              source-identifier:   string
+              buildspec:           optional(string)
+              git-clone-depth:     optional(integer)
+              insecure-ssl:        optional(boolean)
+              report-build-status: optional(boolean)
+              location:            optional(string)
+              auth:                optional(object({ type: string, resource: string }))
+              build-status-config: optional(
+                object({ context: optional(string), target-url: optional(string) }),
+              )
+              git-submodules-config: optional(object({ fetch-submodules: boolean }))
+            },
+          ),
+        ),
+      )
+    }
+    secondary-source-versions: {
+      type: optional(
+        list(
+          object(
+            {
+              source-identifier: string
+              source-version:    string
+            },
+          ),
+        ),
+      )
+    }
+    vpc: {
+      type: optional(
+        object(
+          {
+            vpc-id:             string
+            subnets:            list(string)
+            security-group-ids: list(string)
+          },
+        ),
+      )
+    }
+    docker-security-groups: { type: optional(list(string)) }
+    endpoint:               { type: string }
+    name:                   { type: optional(string) }
+    image:                  { type: optional(string) }
+    compute:                { type: optional(string) }
+    certificate:            { type: optional(string) }
+    description:            { type: optional(string) }
+    timeout:                { type: optional(integer) }
+    clone-depth:            { type: optional(integer) }
+    source-type:            { type: optional(string) }
+    source-location:        { type: optional(string) }
+    buildspec:              { type: optional(string) }
+    visibility:             { type: optional(string) }
+    cache: { type: optional(object({ type: optional(string), location: optional(string) })) }
+  }
+  library-configs: { codebuild: { region: 'us-east-1', endpoint-url: input.endpoint } }
+  resources: {
+    project: codebuild.project {
+      name:                      input.name
+      service-role:              'arn:aws:iam::123456789012:role/build'
+      vpc-config:                input.vpc
+      secondary-artifacts:       input.secondary-artifacts
+      secondary-sources:         input.secondary-sources
+      secondary-source-versions: input.secondary-source-versions
+      description:               input.description
+      timeout-in-minutes:        input.timeout
+      project-visibility:        input.visibility
+      cache:                     input.cache
+      build-batch-config: if input.batch-compute-types == null
+        then null
+        else {
+          service-role: 'arn:aws:iam::123456789012:role/build'
+          restrictions: { compute-types-allowed: input.batch-compute-types }
+        }
+      artifacts: { type: 'NO_ARTIFACTS' }
+      environment: {
+        docker-server: if input.docker-security-groups == null
+          then null
+          else {
+            compute-type:       'BUILD_GENERAL1_SMALL'
+            security-group-ids: input.docker-security-groups
+          }
+        compute-type: input.compute
+        image:        input.image
+        type:         'LINUX_CONTAINER'
+        certificate:  input.certificate
+      }
+      source: {
+        type:            input.source-type
+        buildspec:       input.buildspec
+        location:        input.source-location
+        git-clone-depth: input.clone-depth
+      }
+    }
+  }
+  outputs: { arn: { value: resource.project.arn } }
+}

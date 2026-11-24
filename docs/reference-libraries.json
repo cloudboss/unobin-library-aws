@@ -57,6 +57,13 @@
       "alias": "aws-cloudwatchlogs"
     },
     {
+      "title": "CodeBuild",
+      "slug": "codebuild",
+      "package": "service/codebuild",
+      "module": "github.com/cloudboss/unobin-library-aws//service/codebuild",
+      "alias": "aws-codebuild"
+    },
+    {
       "title": "Cognito Identity Provider",
       "slug": "cognitoidp",
       "package": "service/cognitoidp",

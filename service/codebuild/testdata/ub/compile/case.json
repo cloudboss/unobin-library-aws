@@ -1,0 +1,198 @@
+{
+  "name": "compile-codebuild-project",
+  "rootPath": ".",
+  "executor": "root",
+  "cliVersion": "v0.13.0-a.4",
+  "commands": [
+    {
+      "name": "scenario",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "scenario/factory.ub",
+        "-o",
+        "build-scenario",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/scenario.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "valid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid/factory.ub",
+        "-o",
+        "build-valid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "minimal",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "minimal/factory.ub",
+        "-o",
+        "build-minimal",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/minimal.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "invalid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/factory.ub",
+        "-o",
+        "build-invalid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/invalid.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "required",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "required/factory.ub",
+        "-o",
+        "build-required",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/required.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "type",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "type/factory.ub",
+        "-o",
+        "build-type",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/type.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "duplicates",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "duplicates/factory.ub",
+        "-o",
+        "build-duplicates",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/duplicates.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "distinct",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "distinct/factory.ub",
+        "-o",
+        "build-distinct",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/distinct.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "batch-invalid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "batch-invalid/factory.ub",
+        "-o",
+        "build-batch-invalid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/batch-invalid.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "batch-valid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "batch-valid/factory.ub",
+        "-o",
+        "build-batch-valid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/batch-valid.stdout",
+      "exitCode": 0
+    }
+  ]
+}

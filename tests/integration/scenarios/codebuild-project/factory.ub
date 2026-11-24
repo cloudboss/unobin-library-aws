@@ -1,0 +1,55 @@
+factory: {
+  description: 'Manages a CodeBuild project and its IAM service role.'
+  imports: {
+    aws-codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild'
+    aws-iam:       'github.com/cloudboss/unobin-library-aws//service/iam'
+  }
+  library-configs: { aws-codebuild: input.aws-config, aws-iam: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: { type: string, default: 'initial' }
+    timeout:     { type: integer, default: 60 }
+    variable:    { type: string, default: 'initial' }
+    tags:        { type: map(string), default: { keep: '1', change: 'old', remove: 'yes' } }
+  }
+  resources: {
+    role: aws-iam.role {
+      role-name: 'unobin-it-codebuild-role'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'codebuild.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+    }
+    project: aws-codebuild.project {
+      name:               'unobin-it-codebuild-project'
+      service-role:       resource.role.arn
+      description:        input.description
+      timeout-in-minutes: input.timeout
+      artifacts:          { type: 'NO_ARTIFACTS' }
+      environment: {
+        compute-type:          'BUILD_GENERAL1_SMALL'
+        image:                 'aws/codebuild/standard:7.0'
+        type:                  'LINUX_CONTAINER'
+        environment-variables: [{ name: 'PHASE', value: input.variable }]
+      }
+      source: { type: 'NO_SOURCE', buildspec: 'version: 0.2' }
+      tags:   input.tags
+    }
+  }
+  outputs: {
+    arn:  { value: resource.project.arn }
+    name: { value: resource.project.name }
+    role: { value: resource.role.arn }
+  }
+}

@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    inputs: {
+      description: 'updated'
+      timeout:     90
+      variable:    'updated'
+      tags:        { keep: '1', change: 'new', add: 'yes' }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}
