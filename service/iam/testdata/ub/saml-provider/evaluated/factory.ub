@@ -1,0 +1,26 @@
+factory: {
+  imports: { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  inputs: {
+    endpoint: { type: string }
+    name:     { type: optional(string) }
+    metadata: { type: optional(string) }
+    tags:     { type: optional(map(string)) }
+    region:   { type: string, default: 'us-east-1' }
+  }
+  library-configs: { iam: { region: input.region, endpoint-url: input.endpoint } }
+  resources: {
+    provider: iam.saml-provider {
+      name:                   input.name
+      saml-metadata-document: input.metadata
+      tags:                   input.tags
+    }
+  }
+  outputs: {
+    arn:         { value: resource.provider.arn }
+    name:        { value: resource.provider.name }
+    metadata:    { value: resource.provider.saml-metadata-document }
+    uuid:        { value: resource.provider.saml-provider-uuid }
+    valid-until: { value: resource.provider.valid-until }
+    tags:        { value: resource.provider.tags }
+  }
+}

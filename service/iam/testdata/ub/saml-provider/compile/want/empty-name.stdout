@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.provider: constraints[0] (predicate): name must be 1 to 128 bytes","path":"empty-name/factory.ub","span":{"start":{"line":5,"column":33,"offset":172}}}],"files":[]}
