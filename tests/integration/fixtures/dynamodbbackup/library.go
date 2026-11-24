@@ -38,7 +38,7 @@ func Library() *runtime.Library {
 	return &runtime.Library{
 		Name: "backup-fixture", Configuration: config.LibraryConfiguration(),
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI: "1.1", SuggestedUnobinVersion: "v0.13.0-a.4",
+			RequiredAPI: "1.1", SuggestedUnobinVersion: "v0.13.0",
 		},
 		Resources: map[string]runtime.ResourceRegistration{
 			"cleanup": runtime.MakeResource[
