@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/cloudboss/unobin/pkg/encrypters"
+	"github.com/cloudboss/unobin/pkg/sdk/state"
 	"github.com/cloudboss/unobin/pkg/state/local"
 )
 
@@ -136,6 +137,37 @@ func verifyAliasLookup(alias *kmstypes.AliasListEntry, key *kmstypes.KeyMetadata
 		}
 		if got := snapshot.Outputs[field.output]; got != field.cloud {
 			return fmt.Errorf("stack output %s is %v, want %q", field.output, got, field.cloud)
+		}
+	}
+	return verifyKeyLookups(snapshot, key)
+}
+
+func verifyKeyLookups(snapshot *state.Snapshot, key *kmstypes.KeyMetadata) error {
+	for _, name := range []string{"kms-key-lookup", "kms-key-alias-lookup", "kms-key-arn-lookup"} {
+		lookup := snapshot.Find("data-source." + name)
+		if lookup == nil {
+			return fmt.Errorf("scenario state requires %s", name)
+		}
+		for field, want := range map[string]any{
+			"key-id": aws.ToString(key.KeyId), "arn": aws.ToString(key.Arn),
+			"description": aws.ToString(key.Description), "key-spec": string(key.KeySpec),
+			"key-state": string(key.KeyState), "enabled": key.Enabled,
+		} {
+			if got := lookup.Outputs[field]; got != want {
+				return fmt.Errorf("%s %s is %v, want KMS %v", name, field, got, want)
+			}
+		}
+	}
+	for field, want := range map[string]any{
+		"lookup-key-id": aws.ToString(key.KeyId), "lookup-key-arn": aws.ToString(key.Arn),
+		"lookup-key-spec": string(key.KeySpec), "lookup-key-description": aws.ToString(key.Description),
+		"lookup-key-alias-id":          aws.ToString(key.KeyId),
+		"lookup-key-alias-description": aws.ToString(key.Description),
+		"lookup-key-arn-id":            aws.ToString(key.KeyId),
+		"lookup-key-arn-description":   aws.ToString(key.Description),
+	} {
+		if got := snapshot.Outputs[field]; got != want {
+			return fmt.Errorf("stack output %s is %v, want KMS %v", field, got, want)
 		}
 	}
 	return nil

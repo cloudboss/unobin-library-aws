@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"unknown field \"region\" on kms.key","path":"excluded-region/factory.ub","span":{"start":{"line":9,"column":28,"offset":229}}}],"files":[]}

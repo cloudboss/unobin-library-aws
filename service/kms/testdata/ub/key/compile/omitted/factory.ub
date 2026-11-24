@@ -1,0 +1,7 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  data-sources: {
+    lookup: kms.key {}
+  }
+}

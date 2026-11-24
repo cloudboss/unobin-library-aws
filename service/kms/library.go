@@ -32,6 +32,9 @@ func Library() *runtime.Library {
 			"alias": makeResource[svc.AliasResource, *svc.AliasResourceOutput](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
+			"key": runtime.MakeDataSource[
+				svc.KeyDataSource, *svc.KeyDataSourceOutput, *awscfg.Configuration,
+			](),
 			"alias": runtime.MakeDataSource[
 				svc.AliasDataSource, *svc.AliasDataSourceOutput, *awscfg.Configuration,
 			](),

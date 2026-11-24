@@ -47,19 +47,38 @@ factory: {
   }
 
   data-sources: {
+    kms-key-lookup: aws-kms.key {
+      key-id: resource.kms-key-it.key-id
+    }
+    kms-key-alias-lookup: aws-kms.key {
+      key-id:      resource.kms-alias-it.alias-name
+      @depends-on: [resource.kms-key-it]
+    }
+    kms-key-arn-lookup: aws-kms.key {
+      key-id:      resource.kms-alias-it.arn
+      @depends-on: [resource.kms-key-it]
+    }
     kms-alias-lookup: aws-kms.alias {
       alias-name: resource.kms-alias-it.alias-name
     }
   }
 
   outputs: {
-    key-arn:               { value: resource.kms-key-it.arn }
-    key-id:                { value: resource.kms-key-it.key-id }
-    alias-arn:             { value: resource.kms-alias-it.arn }
-    alias-target-key-arn:  { value: resource.kms-alias-it.target-key-arn }
-    lookup-alias-name:     { value: data-source.kms-alias-lookup.alias-name }
-    lookup-arn:            { value: data-source.kms-alias-lookup.arn }
-    lookup-target-key-arn: { value: data-source.kms-alias-lookup.target-key-arn }
-    lookup-target-key-id:  { value: data-source.kms-alias-lookup.target-key-id }
+    lookup-key-id:                { value: data-source.kms-key-lookup.key-id }
+    lookup-key-arn:               { value: data-source.kms-key-lookup.arn }
+    lookup-key-spec:              { value: data-source.kms-key-lookup.key-spec }
+    lookup-key-description:       { value: data-source.kms-key-lookup.description }
+    lookup-key-alias-id:          { value: data-source.kms-key-alias-lookup.key-id }
+    lookup-key-alias-description: { value: data-source.kms-key-alias-lookup.description }
+    lookup-key-arn-id:            { value: data-source.kms-key-arn-lookup.key-id }
+    lookup-key-arn-description:   { value: data-source.kms-key-arn-lookup.description }
+    key-arn:                      { value: resource.kms-key-it.arn }
+    key-id:                       { value: resource.kms-key-it.key-id }
+    alias-arn:                    { value: resource.kms-alias-it.arn }
+    alias-target-key-arn:         { value: resource.kms-alias-it.target-key-arn }
+    lookup-alias-name:            { value: data-source.kms-alias-lookup.alias-name }
+    lookup-arn:                   { value: data-source.kms-alias-lookup.arn }
+    lookup-target-key-arn:        { value: data-source.kms-alias-lookup.target-key-arn }
+    lookup-target-key-id:         { value: data-source.kms-alias-lookup.target-key-id }
   }
 }

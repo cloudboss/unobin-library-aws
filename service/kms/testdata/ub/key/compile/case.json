@@ -1,0 +1,197 @@
+{
+  "name": "compile-kms-key",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "valid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid/factory.ub",
+        "-o",
+        "build-valid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "omitted",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "omitted/factory.ub",
+        "-o",
+        "build-omitted",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/omitted.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "null/factory.ub",
+        "-o",
+        "build-null",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong-type/factory.ub",
+        "-o",
+        "build-wrong-type",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-type.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-tokens",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong-tokens/factory.ub",
+        "-o",
+        "build-wrong-tokens",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-tokens.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "computed-input",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "computed-input/factory.ub",
+        "-o",
+        "build-computed-input",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/computed-input.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "region",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "region/factory.ub",
+        "-o",
+        "build-region",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/region.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "excluded-id",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "excluded-id/factory.ub",
+        "-o",
+        "build-excluded-id",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/excluded-id.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "excluded-spec",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "excluded-spec/factory.ub",
+        "-o",
+        "build-excluded-spec",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/excluded-spec.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "excluded-region",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "excluded-region/factory.ub",
+        "-o",
+        "build-excluded-region",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/excluded-region.stdout",
+      "exitCode": 1
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  data-sources: {
+    uuid: kms.key {
+      key-id: '12345678-1234-1234-a123-123456789abc'
+    }
+    mrk: kms.key {
+      key-id:       'mrk-1234567890abcdef1234567890abcdef'
+      grant-tokens: []
+    }
+    alias: kms.key {
+      key-id:       'alias/aws/Example'
+      grant-tokens: ['', 'duplicate', 'duplicate']
+    }
+    arn: kms.key {
+      key-id: 'arn:aws-cn:kms:cn-north-1:123456789012:alias/example'
+    }
+    empty: kms.key {
+      key-id:       ''
+      grant-tokens: null
+    }
+  }
+  outputs: {
+    fields: {
+      value: [
+        data-source.uuid.key-id,
+        data-source.uuid.arn,
+        data-source.uuid.aws-account-id,
+        data-source.uuid.cloud-hsm-cluster-id,
+        data-source.uuid.creation-date,
+        data-source.uuid.custom-key-store-id,
+        data-source.uuid.deletion-date,
+        data-source.uuid.description,
+        data-source.uuid.expiration-model,
+        data-source.uuid.key-manager,
+        data-source.uuid.key-spec,
+        data-source.uuid.key-state,
+        data-source.uuid.key-usage,
+        data-source.uuid.origin,
+        data-source.uuid.valid-to,
+        data-source.uuid.enabled,
+        data-source.uuid.multi-region,
+        data-source.uuid.pending-deletion-window-in-days,
+        data-source.uuid.multi-region-configuration?.multi-region-key-type,
+        data-source.uuid.multi-region-configuration?.primary-key?.arn,
+        data-source.uuid.multi-region-configuration?.primary-key?.region,
+        data-source.uuid.multi-region-configuration?.replica-keys,
+        data-source.uuid.xks-key-configuration?.id,
+      ]
+    }
+  }
+}
