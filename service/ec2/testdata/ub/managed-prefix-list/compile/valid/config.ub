@@ -1,0 +1,7 @@
+stack: {
+  factory: { inputs: { endpoint: 'ENDPOINT' } }
+  state: local {
+    path: '.state'
+  }
+  encryption: noop {}
+}

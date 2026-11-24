@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.prefix: constraints[0] (predicate): address-family must be IPv4 or IPv6","path":"family-unknown/factory.ub","span":{"start":{"line":6,"column":37,"offset":325}}}],"files":[]}

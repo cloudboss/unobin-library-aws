@@ -1,0 +1,29 @@
+factory: {
+  imports:         { ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs:          { endpoint: { type: string, default: 'http://127.0.0.1:1' } }
+  library-configs: { ec2: { region: 'us-east-1', endpoint-url: input.endpoint, max-attempts: 1 } }
+  resources: {
+    prefix: ec2.managed-prefix-list {
+      address-family: 'IPv4'
+      max-entries:    8
+      name:           null
+      entries: [
+        { cidr: '10.0.0.1/08', description: null },
+        { cidr: '2001:DB8::1/064', description: '' },
+      ]
+      tags: { blank: '' }
+    }
+  }
+  outputs: {
+    id:       { value: resource.prefix.prefix-list-id }
+    arn:      { value: resource.prefix.arn }
+    owner:    { value: resource.prefix.owner-id }
+    family:   { value: resource.prefix.address-family }
+    capacity: { value: resource.prefix.max-entries }
+    version:  { value: resource.prefix.version }
+    name:     { value: resource.prefix.name }
+    entries:  { value: resource.prefix.entries }
+    tags:     { value: resource.prefix.tags }
+    region:   { value: resource.prefix.region }
+  }
+}

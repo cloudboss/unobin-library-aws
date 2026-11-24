@@ -49,6 +49,8 @@ func Library() *runtime.Library {
 			"stop-instance": makeAction[svc.StopInstanceAction, *svc.StopInstanceActionOutput](),
 		},
 		Resources: map[string]runtime.ResourceRegistration{
+			"managed-prefix-list": makeResource[
+				svc.ManagedPrefixListResource, *svc.ManagedPrefixListResourceOutput](),
 			"network-acl":    makeResource[svc.NetworkACLResource, *svc.NetworkACLResourceOutput](),
 			"flow-log":       makeResource[svc.FlowLogResource, *svc.FlowLogResourceOutput](),
 			"vpc":            makeResource[svc.VpcResource, *svc.VpcResourceOutput](),

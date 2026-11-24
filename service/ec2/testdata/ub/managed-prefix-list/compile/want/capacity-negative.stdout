@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.prefix: constraints[1] (predicate): max-entries must be at least 1","path":"capacity-negative/factory.ub","span":{"start":{"line":6,"column":37,"offset":325}}}],"files":[]}

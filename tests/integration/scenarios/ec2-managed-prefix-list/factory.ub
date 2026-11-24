@@ -1,0 +1,48 @@
+factory: {
+  imports: { ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    stage: { type: string, default: 'initial' }
+  }
+  library-configs: { ec2: input.aws-config }
+  resources: {
+    managed: ec2.managed-prefix-list {
+      address-family: 'IPv4'
+      name: if input.stage == 'initial' then 'unobin-prefix-it' else 'unobin-prefix-renamed-it'
+      max-entries: if input.stage == 'initial' then 2 else 4
+      entries: if input.stage == 'initial'
+        then [{ cidr: '10.0.0.0/8', description: 'initial' }, { cidr: '192.0.2.0/24' }]
+        else [
+          { cidr: '10.0.0.0/8', description: 'updated' },
+          { cidr: '198.51.100.0/24', description: 'new' },
+        ]
+      tags: { unobin: 'ec2-managed-prefix-list-it', role: 'managed', stage: input.stage, blank: '' }
+    }
+    cleared: ec2.managed-prefix-list {
+      address-family: 'IPv4'
+      name:           'unobin-prefix-cleared-it'
+      max-entries:    if input.stage == 'initial' then 4 else 1
+      entries: if input.stage == 'initial'
+        then [{ cidr: '192.0.2.0/24', description: 'remove' }]
+        else []
+      tags: { unobin: 'ec2-managed-prefix-list-it', role: 'cleared', stage: input.stage }
+    }
+    unmanaged: ec2.managed-prefix-list {
+      address-family: 'IPv4'
+      name:           'unobin-prefix-unmanaged-it'
+      max-entries:    2
+      entries: if input.stage == 'initial'
+        then [{ cidr: '203.0.113.0/24', description: 'retained' }]
+        else null
+      tags: { unobin: 'ec2-managed-prefix-list-it', role: 'unmanaged', stage: input.stage }
+    }
+  }
+  outputs: {
+    managed:   { value: resource.managed.prefix-list-id }
+    cleared:   { value: resource.cleared.prefix-list-id }
+    unmanaged: { value: resource.unmanaged.prefix-list-id }
+  }
+}
