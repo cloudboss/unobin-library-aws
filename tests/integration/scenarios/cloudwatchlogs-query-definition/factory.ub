@@ -1,0 +1,31 @@
+factory: {
+  imports: { logs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs' }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    name:          { type: string, default: 'unobin-query-definition-it' }
+    query:         { type: string, default: 'fields @timestamp, @message | limit 5' }
+    attach-groups: { type: boolean, default: true }
+  }
+  library-configs: { logs: input.aws-config }
+  resources: {
+    group: logs.log-group {
+      name:              'unobin-query-definition-group-it'
+      retention-in-days: 1
+    }
+    query: logs.query-definition {
+      name:            input.name
+      query-string:    input.query
+      log-group-names: if input.attach-groups then [resource.group.name] else null
+    }
+  }
+  outputs: {
+    id:     { value: resource.query.query-definition-id }
+    arn:    { value: resource.query.arn }
+    name:   { value: resource.query.name }
+    query:  { value: resource.query.query-string }
+    groups: { value: resource.query.log-group-names }
+  }
+}

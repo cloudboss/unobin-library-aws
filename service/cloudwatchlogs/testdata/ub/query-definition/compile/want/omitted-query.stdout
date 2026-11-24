@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"missing required input \"query-string\" on logs.query-definition","path":"omitted-query/factory.ub","span":{"start":{"line":5,"column":36,"offset":188}}}],"files":[]}

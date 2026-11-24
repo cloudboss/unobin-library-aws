@@ -23,11 +23,13 @@ func Library() *runtime.Library {
 		Name:        "aws-cloudwatchlogs",
 		Description: "AWS CloudWatch Logs library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
+			RequiredAPI:            "1.1",
 			SuggestedUnobinVersion: "v0.13.0",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"query-definition": makeResource[
+				svc.QueryDefinitionResource, *svc.QueryDefinitionResourceOutput](),
 			"log-group": makeResource[svc.LogGroupResource, *svc.LogGroupResourceOutput](),
 			"subscription-filter": makeResource[
 				svc.SubscriptionFilterResource,

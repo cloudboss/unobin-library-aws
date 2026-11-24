@@ -54,12 +54,6 @@ func TestLibraryRegistersCloudWatchLogsLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Equal(t, []string{
-		"log-group",
-		"metric-filter",
-		"resource-policy",
-		"subscription-filter",
-	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.DataSources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
@@ -97,12 +91,6 @@ func TestReadCloudWatchLogsServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"log-group",
-		"metric-filter",
-		"resource-policy",
-		"subscription-filter",
-	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.DataSources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

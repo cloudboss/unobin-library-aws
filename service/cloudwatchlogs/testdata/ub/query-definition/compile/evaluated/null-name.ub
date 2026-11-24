@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    pin: { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: {
+      endpoint: '__ENDPOINT__'
+      region:   'us-east-1'
+      query:    { name: null, query-string: '', log-group-names: [] }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

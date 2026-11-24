@@ -1,0 +1,15 @@
+factory: {
+  imports:         { logs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs' }
+  library-configs: { logs: {} }
+  resources: {
+    subject: logs.query-definition {
+      name: 'éééééééééééééééééééééééééééééééé' + '''\-
+        éééééééééééééééééééééééééééééééé
+        ''' + 'éééééééééééééééééééééééééééééééé' + '''\-
+        éééééééééééééééééééééééééééééééa
+        '''
+      query-string: ''
+    }
+  }
+  outputs: { id: { value: resource.subject.query-definition-id } }
+}

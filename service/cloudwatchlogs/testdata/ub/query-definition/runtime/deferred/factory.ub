@@ -1,0 +1,37 @@
+factory: {
+  imports: { logs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs' }
+  inputs: {
+    endpoint: { type: string }
+    region:   { type: string }
+    query: {
+      type: object(
+        {
+          name:            optional(string)
+          query-string:    optional(string)
+          log-group-names: optional(list(string))
+        },
+      )
+    }
+  }
+  library-configs: { logs: { region: input.region, endpoint-url: input.endpoint, max-attempts: 1 } }
+  actions: {
+    seed: test.seed {
+      value: input.query
+    }
+  }
+  resources: {
+    subject: logs.query-definition {
+      name:            action.seed.name
+      query-string:    action.seed.query-string
+      log-group-names: action.seed.log-group-names
+    }
+  }
+  outputs: {
+    id:     { value: resource.subject.query-definition-id }
+    arn:    { value: resource.subject.arn }
+    name:   { value: resource.subject.name }
+    query:  { value: resource.subject.query-string }
+    groups: { value: resource.subject.log-group-names }
+    region: { value: resource.subject.region }
+  }
+}

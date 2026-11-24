@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.subject: constraints[3] (predicate): name must match the query definition name pattern","path":"colon/factory.ub","span":{"start":{"line":5,"column":36,"offset":188}}}],"files":[]}

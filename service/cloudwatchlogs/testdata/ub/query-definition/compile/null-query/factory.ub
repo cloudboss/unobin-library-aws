@@ -1,0 +1,18 @@
+factory: {
+  imports:         { logs: 'github.com/cloudboss/unobin-library-aws//service/cloudwatchlogs' }
+  library-configs: { logs: {} }
+  resources: {
+    subject: logs.query-definition {
+      name:         'query'
+      query-string: null
+    }
+  }
+  outputs: {
+    arn:    { value: resource.subject.arn }
+    id:     { value: resource.subject.query-definition-id }
+    name:   { value: resource.subject.name }
+    query:  { value: resource.subject.query-string }
+    groups: { value: resource.subject.log-group-names }
+    region: { value: resource.subject.region }
+  }
+}

@@ -1,0 +1,13 @@
+stack: {
+  factory: {
+    inputs: {
+      name:          'unobin-query-definition-renamed-it'
+      query:         'fields @message | limit 10'
+      attach-groups: false
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}
