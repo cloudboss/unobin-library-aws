@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"unknown field \"peer-region\" on aws-ec2.vpc-peering-connection-accepter","path":"output-only/factory.ub","span":{"start":{"line":7,"column":7,"offset":259}}}],"files":[]}

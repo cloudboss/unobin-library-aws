@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"missing required input \"vpc-peering-connection-id\" on aws-ec2.vpc-peering-connection-accepter","path":"missing/factory.ub","span":{"start":{"line":5,"column":57,"offset":204}}}],"files":[]}
