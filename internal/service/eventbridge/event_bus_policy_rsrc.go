@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
@@ -15,8 +16,6 @@ import (
 	"github.com/cloudboss/unobin/pkg/defaults"
 	"github.com/cloudboss/unobin/pkg/runtime"
 	awspolicy "github.com/hashicorp/awspolicyequivalence"
-
-	"github.com/cloudboss/unobin-library-aws/internal/wait"
 )
 
 type EventBusPolicyResource struct {
@@ -57,6 +56,10 @@ func (r *EventBusPolicyResource) ResourceDefinition() runtime.ResourceDefinition
 ] {
 	return runtime.ResourceDefinition[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg]{
 		SchemaVersion: 1,
+		Validate: func(_ context.Context, in EventBusPolicyResource, _ *awsCfg) error {
+			_, err := in.preparePolicy(in.EventBusName)
+			return err
+		},
 		Equality: []runtime.InputEqualityRule[EventBusPolicyResource]{
 			runtime.EqualBy(runtime.InputField(func(in *EventBusPolicyResource) *string {
 				return &in.Policy
@@ -65,6 +68,9 @@ func (r *EventBusPolicyResource) ResourceDefinition() runtime.ResourceDefinition
 		Replace: runtime.Replacement[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg]{
 			Fields: []runtime.AnyInputField[EventBusPolicyResource]{
 				runtime.InputField(func(in *EventBusPolicyResource) *string { return &in.EventBusName }),
+			},
+			ConfigurationFields: []runtime.AnyConfigurationField[*awsCfg]{
+				runtime.ConfigurationField(func(cfg *awsCfg) **string { return &cfg.Region }),
 			},
 		},
 	}
@@ -76,13 +82,13 @@ func (r *EventBusPolicyResource) Create(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	return r.putPolicy(ctx, client, r.EventBusName)
+	return r.createPolicy(ctx, client, r.EventBusName)
 }
 
 func (r *EventBusPolicyResource) Read(ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg],
 ) (*EventBusPolicyResourceOutput, error) {
-	client, err := newClient(ctx, cfg)
+	client, err := newPolicyPriorClient(ctx, cfg, prior)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +98,7 @@ func (r *EventBusPolicyResource) Read(ctx context.Context, cfg *awsCfg,
 func (r *EventBusPolicyResource) Update(ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg],
 ) (*EventBusPolicyResourceOutput, error) {
-	client, err := newClient(ctx, cfg)
+	client, err := newPolicyPriorClient(ctx, cfg, prior)
 	if err != nil {
 		return nil, err
 	}
@@ -102,11 +108,20 @@ func (r *EventBusPolicyResource) Update(ctx context.Context, cfg *awsCfg,
 func (r *EventBusPolicyResource) Delete(ctx context.Context, cfg *awsCfg,
 	prior runtime.Prior[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg],
 ) error {
-	client, err := newClient(ctx, cfg)
+	client, err := newPolicyPriorClient(ctx, cfg, prior)
 	if err != nil {
 		return err
 	}
 	return deleteBusPolicy(ctx, client, policyBusName(r.EventBusName, prior.Outputs))
+}
+
+func newPolicyPriorClient(ctx context.Context, cfg *awsCfg,
+	prior runtime.Prior[EventBusPolicyResource, *EventBusPolicyResourceOutput, *awsCfg],
+) (*eventbridge.Client, error) {
+	if prior.Configuration != nil {
+		cfg = prior.Configuration
+	}
+	return newClient(ctx, cfg)
 }
 
 func policyBusName(name string, prior *EventBusPolicyResourceOutput) string {
@@ -129,7 +144,12 @@ func (r *EventBusPolicyResource) preparePolicy(
 }
 
 func (r *EventBusPolicyResource) putPolicy(ctx context.Context, client eventBusPolicyClient,
-	name string, opts ...wait.Option) (*EventBusPolicyResourceOutput, error) {
+	name string, opts ...policyRetry) (*EventBusPolicyResourceOutput, error) {
+	return r.writePolicy(ctx, client, name, false, opts...)
+}
+
+func (r *EventBusPolicyResource) writePolicy(ctx context.Context, client eventBusPolicyClient,
+	name string, cleanup bool, opts ...policyRetry) (*EventBusPolicyResourceOutput, error) {
 	in, err := r.preparePolicy(name)
 	if err != nil {
 		return nil, err
@@ -137,17 +157,86 @@ func (r *EventBusPolicyResource) putPolicy(ctx context.Context, client eventBusP
 	if _, err := client.PutPermission(ctx, in); err != nil {
 		return nil, fmt.Errorf("put event bus policy: %w", err)
 	}
-	err = wait.Until(ctx, "event bus policy", func(ctx context.Context) (bool, error) {
+	out, err := r.awaitPolicy(ctx, client, name, opts...)
+	if err == nil || !cleanup {
+		return out, err
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
+	defer cancel()
+	if cleanupErr := deleteBusPolicy(cleanupCtx, client, name); cleanupErr != nil {
+		err = errors.Join(err, fmt.Errorf("cleanup event bus policy %s: %w", name, cleanupErr))
+	}
+	return nil, err
+}
+
+func (r *EventBusPolicyResource) awaitPolicy(ctx context.Context, client eventBusPolicyClient,
+	name string, opts ...policyRetry) (*EventBusPolicyResourceOutput, error) {
+	err := retryPolicyPresence(ctx, func(ctx context.Context) error {
 		_, err := r.lookupPolicy(ctx, client, name)
-		if errors.Is(err, runtime.ErrNotFound) {
-			return false, nil
-		}
-		return err == nil, err
+		return err
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("wait for event bus policy: %w", err)
 	}
 	return r.readPolicy(ctx, client, name)
+}
+
+func (r *EventBusPolicyResource) createPolicy(ctx context.Context, client eventBusPolicyClient,
+	name string, opts ...policyRetry) (*EventBusPolicyResourceOutput, error) {
+	return r.writePolicy(ctx, client, name, true, opts...)
+}
+
+type policyRetry struct {
+	now     func() time.Time
+	sleep   func(context.Context, time.Duration) error
+	timeout time.Duration
+}
+
+func retryPolicyPresence(ctx context.Context, poll func(context.Context) error,
+	opts ...policyRetry) error {
+	cfg := policyRetry{now: time.Now, sleep: sleepPolicyRetry, timeout: 2 * time.Minute}
+	if len(opts) > 0 {
+		cfg = opts[0]
+	}
+	deadline := cfg.now().Add(cfg.timeout)
+	delay := 500 * time.Millisecond
+	grace := false
+	var last error
+	for first := true; ; first = false {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(last, err)
+		}
+		if !first {
+			if !cfg.now().Before(deadline) {
+				if grace {
+					return last
+				}
+				grace = true
+			}
+			if err := cfg.sleep(ctx, delay); err != nil {
+				return errors.Join(last, err)
+			}
+			delay = min(delay*2, 10*time.Second)
+		}
+		if err := ctx.Err(); err != nil {
+			return errors.Join(last, err)
+		}
+		last = poll(ctx)
+		if !errors.Is(last, runtime.ErrNotFound) {
+			return last
+		}
+	}
+}
+
+func sleepPolicyRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (r *EventBusPolicyResource) lookupPolicy(ctx context.Context, client eventBusPolicyClient,
@@ -219,7 +308,6 @@ func selectEventBusPolicy(prior, remote string) (string, error) {
 
 func normalizeEventBusPolicy(document string) (string, error) {
 	decoder := json.NewDecoder(bytes.NewBufferString(document))
-	decoder.UseNumber()
 	var value any
 	if err := decoder.Decode(&value); err != nil {
 		return "", err

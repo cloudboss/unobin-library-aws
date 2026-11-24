@@ -1,6 +1,7 @@
 package eventbridge
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,7 @@ const (
 	policyAddress  = "resource.policy"
 	policyDocument = `{"Statement":[{"Action":["events:PutEvents","events:DescribeEventBus"],` +
 		`"Effect":"Allow","Resource":"*"}]}`
-	policyRequiredRule = "resource.policy: schema: constraints[0] (predicate): policy is required"
+	policyRequiredRule = `resource.policy: field "policy": required but is null`
 	policyBusRule      = "resource.policy: schema: constraints[1] (predicate): " +
 		"event-bus-name must be 1-256 ASCII letters, digits, slash, dot, underscore or hyphen"
 	policyJSONRule = "resource.policy: schema: constraints[2] (predicate): policy must be valid JSON"
@@ -40,10 +41,16 @@ type busPolicyRequest struct {
 }
 
 type busPolicyAPI struct {
-	mu       sync.Mutex
-	calls    []busPolicyRequest
-	policies map[string]string
-	reject   bool
+	mu             sync.Mutex
+	calls          []busPolicyRequest
+	policies       map[string]string
+	reject         bool
+	describes      int
+	failDescribeAt int
+	malformedAt    int
+	regions        []string
+	beforeDescribe func()
+	deletedBuses   map[string]bool
 }
 
 func busPolicyEndpoint(t *testing.T) (string, *busPolicyAPI) {
@@ -51,7 +58,7 @@ func busPolicyEndpoint(t *testing.T) (string, *busPolicyAPI) {
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
-	api := &busPolicyAPI{policies: map[string]string{}}
+	api := &busPolicyAPI{policies: map[string]string{}, deletedBuses: map[string]bool{}}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		api.mu.Lock()
 		defer api.mu.Unlock()
@@ -59,6 +66,10 @@ func busPolicyEndpoint(t *testing.T) (string, *busPolicyAPI) {
 		var body map[string]any
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		api.calls = append(api.calls, busPolicyRequest{operation, body})
+		credential := strings.Split(r.Header.Get("Authorization"), "/")
+		if len(credential) > 2 {
+			api.regions = append(api.regions, credential[2])
+		}
 		w.Header().Set("Content-Type", "application/x-amz-json-1.1")
 		bus, _ := body["EventBusName"].(string)
 		switch operation {
@@ -68,6 +79,7 @@ func busPolicyEndpoint(t *testing.T) (string, *busPolicyAPI) {
 				"EventBusArn": "arn:aws:events:us-east-1:123456789012:event-bus/" + bus}))
 		case "DeleteEventBus":
 			bus = body["Name"].(string)
+			api.deletedBuses[bus] = true
 			delete(api.policies, bus)
 			_, _ = w.Write([]byte(`{}`))
 		case "ListTagsForResource":
@@ -81,9 +93,27 @@ func busPolicyEndpoint(t *testing.T) (string, *busPolicyAPI) {
 			api.policies[bus] = body["Policy"].(string)
 			_, _ = w.Write([]byte(`{}`))
 		case "DescribeEventBus":
+			api.describes++
+			if api.beforeDescribe != nil {
+				api.beforeDescribe()
+			}
+			if api.describes == api.failDescribeAt {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"__type":"AccessDeniedException","message":"lookup denied"}`))
+				return
+			}
 			bus = body["Name"].(string)
+			if api.deletedBuses[bus] {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"__type":"ResourceNotFoundException"}`))
+				return
+			}
+			policy := api.policies[bus]
+			if api.describes == api.malformedAt {
+				policy = "broken remote JSON"
+			}
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
-				"Name": bus, "Policy": api.policies[bus],
+				"Name": bus, "Policy": policy,
 				"Arn": "arn:aws:events:us-east-1:123456789012:event-bus/" + bus}))
 		case "RemovePermission":
 			delete(api.policies, bus)
@@ -101,6 +131,8 @@ func busPolicyExecutor(t *testing.T, fixture string) *runtime.Executor {
 	lib := runtime.LibraryWithPath(Library(),
 		"github.com/cloudboss/unobin-library-aws//service/eventbridge")
 	lib.Schema = readLibrarySchema(t)
+	lib.Schema.Resources["event-bus-policy"].EvaluatedInputs =
+		lib.Schema.Resources["event-bus-policy"].Inputs
 	lib.Constraints = map[string][]lang.ConstraintSpec{
 		"resource.event-bus-policy": lib.Schema.Resources["event-bus-policy"].Constraints,
 	}
@@ -174,6 +206,19 @@ func policyPut(bus, policy string) busPolicyRequest {
 func policyRemove(bus string) busPolicyRequest {
 	return busPolicyRequest{"RemovePermission", map[string]any{
 		"EventBusName": bus, "RemoveAllPermissions": true}}
+}
+
+func assertPolicyBusExists(t *testing.T, endpoint, name string) {
+	t.Helper()
+	region := "us-east-1"
+	bus := &svc.EventBusResource{Name: name}
+	out, err := bus.Read(t.Context(),
+		&awscfg.Configuration{Region: &region, EndpointURL: &endpoint},
+		runtime.Prior[svc.EventBusResource, *svc.EventBusResourceOutput, *awscfg.Configuration]{})
+	require.NoError(t, err)
+	assert.Equal(t, &svc.EventBusResourceOutput{
+		Name: name, Arn: "arn:aws:events:us-east-1:123456789012:event-bus/" + name,
+	}, out)
 }
 
 func TestEventBusPolicyNativeLifecycle(t *testing.T) {
@@ -519,4 +564,288 @@ func TestEventBusPolicyManagedFixtureFailedUpdateCleanup(t *testing.T) {
 	snapshot, err := executor.Store.Current()
 	require.NoError(t, err)
 	assert.Empty(t, snapshot.Entries)
+}
+
+func TestEventBusPolicyNativeAcceptedCreateFailure(t *testing.T) {
+	for _, stage := range []string{"visibility", "final read", "normalization", "rejected"} {
+		t.Run(stage, func(t *testing.T) {
+			endpoint, api := busPolicyEndpoint(t)
+			api.policies["external-bus"] = `{"external":true}`
+			switch stage {
+			case "visibility":
+				api.failDescribeAt = 1
+			case "final read":
+				api.failDescribeAt = 2
+			case "normalization":
+				api.malformedAt = 2
+			case "rejected":
+				api.reject = true
+			}
+			executor := busPolicyExecutor(t, "evaluated")
+			executor.Inputs = policyInputs(endpoint, "external-bus", policyDocument)
+			_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+			require.Error(t, err)
+			want := []busPolicyRequest{policyPut("external-bus", policyDocument)}
+			if stage == "rejected" {
+				assert.Equal(t, `{"external":true}`, api.policy("external-bus"))
+			} else {
+				want = append(want, policyRemove("external-bus"))
+				assert.Empty(t, api.policy("external-bus"))
+			}
+			assertPolicyMutations(t, api, want)
+			snapshot, err := executor.Store.Current()
+			require.ErrorIs(t, err, state.ErrNoCurrent)
+			assert.Nil(t, snapshot)
+			assertPolicyBusExists(t, endpoint, "external-bus")
+		})
+	}
+}
+
+func TestEventBusPolicyNativeAcceptedUpdateFailure(t *testing.T) {
+	endpoint, api := busPolicyEndpoint(t)
+	executor := busPolicyExecutor(t, "evaluated")
+	executor.Inputs = policyInputs(endpoint, "external-bus", policyDocument)
+	_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	api.takeCalls()
+	executor.Inputs["policy"] = `{"Statement":[]}`
+	saved := savedEventActionPlan(t, executor)
+	api.failDescribeAt = api.describes + 1
+	_, err = executor.ApplyPlan(t.Context(), saved)
+	require.ErrorContains(t, err, "lookup denied")
+	assertPolicyMutations(t, api, []busPolicyRequest{policyPut("external-bus", `{"Statement":[]}`)})
+	assert.Equal(t, `{"Statement":[]}`, api.policy("external-bus"))
+	snapshot, err := executor.Store.Current()
+	require.NoError(t, err)
+	require.NotNil(t, snapshot.Find(policyAddress))
+}
+
+func TestEventBusPolicyPreparationBeforeReplacementDelete(t *testing.T) {
+	endpoint, api := busPolicyEndpoint(t)
+	executor := busPolicyExecutor(t, "deferred")
+	executor.Inputs = policyInputs(endpoint, "old-bus", policyDocument)
+	_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	api.takeCalls()
+	executor.Inputs["trigger"] = "second"
+	executor.Inputs["bus"] = "new-bus"
+	executor.Inputs["policy"] = "1e1000"
+	saved := savedEventActionPlan(t, executor)
+	assert.Equal(t, map[string][]string{
+		"event-bus-name": {"action.seed.value.bus"}, "policy": {"action.seed.value.policy"},
+	}, policyPlanStep(t, saved).UnresolvedInputs)
+	_, err = executor.ApplyPlan(t.Context(), saved)
+	require.ErrorContains(t, err, "prepare event bus policy")
+	assertPolicyMutations(t, api, nil)
+	assert.Equal(t, policyDocument, api.policy("old-bus"))
+}
+
+func TestEventBusPolicyNativeRegionalReplacement(t *testing.T) {
+	oldEndpoint, oldAPI := busPolicyEndpoint(t)
+	newEndpoint, newAPI := busPolicyEndpoint(t)
+	executor := busPolicyExecutor(t, "regional")
+	executor.Inputs = policyInputs(oldEndpoint, "bus", policyDocument)
+	executor.Inputs["region"] = "us-east-1"
+	_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	oldAPI.takeCalls()
+	executor.Inputs["endpoint"], executor.Inputs["region"] = newEndpoint, "us-west-2"
+	saved := savedEventActionPlan(t, executor)
+	step := policyPlanStep(t, saved)
+	require.Equal(t, runtime.DecisionReplace, step.Decision)
+	assert.Equal(t, []string{"region"}, step.ReplacementReasons)
+	assert.Equal(t, []busPolicyRequest{
+		{"DescribeEventBus", map[string]any{"Name": "bus"}},
+	}, oldAPI.takeCalls())
+	assert.Empty(t, newAPI.takeCalls())
+	executor.Inputs = nil
+	_, err = executor.ApplyPlan(t.Context(), saved)
+	require.NoError(t, err)
+	assert.Equal(t, []busPolicyRequest{
+		{"DescribeEventBus", map[string]any{"Name": "bus"}}, policyRemove("bus"),
+	}, oldAPI.takeCalls())
+	assert.Equal(t, []busPolicyRequest{policyPut("bus", policyDocument),
+		{"DescribeEventBus", map[string]any{"Name": "bus"}},
+		{"DescribeEventBus", map[string]any{"Name": "bus"}},
+	}, newAPI.takeCalls())
+	assert.Equal(t, []string{"us-east-1", "us-east-1", "us-east-1", "us-east-1",
+		"us-east-1", "us-east-1"}, oldAPI.regions)
+	assert.Equal(t, []string{"us-west-2", "us-west-2", "us-west-2"}, newAPI.regions)
+}
+
+func TestEventBusPolicyExistingConfiguration(t *testing.T) {
+	for _, saved := range []string{"explicit region", "SDK region", "absent"} {
+		t.Run(saved, func(t *testing.T) {
+			oldEndpoint, oldAPI := busPolicyEndpoint(t)
+			newEndpoint, newAPI := busPolicyEndpoint(t)
+			t.Setenv("AWS_REGION", "us-east-2")
+			region, newRegion := "us-east-1", "us-west-2"
+			prior := runtime.Prior[svc.EventBusPolicyResource, *svc.EventBusPolicyResourceOutput,
+				*awscfg.Configuration]{Outputs: &svc.EventBusPolicyResourceOutput{Name: "persisted"}}
+			cfg := &awscfg.Configuration{Region: &newRegion, EndpointURL: &newEndpoint}
+			wantAPI, unusedAPI, signingRegion := oldAPI, newAPI, region
+			if saved == "absent" {
+				wantAPI, unusedAPI, signingRegion = newAPI, oldAPI, newRegion
+			} else {
+				prior.Configuration = &awscfg.Configuration{Region: &region, EndpointURL: &oldEndpoint}
+				if saved == "SDK region" {
+					prior.Configuration.Region = nil
+					signingRegion = "us-east-2"
+				}
+			}
+			wantAPI.policies["persisted"] = policyDocument
+			r := &svc.EventBusPolicyResource{EventBusName: "desired", Policy: `{}`}
+			_, err := r.Read(t.Context(), cfg, prior)
+			require.NoError(t, err)
+			_, err = r.Update(t.Context(), cfg, prior)
+			require.NoError(t, err)
+			require.NoError(t, r.Delete(t.Context(), cfg, prior))
+			assert.Equal(t, []busPolicyRequest{
+				{"DescribeEventBus", map[string]any{"Name": "persisted"}},
+				policyPut("persisted", `{}`),
+				{"DescribeEventBus", map[string]any{"Name": "persisted"}},
+				{"DescribeEventBus", map[string]any{"Name": "persisted"}},
+				policyRemove("persisted"),
+			}, wantAPI.takeCalls())
+			assert.Empty(t, unusedAPI.takeCalls())
+			assert.Equal(t, []string{signingRegion, signingRegion, signingRegion,
+				signingRegion, signingRegion}, wantAPI.regions)
+		})
+	}
+}
+
+func TestEventBusPolicyNativeCanceledCreate(t *testing.T) {
+	endpoint, api := busPolicyEndpoint(t)
+	api.policies["external-bus"] = `{"external":true}`
+	executor := busPolicyExecutor(t, "evaluated")
+	executor.Inputs = policyInputs(endpoint, "external-bus", policyDocument)
+	saved := savedEventActionPlan(t, executor)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	api.beforeDescribe = cancel
+	_, err := executor.ApplyPlan(ctx, saved)
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.Canceled)
+	assertPolicyMutations(t, api, []busPolicyRequest{
+		policyPut("external-bus", policyDocument), policyRemove("external-bus"),
+	})
+	assert.Empty(t, api.policy("external-bus"))
+	snapshot, err := executor.Store.Current()
+	require.ErrorIs(t, err, state.ErrNoCurrent)
+	assert.Nil(t, snapshot)
+	assertPolicyBusExists(t, endpoint, "external-bus")
+}
+
+func TestEventBusPolicyExplicitNullPredicate(t *testing.T) {
+	endpoint, api := busPolicyEndpoint(t)
+	executor := busPolicyExecutor(t, "evaluated")
+	executor.Libraries["eventbridge"].Schema.Resources["event-bus-policy"].EvaluatedInputs = nil
+	executor.Inputs = policyInputs(endpoint, "bus", policyDocument)
+	executor.Inputs["policy"] = nil
+	_, err := executor.Plan(t.Context())
+	require.ErrorContains(t, err,
+		"resource.policy: schema: constraints[0] (predicate): policy is required")
+	assertPolicyMutations(t, api, nil)
+}
+
+func TestEventBusPolicyNativeRegionalFailedReplacement(t *testing.T) {
+	oldEndpoint, oldAPI := busPolicyEndpoint(t)
+	newEndpoint, newAPI := busPolicyEndpoint(t)
+	executor := busPolicyExecutor(t, "regional")
+	executor.Inputs = policyInputs(oldEndpoint, "old-bus", policyDocument)
+	executor.Inputs["region"] = "us-east-1"
+	_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	oldAPI.takeCalls()
+	newAPI.policies["new-bus"] = `{"external":true}`
+	newAPI.failDescribeAt = 1
+	executor.Inputs["endpoint"], executor.Inputs["region"] = newEndpoint, "us-west-2"
+	executor.Inputs["bus"] = "new-bus"
+	saved := savedEventActionPlan(t, executor)
+	assert.Equal(t, []string{"event-bus-name", "region"},
+		policyPlanStep(t, saved).ReplacementReasons)
+	_, err = executor.ApplyPlan(t.Context(), saved)
+	require.ErrorContains(t, err, "lookup denied")
+	assertPolicyMutations(t, oldAPI, []busPolicyRequest{policyRemove("old-bus")})
+	assertPolicyMutations(t, newAPI, []busPolicyRequest{
+		policyPut("new-bus", policyDocument), policyRemove("new-bus"),
+	})
+	assert.Empty(t, oldAPI.policy("old-bus"))
+	assert.Empty(t, newAPI.policy("new-bus"))
+}
+
+func TestEventBusPolicyNativeExternalOwnership(t *testing.T) {
+	endpoint, api := busPolicyEndpoint(t)
+	api.policies["external-bus"] = `{"external":true}`
+	executor := busPolicyExecutor(t, "evaluated")
+	executor.Inputs = policyInputs(endpoint, "external-bus", policyDocument)
+	_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	assertPolicyMutations(t, api, []busPolicyRequest{policyPut("external-bus", policyDocument)})
+	assert.Equal(t, policyDocument, api.policy("external-bus"))
+	api.mu.Lock()
+	api.policies["external-bus"] = `{"Statement":[{"Effect":"Allow","Action":"events:*",` +
+		`"Resource":"*"}]}`
+	api.mu.Unlock()
+	saved := savedEventActionPlan(t, executor)
+	require.Equal(t, runtime.DecisionUpdate, policyPlanStep(t, saved).Decision)
+	_, err = executor.ApplyPlan(t.Context(), saved)
+	require.NoError(t, err)
+	assertPolicyMutations(t, api, []busPolicyRequest{policyPut("external-bus", policyDocument)})
+	assert.Equal(t, policyDocument, api.policy("external-bus"))
+	api.mu.Lock()
+	api.policies["external-bus"] = `{"external":true}`
+	api.mu.Unlock()
+	executor.Destroy = true
+	_, err = executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+	require.NoError(t, err)
+	assertPolicyMutations(t, api, []busPolicyRequest{policyRemove("external-bus")})
+	assert.Empty(t, api.policy("external-bus"))
+	assertPolicyBusExists(t, endpoint, "external-bus")
+}
+
+func TestEventBusPolicyHistoricalConfigurationDestroy(t *testing.T) {
+	for _, missing := range []string{"configuration", "region"} {
+		t.Run(missing, func(t *testing.T) {
+			oldEndpoint, oldAPI := busPolicyEndpoint(t)
+			newEndpoint, newAPI := busPolicyEndpoint(t)
+			t.Setenv("AWS_REGION", "us-east-2")
+			executor := busPolicyExecutor(t, "regional")
+			executor.Inputs = policyInputs(oldEndpoint, "persisted", policyDocument)
+			executor.Inputs["region"] = "us-east-1"
+			_, err := executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+			require.NoError(t, err)
+			oldAPI.takeCalls()
+			oldAPI.regions = nil
+			t.Setenv("AWS_ENDPOINT_URL", newEndpoint)
+			newAPI.policies["persisted"] = policyDocument
+			snapshot, err := executor.Store.Current()
+			require.NoError(t, err)
+			entry := snapshot.Find(policyAddress)
+			if missing == "configuration" {
+				entry.Configuration = nil
+			} else {
+				delete(entry.Configuration, "region")
+			}
+			revision, err := executor.Store.Write(snapshot)
+			require.NoError(t, err)
+			require.NoError(t, executor.Store.SetCurrent(revision))
+			executor.Inputs["endpoint"], executor.Inputs["region"] = newEndpoint, "us-west-2"
+			executor.Destroy = true
+			_, err = executor.ApplyPlan(t.Context(), savedEventActionPlan(t, executor))
+			require.NoError(t, err)
+			if missing == "configuration" {
+				assertPolicyMutations(t, newAPI, []busPolicyRequest{policyRemove("persisted")})
+				assert.Empty(t, oldAPI.takeCalls())
+				assert.Equal(t, []string{"us-east-2", "us-east-2", "us-east-2"}, newAPI.regions)
+			} else {
+				assertPolicyMutations(t, oldAPI, []busPolicyRequest{policyRemove("persisted")})
+				assert.Empty(t, newAPI.takeCalls())
+				assert.Equal(t, []string{"us-east-2", "us-east-2", "us-east-2"}, oldAPI.regions)
+			}
+			snapshot, err = executor.Store.Current()
+			require.NoError(t, err)
+			assert.Nil(t, snapshot.Find(policyAddress))
+		})
+	}
 }

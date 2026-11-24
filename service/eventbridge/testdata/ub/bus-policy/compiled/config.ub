@@ -1,0 +1,14 @@
+stack: {
+  factory: {
+    pin: { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: {
+      endpoint: '__ENDPOINT__'
+      bus:      'external-bus'
+      policy:   '{"Statement":[]}'
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}
