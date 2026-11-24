@@ -1,0 +1,311 @@
+{
+  "name": "compile-dynamodb-create-backup",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "literal",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "literal/factory.ub",
+        "-o",
+        "build-literal",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/literal.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "literal-run",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "literal-run/factory.ub",
+        "-o",
+        "build-literal-run",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/literal-run.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "settled",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "settled/factory.ub",
+        "-o",
+        "build-settled",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/settled.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "missing-table",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/missing-table/factory.ub",
+        "-o",
+        "build-missing-table",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing-table.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null-table",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/null-table/factory.ub",
+        "-o",
+        "build-null-table",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null-table.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-table",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/wrong-table/factory.ub",
+        "-o",
+        "build-wrong-table",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-table.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "empty-table",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/empty-table/factory.ub",
+        "-o",
+        "build-empty-table",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/empty-table.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-table",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/long-table/factory.ub",
+        "-o",
+        "build-long-table",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-table.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "empty-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/empty-name/factory.ub",
+        "-o",
+        "build-empty-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/empty-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "short-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/short-name/factory.ub",
+        "-o",
+        "build-short-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/short-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/long-name/factory.ub",
+        "-o",
+        "build-long-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "space-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/space-name/factory.ub",
+        "-o",
+        "build-space-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/space-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "slash-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/slash-name/factory.ub",
+        "-o",
+        "build-slash-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/slash-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "unicode-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/unicode-name/factory.ub",
+        "-o",
+        "build-unicode-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/unicode-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-timeout",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/wrong-timeout/factory.ub",
+        "-o",
+        "build-wrong-timeout",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-timeout.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "unknown",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid/unknown/factory.ub",
+        "-o",
+        "build-unknown",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/unknown.stdout",
+      "exitCode": 1
+    }
+  ]
+}

@@ -58,7 +58,6 @@ func TestLibraryRegistersDynamoDBLocalKinds(t *testing.T) {
 		"table",
 	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.DataSources))
-	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
 		"table": reflect.TypeFor[*svc.TableResourceOutput](),
@@ -95,5 +94,4 @@ func TestReadDynamoDBServiceSchema(t *testing.T) {
 		"table",
 	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.DataSources))
-	require.Empty(t, sortedKeys(schema.Actions))
 }

@@ -18,6 +18,15 @@ func makeResource[T, Out any, PT resourcePtr[T, Out]]() runtime.ResourceRegistra
 	return runtime.MakeResource[T, Out, *awscfg.Configuration, PT](PT(new(T)).ResourceDefinition())
 }
 
+type actionPtr[T, Out any] interface {
+	*T
+	runtime.TypedAction[Out, *awscfg.Configuration]
+}
+
+func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
+	return runtime.MakeAction[T, Out, *awscfg.Configuration, PT]()
+}
+
 func Library() *runtime.Library {
 	return &runtime.Library{
 		Name:        "aws-dynamodb",
@@ -29,6 +38,9 @@ func Library() *runtime.Library {
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"table": makeResource[svc.TableResource, *svc.TableResourceOutput](),
+		},
+		Actions: map[string]runtime.ActionRegistration{
+			"create-backup": makeAction[svc.CreateBackupAction, *svc.CreateBackupActionOutput](),
 		},
 	}
 }

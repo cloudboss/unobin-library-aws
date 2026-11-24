@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.type","severity":"error","message":"type mismatch: expected optional(integer), got string","path":"invalid/wrong-timeout/factory.ub","span":{"start":{"line":7,"column":19,"offset":255}}}],"files":[]}

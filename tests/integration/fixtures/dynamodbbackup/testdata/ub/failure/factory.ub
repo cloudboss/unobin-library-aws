@@ -1,0 +1,24 @@
+factory: {
+  imports: {
+    dynamodb: 'github.com/cloudboss/unobin-library-aws//service/dynamodb'
+    fixture:  'github.com/cloudboss/unobin-library-aws//tests/integration/fixtures/dynamodbbackup'
+  }
+  inputs: { endpoint: { type: string } }
+  library-configs: {
+    dynamodb: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+    fixture:  { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  resources: {
+    cleanup: fixture.cleanup {
+      table-arn:  'owned-table-arn'
+      table-name: 'owned-table'
+    }
+  }
+  actions: {
+    backup: dynamodb.create-backup {
+      table-name:  resource.cleanup.table-name
+      backup-name: 'failure-backup'
+      timeout:     0
+    }
+  }
+}

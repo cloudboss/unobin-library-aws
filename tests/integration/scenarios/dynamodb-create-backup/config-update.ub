@@ -1,0 +1,9 @@
+stack: {
+  factory: {
+    inputs: { batch: 'updated' }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

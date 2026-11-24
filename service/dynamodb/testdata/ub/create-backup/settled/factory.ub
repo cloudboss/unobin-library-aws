@@ -1,0 +1,26 @@
+factory: {
+  imports: { dynamodb: 'github.com/cloudboss/unobin-library-aws//service/dynamodb' }
+  library-configs: {
+    dynamodb: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint: { type: string }
+    table:    { type: string }
+    name:     { type: optional(string), default: null }
+    region:   { type: optional(string), default: null }
+    trigger:  { type: string }
+  }
+  actions: {
+    backup: dynamodb.create-backup {
+      @trigger:    input.trigger
+      table-name:  input.table
+      backup-name: input.name
+      region:      input.region
+    }
+  }
+  outputs: {
+    backup-arn:                { value: action.backup.backup-arn }
+    backup-creation-date-time: { value: action.backup.backup-creation-date-time }
+    backup-size-bytes:         { value: action.backup.backup-size-bytes }
+  }
+}
