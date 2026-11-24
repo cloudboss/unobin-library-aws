@@ -35,14 +35,14 @@ func TestScheduleGroupCompile(t *testing.T) {
 			"type mismatch: expected optional(string), got integer",
 			"type mismatch: expected optional(string), got boolean",
 			"type mismatch: expected optional(map(string)), got list(string)",
-			"type mismatch: expected optional(map(string)), got object({ tag: integer })",
+			"type mismatch: expected string, got integer",
 		}},
 	} {
 		t.Run(test.fixture, func(t *testing.T) {
 			err := compile.Run(compile.Options{
 				FactoryPath:      scheduleGroupFixture(test.fixture),
 				OutDir:           "-",
-				CLIVersion:       "v0.13.0-a.4",
+				CLIVersion:       "v0.13.0",
 				ReplaceUnobin:    core.Dir,
 				ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(project string) (resolve.Resolver, error) {

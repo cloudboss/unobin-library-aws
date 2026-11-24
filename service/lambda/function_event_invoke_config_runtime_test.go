@@ -376,7 +376,7 @@ func TestEventInvokeMutableLifecycle(t *testing.T) {
 		api.takeCalls())
 	assertEventInvokeOutput(t, exec, map[string]any{
 		"function-name": "fn", "qualifier": "blue", "region": "us-east-1",
-		"maximum-event-age-in-seconds": float64(60), "maximum-retry-attempts": float64(0),
+		"maximum-event-age-in-seconds": int64(60), "maximum-retry-attempts": int64(0),
 		"destination-config": map[string]any{"on-failure": failure, "on-success": success},
 	})
 
@@ -402,7 +402,7 @@ func TestEventInvokeMutableLifecycle(t *testing.T) {
 	assert.Equal(t, []eventInvokeCall{put, get}, api.takeCalls())
 	assertEventInvokeOutput(t, exec, map[string]any{
 		"function-name": "fn", "qualifier": "blue", "region": "us-east-1",
-		"maximum-event-age-in-seconds": float64(21600), "maximum-retry-attempts": float64(0),
+		"maximum-event-age-in-seconds": int64(21600), "maximum-retry-attempts": int64(0),
 		"destination-config": map[string]any{"on-failure": failure, "on-success": nil},
 	})
 
@@ -436,7 +436,7 @@ func TestEventInvokeMutableLifecycle(t *testing.T) {
 	}, api.takeCalls())
 	assertEventInvokeOutput(t, exec, map[string]any{
 		"function-name": "fn", "qualifier": "blue", "region": "us-east-1",
-		"maximum-event-age-in-seconds": float64(21600), "maximum-retry-attempts": float64(0),
+		"maximum-event-age-in-seconds": int64(21600), "maximum-retry-attempts": int64(0),
 		"destination-config": map[string]any{"on-failure": nil, "on-success": success},
 	})
 }
@@ -566,7 +566,7 @@ func TestEventInvokeRegionReplacement(t *testing.T) {
 			}
 			assertEventInvokeOutput(t, exec, map[string]any{
 				"function-name": "fn", "qualifier": "", "region": tc.desired,
-				"maximum-event-age-in-seconds": float64(0), "maximum-retry-attempts": float64(0),
+				"maximum-event-age-in-seconds": int64(0), "maximum-retry-attempts": int64(0),
 				"destination-config": nil,
 			})
 		})
@@ -623,7 +623,7 @@ func TestEventInvokeWriteGetResults(t *testing.T) {
 			assert.Equal(t, []eventInvokeCall{put, get}, api.takeCalls())
 			assertEventInvokeOutput(t, exec, map[string]any{
 				"function-name": "fn", "qualifier": "", "region": "us-east-1",
-				"maximum-event-age-in-seconds": float64(0), "maximum-retry-attempts": float64(0),
+				"maximum-event-age-in-seconds": int64(0), "maximum-retry-attempts": int64(0),
 				"destination-config": nil,
 			})
 		})
@@ -700,7 +700,7 @@ func TestEventInvokeFunctionKeys(t *testing.T) {
 			}, api.takeCalls())
 			assertEventInvokeOutput(t, exec, map[string]any{
 				"function-name": tc.base, "qualifier": tc.qualifier, "region": "us-east-1",
-				"maximum-event-age-in-seconds": float64(0), "maximum-retry-attempts": float64(0),
+				"maximum-event-age-in-seconds": int64(0), "maximum-retry-attempts": int64(0),
 				"destination-config": nil,
 			})
 			exec.Destroy = true

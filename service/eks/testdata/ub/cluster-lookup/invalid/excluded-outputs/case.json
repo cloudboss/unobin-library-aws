@@ -2,7 +2,7 @@
   "name": "excluded-outputs",
   "rootPath": "src",
   "executor": "root",
-  "cliVersion": "v0.13.0-a.4",
+  "cliVersion": "v0.13.0",
   "commands": [
     {
       "name": "compile",

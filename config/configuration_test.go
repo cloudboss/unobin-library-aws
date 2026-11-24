@@ -48,7 +48,7 @@ func TestLibraryRegistersConfiguration(t *testing.T) {
 	require.Equal(t, "aws-config", lib.Name)
 	require.Equal(t, runtime.LibraryCompatibility{
 		RequiredAPI:            "1.0",
-		SuggestedUnobinVersion: "v0.12.0",
+		SuggestedUnobinVersion: "v0.13.0",
 	}, lib.Compatibility)
 	require.Empty(t, lib.Resources)
 	require.Empty(t, lib.DataSources)

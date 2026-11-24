@@ -176,7 +176,7 @@ func TestArchiveNativeLifecycle(t *testing.T) {
 		"archive-arn":      "arn:aws:events:us-east-1:123456789012:archive/old",
 		"event-source-arn": archiveARN,
 		"description":      "initial", "event-pattern": `{"x":1}`, "kms-key-identifier": "alias/key",
-		"retention-days": float64(30)}, snapshot.Find("resource.archive").Outputs)
+		"retention-days": int64(30)}, snapshot.Find("resource.archive").Outputs)
 	unchanged := savedArchivePlan(t, executor)
 	assert.Equal(t, runtime.DecisionNoOp, archiveStep(t, unchanged).Decision)
 	executor.Inputs = nil

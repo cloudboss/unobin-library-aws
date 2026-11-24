@@ -424,6 +424,12 @@ func TestOriginRequestPolicyRuntimeSavedDeferredInputs(t *testing.T) {
 			cloud := newOriginRequestCloud(t)
 			exec := originRequestExecutor(t, tt.fixture, cloud.url, libraries)
 			exec.Inputs["cookie-mode"] = tt.mode
+			if tt.fixture == "pending-cookie-items" {
+				_, err := exec.Plan(t.Context())
+				requireOriginRequestConstraint(t, err, 0, "cookie-behavior")
+				require.Empty(t, cloud.takeCalls())
+				return
+			}
 			if tt.decision == runtime.DecisionReplace {
 				initial := originRequestExecutor(t, "evaluated", cloud.url, libraries)
 				initial.Store = exec.Store
@@ -434,10 +440,6 @@ func TestOriginRequestPolicyRuntimeSavedDeferredInputs(t *testing.T) {
 			step := originRequestStep(t, saved, tt.decision)
 			assert.Equal(t, map[string][]string{"cookies-config": {tt.pending}},
 				step.UnresolvedInputs)
-			if tt.fixture == "pending-cookie-items" {
-				config := step.Inputs["cookies-config"].(map[string]any)
-				assert.Equal(t, "None", config["cookie-behavior"])
-			}
 			if tt.decision == runtime.DecisionReplace {
 				assert.Equal(t, []string{"binding"}, step.ReplacementReasons)
 				require.NotNil(t, step.ExpectedStableID)

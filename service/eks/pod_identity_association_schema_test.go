@@ -36,7 +36,7 @@ func TestPodIdentityAssociationInvalidLiterals(t *testing.T) {
 				FactoryPath:      filepath.Join("testdata", "ub", "pod-identity-association", tc.fixture),
 				OutDir:           "-",
 				StackName:        "pod-identity-association-schema",
-				CLIVersion:       "v0.13.0-a.4",
+				CLIVersion:       "v0.13.0",
 				ReplaceUnobin:    core.Dir,
 				ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(project string) (resolve.Resolver, error) {

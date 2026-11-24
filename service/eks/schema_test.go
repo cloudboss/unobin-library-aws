@@ -1,6 +1,7 @@
 package eks_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/cloudboss/unobin/pkg/typecheck"
@@ -58,6 +59,17 @@ func TestNodeGroupSchema(t *testing.T) {
 	assert.Equal(t, typecheck.TBoolean(), nodeGroup.Inputs["force-update-version"])
 	assert.Equal(t, typecheck.TOptional(typecheck.TMap(typecheck.TString())),
 		nodeGroup.Inputs["tags"])
+	repair := nodeGroup.Inputs["node-repair-config"]
+	repairFields := slices.Clone(repair.Elem.Fields)
+	found := false
+	for i, field := range repairFields {
+		if field.Name == "enabled" {
+			require.True(t, field.Defaulted)
+			repairFields[i].Defaulted = false
+			found = true
+		}
+	}
+	require.True(t, found)
 	assert.Equal(t, map[string]typecheck.Type{
 		"cluster-name":                    typecheck.TString(),
 		"node-group-name":                 typecheck.TString(),
@@ -72,7 +84,7 @@ func TestNodeGroupSchema(t *testing.T) {
 		"launch-template-id":              typecheck.TOptional(typecheck.TString()),
 		"launch-template-name":            typecheck.TOptional(typecheck.TString()),
 		"launch-template-version":         typecheck.TOptional(typecheck.TString()),
-		"node-repair-config":              nodeGroup.Inputs["node-repair-config"],
+		"node-repair-config":              typecheck.TOptional(typecheck.TObject(repairFields)),
 		"release-version":                 typecheck.TString(),
 		"update-config":                   nodeGroup.Inputs["update-config"],
 		"version":                         typecheck.TString(),

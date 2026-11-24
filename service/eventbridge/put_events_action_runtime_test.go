@@ -290,6 +290,12 @@ func TestPutEventsDeferredSavedPlan(t *testing.T) {
 			executor.Inputs = map[string]any{
 				"endpoint": endpoint, "value": tt.value, "time": tt.time,
 			}
+			if tt.name == "known bad time beside pending source" {
+				_, err := executor.Plan(t.Context())
+				require.ErrorContains(t, err, tt.rule)
+				assert.Empty(t, requests)
+				return
+			}
 			saved := savedEventActionPlan(t, executor)
 			step := eventActionStep(t, saved)
 			require.Equal(t, runtime.DecisionRerun, step.Decision)

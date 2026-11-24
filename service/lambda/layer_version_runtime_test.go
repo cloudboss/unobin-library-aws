@@ -491,7 +491,7 @@ func TestLayerVersionZipHashAndOutputDrift(t *testing.T) {
 		"layer-version-arn":           wantARN,
 		"layer-arn":                   "arn:aws:lambda:us-east-1:123456789012:layer:layer",
 		"layer-name":                  "layer",
-		"version":                     float64(1),
+		"version":                     int64(1),
 		"region":                      "us-east-1",
 		"created-date":                "2026-10-01T01:02:03.456+0000",
 		"description":                 "observed description",
@@ -499,7 +499,7 @@ func TestLayerVersionZipHashAndOutputDrift(t *testing.T) {
 		"compatible-architectures":    []any{"arm64", "x86_64"},
 		"compatible-runtimes":         []any{"go1.x", "python3.14"},
 		"code-sha256":                 "observed-checksum",
-		"code-size":                   float64(123),
+		"code-size":                   int64(123),
 		"signing-job-arn":             "signing-job",
 		"signing-profile-version-arn": "signing-profile-version",
 	}, entry.Outputs)

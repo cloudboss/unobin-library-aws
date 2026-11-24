@@ -29,7 +29,7 @@ func keyCompileOptions(t *testing.T, fixture, out string) compile.Options {
 	unobin := unobinModuleRoot(t)
 	return compile.Options{
 		FactoryPath: filepath.Join("testdata", "ub", "key", "compile", fixture, "factory.ub"),
-		OutDir:      out, CLIVersion: "v0.13.0-a.4", GoVersion: "1.26.2",
+		OutDir:      out, CLIVersion: "v0.13.0", GoVersion: "1.26.2",
 		ReplaceUnobin: unobin.Dir, ReplaceGoModules: map[string]string{module.Path: module.Dir},
 		NewResolver: func(directory string) (resolve.Resolver, error) {
 			return resolve.NewLocalResolver(directory), nil
@@ -142,7 +142,7 @@ func initialKeyLookup(
 	lookup := snapshot.Find("data-source.lookup")
 	require.Equal(t, map[string]any{"key-id": aliasRuntimeName}, lookup.Inputs)
 	want := keyRuntimeOutputs()
-	want["pending-deletion-window-in-days"] = float64(0)
+	want["pending-deletion-window-in-days"] = int64(0)
 	require.Equal(t, want, lookup.Outputs)
 	consumer := snapshot.Find("resource.consumer")
 	require.Equal(t, map[string]any{"key-id": aliasRuntimeKeyID}, consumer.Inputs)

@@ -19,14 +19,14 @@ func TestLibraryCompatibility(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			want := runtime.LibraryCompatibility{
 				RequiredAPI:            "1.0",
-				SuggestedUnobinVersion: "v0.12.0",
+				SuggestedUnobinVersion: "v0.13.0",
 			}
 			switch name {
 			case "cloudfront", "cloudwatch", "codebuild", "dynamodb", "ec2", "eks", "eventbridge",
 				"iam", "kms", "lambda", "s3", "scheduler", "sfn", "sns", "sqs", "wafv2":
 				want = runtime.LibraryCompatibility{
 					RequiredAPI:            "1.1",
-					SuggestedUnobinVersion: "v0.13.0-a.4",
+					SuggestedUnobinVersion: "v0.13.0",
 				}
 			}
 			require.Equal(t, want, lib.Compatibility)

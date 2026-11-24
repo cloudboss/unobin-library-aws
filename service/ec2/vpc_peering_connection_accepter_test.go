@@ -31,7 +31,7 @@ func TestPeeringAccepterCompileInputsAndOutputs(t *testing.T) {
 			}
 			err := compile.Run(compile.Options{
 				FactoryPath: path, Build: tc.name == "scenario", GoVersion: "1.26.2",
-				OutDir: out, CLIVersion: "v0.13.0-a.4", ReplaceUnobin: unobin.Dir,
+				OutDir: out, CLIVersion: "v0.13.0", ReplaceUnobin: unobin.Dir,
 				ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(directory string) (resolve.Resolver, error) {
 					return resolve.NewLocalResolver(directory), nil

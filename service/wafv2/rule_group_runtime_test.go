@@ -430,16 +430,38 @@ func TestRuleGroupPendingKnownSiblingAndReplacement(t *testing.T) {
 			executor.Inputs["capacity"] = int64(21)
 			executor.Inputs["metric"] = metric
 			executor.Inputs["pending-rule"] = labelRule("resolved")
+			read := ruleGroupReadCalls("aws", "us-west-2", "REGIONAL", "example", "id-1")
+			if metric == "invalid!" {
+				_, err := executor.Plan(t.Context())
+				require.ErrorContains(t, err, ruleGroupAddress+": schema: constraints[12]")
+				require.ErrorContains(t, err, "rule visibility metric-name")
+				require.ErrorContains(t, err, "rules[0]")
+				require.Equal(t, read, cloud.takeCalls())
+				require.Equal(t, "id-1", ipSetSnapshot(t, executor).Find(ruleGroupAddress).Outputs["id"])
+
+				executor = newRuleGroupExecutor(t, "deferred-required", libraries, url)
+				executor.Store = initial.Store
+				executor.Inputs["capacity"] = int64(21)
+				invalid := labelRule("known")
+				invalid["visibility-config"] = ruleGroupVisibility(metric)
+				executor.Inputs["rules"] = []any{invalid, labelRule("resolved")}
+			}
 			plan := saveIPSetPlan(t, executor)
 			step := ruleGroupPlanStep(t, plan, runtime.DecisionReplace)
-			require.Equal(t, map[string][]string{"rules": {"action.seed.value"}}, step.UnresolvedInputs)
-			read := ruleGroupReadCalls("aws", "us-west-2", "REGIONAL", "example", "id-1")
+			pending := map[string][]string{"rules": {"action.seed.value"}}
+			if metric == "invalid!" {
+				pending = map[string][]string{
+					"rules": {"action.rules.value"}, "visibility-config": {"action.visibility.value"},
+				}
+			}
+			require.Equal(t, pending, step.UnresolvedInputs)
 			require.Equal(t, read, cloud.takeCalls())
 
 			_, err := executor.ApplyPlan(t.Context(), plan)
 			if metric == "invalid!" {
-				require.ErrorContains(t, err, ruleGroupAddress)
+				require.ErrorContains(t, err, ruleGroupAddress+": schema: constraints[12]")
 				require.ErrorContains(t, err, "rule visibility metric-name")
+				require.ErrorContains(t, err, "rules[0]")
 				require.Empty(t, cloud.takeCalls())
 				require.Equal(t, "id-1", ipSetSnapshot(t, executor).Find(ruleGroupAddress).Outputs["id"])
 				return
@@ -1188,7 +1210,7 @@ func TestRuleGroupPendingEquivalentRulesKeepNoOp(t *testing.T) {
 	require.Equal(t, wantNames, names)
 }
 
-func TestRuleGroupPendingCustomKeyDefersKnownLength(t *testing.T) {
+func TestRuleGroupPendingCustomKeyChecksKnownLength(t *testing.T) {
 	libraries := ruleGroupRuntimeLibraries(t)
 	for _, decision := range []runtime.Decision{runtime.DecisionCreate, runtime.DecisionReplace} {
 		t.Run(string(decision), func(t *testing.T) {
@@ -1207,14 +1229,44 @@ func TestRuleGroupPendingCustomKeyDefersKnownLength(t *testing.T) {
 			executor.Inputs["pending-key"] = map[string]any{
 				"ja4-fingerprint": map[string]any{"fallback-behavior": "NO_MATCH"},
 			}
-			saved := saveIPSetPlan(t, executor)
-			step := ruleGroupPlanStep(t, saved, decision)
-			require.Equal(t, map[string][]string{"rules": {"action.seed.value"}}, step.UnresolvedInputs)
-			require.Equal(t, read, cloud.takeCalls())
-			_, err := executor.ApplyPlan(t.Context(), saved)
-			require.ErrorContains(t, err, ruleGroupAddress)
+			_, err := executor.Plan(t.Context())
+			require.ErrorContains(t, err, ruleGroupAddress+": schema: constraints[25]")
 			require.ErrorContains(t, err,
 				"rate-based statement contains an invalid limit or custom-keys length")
+			require.ErrorContains(t, err, "rules[0]")
+			require.Equal(t, read, cloud.takeCalls())
+			if decision == runtime.DecisionReplace {
+				require.Equal(t, "id-1", ipSetSnapshot(t, executor).Find(ruleGroupAddress).Outputs["id"])
+			}
+
+			deferred := newRuleGroupExecutor(t, "deferred-required", libraries, endpoint)
+			deferred.Store = executor.Store
+			deferred.Inputs["capacity"] = executor.Inputs["capacity"]
+			rule := labelRule("rate")
+			rule["statement"] = map[string]any{"rate-based-statement": map[string]any{
+				"limit": int64(10), "aggregate-key-type": "CUSTOM_KEYS",
+				"custom-keys": []any{
+					map[string]any{"asn": map[string]any{}},
+					map[string]any{"ip": map[string]any{}},
+					map[string]any{"http-method": map[string]any{}},
+					map[string]any{"label-namespace": map[string]any{"namespace": "org:"}},
+					map[string]any{"ja3-fingerprint": map[string]any{"fallback-behavior": "MATCH"}},
+					executor.Inputs["pending-key"],
+				},
+			}}
+			deferred.Inputs["rules"] = []any{rule}
+			executor = deferred
+			saved := saveIPSetPlan(t, executor)
+			step := ruleGroupPlanStep(t, saved, decision)
+			require.Equal(t, map[string][]string{
+				"rules": {"action.rules.value"}, "visibility-config": {"action.visibility.value"},
+			}, step.UnresolvedInputs)
+			require.Equal(t, read, cloud.takeCalls())
+			_, err = executor.ApplyPlan(t.Context(), saved)
+			require.ErrorContains(t, err, ruleGroupAddress+": schema: constraints[25]")
+			require.ErrorContains(t, err,
+				"rate-based statement contains an invalid limit or custom-keys length")
+			require.ErrorContains(t, err, "rules[0]")
 			require.Empty(t, cloud.takeCalls())
 			if decision == runtime.DecisionReplace {
 				entry := ipSetSnapshot(t, executor).Find(ruleGroupAddress)

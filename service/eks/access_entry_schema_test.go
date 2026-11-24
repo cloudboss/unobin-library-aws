@@ -54,8 +54,8 @@ func TestAccessEntryFactoryCompilation(t *testing.T) {
 			`missing required input "principal-arn" on aws-eks.access-entry`,
 			"14:22: type: type mismatch: expected string, got integer",
 			"19:22: type: type mismatch: expected string, got integer",
-			"type mismatch: expected optional(list(string)), got list(integer)",
-			"type mismatch: expected optional(map(string)), got object({ x: integer })",
+			"24:27: type: type mismatch: expected string, got integer",
+			"29:27: type: type mismatch: expected string, got integer",
 		}},
 		{fixture: "rules", errors: []string{
 			"resource.empty-name: constraints[0]", "resource.leading-underscore: constraints[0]",
@@ -69,7 +69,7 @@ func TestAccessEntryFactoryCompilation(t *testing.T) {
 				FactoryPath:      filepath.Join("testdata", "ub", "access-entry", tc.fixture),
 				OutDir:           "-",
 				StackName:        "access-entry-schema",
-				CLIVersion:       "v0.13.0-a.4",
+				CLIVersion:       "v0.13.0",
 				ReplaceUnobin:    core.Dir,
 				ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(project string) (resolve.Resolver, error) {

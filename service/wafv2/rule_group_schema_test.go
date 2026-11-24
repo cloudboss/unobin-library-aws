@@ -44,7 +44,7 @@ func TestRuleGroupNativeStatementConstraint(t *testing.T) {
 func TestRuleGroupCompileLiterals(t *testing.T) {
 	module := moduleRoot(t, ".")
 	unobin := unobinRoot(t)
-	for _, name := range []string{"wider", "invalid", "invalid-native"} {
+	for _, name := range []string{"valid", "wider", "invalid", "invalid-native"} {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("testdata", "ub", "rule-group", "compile", name, "factory.ub")
 			src, err := os.ReadFile(path)
@@ -52,14 +52,14 @@ func TestRuleGroupCompileLiterals(t *testing.T) {
 			parsed, err := syntax.ParseSource(path, src)
 			require.NoError(t, err)
 			err = compile.Run(compile.Options{
-				FactoryPath: path, OutDir: "-", CLIVersion: "v0.13.0-a.4",
+				FactoryPath: path, OutDir: "-", CLIVersion: "v0.13.0",
 				ReplaceUnobin: unobin.Dir, ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(directory string) (resolve.Resolver, error) {
 					return resolve.NewLocalResolver(directory), nil
 				},
 				Stdout: io.Discard, Stderr: io.Discard,
 			})
-			if name == "wider" {
+			if name == "valid" {
 				require.NoError(t, err)
 				return
 			}
@@ -79,23 +79,33 @@ func TestRuleGroupCompileLiterals(t *testing.T) {
 					}
 				}
 			}
+			if name == "wider" {
+				for _, field := range []string{
+					"challenge-config", "override-action", "rate-based-statement",
+					"managed-rule-group-statement", "rule-group-reference-statement",
+				} {
+					assert.Contains(t, strings.Join(byResource["group"], "\n"),
+						"unknown field \""+field+"\"")
+				}
+				return
+			}
 			for resource, want := range map[string]string{
-				"too-deep":                 "statement must select exactly one member",
-				"nested-rate":              "statement must select exactly one member",
-				"managed-reference":        "statement must select exactly one member",
-				"group-reference":          "statement must select exactly one member",
+				"too-deep":                 `unknown field "and-statement"`,
+				"nested-rate":              `unknown field "rate-based-statement"`,
+				"managed-reference":        `unknown field "managed-rule-group-statement"`,
+				"group-reference":          `unknown field "rule-group-reference-statement"`,
 				"unsupported-rule-members": "unknown field \"tags-all\"",
 				"encoded-search":           "search-string-base64",
-				"missing-priority":         "type mismatch",
-				"null-priority":            "priority: null",
-				"missing-action":           "type mismatch",
-				"missing-visibility-flag":  "type mismatch",
-				"missing-byte-field":       "type mismatch",
-				"missing-regex-field":      "type mismatch",
-				"missing-regex-set-field":  "type mismatch",
-				"missing-size-field":       "type mismatch",
-				"missing-sqli-field":       "type mismatch",
-				"missing-xss-field":        "type mismatch",
+				"missing-priority":         `missing required field "priority"`,
+				"null-priority":            "type mismatch: expected integer, got null",
+				"missing-action":           `missing required field "action"`,
+				"missing-visibility-flag":  `missing required field "sampled-requests-enabled"`,
+				"missing-byte-field":       `missing required field "field-to-match"`,
+				"missing-regex-field":      `missing required field "field-to-match"`,
+				"missing-regex-set-field":  `missing required field "field-to-match"`,
+				"missing-size-field":       `missing required field "field-to-match"`,
+				"missing-sqli-field":       `missing required field "field-to-match"`,
+				"missing-xss-field":        `missing required field "field-to-match"`,
 				"zero-capacity":            "constraints[2]",
 				"bad-visibility":           "constraints[6]",
 				"bad-json-path":            "invalid cookies, headers or JSON body match pattern",

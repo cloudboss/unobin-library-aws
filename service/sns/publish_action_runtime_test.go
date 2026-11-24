@@ -84,7 +84,7 @@ func publishEndpoint(t *testing.T) (string, <-chan publishRequest) {
 	return server.URL, requests
 }
 
-func publishExecutor(t *testing.T, fixture string) *runtime.Executor {
+func publishLibraries(t *testing.T) map[string]*runtime.Library {
 	t.Helper()
 	lib := runtime.LibraryWithPath(Library(),
 		"github.com/cloudboss/unobin-library-aws//service/sns")
@@ -92,7 +92,7 @@ func publishExecutor(t *testing.T, fixture string) *runtime.Executor {
 	lib.Constraints = map[string][]lang.ConstraintSpec{
 		"action.publish": lib.Schema.Actions["publish"].Constraints,
 	}
-	libs := map[string]*runtime.Library{
+	return map[string]*runtime.Library{
 		"sns": lib,
 		"test": {
 			Actions: map[string]runtime.ActionRegistration{
@@ -100,6 +100,11 @@ func publishExecutor(t *testing.T, fixture string) *runtime.Executor {
 			},
 		},
 	}
+}
+
+func publishExecutor(t *testing.T, fixture string) *runtime.Executor {
+	t.Helper()
+	libs := publishLibraries(t)
 	path := filepath.Join("testdata", "ub", "publish", fixture, "factory.ub")
 	source, err := os.ReadFile(path)
 	require.NoError(t, err)
@@ -399,6 +404,19 @@ func TestPublishActionDeferredSavedPlan(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			endpoint, requests := publishEndpoint(t)
+			if tt.fixture == "deferred-bad-sibling" {
+				path := filepath.Join("testdata", "ub", "publish", tt.fixture, "factory.ub")
+				source, err := os.ReadFile(path)
+				require.NoError(t, err)
+				file, _, err := compile.ParseFactorySyntaxSource(path, source)
+				require.NoError(t, err)
+				checker := check.NewSyntax(file.Factory.Body, publishLibraries(t), nil, "")
+				require.NoError(t, checker.References(nil).Err())
+				require.ErrorContains(t, checker.LiteralConstraints().Err(),
+					publishAddress+": "+tt.want)
+				assert.Empty(t, requests)
+				return
+			}
 			executor := publishExecutor(t, tt.fixture)
 			executor.Inputs = map[string]any{"endpoint": endpoint, "value": tt.value}
 			plan := savedPublishPlan(t, executor)

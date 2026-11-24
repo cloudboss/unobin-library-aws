@@ -558,7 +558,7 @@ func TestCompositeAlarmInPlaceUpdatesAndDrift(t *testing.T) {
 	assert.Equal(t, slices.Concat(compositeObserve(oldAlarm), compositeCreate(oldAlarm)),
 		cloud.takeCalls())
 	assert.Equal(t, map[string]any{
-		"alarm": "mute", "extension-period": float64(0), "wait-period": float64(30),
+		"alarm": "mute", "extension-period": int64(0), "wait-period": int64(30),
 	}, compositeOutputs(t, exec)["actions-suppressor"])
 
 	exec.Inputs["suppressor"] = nil

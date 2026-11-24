@@ -25,7 +25,7 @@ func TestProjectCompiledCLI(t *testing.T) {
 	out := t.TempDir()
 	result, err := compile.RunResult(compile.Options{
 		FactoryPath: "testdata/ub/compiled/factory.ub", OutDir: out,
-		Build: true, GoVersion: "1.26.2", CLIVersion: "v0.13.0-a.4",
+		Build: true, GoVersion: "1.26.2", CLIVersion: "v0.13.0",
 		ReplaceUnobin: unobin.Dir, ReplaceGoModules: map[string]string{module.Path: module.Dir},
 		NewResolver: func(dir string) (resolve.Resolver, error) {
 			return resolve.NewLocalResolver(dir), nil
@@ -66,7 +66,7 @@ func TestProjectCompiledCLI(t *testing.T) {
 	require.NoError(t, err)
 	for _, field := range []string{"image", "batch-compute-types"} {
 		require.NoError(t, json.Unmarshal(body, &saved))
-		message := "Environment.Image is required"
+		message := `field "environment.image": required but is null`
 		saved.Inputs[field] = nil
 		if field == "batch-compute-types" {
 			saved.Inputs[field] = []any{"custom"}
@@ -92,7 +92,10 @@ func TestProjectCompiledCLI(t *testing.T) {
 		require.NoError(t, os.WriteFile(planPath, encoded, 0o600))
 		output, err = command("apply", planPath)
 		require.Error(t, err)
-		assert.Contains(t, string(output), "resource.project: schema: constraints[")
+		assert.Contains(t, string(output), "resource.project:")
+		if field == "batch-compute-types" {
+			assert.Contains(t, string(output), "schema: constraints[")
+		}
 		assert.Contains(t, string(output), message)
 		assert.Empty(t, c.take())
 	}

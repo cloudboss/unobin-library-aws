@@ -2,18 +2,18 @@
   "name": "compile-iam-service-linked-role",
   "rootPath": ".",
   "executor": "root",
-  "cliVersion": "v0.13.0-a.4",
+  "cliVersion": "v0.13.0",
   "commands": [
     {
       "name": "valid",
-      "args": ["compile", "--format", "json", "-p", "valid/factory.ub", "-o", "build-valid", "--replace-unobin", "$REPO_ROOT", "--replace-go-module", "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"],
+      "args": ["compile", "--format", "json", "-p", "valid", "-o", "build-valid", "--replace-unobin", "$REPO_ROOT", "--replace-go-module", "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"],
       "normalize": "json",
       "stdout": "want/valid.stdout",
       "exitCode": 0
     },
     {
       "name": "scenario",
-      "args": ["compile", "--format", "json", "-p", "scenario/factory.ub", "-o", "build-scenario", "--replace-unobin", "$REPO_ROOT", "--replace-go-module", "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"],
+      "args": ["compile", "--format", "json", "-p", "scenario", "-o", "build-scenario", "--replace-unobin", "$REPO_ROOT", "--replace-go-module", "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"],
       "normalize": "json",
       "stdout": "want/scenario.stdout",
       "exitCode": 0

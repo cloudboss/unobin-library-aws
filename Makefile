@@ -15,7 +15,7 @@ FLOCI_NAME      := $(PROJECT)-floci
 MINISTACK_NAME  := $(PROJECT)-ministack
 
 UNOBIN_VERSION := $(shell awk '/github.com[/]cloudboss[/]unobin v/{print $$2}' go.mod)
-DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.3.0
+DOCGEN ?= go run github.com/cloudboss/cloudboss-docs/unobin/cmd/docgen@v0.3.1
 
 .DEFAULT_GOAL := help
 

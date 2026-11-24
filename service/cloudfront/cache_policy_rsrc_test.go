@@ -57,8 +57,9 @@ func TestCompileCloudFrontCachePolicy(t *testing.T) {
 		require.NoError(t, check(t, path))
 		require.NoError(t, check(t, filepath.Join(cachePolicyFixtureRoot, "evaluated")))
 	})
-	t.Run("literal mode beside a deferred expression", func(t *testing.T) {
-		require.NoError(t, check(t, filepath.Join(cachePolicyFixtureRoot, "compile-pending")))
+	t.Run("invalid literal mode beside a deferred expression", func(t *testing.T) {
+		err := check(t, filepath.Join(cachePolicyFixtureRoot, "compile-pending"))
+		assert.ErrorContains(t, err, "constraints[0] (predicate): cookie-behavior must be")
 	})
 	t.Run("literal enums", func(t *testing.T) {
 		err := check(t, filepath.Join(cachePolicyFixtureRoot, "enum-invalid"))
@@ -85,7 +86,7 @@ func TestCompileCloudFrontCachePolicy(t *testing.T) {
 			`unknown field "tags" on aws-cloudfront.cache-policy`,
 			`expected string, got integer`,
 			`expected string, got boolean`,
-			`got object({ items: list(boolean) })`,
+			`factory.ub:61:77: type: type mismatch: expected string, got boolean`,
 			`got list(unknown)`,
 			`got null`,
 		} {
@@ -470,6 +471,12 @@ func TestCachePolicySavedDeferredModes(t *testing.T) {
 			cloud := newCachePolicyCloud(t)
 			executor := cachePolicyExecutor(t, tt.fixture, cloud.url, libraries)
 			executor.Inputs["cookie-mode"] = tt.input
+			if tt.fixture == "partially-pending" {
+				_, err := executor.Plan(t.Context())
+				assertCachePolicyConstraint(t, err, 0, "cookie-behavior")
+				require.Empty(t, cloud.takeCalls())
+				return
+			}
 			if tt.decision == runtime.DecisionReplace {
 				initial := cachePolicyExecutor(t, "evaluated", cloud.url, libraries)
 				initial.Store = executor.Store
@@ -482,11 +489,6 @@ func TestCachePolicySavedDeferredModes(t *testing.T) {
 			step := cachePolicyStep(t, saved, tt.decision)
 			require.Equal(t, map[string][]string{cachePolicyParametersKey: {tt.pending}},
 				step.UnresolvedInputs)
-			if tt.fixture == "partially-pending" {
-				parameters := step.Inputs[cachePolicyParametersKey].(map[string]any)
-				cookies := parameters["cookies-config"].(map[string]any)
-				require.Equal(t, "None", cookies["cookie-behavior"])
-			}
 			if tt.decision == runtime.DecisionReplace {
 				require.Equal(t, []string{"binding"}, step.ReplacementReasons)
 				require.Equal(t, "test-id", *step.ExpectedStableID)

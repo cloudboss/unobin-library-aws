@@ -12,7 +12,7 @@ func Library() *runtime.Library {
 		Description: "AWS configuration library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
 			RequiredAPI:            "1.0",
-			SuggestedUnobinVersion: "v0.12.0",
+			SuggestedUnobinVersion: "v0.13.0",
 		},
 		Configuration: LibraryConfiguration(),
 	}

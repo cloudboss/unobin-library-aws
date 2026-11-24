@@ -37,7 +37,7 @@ func TestArchiveCompiledCLIPlan(t *testing.T) {
 			out := t.TempDir()
 			result, err := compile.RunResult(compile.Options{
 				FactoryPath: path, OutDir: out, Build: true,
-				GoVersion: "1.26.2", CLIVersion: "v0.13.0-a.4",
+				GoVersion: "1.26.2", CLIVersion: "v0.13.0",
 				ReplaceUnobin: unobin.Dir, ReplaceGoModules: map[string]string{module.Path: module.Dir},
 				NewResolver: func(directory string) (resolve.Resolver, error) {
 					return resolve.NewLocalResolver(directory), nil
