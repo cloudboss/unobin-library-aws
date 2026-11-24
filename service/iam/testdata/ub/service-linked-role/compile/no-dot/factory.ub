@@ -1,0 +1,9 @@
+factory: {
+  imports:         { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  library-configs: { iam: {} }
+  resources: {
+    linked: iam.service-linked-role {
+      aws-service-name: 'invalid'
+    }
+  }
+}

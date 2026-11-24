@@ -1,0 +1,9 @@
+stack: {
+  factory: {
+    inputs: { description: 'updated integration role', tags: { add: '', change: 'new', keep: '1' } }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

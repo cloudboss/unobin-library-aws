@@ -1,0 +1,23 @@
+factory: {
+  imports: { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: { type: optional(string), default: 'integration role' }
+    tags:        { type: map(string), default: { change: 'old', keep: '1', remove: 'yes' } }
+  }
+  library-configs: { iam: input.aws-config }
+  resources: {
+    linked: iam.service-linked-role {
+      aws-service-name: 'elasticbeanstalk.amazonaws.com'
+      description:      input.description
+      tags:             input.tags
+    }
+  }
+  outputs: {
+    arn:  { value: resource.linked.arn }
+    name: { value: resource.linked.role-name }
+  }
+}

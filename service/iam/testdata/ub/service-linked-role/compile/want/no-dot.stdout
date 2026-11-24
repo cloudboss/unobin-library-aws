@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.linked: constraints[1] (predicate): aws-service-name must contain a dot","path":"no-dot/factory.ub","span":{"start":{"line":5,"column":37,"offset":176}}}],"files":[]}

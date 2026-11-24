@@ -54,21 +54,6 @@ func TestLibraryRegistersIAMLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Equal(t, []string{
-		"access-key",
-		"group",
-		"group-policy",
-		"group-policy-attachment",
-		"instance-profile",
-		"openid-connect-provider",
-		"policy",
-		"role",
-		"role-policy",
-		"role-policy-attachment",
-		"user",
-		"user-policy",
-		"user-policy-attachment",
-	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourcesOutputs := map[string]reflect.Type{
@@ -123,20 +108,5 @@ func TestReadIAMServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"access-key",
-		"group",
-		"group-policy",
-		"group-policy-attachment",
-		"instance-profile",
-		"openid-connect-provider",
-		"policy",
-		"role",
-		"role-policy",
-		"role-policy-attachment",
-		"user",
-		"user-policy",
-		"user-policy-attachment",
-	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

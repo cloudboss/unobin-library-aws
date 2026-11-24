@@ -37,6 +37,8 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"service-linked-role": makeServiceLinkedRoleResource[
+				svc.ServiceLinkedRoleResource, *svc.ServiceLinkedRoleResourceOutput](),
 			"role":       makeResource[svc.RoleResource, *svc.RoleResourceOutput](),
 			"group":      makeResource[svc.GroupResource, *svc.GroupResourceOutput](),
 			"user":       makeResource[svc.UserResource, *svc.UserResourceOutput](),

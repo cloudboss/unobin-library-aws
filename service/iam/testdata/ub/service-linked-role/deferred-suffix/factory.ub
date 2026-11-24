@@ -1,0 +1,36 @@
+factory: {
+  imports: { iam: 'github.com/cloudboss/unobin-library-aws//service/iam' }
+  inputs: {
+    endpoint:    { type: string }
+    service:     { type: optional(string) }
+    suffix:      { type: optional(string) }
+    description: { type: optional(string) }
+    tags:        { type: optional(map(string)) }
+  }
+  library-configs: { iam: { region: 'us-east-1', endpoint-url: input.endpoint } }
+  actions: {
+    seed: test.linked-seed {
+      next-service: input.service
+      next-suffix:  input.suffix
+    }
+  }
+  resources: {
+    linked: iam.service-linked-role {
+      aws-service-name: input.service
+      custom-suffix:    action.seed.suffix
+      description:      input.description
+      tags:             input.tags
+    }
+  }
+  outputs: {
+    arn:         { value: resource.linked.arn }
+    name:        { value: resource.linked.role-name }
+    id:          { value: resource.linked.role-id }
+    path:        { value: resource.linked.path }
+    created:     { value: resource.linked.create-date }
+    description: { value: resource.linked.description }
+    tags:        { value: resource.linked.tags }
+    service:     { value: resource.linked.aws-service-name }
+    suffix:      { value: resource.linked.custom-suffix }
+  }
+}
