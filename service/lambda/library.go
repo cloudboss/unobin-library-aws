@@ -27,6 +27,15 @@ func makeAction[T, Out any, PT actionPtr[T, Out]]() runtime.ActionRegistration {
 	return runtime.MakeAction[T, Out, *awscfg.Configuration, PT]()
 }
 
+type dataSourcePtr[T, Out any] interface {
+	*T
+	runtime.TypedDataSource[Out, *awscfg.Configuration]
+}
+
+func makeDataSource[T, Out any, PT dataSourcePtr[T, Out]]() runtime.DataSourceRegistration {
+	return runtime.MakeDataSource[T, Out, *awscfg.Configuration, PT]()
+}
+
 func Library() *runtime.Library {
 	return &runtime.Library{
 		Name:        "aws-lambda",
@@ -49,6 +58,9 @@ func Library() *runtime.Library {
 			"layer-version": makeResource[
 				svc.LayerVersionResource, *svc.LayerVersionResourceOutput](),
 			"function-url": makeResource[svc.FunctionUrlResource, *svc.FunctionUrlResourceOutput](),
+		},
+		DataSources: map[string]runtime.DataSourceRegistration{
+			"function": makeDataSource[svc.FunctionDataSource, *svc.FunctionDataSourceOutput](),
 		},
 		Actions: map[string]runtime.ActionRegistration{
 			"invoke": makeAction[svc.InvokeAction, *svc.InvokeActionOutput](),

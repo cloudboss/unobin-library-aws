@@ -1,0 +1,10 @@
+stack: {
+  factory: {
+    pin:    { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: { endpoint: '__ENDPOINT__', name: 'arn:aws:lambda:ap-south-1:999:function:input' }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

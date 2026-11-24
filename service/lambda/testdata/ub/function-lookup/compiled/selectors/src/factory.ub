@@ -1,0 +1,81 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: { region: 'us-east-1' } }
+  data-sources: {
+    empty: lambda.function {
+      function-name: ''
+    }
+    unusual: lambda.function {
+      function-name: ' λ ! : alias '
+      qualifier:     ' unusual λ '
+    }
+    explicit: lambda.function {
+      function-name: 'n'
+      qualifier:     '$LATEST'
+    }
+    numeric: lambda.function {
+      function-name: 'n'
+      qualifier:     '27'
+    }
+    null-qualifier: lambda.function {
+      function-name: 'n'
+      qualifier:     null
+    }
+    arn-selector: lambda.function {
+      function-name: 'arn:aws:lambda:us-west-2:1:function:f:live'
+    }
+  }
+  outputs: {
+    arn:                            { value: data-source.explicit.arn }
+    qualified-arn:                  { value: data-source.explicit.qualified-arn }
+    invoke-arn:                     { value: data-source.explicit.invoke-arn }
+    qualified-invoke-arn:           { value: data-source.explicit.qualified-invoke-arn }
+    response-streaming-invoke-arn:  { value: data-source.explicit.response-streaming-invoke-arn }
+    code-sha256:                    { value: data-source.explicit.code-sha256 }
+    source-code-hash:               { value: data-source.explicit.source-code-hash }
+    code-signing-config-arn:        { value: data-source.explicit.code-signing-config-arn }
+    description:                    { value: data-source.explicit.description }
+    handler:                        { value: data-source.explicit.handler }
+    image-uri:                      { value: data-source.explicit.image-uri }
+    kms-key-arn:                    { value: data-source.explicit.kms-key-arn }
+    last-modified:                  { value: data-source.explicit.last-modified }
+    memory-size:                    { value: data-source.explicit.memory-size }
+    reserved-concurrent-executions: { value: data-source.explicit.reserved-concurrent-executions }
+    role:                           { value: data-source.explicit.role }
+    runtime:                        { value: data-source.explicit.runtime }
+    signing-job-arn:                { value: data-source.explicit.signing-job-arn }
+    signing-profile-version-arn:    { value: data-source.explicit.signing-profile-version-arn }
+    source-code-size:               { value: data-source.explicit.source-code-size }
+    source-kms-key-arn:             { value: data-source.explicit.source-kms-key-arn }
+    timeout:                        { value: data-source.explicit.timeout }
+    version:                        { value: data-source.explicit.version }
+    architectures:                  { value: data-source.explicit.architectures }
+    layers:                         { value: data-source.explicit.layers }
+    tags:                           { value: data-source.explicit.tags }
+    file-system-configs:            { value: data-source.explicit.file-system-configs }
+    capacity: {
+      value: data-source.explicit.capacity-provider-config?.lambda-managed-instances-capacity-provider-config.capacity-provider-arn
+    }
+    memory: {
+      value: data-source.explicit.capacity-provider-config?.lambda-managed-instances-capacity-provider-config.execution-environment-memory-gib-per-vcpu
+    }
+    concurrency: {
+      value: data-source.explicit.capacity-provider-config?.lambda-managed-instances-capacity-provider-config.per-execution-environment-max-concurrency
+    }
+    dead:            { value: data-source.explicit.dead-letter-config?.target-arn }
+    durable-timeout: { value: data-source.explicit.durable-config?.execution-timeout }
+    retention:       { value: data-source.explicit.durable-config?.retention-period-in-days }
+    environment:     { value: data-source.explicit.environment?.variables }
+    storage:         { value: data-source.explicit.ephemeral-storage?.size }
+    app-log:         { value: data-source.explicit.logging-config?.application-log-level }
+    format:          { value: data-source.explicit.logging-config?.log-format }
+    group:           { value: data-source.explicit.logging-config?.log-group }
+    system-log:      { value: data-source.explicit.logging-config?.system-log-level }
+    tenancy:         { value: data-source.explicit.tenancy-config?.tenant-isolation-mode }
+    tracing:         { value: data-source.explicit.tracing-config.mode }
+    ipv6:            { value: data-source.explicit.vpc-config?.ipv6-allowed-for-dual-stack }
+    subnets:         { value: data-source.explicit.vpc-config?.subnet-ids }
+    groups:          { value: data-source.explicit.vpc-config?.security-group-ids }
+    vpc:             { value: data-source.explicit.vpc-config?.vpc-id }
+  }
+}

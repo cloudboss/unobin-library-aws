@@ -54,7 +54,6 @@ func TestLibraryRegistersLambdaLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Empty(t, sortedKeys(lib.DataSources))
 	require.Equal(t, []string{
 		"invoke",
 	}, sortedKeys(lib.Actions))
@@ -109,7 +108,6 @@ func TestReadLambdaServiceSchema(t *testing.T) {
 	} {
 		require.Contains(t, schema.Resources, name)
 	}
-	require.Empty(t, sortedKeys(schema.DataSources))
 	require.Equal(t, []string{
 		"invoke",
 	}, sortedKeys(schema.Actions))

@@ -1,0 +1,19 @@
+{
+  "name": "selectors",
+  "factoryPath": "src",
+  "libraryPath": "example.com/lambda-function-lookup",
+  "build": true,
+  "deterministic": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/dev.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: { region: 'us-east-1' } }
+  data-sources: {
+    missing: lambda.function {}
+    null: lambda.function {
+      function-name: null
+    }
+    integer: lambda.function {
+      function-name: 123
+    }
+    qualifier: lambda.function {
+      function-name: 'n'
+      qualifier:     true
+    }
+  }
+}

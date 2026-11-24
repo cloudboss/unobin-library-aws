@@ -1,0 +1,22 @@
+factory: {
+  imports: { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  inputs: {
+    endpoint:  { type: string }
+    name:      { type: string }
+    qualifier: { type: optional(string) }
+  }
+  library-configs: {
+    lambda: { region: 'us-gov-west-1', endpoint-url: input.endpoint, max-attempts: 1 }
+  }
+  data-sources: {
+    lookup: lambda.function {
+      function-name: input.name
+      qualifier:     input.qualifier
+    }
+  }
+  outputs: {
+    description:   { value: data-source.lookup.description }
+    arn:           { value: data-source.lookup.arn }
+    qualified-arn: { value: data-source.lookup.qualified-arn }
+  }
+}

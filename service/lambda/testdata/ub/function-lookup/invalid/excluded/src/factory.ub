@@ -1,0 +1,25 @@
+factory: {
+  imports:         { lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda' }
+  library-configs: { lambda: { region: 'us-east-1' } }
+  data-sources: {
+    computed: lambda.function {
+      function-name:    'n'
+      arn:              'x'
+      version:          '7'
+      source-code-size: 2
+    }
+    tags: lambda.function {
+      function-name: 'n'
+      tags:          { env: 'test' }
+    }
+    region: lambda.function {
+      function-name: 'n'
+      region:        'us-west-2'
+    }
+    extra: lambda.function {
+      function-name: 'n'
+      package-type:  'Zip'
+      image-config:  {}
+    }
+  }
+}

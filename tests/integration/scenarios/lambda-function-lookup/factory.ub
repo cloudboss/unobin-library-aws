@@ -1,0 +1,67 @@
+factory: {
+  imports: {
+    iam:    'github.com/cloudboss/unobin-library-aws//service/iam'
+    lambda: 'github.com/cloudboss/unobin-library-aws//service/lambda'
+  }
+  assets:          { code: './_output/function.zip' }
+  inputs:          { updated: { type: boolean, default: false } }
+  library-configs: { iam: {}, lambda: {} }
+  resources: {
+    role: iam.role {
+      role-name: 'unobin-it-lambda-function-lookup-role'
+      assume-role-policy-document: '''\-
+        {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":
+        {"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        '''
+    }
+    function: lambda.function {
+      function-name: 'unobin-it-lambda-function-lookup'
+      role:          resource.role.arn
+      runtime:       'python3.12'
+      handler:       'index.handler'
+      code:          { zip-file-path: asset.code.path }
+      description:   if input.updated then 'updated' else 'initial'
+      memory-size:   if input.updated then 256 else 128
+      timeout:       if input.updated then 10 else 3
+      environment:   { variables: { PHASE: if input.updated then 'updated' else 'initial' } }
+      tags:          { phase: if input.updated then 'updated' else 'initial' }
+    }
+  }
+  data-sources: {
+    latest: lambda.function {
+      @depends-on:   [resource.function]
+      function-name: 'unobin-it-lambda-function-lookup'
+    }
+    explicit: lambda.function {
+      @depends-on:   [resource.function]
+      function-name: 'unobin-it-lambda-function-lookup'
+      qualifier:     '$LATEST'
+    }
+  }
+  outputs: {
+    lookup: {
+      value: {
+        arn:                  data-source.latest.arn
+        qualified-arn:        data-source.latest.qualified-arn
+        version:              data-source.latest.version
+        hash:                 data-source.latest.code-sha256
+        compatibility-hash:   data-source.latest.source-code-hash
+        size:                 data-source.latest.source-code-size
+        description:          data-source.latest.description
+        memory:               data-source.latest.memory-size
+        timeout:              data-source.latest.timeout
+        handler:              data-source.latest.handler
+        runtime:              data-source.latest.runtime
+        role:                 data-source.latest.role
+        environment:          data-source.latest.environment?.variables
+        tags:                 data-source.latest.tags
+        concurrency:          data-source.latest.reserved-concurrent-executions
+        explicit-concurrency: data-source.explicit.reserved-concurrent-executions
+        signing:              data-source.latest.code-signing-config-arn
+        invoke:               data-source.latest.invoke-arn
+        qualified-invoke:     data-source.latest.qualified-invoke-arn
+        streaming-invoke:     data-source.latest.response-streaming-invoke-arn
+      }
+    }
+  }
+}
