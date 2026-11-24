@@ -1,0 +1,50 @@
+factory: {
+  imports: {
+    kms: 'github.com/cloudboss/unobin-library-aws//service/kms'
+    iam: 'github.com/cloudboss/unobin-library-aws//service/iam'
+    sts: 'github.com/cloudboss/unobin-library-aws//service/sts'
+  }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    operations: { type: list(string), default: ['Encrypt'] }
+    context:    { type: map(string), default: { stage: 'created' } }
+  }
+  library-configs: { kms: input.aws-config, iam: input.aws-config, sts: input.aws-config }
+  data-sources: {
+    caller: sts.caller-identity {}
+  }
+  resources: {
+    key: kms.key {
+      description: 'unobin kms-grant integration'
+      tags:        { unobin: 'kms-grant-it' }
+    }
+    principal: iam.user {
+      name: 'unobin-kms-grant-it'
+    }
+    revoked: kms.grant {
+      key-id:            resource.key.arn
+      grantee-principal: resource.principal.arn
+      operations:        input.operations
+      constraints:       { encryption-context-equals: input.context }
+      name:              'unobin-grant-revoked'
+    }
+    retired: kms.grant {
+      key-id:             resource.key.arn
+      grantee-principal:  resource.principal.arn
+      retiring-principal: data-source.caller.arn
+      operations:         input.operations
+      constraints:        { encryption-context-subset: input.context }
+      name:               'unobin-grant-retired'
+      retire-on-delete:   true
+    }
+  }
+  outputs: {
+    key-id:    { value: resource.key.key-id }
+    principal: { value: resource.principal.arn }
+    revoked:   { value: resource.revoked.grant-id }
+    retired:   { value: resource.retired.grant-id }
+  }
+}

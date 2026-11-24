@@ -1,0 +1,7 @@
+stack: {
+  factory: { inputs: { operations: ['Decrypt', 'Encrypt'], context: { stage: 'updated' } } }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

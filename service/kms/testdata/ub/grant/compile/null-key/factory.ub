@@ -1,0 +1,11 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  resources: {
+    subject: kms.grant {
+      key-id:            null
+      grantee-principal: ''
+      operations:        ['Encrypt']
+    }
+  }
+}

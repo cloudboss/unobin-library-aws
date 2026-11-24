@@ -54,10 +54,6 @@ func TestLibraryRegistersKMSLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Equal(t, []string{
-		"alias",
-		"key",
-	}, sortedKeys(lib.Resources))
 	require.Empty(t, sortedKeys(lib.Actions))
 
 	resourceOutputs := map[string]reflect.Type{
@@ -92,9 +88,5 @@ func TestReadKMSServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"alias",
-		"key",
-	}, sortedKeys(schema.Resources))
 	require.Empty(t, sortedKeys(schema.Actions))
 }

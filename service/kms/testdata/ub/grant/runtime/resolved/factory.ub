@@ -1,0 +1,45 @@
+factory: {
+  imports: { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  inputs: {
+    endpoint: { type: string }
+    grant: {
+      type: object(
+        {
+          key-id:            optional(string)
+          grantee-principal: optional(string)
+          operations:        optional(list(string))
+          constraints: optional(
+            object(
+              {
+                encryption-context-equals: optional(map(string))
+                encryption-context-subset: optional(map(string))
+              },
+            ),
+          )
+          name:               optional(string)
+          grant-tokens:       optional(list(string))
+          retiring-principal: optional(string)
+          retire-on-delete:   boolean
+        },
+      )
+    }
+  }
+  library-configs: { kms: { region: 'us-east-1', endpoint-url: input.endpoint, max-attempts: 1 } }
+
+  resources: {
+    subject: kms.grant {
+      key-id:             input.grant.key-id
+      grantee-principal:  input.grant.grantee-principal
+      operations:         input.grant.operations
+      constraints:        input.grant.constraints
+      name:               input.grant.name
+      grant-tokens:       input.grant.grant-tokens
+      retiring-principal: input.grant.retiring-principal
+      retire-on-delete:   input.grant.retire-on-delete
+    }
+  }
+  outputs: {
+    grant-id: { value: resource.subject.grant-id }
+    token:    { value: resource.subject.grant-token }
+  }
+}

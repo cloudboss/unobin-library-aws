@@ -28,6 +28,7 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"grant": makeResource[svc.GrantResource, *svc.GrantResourceOutput](),
 			"key":   makeResource[svc.KeyResource, *svc.KeyResourceOutput](),
 			"alias": makeResource[svc.AliasResource, *svc.AliasResourceOutput](),
 		},

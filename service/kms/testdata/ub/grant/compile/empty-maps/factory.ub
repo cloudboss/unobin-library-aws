@@ -1,0 +1,22 @@
+factory: {
+  imports:         { kms: 'github.com/cloudboss/unobin-library-aws//service/kms' }
+  library-configs: { kms: {} }
+  resources: {
+    subject: kms.grant {
+      key-id:            'alias/original'
+      grantee-principal: ''
+      operations:        ['Encrypt']
+      constraints:       { encryption-context-equals: {}, encryption-context-subset: { c: 'd' } }
+    }
+  }
+  outputs: {
+    grant-id:    { value: resource.subject.grant-id }
+    grant-token: { value: resource.subject.grant-token }
+    key-id:      { value: resource.subject.key-id }
+    grantee:     { value: resource.subject.grantee-principal }
+    retiring:    { value: resource.subject.retiring-principal }
+    name:        { value: resource.subject.name }
+    operations:  { value: resource.subject.operations }
+    constraints: { value: resource.subject.constraints }
+  }
+}

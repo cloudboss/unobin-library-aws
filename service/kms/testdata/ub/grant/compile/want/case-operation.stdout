@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.subject: constraints[5] (predicate): invalid grant operation (operations[0])","path":"case-operation/factory.ub","span":{"start":{"line":5,"column":24,"offset":163}}}],"files":[]}

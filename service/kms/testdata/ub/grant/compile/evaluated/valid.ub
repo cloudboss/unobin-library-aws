@@ -1,0 +1,19 @@
+stack: {
+  factory: {
+    pin: { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: {
+      endpoint: '__ENDPOINT__'
+      grant: {
+        key-id:            'arn:aws:kms:us-east-1:123456789012:key/original'
+        grantee-principal: 'lambda.amazonaws.com'
+        operations:        ['Encrypt', 'Decrypt']
+        grant-tokens:      ['a', 'b']
+        retire-on-delete:  false
+      }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}
