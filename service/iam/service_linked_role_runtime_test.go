@@ -46,7 +46,7 @@ type linkedCloud struct {
 	requests                     []url.Values
 	failureAction                string
 	cleanupFailure               bool
-	cancelFailure                context.CancelFunc
+	cancelFailure                func(context.Context)
 	exists                       bool
 }
 
@@ -75,7 +75,8 @@ func newLinkedCloud(t *testing.T) *linkedCloud {
 		if action == cloud.failureAction ||
 			action == "DeleteServiceLinkedRole" && cloud.cleanupFailure {
 			if action == cloud.failureAction && cloud.cancelFailure != nil {
-				cloud.cancelFailure()
+				cloud.cancelFailure(r.Context())
+				return
 			}
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, `<ErrorResponse><Error><Code>InvalidInput</Code>
@@ -241,7 +242,10 @@ func TestServiceLinkedRoleFailedCreateState(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				defer cancel()
 				if action != mode {
-					cloud.cancelFailure = cancel
+					cloud.cancelFailure = func(requestCtx context.Context) {
+						cancel()
+						<-requestCtx.Done()
+					}
 				}
 				exec := linkedExecutor(t, "evaluated", cloud, linkedLibraries(t))
 				exec.Inputs["tags"] = map[string]any{"owner": "test"}
