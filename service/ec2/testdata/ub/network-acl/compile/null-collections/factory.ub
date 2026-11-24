@@ -1,0 +1,22 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: {} }
+  resources: {
+    connection: aws-ec2.network-acl {
+      vpc-id:     ''
+      ingress:    null
+      egress:     []
+      subnet-ids: null
+    }
+  }
+  outputs: {
+    id:      { value: resource.connection.network-acl-id }
+    vpc:     { value: resource.connection.vpc-id }
+    owner:   { value: resource.connection.owner-id }
+    arn:     { value: resource.connection.arn }
+    ingress: { value: resource.connection.ingress }
+    egress:  { value: resource.connection.egress }
+    subnets: { value: resource.connection.subnet-ids }
+    tags:    { value: resource.connection.tags }
+  }
+}

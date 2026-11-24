@@ -1,0 +1,28 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    vpc-id:     { type: optional(string) }
+    ingress:    { type: optional(list(opaque)) }
+    egress:     { type: optional(list(opaque)) }
+    subnet-ids: { type: optional(list(string)) }
+    tags:       { type: optional(map(string)) }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  actions: {
+    seed: fixture.seed {
+      vpc-id:  input.vpc-id
+      ingress: input.ingress
+      egress:  input.egress
+    }
+  }
+  resources: {
+    connection: aws-ec2.network-acl {
+      vpc-id:     action.seed.resolved-vpc
+      ingress:    action.seed.resolved-ingress
+      egress:     action.seed.resolved-egress
+      subnet-ids: input.subnet-ids
+      tags:       input.tags
+    }
+  }
+}

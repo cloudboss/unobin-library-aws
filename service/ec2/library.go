@@ -37,6 +37,7 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"network-acl":    makeResource[svc.NetworkACLResource, *svc.NetworkACLResourceOutput](),
 			"flow-log":       makeResource[svc.FlowLogResource, *svc.FlowLogResourceOutput](),
 			"vpc":            makeResource[svc.VpcResource, *svc.VpcResourceOutput](),
 			"security-group": makeResource[svc.SecurityGroupResource, *svc.SecurityGroupResourceOutput](),

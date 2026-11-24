@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.connection: constraints[8] (predicate): all protocols require zero ports (egress[0])","path":"all-ports/factory.ub","span":{"start":{"line":5,"column":37,"offset":184}}}],"files":[]}

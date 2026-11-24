@@ -1,0 +1,97 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    stage: { type: string, default: 'initial' }
+  }
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.71.0.0/16'
+    }
+    first: aws-ec2.subnet {
+      vpc-id:     resource.vpc.vpc-id
+      cidr-block: '10.71.1.0/24'
+    }
+    second: aws-ec2.subnet {
+      vpc-id:     resource.vpc.vpc-id
+      cidr-block: '10.71.2.0/24'
+    }
+    third: aws-ec2.subnet {
+      vpc-id:     resource.vpc.vpc-id
+      cidr-block: '10.71.3.0/24'
+    }
+    managed: aws-ec2.network-acl {
+      vpc-id: resource.vpc.vpc-id
+      ingress: [
+        {
+          rule-number: 10
+          rule-action: 'allow'
+          protocol:    'tcp'
+          from-port:   if input.stage == 'initial' then 80 else 443
+          to-port:     if input.stage == 'initial' then 80 else 443
+          cidr-block:  '10.0.0.0/8'
+        },
+      ]
+      egress: if input.stage == 'initial'
+        then [
+          {
+            rule-number: 20
+            rule-action: 'allow'
+            protocol:    'all'
+            from-port:   0
+            to-port:     0
+            cidr-block:  '0.0.0.0/0'
+          },
+        ]
+        else null
+      subnet-ids: [if input.stage == 'initial' then resource.first.id else resource.second.id]
+      tags:       { unobin: 'ec2-network-acl-it', role: 'managed', stage: input.stage }
+    }
+    cleared: aws-ec2.network-acl {
+      vpc-id: resource.vpc.vpc-id
+      ingress: if input.stage == 'initial'
+        then [
+          {
+            rule-number: 30
+            rule-action: 'deny'
+            protocol:    'tcp'
+            from-port:   22
+            to-port:     22
+            cidr-block:  '10.0.0.0/8'
+          },
+        ]
+        else []
+      egress:     []
+      subnet-ids: if input.stage == 'initial' then [resource.third.id] else []
+      tags:       { unobin: 'ec2-network-acl-it', role: 'cleared', stage: input.stage }
+    }
+    unmanaged: aws-ec2.network-acl {
+      vpc-id: resource.vpc.vpc-id
+      ingress: if input.stage == 'initial'
+        then [
+          {
+            rule-number: 40
+            rule-action: 'allow'
+            protocol:    'icmp'
+            from-port:   0
+            to-port:     0
+            icmp-type:   -1
+            icmp-code:   -1
+            cidr-block:  '10.0.0.0/8'
+          },
+        ]
+        else null
+      tags: { unobin: 'ec2-network-acl-it', role: 'unmanaged', stage: input.stage }
+    }
+  }
+  outputs: {
+    managed-id:   { value: resource.managed.network-acl-id }
+    cleared-id:   { value: resource.cleared.network-acl-id }
+    unmanaged-id: { value: resource.unmanaged.network-acl-id }
+    vpc-id:       { value: resource.vpc.vpc-id }
+  }
+}

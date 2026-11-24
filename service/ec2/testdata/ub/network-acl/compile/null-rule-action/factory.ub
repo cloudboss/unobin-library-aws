@@ -1,0 +1,10 @@
+factory: {
+  imports:         { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  library-configs: { aws-ec2: {} }
+  resources: {
+    connection: aws-ec2.network-acl {
+      vpc-id:  'vpc-1'
+      ingress: [{ rule-action: null, protocol: 'tcp', rule-number: 10, from-port: 0, to-port: 80 }]
+    }
+  }
+}

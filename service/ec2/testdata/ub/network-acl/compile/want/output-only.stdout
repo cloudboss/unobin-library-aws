@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"unknown field \"network-acl-id\" on aws-ec2.network-acl","path":"output-only/factory.ub","span":{"start":{"line":7,"column":7,"offset":222}}}],"files":[]}

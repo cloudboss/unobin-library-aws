@@ -1,0 +1,30 @@
+factory: {
+  imports: { aws-ec2: 'github.com/cloudboss/unobin-library-aws//service/ec2' }
+  inputs: {
+    aws-config: { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+  }
+  library-configs: { aws-ec2: input.aws-config }
+  resources: {
+    vpc: aws-ec2.vpc {
+      cidr-block: '10.70.0.0/16'
+    }
+    subnet: aws-ec2.subnet {
+      vpc-id:     resource.vpc.vpc-id
+      cidr-block: '10.70.1.0/24'
+    }
+    connection: aws-ec2.network-acl {
+      vpc-id:     resource.vpc.vpc-id
+      subnet-ids: [resource.subnet.id]
+      ingress: [
+        {
+          rule-number: 10
+          rule-action: 'allow'
+          protocol:    'tcp'
+          from-port:   80
+          to-port:     80
+          cidr-block:  '10.0.0.0/8'
+        },
+      ]
+    }
+  }
+}
