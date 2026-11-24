@@ -1,5 +1,6 @@
 factory: {
-  imports: { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: { region: 'us-gov-west-1' } }
   data-sources: {
     lookup: ecr.repository {
       name: 3

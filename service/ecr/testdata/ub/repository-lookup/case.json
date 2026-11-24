@@ -1,0 +1,68 @@
+{
+  "name": "compile-ecr-repository-lookup",
+  "rootPath": ".",
+  "executor": "root",
+  "cliVersion": "v0.13.0",
+  "commands": [
+    {
+      "name": "valid",
+      "args": [
+        "compile", "--format", "json", "-p", "valid", "-o", "build-valid",
+        "--replace-unobin", "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "missing",
+      "args": [
+        "compile", "--format", "json", "-p", "missing/factory.ub", "-o", "build-missing",
+        "--replace-unobin", "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null",
+      "args": [
+        "compile", "--format", "json", "-p", "null/factory.ub", "-o", "build-null",
+        "--replace-unobin", "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type",
+      "args": [
+        "compile", "--format", "json", "-p", "wrong-type/factory.ub", "-o", "build-wrong-type",
+        "--replace-unobin", "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-type.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "aliases",
+      "args": [
+        "compile", "--format", "json", "-p", "aliases/factory.ub", "-o", "build-aliases",
+        "--replace-unobin", "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/aliases.stdout",
+      "exitCode": 1
+    }
+  ]
+}
