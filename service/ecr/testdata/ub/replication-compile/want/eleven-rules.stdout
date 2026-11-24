@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.replication: constraints[2] (predicate): rules must contain 1-10 entries","path":"eleven-rules/factory.ub","span":{"start":{"line":5,"column":48,"offset":187}}}],"files":[]}

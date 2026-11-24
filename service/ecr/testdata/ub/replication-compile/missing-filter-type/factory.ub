@@ -1,0 +1,21 @@
+factory: {
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: {} }
+  resources: {
+    replication: ecr.replication-configuration {
+      replication-configuration: {
+        rules: [
+          {
+            destinations:       [{ region: 'us-east-1', registry-id: '000000000001' }]
+            repository-filters: [{ filter: '' }]
+          },
+        ]
+      }
+    }
+  }
+  outputs: {
+    account: { value: resource.replication.registry-id }
+    region:  { value: resource.replication.region }
+    config:  { value: resource.replication.replication-configuration }
+  }
+}

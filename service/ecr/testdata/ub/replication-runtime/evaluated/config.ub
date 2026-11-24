@@ -1,0 +1,16 @@
+stack: {
+  factory: {
+    inputs: {
+      endpoint: 'ENDPOINT'
+      region:   'us-east-1'
+      trigger:  'test'
+      configuration: {
+        rules: [{ destinations: [{ region: 'us-west-1', registry-id: '000000000001' }] }]
+      }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

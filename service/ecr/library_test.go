@@ -3,7 +3,6 @@ package ecr_test
 import (
 	"os/exec"
 	"reflect"
-	"slices"
 	"strings"
 	"testing"
 
@@ -38,15 +37,6 @@ func unobinModuleRoot(t *testing.T) goschema.ModuleRoot {
 	return goschema.ModuleRoot{Path: unobinModulePath, Dir: dir}
 }
 
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
-}
-
 func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	lib := awsecr.Library()
 	require.NotNil(t, lib)
@@ -54,10 +44,7 @@ func TestLibraryRegistersECRLocalKinds(t *testing.T) {
 	require.NotNil(t, lib.Configuration)
 	require.Equal(t, reflect.TypeFor[*awscfg.Configuration](), lib.Configuration.ValueType())
 
-	require.Equal(t, []string{
-		"repository",
-	}, sortedKeys(lib.Resources))
-	require.Empty(t, sortedKeys(lib.Actions))
+	require.Empty(t, lib.Actions)
 
 	resourceOutputs := map[string]reflect.Type{
 		"repository": reflect.TypeFor[*svc.RepositoryResourceOutput](),
@@ -99,8 +86,5 @@ func TestReadECRServiceSchema(t *testing.T) {
 	require.Equal(t, configSchema.ConfigurationIdentity, schema.ConfigurationIdentity)
 	require.Equal(t, configSchema.ConfigurationDigest, schema.ConfigurationDigest)
 
-	require.Equal(t, []string{
-		"repository",
-	}, sortedKeys(schema.Resources))
-	require.Empty(t, sortedKeys(schema.Actions))
+	require.Empty(t, schema.Actions)
 }

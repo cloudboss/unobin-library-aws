@@ -1,0 +1,43 @@
+factory: {
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: { endpoint-url: input.endpoint, region: input.region, max-attempts: 1 } }
+  inputs: {
+    endpoint: { type: string }
+    region:   { type: string }
+    configuration: {
+      type: optional(
+        object(
+          {
+            rules: list(
+              object(
+                {
+                  destinations: list(object({ region: string, registry-id: string }))
+                  repository-filters: optional(
+                    list(object({ filter: string, filter-type: string })),
+                  )
+                },
+              ),
+            )
+          },
+        ),
+      )
+    }
+    trigger: { type: string }
+  }
+  actions: {
+    seed: test.seed {
+      @trigger: input.trigger
+      echo:     input.configuration
+    }
+  }
+  resources: {
+    replication: ecr.replication-configuration {
+      replication-configuration: action.seed.value
+    }
+  }
+  outputs: {
+    account:       { value: resource.replication.registry-id }
+    region:        { value: resource.replication.region }
+    configuration: { value: resource.replication.replication-configuration }
+  }
+}

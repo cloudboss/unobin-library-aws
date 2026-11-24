@@ -1,0 +1,13 @@
+stack: {
+  factory: {
+    inputs: {
+      configuration: {
+        rules: [{ destinations: [{ region: 'eu-west-1', registry-id: '000000000002' }] }]
+      }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

@@ -1,0 +1,42 @@
+factory: {
+  imports:         { ecr: 'github.com/cloudboss/unobin-library-aws//service/ecr' }
+  library-configs: { ecr: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    configuration: {
+      type: object(
+        {
+          rules: list(
+            object(
+              {
+                destinations:       list(object({ region: string, registry-id: string }))
+                repository-filters: optional(list(object({ filter: string, filter-type: string })))
+              },
+            ),
+          )
+        },
+      )
+      default: {
+        rules: [
+          {
+            destinations:       [{ region: 'us-west-2', registry-id: '000000000001' }]
+            repository-filters: [{ filter: 'unobin-initial', filter-type: 'PREFIX_MATCH' }]
+          },
+        ]
+      }
+    }
+  }
+  resources: {
+    replication: ecr.replication-configuration {
+      replication-configuration: input.configuration
+    }
+  }
+  outputs: {
+    registry-id:   { value: resource.replication.registry-id }
+    region:        { value: resource.replication.region }
+    configuration: { value: resource.replication.replication-configuration }
+  }
+}

@@ -32,12 +32,15 @@ func Library() *runtime.Library {
 		Name:        "aws-ecr",
 		Description: "AWS ECR library for Unobin.",
 		Compatibility: runtime.LibraryCompatibility{
-			RequiredAPI:            "1.0",
+			RequiredAPI:            "1.1",
 			SuggestedUnobinVersion: "v0.13.0",
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
 			"repository": makeResource[svc.RepositoryResource, *svc.RepositoryResourceOutput](),
+			"replication-configuration": makeResource[
+				svc.ReplicationConfigurationResource, *svc.ReplicationConfigurationResourceOutput,
+			](),
 		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"image":      makeDataSource[svc.ImageDataSource, *svc.ImageDataSourceOutput](),
