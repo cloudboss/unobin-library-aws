@@ -1,0 +1,23 @@
+factory: {
+  imports: { sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs' }
+  inputs:  { endpoint: { type: string }, lookup: { type: string }, phase: { type: string } }
+  library-configs: {
+    sqs: { region: 'us-gov-west-1', endpoint-url: input.endpoint, max-attempts: 1 }
+  }
+  resources: {
+    seed: sqs.queue {
+      name: input.lookup
+      tags: { phase: input.phase }
+    }
+    consumer: test.value {
+      uri: data-source.lookup.tags.phase
+    }
+  }
+  data-sources: {
+    lookup: sqs.queue {
+      queue-name:  resource.seed.name
+      @depends-on: [resource.seed]
+    }
+  }
+  outputs: { phase: { value: data-source.lookup.tags.phase } }
+}

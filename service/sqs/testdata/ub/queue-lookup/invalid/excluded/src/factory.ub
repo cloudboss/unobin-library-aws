@@ -1,0 +1,18 @@
+factory: {
+  imports:         { aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs' }
+  library-configs: { aws-sqs: { region: 'us-east-1' } }
+  data-sources: {
+    tags: aws-sqs.queue {
+      queue-name: 'a'
+      tags:       { ordinary: 'value' }
+    }
+    region: aws-sqs.queue {
+      queue-name: 'a'
+      region:     'us-east-1'
+    }
+    owner: aws-sqs.queue {
+      queue-name:                 'a'
+      queue-owner-aws-account-id: '123'
+    }
+  }
+}

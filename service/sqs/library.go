@@ -31,5 +31,10 @@ func Library() *runtime.Library {
 			"queue":        makeResource[svc.QueueResource, *svc.QueueResourceOutput](),
 			"queue-policy": makeResource[svc.QueuePolicyResource, *svc.QueuePolicyResourceOutput](),
 		},
+		DataSources: map[string]runtime.DataSourceRegistration{
+			"queue": runtime.MakeDataSource[
+				svc.QueueDataSource, *svc.QueueDataSourceOutput, *awscfg.Configuration,
+			](),
+		},
 	}
 }

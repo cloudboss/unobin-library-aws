@@ -1,0 +1,29 @@
+{
+  "name": "managed",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/aws-sqs-queue-lookup",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/dev.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    },
+    {
+      "name": "validate-update",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/update.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

@@ -1,6 +1,6 @@
 stack: {
   factory: {
-    inputs: { visibility-timeout: 60 }
+    inputs: { visibility-timeout: 60, lookup-tag: 'updated' }
   }
 
   state: local {

@@ -1,0 +1,17 @@
+factory: {
+  imports:         { aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs' }
+  library-configs: { aws-sqs: { region: 'us-east-1' } }
+  data-sources: {
+    empty: aws-sqs.queue {
+      queue-name: ''
+    }
+    unusual: aws-sqs.queue {
+      queue-name: ' ?/ü ordinary.fifo '
+    }
+  }
+  outputs: {
+    queue-url: { value: data-source.empty.queue-url }
+    queue-arn: { value: data-source.unusual.queue-arn }
+    tags:      { value: data-source.unusual.tags }
+  }
+}

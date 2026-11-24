@@ -1,0 +1,13 @@
+factory: {
+  imports:         { aws-sqs: 'github.com/cloudboss/unobin-library-aws//service/sqs' }
+  library-configs: { aws-sqs: { region: 'us-east-1' } }
+  data-sources: {
+    missing: aws-sqs.queue {}
+    null: aws-sqs.queue {
+      queue-name: null
+    }
+    wrong: aws-sqs.queue {
+      queue-name: 123
+    }
+  }
+}

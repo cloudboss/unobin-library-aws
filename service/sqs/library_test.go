@@ -58,7 +58,6 @@ func TestLibraryRegistersSQSLocalResources(t *testing.T) {
 		"queue",
 		"queue-policy",
 	}, sortedKeys(lib.Resources))
-	require.Empty(t, lib.DataSources)
 	require.Empty(t, lib.Actions)
 
 	outputs := map[string]reflect.Type{
@@ -97,6 +96,5 @@ func TestReadSQSServiceSchema(t *testing.T) {
 		"queue",
 		"queue-policy",
 	}, sortedKeys(schema.Resources))
-	require.Empty(t, schema.DataSources)
 	require.Empty(t, schema.Actions)
 }

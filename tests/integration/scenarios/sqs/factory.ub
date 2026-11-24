@@ -15,6 +15,7 @@ factory: {
       type:    library-config('github.com/cloudboss/unobin-library-aws//config')
       default: {}
     }
+    lookup-tag: { type: string, default: 'initial' }
     visibility-timeout: {
       type:        integer
       default:     30
@@ -34,7 +35,7 @@ factory: {
       redrive-policy: $'''\-
         {"deadLetterTargetArn":"{{ resource.sqs-queue-dlq.arn }}","maxReceiveCount":5}
         '''
-      tags: { unobin: 'sqs-it' }
+      tags: { unobin: 'sqs-it', phase: input.lookup-tag }
     }
     sqs-queue-policy-it: aws-sqs.queue-policy {
       queue-url: resource.sqs-queue-it.url
@@ -46,9 +47,19 @@ factory: {
     }
   }
 
+  data-sources: {
+    sqs-queue-lookup: aws-sqs.queue {
+      queue-name:  resource.sqs-queue-it.name
+      @depends-on: [resource.sqs-queue-it]
+    }
+  }
+
   outputs: {
-    queue-url: { value: resource.sqs-queue-it.url }
-    queue-arn: { value: resource.sqs-queue-it.arn }
-    dlq-arn:   { value: resource.sqs-queue-dlq.arn }
+    lookup-queue-url: { value: data-source.sqs-queue-lookup.queue-url }
+    lookup-queue-arn: { value: data-source.sqs-queue-lookup.queue-arn }
+    lookup-tags:      { value: data-source.sqs-queue-lookup.tags }
+    queue-url:        { value: resource.sqs-queue-it.url }
+    queue-arn:        { value: resource.sqs-queue-it.arn }
+    dlq-arn:          { value: resource.sqs-queue-dlq.arn }
   }
 }
