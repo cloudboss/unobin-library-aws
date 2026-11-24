@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"unknown field \"arn\" on eventbridge.archive","path":"invalid-output/factory.ub","span":{"start":{"line":10,"column":32,"offset":319}}}],"files":[]}

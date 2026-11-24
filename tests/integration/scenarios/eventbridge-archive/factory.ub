@@ -1,0 +1,29 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    description: { type: string, default: 'initial archive' }
+    pattern:     { type: string, default: '{"source":["unobin.initial"]}' }
+    days:        { type: integer, default: 1 }
+  }
+  resources: {
+    bus: eventbridge.event-bus {
+      name: 'unobin-it-archive-bus'
+    }
+    archive: eventbridge.archive {
+      name:             'unobin-it-archive'
+      event-source-arn: resource.bus.arn
+      description:      input.description
+      event-pattern:    input.pattern
+      retention-days:   input.days
+    }
+  }
+  outputs: {
+    name: { value: resource.archive.archive-name }
+    arn:  { value: resource.archive.archive-arn }
+  }
+}

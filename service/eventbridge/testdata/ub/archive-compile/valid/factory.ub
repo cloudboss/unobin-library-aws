@@ -1,0 +1,106 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { region: 'us-east-1' } }
+  resources: {
+    small: eventbridge.archive {
+      name:               '.'
+      event-source-arn:   ''
+      description:        null
+      event-pattern:      null
+      kms-key-identifier: null
+      retention-days:     null
+    }
+    large: eventbridge.archive {
+      name:             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      event-source-arn: ''
+    }
+    archive: eventbridge.archive {
+      name:             'archive'
+      event-source-arn: 'arn:aws:events:us-east-1:123456789012:event-bus/test'
+      description: '''\-
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééééé
+        ééééééééééééééééééééééééééééééééééééééééé
+        '''
+      kms-key-identifier: '''\-
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+        '''
+      retention-days: -1
+      event-pattern:  '{}'
+    }
+    empty: eventbridge.archive {
+      name:               'empty'
+      event-source-arn:   ''
+      event-pattern:      ''
+      description:        ''
+      kms-key-identifier: ''
+      retention-days:     0
+    }
+    scalar: eventbridge.archive {
+      name:               'scalar'
+      event-source-arn:   ''
+      event-pattern:      'true'
+      description:        ''
+      kms-key-identifier: ''
+      retention-days:     0
+    }
+    null: eventbridge.archive {
+      name:               'null'
+      event-source-arn:   ''
+      event-pattern:      'null'
+      description:        ''
+      kms-key-identifier: ''
+      retention-days:     0
+    }
+    number: eventbridge.archive {
+      name:               'number'
+      event-source-arn:   ''
+      event-pattern:      '1e2'
+      description:        ''
+      kms-key-identifier: ''
+      retention-days:     0
+    }
+    text: eventbridge.archive {
+      name:               'text'
+      event-source-arn:   ''
+      event-pattern:      '"text"'
+      description:        ''
+      kms-key-identifier: ''
+      retention-days:     0
+    }
+  }
+  outputs: {
+    arn:         { value: resource.archive.archive-arn }
+    name:        { value: resource.archive.archive-name }
+    source:      { value: resource.archive.event-source-arn }
+    description: { value: resource.archive.description }
+    pattern:     { value: resource.archive.event-pattern }
+    key:         { value: resource.archive.kms-key-identifier }
+    days:        { value: resource.archive.retention-days }
+  }
+}

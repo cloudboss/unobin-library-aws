@@ -1,0 +1,13 @@
+stack: {
+  factory: {
+    inputs: {
+      description: 'updated archive'
+      pattern:     '{"source":["unobin.updated"]}'
+      days:        7
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

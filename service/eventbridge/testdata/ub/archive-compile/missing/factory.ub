@@ -1,0 +1,7 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { region: 'us-east-1' } }
+  resources: {
+    missing: eventbridge.archive {}
+  }
+}

@@ -1,0 +1,34 @@
+factory: {
+  imports:         { eventbridge: 'github.com/cloudboss/unobin-library-aws//service/eventbridge' }
+  library-configs: { eventbridge: { endpoint-url: input.endpoint, region: input.region } }
+  inputs: {
+    endpoint:    { type: string }
+    region:      { type: string }
+    name:        { type: string }
+    source:      { type: string }
+    description: { type: string }
+    pattern:     { type: string }
+    key:         { type: string }
+    days:        { type: integer }
+    trigger:     { type: string }
+  }
+  resources: {
+    archive: eventbridge.archive {
+      name:               input.name
+      event-source-arn:   input.source
+      description:        input.description
+      event-pattern:      input.pattern
+      kms-key-identifier: input.key
+      retention-days:     input.days
+    }
+  }
+  outputs: {
+    arn:         { value: resource.archive.archive-arn }
+    name:        { value: resource.archive.archive-name }
+    source:      { value: resource.archive.event-source-arn }
+    description: { value: resource.archive.description }
+    pattern:     { value: resource.archive.event-pattern }
+    key:         { value: resource.archive.kms-key-identifier }
+    days:        { value: resource.archive.retention-days }
+  }
+}

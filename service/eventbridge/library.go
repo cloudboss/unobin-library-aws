@@ -37,6 +37,7 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"archive": makeResource[svc.ArchiveResource, *svc.ArchiveResourceOutput](),
 			"event-bus-policy": makeResource[
 				svc.EventBusPolicyResource, *svc.EventBusPolicyResourceOutput](),
 			"event-bus": makeResource[svc.EventBusResource, *svc.EventBusResourceOutput](),
