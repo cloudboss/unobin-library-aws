@@ -142,9 +142,11 @@ func verifyWAFNoOp(ctx context.Context, buildDir string) error {
 		return fmt.Errorf("decode plan after clearing WAF resources: %w", err)
 	}
 	want := map[string]runtime.Decision{
-		"resource.ip-set-clear": runtime.DecisionNoOp,
-		"resource.ip-set-edit":  runtime.DecisionNoOp,
-		"resource.rule-group":   runtime.DecisionNoOp,
+		"resource.regex-pattern-set-clear": runtime.DecisionNoOp,
+		"resource.regex-pattern-set-edit":  runtime.DecisionNoOp,
+		"resource.ip-set-clear":            runtime.DecisionNoOp,
+		"resource.ip-set-edit":             runtime.DecisionNoOp,
+		"resource.rule-group":              runtime.DecisionNoOp,
 	}
 	got := map[string]runtime.Decision{}
 	for _, step := range plan.Steps {

@@ -42,6 +42,10 @@ factory: {
       type:    boolean
       default: false
     }
+    clear-regex-pattern-set: {
+      type:    boolean
+      default: false
+    }
     ip-set-description: {
       type:    optional(string)
       default: 'initial'
@@ -61,6 +65,22 @@ factory: {
   }
 
   resources: {
+    regex-pattern-set-clear: aws-wafv2.regex-pattern-set {
+      name:        'unobin-it-wafv2-regex-clear'
+      scope:       'REGIONAL'
+      description: if input.clear-regex-pattern-set then null else input.description
+      regular-expression-list: if input.clear-regex-pattern-set
+        then null
+        else [{ regex-string: '^initial' }, { regex-string: 'example$' }]
+      tags: if input.clear-regex-pattern-set then null else input.tags
+    }
+    regex-pattern-set-edit: aws-wafv2.regex-pattern-set {
+      name:                    'unobin-it-wafv2-regex-edit'
+      scope:                   'REGIONAL'
+      description:             input.description
+      regular-expression-list: [{ regex-string: input.search-string }]
+      tags:                    input.tags
+    }
     ip-set-clear: aws-wafv2.ip-set {
       name:               'unobin-it-wafv2-ip-set-clear'
       scope:              'REGIONAL'

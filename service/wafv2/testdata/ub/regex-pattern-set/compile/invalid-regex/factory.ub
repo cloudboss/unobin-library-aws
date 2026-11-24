@@ -1,0 +1,10 @@
+factory: {
+  imports:         { waf: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { waf: {} }
+  resources: {
+    patterns: waf.regex-pattern-set {
+      scope:                   'REGIONAL'
+      regular-expression-list: [{ regex-string: '[' }]
+    }
+  }
+}

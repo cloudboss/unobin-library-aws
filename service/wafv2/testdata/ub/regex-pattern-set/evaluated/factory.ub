@@ -1,0 +1,23 @@
+factory: {
+  imports:         { aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { aws-wafv2: input.aws-config }
+  inputs: {
+    aws-config:  { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    scope:       { type: string }
+    name:        { type: optional(string) }
+    name-prefix: { type: optional(string) }
+    tags:        { type: optional(map(string)) }
+    description: { type: optional(string) }
+    regular-expression-list: { type: optional(list(object({ regex-string: string }))) }
+  }
+  resources: {
+    patterns: aws-wafv2.regex-pattern-set {
+      scope:                   input.scope
+      name:                    input.name
+      name-prefix:             input.name-prefix
+      tags:                    input.tags
+      description:             input.description
+      regular-expression-list: input.regular-expression-list
+    }
+  }
+}

@@ -1,0 +1,17 @@
+stack: {
+  factory: {
+    inputs: {
+      aws-config:              { endpoint-url: '__ENDPOINT__', region: 'us-west-2' }
+      scope:                   'REGIONAL'
+      name:                    'example'
+      name-prefix:             null
+      description:             null
+      regular-expression-list: null
+      tags:                    null
+    }
+  }
+  state: local {
+    path: '.state'
+  }
+  encryption: noop {}
+}

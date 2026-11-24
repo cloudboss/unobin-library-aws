@@ -1,0 +1,388 @@
+{
+  "name": "compile-wafv2-regex-pattern-set",
+  "rootPath": ".",
+  "executor": "root",
+  "cliVersion": "v0.13.0",
+  "commands": [
+    {
+      "name": "valid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid",
+        "-o",
+        "build-valid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "valid-boundaries",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid-boundaries",
+        "-o",
+        "build-valid-boundaries",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid-boundaries.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "valid-prefix",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid-prefix",
+        "-o",
+        "build-valid-prefix",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid-prefix.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "missing-scope",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "missing-scope/factory.ub",
+        "-o",
+        "build-missing-scope",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing-scope.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null-scope",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "null-scope/factory.ub",
+        "-o",
+        "build-null-scope",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null-scope.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "lowercase-scope",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "lowercase-scope/factory.ub",
+        "-o",
+        "build-lowercase-scope",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/lowercase-scope.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "unknown-scope",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "unknown-scope/factory.ub",
+        "-o",
+        "build-unknown-scope",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/unknown-scope.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "name-conflict",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "name-conflict/factory.ub",
+        "-o",
+        "build-name-conflict",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/name-conflict.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "empty-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "empty-name/factory.ub",
+        "-o",
+        "build-empty-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/empty-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "long-name/factory.ub",
+        "-o",
+        "build-long-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-prefix",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "long-prefix/factory.ub",
+        "-o",
+        "build-long-prefix",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-prefix.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "invalid-name",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid-name/factory.ub",
+        "-o",
+        "build-invalid-name",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/invalid-name.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "empty-description",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "empty-description/factory.ub",
+        "-o",
+        "build-empty-description",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/empty-description.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-description",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "long-description/factory.ub",
+        "-o",
+        "build-long-description",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-description.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "missing-regex",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "missing-regex/factory.ub",
+        "-o",
+        "build-missing-regex",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing-regex.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null-regex",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "null-regex/factory.ub",
+        "-o",
+        "build-null-regex",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null-regex.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "empty-regex",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "empty-regex/factory.ub",
+        "-o",
+        "build-empty-regex",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/empty-regex.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "long-regex",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "long-regex/factory.ub",
+        "-o",
+        "build-long-regex",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/long-regex.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "invalid-regex",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "invalid-regex/factory.ub",
+        "-o",
+        "build-invalid-regex",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/invalid-regex.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong-type",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong-type/factory.ub",
+        "-o",
+        "build-wrong-type",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong-type.stdout",
+      "exitCode": 1
+    }
+  ]
+}

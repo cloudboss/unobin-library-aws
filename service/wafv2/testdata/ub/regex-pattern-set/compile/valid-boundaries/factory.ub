@@ -1,0 +1,48 @@
+factory: {
+  imports:         { waf: 'github.com/cloudboss/unobin-library-aws//service/wafv2' }
+  library-configs: { waf: {} }
+  resources: {
+    patterns: waf.regex-pattern-set {
+      scope: 'CLOUDFRONT'
+      name: '''\-
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        '''
+      description: @core.join(
+        [
+          'éééééééééééééééééééééééé',
+          'éééééééééééééééééééééééé',
+          'éééééééééééééééééééééééé',
+          'éééééééééééééééééééééééé',
+          'éééééééééééééééééééééééé', 'éééééééé',
+        ],
+        '',
+      )
+      regular-expression-list: [
+        {
+          regex-string: @core.join(
+            [
+              'éééééééééééééééééééééééé',
+              'éééééééééééééééééééééééé',
+              'éééééééééééééééééééééééé',
+              'éééééééééééééééééééééééé', 'éééé',
+            ],
+            '',
+          )
+        },
+      ]
+    }
+  }
+  outputs: {
+    id:                      { value: resource.patterns.id }
+    arn:                     { value: resource.patterns.arn }
+    name:                    { value: resource.patterns.name }
+    scope:                   { value: resource.patterns.scope }
+    region:                  { value: resource.patterns.region }
+    name-prefix:             { value: resource.patterns.name-prefix }
+    lock-token:              { value: resource.patterns.lock-token }
+    description:             { value: resource.patterns.description }
+    regular-expression-list: { value: resource.patterns.regular-expression-list }
+    tags:                    { value: resource.patterns.tags }
+  }
+}

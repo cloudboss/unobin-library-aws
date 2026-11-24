@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.type","severity":"error","message":"missing required field \"regex-string\" on object({ regex-string: string })","path":"missing-regex/factory.ub","span":{"start":{"line":7,"column":33,"offset":254}}}],"files":[]}

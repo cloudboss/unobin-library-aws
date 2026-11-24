@@ -2,6 +2,7 @@ stack: {
   factory: {
     inputs: {
       clear-rule-group:             true
+      clear-regex-pattern-set:      true
       ip-set-description:           null
       ip-set-addresses:             null
       description:                  'updated'

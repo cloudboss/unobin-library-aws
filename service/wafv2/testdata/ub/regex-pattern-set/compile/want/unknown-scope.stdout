@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.schema","severity":"error","message":"resource.patterns: constraints[2] (predicate): predicate requirement not satisfied","path":"unknown-scope/factory.ub","span":{"start":{"line":5,"column":37,"offset":178}}}],"files":[]}

@@ -1,0 +1,26 @@
+factory: {
+  imports: {
+    fixture:   'example.test/waf-fixture'
+    aws-wafv2: 'github.com/cloudboss/unobin-library-aws//service/wafv2'
+  }
+  library-configs: { aws-wafv2: input.aws-config }
+  inputs: {
+    aws-config:   { type: library-config('github.com/cloudboss/unobin-library-aws//config') }
+    name:         { type: string }
+    scope:        { type: string }
+    regex-string: { type: string }
+  }
+  actions: {
+    seed: fixture.seed {
+      next-scope: input.scope
+      next-regex: input.regex-string
+    }
+  }
+  resources: {
+    patterns: aws-wafv2.regex-pattern-set {
+      scope:                   action.seed.scope
+      name:                    input.name
+      regular-expression-list: [{ regex-string: action.seed.regex }]
+    }
+  }
+}
