@@ -31,5 +31,10 @@ func Library() *runtime.Library {
 		Resources: map[string]runtime.ResourceRegistration{
 			"project": makeResource[svc.ProjectResource, *svc.ProjectResourceOutput](),
 		},
+		Actions: map[string]runtime.ActionRegistration{
+			"start-build": runtime.MakeAction[
+				svc.StartBuildAction, *svc.StartBuildActionOutput, *awscfg.Configuration,
+			](),
+		},
 	}
 }

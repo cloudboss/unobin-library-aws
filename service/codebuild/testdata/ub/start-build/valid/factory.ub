@@ -1,0 +1,33 @@
+factory: {
+  imports:         { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  library-configs: { codebuild: {} }
+  actions: {
+    omitted: codebuild.start-build {
+      project-name: ''
+    }
+    empty: codebuild.start-build {
+      project-name:                   ''
+      source-version:                 ''
+      environment-variables-override: []
+      timeout:                        0
+    }
+    nulls: codebuild.start-build {
+      project-name:                   ''
+      source-version:                 null
+      environment-variables-override: null
+      timeout:                        null
+      region:                         null
+    }
+    populated: codebuild.start-build {
+      project-name: ''
+      timeout:      -1
+      environment-variables-override: [
+        { name: '', value: '' },
+        { name: 'x', value: 'a', type: null },
+        { name: 'x', value: 'b', type: '' },
+        { name: 'x', value: 'c', type: 'custom' },
+      ]
+    }
+  }
+  outputs: { build-id: { value: action.populated.build-id } }
+}

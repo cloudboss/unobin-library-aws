@@ -1,0 +1,30 @@
+factory: {
+  imports: {
+    codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild'
+    fixture:   'github.com/cloudboss/unobin-library-aws//tests/integration/fixtures/codebuildbuild'
+  }
+  inputs: { endpoint: { type: string } }
+  library-configs: {
+    codebuild: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+    fixture:   { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  resources: {
+    role: test.parent {
+      name: 'role'
+    }
+    project: test.parent {
+      name:       'project'
+      dependency: resource.role.name
+    }
+    cleanup: fixture.cleanup {
+      project-name: resource.project.name
+      project-arn:  resource.project.name
+    }
+  }
+  actions: {
+    build: codebuild.start-build {
+      project-name: resource.cleanup.project-name
+      timeout:      0
+    }
+  }
+}

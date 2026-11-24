@@ -1,0 +1,7 @@
+factory: {
+  imports:         { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  library-configs: { codebuild: {} }
+  actions: {
+    build: codebuild.start-build {}
+  }
+}

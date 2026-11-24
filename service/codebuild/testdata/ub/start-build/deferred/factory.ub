@@ -1,0 +1,31 @@
+factory: {
+  imports: { codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild' }
+  library-configs: {
+    codebuild: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 }
+  }
+  inputs: {
+    endpoint: { type: string }
+    project:  { type: optional(string) }
+    variables: {
+      type: optional(
+        list(object({ name: optional(string), value: optional(string), type: optional(string) })),
+      )
+      default: null
+    }
+    trigger: { type: string }
+  }
+  actions: {
+    project: test.seed {
+      echo: input.project
+    }
+    variables: test.seed {
+      echo: input.variables
+    }
+    build: codebuild.start-build {
+      @trigger:                       input.trigger
+      project-name:                   action.project.value
+      environment-variables-override: action.variables.value
+    }
+  }
+  outputs: { build-id: { value: action.build.build-id } }
+}

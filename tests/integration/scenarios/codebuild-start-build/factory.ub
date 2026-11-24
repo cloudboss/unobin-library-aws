@@ -1,0 +1,70 @@
+factory: {
+  description: 'Starts builds, verifies overrides, and owns cleanup before invocation.'
+  imports: {
+    codebuild: 'github.com/cloudboss/unobin-library-aws//service/codebuild'
+    iam:       'github.com/cloudboss/unobin-library-aws//service/iam'
+    fixture:   'github.com/cloudboss/unobin-library-aws//tests/integration/fixtures/codebuildbuild'
+  }
+  library-configs: { codebuild: input.aws-config, iam: input.aws-config, fixture: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    batch: { type: string, default: 'applied' }
+  }
+  resources: {
+    role: iam.role {
+      role-name: 'unobin-it-start-build-role'
+      assume-role-policy-document: @core.to-json(
+        {
+          Version: '2012-10-17'
+          Statement: [
+            {
+              Effect:    'Allow'
+              Principal: { Service: 'codebuild.amazonaws.com' }
+              Action:    'sts:AssumeRole'
+            },
+          ]
+        },
+      )
+    }
+    project: codebuild.project {
+      name:         'unobin-it-start-build'
+      service-role: resource.role.arn
+      artifacts:    { type: 'NO_ARTIFACTS' }
+      environment: {
+        compute-type: 'BUILD_GENERAL1_SMALL'
+        image:        'aws/codebuild/standard:7.0'
+        type:         'LINUX_CONTAINER'
+      }
+      source: {
+        type:      'NO_SOURCE'
+        buildspec: 'version: 0.2\nphases:\n  build:\n    commands:\n      - echo "$RUN"\n'
+      }
+      logs-config: { cloud-watch-logs: { status: 'DISABLED' } }
+    }
+    cleanup: fixture.cleanup {
+      project-name: resource.project.name
+      project-arn:  resource.project.arn
+    }
+  }
+  actions: {
+    build: codebuild.start-build {
+      @trigger:                       input.batch
+      project-name:                   resource.cleanup.project-name
+      environment-variables-override: [{ name: 'RUN', value: input.batch, type: 'PLAINTEXT' }]
+    }
+  }
+  data-sources: {
+    build: fixture.build-check {
+      build-id:     action.build.build-id
+      project-name: resource.cleanup.project-name
+      variable:     input.batch
+    }
+  }
+  outputs: {
+    build-id: { value: action.build.build-id }
+    verified: { value: data-source.build.verified }
+  }
+}
