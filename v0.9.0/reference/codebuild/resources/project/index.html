@@ -1,0 +1,4841 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://cloudboss.co/docs/unobin-library-aws/v0.9.0/reference/codebuild/resources/project/">
+      
+      
+        <link rel="prev" href="../../configuration/">
+      
+      
+        <link rel="next" href="../../actions/start-build/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>project - unobin AWS library</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Cantarell:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Cantarell";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+    
+  
+  
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MZGMN4NWS2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "G-MZGMN4NWS2");
+    </script>
+  
+  <style>/* The cloudboss look: cloudboss.co palette and typography over Material. */
+
+:root {
+  --md-text-font: "Cantarell";
+  --md-code-font: "SFMono-Regular", "Consolas", "Liberation Mono", "Menlo";
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-fg-color: #1a1a1a;
+  --md-default-fg-color--light: #555555;
+  --md-default-fg-color--lighter: #888888;
+  --md-default-fg-color--lightest: #ebebeb;
+  --md-default-bg-color: #ffffff;
+  --md-typeset-color: #1a1a1a;
+
+  /* White header with dark text, like cloudboss.co. */
+  --md-primary-fg-color: #ffffff;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark: #f5f5f5;
+  --md-primary-bg-color: #1a1a1a;
+  --md-primary-bg-color--light: #555555;
+
+  /* The one accent: cloudboss link blue. */
+  --md-accent-fg-color: #2a7ab5;
+  --md-typeset-a-color: #2a7ab5;
+
+  --md-code-bg-color: #f5f5f5;
+  --md-code-fg-color: #1a1a1a;
+}
+
+.md-header {
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  box-shadow: none;
+}
+
+/* A bit larger than Material's default 1.2rem logo. */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 1.8rem;
+  width: auto;
+}
+
+.md-typeset {
+  line-height: 1.6;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+.md-typeset h2 {
+  margin-top: 1.8em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset pre > code {
+  border-radius: 9px;
+}
+
+.md-nav__link--active,
+.md-nav__item .md-nav__link--active {
+  font-weight: 700;
+}
+
+/* Admonitions styled like the cloudboss mockup callout: a soft-tinted box with a
+   left accent bar and an uppercase title, no icon and no tinted title bar. Each type
+   sets --cb-admon to its own color; the box, bar, and title all read from it. */
+.md-typeset .admonition,
+.md-typeset details {
+  --cb-admon: var(--md-accent-fg-color);
+  margin: 1.5em 0;
+  padding: 0;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-left: 4px solid var(--cb-admon);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cb-admon) 9%, #ffffff);
+  box-shadow: none;
+  font-size: 0.8rem;
+}
+
+/* Informational types all share one blue. */
+.md-typeset .note,
+.md-typeset .info,
+.md-typeset .todo,
+.md-typeset .abstract,
+.md-typeset .summary,
+.md-typeset .tldr,
+.md-typeset .tip,
+.md-typeset .hint,
+.md-typeset .important,
+.md-typeset .success,
+.md-typeset .check,
+.md-typeset .done,
+.md-typeset .question,
+.md-typeset .help,
+.md-typeset .faq {
+  --cb-admon: #2a7ab5;
+}
+
+.md-typeset .warning,
+.md-typeset .caution,
+.md-typeset .attention {
+  --cb-admon: #b8730a;
+}
+
+.md-typeset .danger,
+.md-typeset .error,
+.md-typeset .failure,
+.md-typeset .fail,
+.md-typeset .missing,
+.md-typeset .bug {
+  --cb-admon: #c0392b;
+}
+
+.md-typeset .example {
+  --cb-admon: #6a5acd;
+}
+
+.md-typeset .quote,
+.md-typeset .cite {
+  --cb-admon: #6b7280;
+}
+
+.md-typeset .admonition-title {
+  margin: 0;
+  padding: 0.65rem 0.85rem 0;
+  background: transparent;
+  border: 0;
+  color: var(--cb-admon);
+  font-weight: 700;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.md-typeset .admonition-title::before {
+  display: none;
+}
+
+.md-typeset .admonition > :not(.admonition-title) {
+  margin: 0;
+  padding: 0.2rem 0.85rem 0;
+}
+
+.md-typeset .admonition > :last-child {
+  padding-bottom: 0.7rem;
+}</style>
+  
+    <style>:root {
+  --md-grid-width: 88rem;
+  --ub-reference-font-size: 0.78rem;
+  --ub-reference-small-font-size: 0.72rem;
+  --ub-reference-field-name-font-size: 0.86rem;
+}
+
+.md-grid {
+  max-width: var(--md-grid-width);
+}
+
+.md-typeset :not(pre) > code {
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: inherit;
+  font-size: 0.9em;
+  padding: 0;
+}
+
+.md-typeset table:not([class]),
+.md-typeset .ub-fields,
+.md-typeset .ub-constraints {
+  font-size: var(--ub-reference-font-size);
+}
+
+.md-typeset table:not([class]) th:first-child,
+.md-typeset table:not([class]) td:first-child,
+.md-typeset table:not([class]) td:first-child code {
+  white-space: nowrap;
+}
+
+.md-typeset > p,
+.md-typeset > ul,
+.md-typeset > ol {
+  max-width: 48rem;
+}
+
+.md-typeset .ub-field {
+  border-top: 0.05rem solid var(--md-default-fg-color--lightest);
+  padding: 0.55rem 0;
+}
+
+.md-typeset .ub-field:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.md-typeset .ub-field-header {
+  align-items: baseline;
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: minmax(10rem, 0.85fr) minmax(14rem, 1.15fr);
+}
+
+.md-typeset .ub-field p,
+.md-typeset .ub-constraint p {
+  line-height: 1.42;
+  margin: 0.25em 0;
+}
+
+.md-typeset .ub-field-name {
+  font-size: var(--ub-reference-field-name-font-size);
+  font-weight: 700;
+}
+
+.md-typeset .ub-field-type,
+.md-typeset .ub-field-type-details {
+  color: var(--md-default-fg-color--light);
+  min-width: 0;
+}
+
+.md-typeset .ub-field-type code {
+  white-space: nowrap;
+}
+
+.md-typeset .ub-field-meta {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.md-typeset .ub-badge,
+.md-typeset .ub-default-label {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 999px;
+  color: var(--md-default-fg-color--light);
+  display: inline-flex;
+  font-size: var(--ub-reference-small-font-size);
+  line-height: 1.2;
+  padding: 0.08rem 0.38rem;
+}
+
+.md-typeset .ub-badge--required {
+  border-color: color-mix(in srgb, var(--md-accent-fg-color) 35%, #ffffff);
+  color: var(--md-accent-fg-color);
+  font-weight: 700;
+}
+
+.md-typeset .ub-badge--sensitive {
+  border-color: color-mix(in srgb, #c0392b 35%, #ffffff);
+  color: #9f2f24;
+  font-weight: 700;
+}
+
+.md-typeset .ub-field-default {
+  align-items: baseline;
+  display: grid;
+  gap: 0.3rem 0.45rem;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0.25em 0;
+}
+
+.md-typeset .ub-default-value,
+.md-typeset .ub-default-value-block {
+  justify-self: start;
+}
+
+.md-typeset .ub-default-value-block {
+  font-size: var(--ub-reference-small-font-size);
+  margin: 0;
+}
+
+.md-typeset .ub-default-value-block code {
+  font-size: inherit;
+}
+
+.md-typeset details.ub-field-type-details,
+.md-typeset details.ub-constraint-logic {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: inherit;
+  margin: 0;
+  padding: 0 !important;
+}
+
+.md-typeset details.ub-field-type-details {
+  display: inline-block;
+}
+
+.md-typeset details.ub-constraint-logic {
+  color: inherit;
+  display: block;
+  margin-top: 0.3rem;
+}
+
+.md-typeset details.ub-field-type-details > summary,
+.md-typeset details.ub-constraint-logic > summary {
+  align-items: baseline;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  gap: 0.3rem;
+  list-style: none;
+  margin: 0;
+  min-height: 0;
+  padding: 0 !important;
+  width: fit-content;
+}
+
+.md-typeset details.ub-field-type-details > summary {
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset details.ub-constraint-logic > summary {
+  color: var(--md-accent-fg-color);
+  font-size: var(--ub-reference-small-font-size);
+  font-weight: 700;
+}
+
+.md-typeset details.ub-field-type-details > summary::-webkit-details-marker,
+.md-typeset details.ub-constraint-logic > summary::-webkit-details-marker {
+  display: none;
+}
+
+.md-typeset details.ub-field-type-details > summary::before,
+.md-typeset details.ub-constraint-logic > summary::before {
+  -webkit-mask-image: none !important;
+  background: transparent !important;
+  color: var(--md-default-fg-color--lighter);
+  content: "▸" !important;
+  display: inline-block !important;
+  flex: none;
+  font-size: 0.65rem;
+  height: auto !important;
+  margin: 0;
+  mask-image: none !important;
+  position: static !important;
+  transform: translateY(-0.02rem);
+  width: auto !important;
+}
+
+.md-typeset details.ub-field-type-details > summary::after,
+.md-typeset details.ub-constraint-logic > summary::after {
+  content: none !important;
+  display: none !important;
+}
+
+.md-typeset details.ub-field-type-details[open] > summary::before,
+.md-typeset details.ub-constraint-logic[open] > summary::before {
+  transform: rotate(90deg) translateX(0.02rem);
+}
+
+.md-typeset .ub-field-type-block {
+  font-size: var(--ub-reference-small-font-size);
+  margin: 0.25rem 0 0;
+}
+
+.md-typeset details.ub-field-type-details[open] .ub-field-type-block {
+  background: color-mix(in srgb, var(--md-accent-fg-color) 7%, #ffffff);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-left: 3px solid var(--md-accent-fg-color);
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+}
+
+.md-typeset .ub-field-type-block code {
+  font-size: inherit;
+}
+
+.md-typeset .ub-field-description {
+  color: var(--md-default-fg-color--light);
+  margin-top: 0.35rem;
+}
+
+.md-typeset .ub-constraints {
+  margin-top: 0.4rem;
+}
+
+.md-typeset .ub-constraint-group {
+  margin: 1rem 0 1.15rem;
+}
+
+.md-typeset .ub-constraint-group-title {
+  border: 0;
+  font-size: 0.92rem;
+  letter-spacing: -0.005em;
+  margin: 0 0 0.35rem;
+  padding: 0;
+}
+
+.md-typeset .ub-constraint {
+  background: transparent;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 7px;
+  margin: 0.35rem 0;
+  padding: 0.5rem 0.65rem;
+}
+
+.md-typeset .ub-constraint-summary {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.md-typeset .ub-constraint-summary strong {
+  font-weight: 700;
+}
+
+.md-typeset .ub-constraint-logic dl {
+  display: grid;
+  gap: 0.18rem 0.7rem;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  margin: 0.35rem 0 0;
+}
+
+.md-typeset details.ub-constraint-logic[open] dl {
+  background: color-mix(in srgb, var(--md-accent-fg-color) 7%, #ffffff);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-left: 3px solid var(--md-accent-fg-color);
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+}
+
+.md-typeset .ub-constraint-logic dt {
+  color: var(--md-default-fg-color--light);
+  font-weight: 700;
+  margin: 0;
+}
+
+.md-typeset .ub-constraint-logic dd {
+  margin: 0;
+  min-width: 0;
+}
+
+@media screen and (max-width: 44.984375em) {
+  .md-typeset .ub-field-header,
+  .md-typeset .ub-constraint-logic dl {
+    display: block;
+  }
+
+  .md-typeset .ub-field-type code {
+    white-space: normal;
+  }
+
+  .md-typeset .ub-constraint-logic dd {
+    margin-bottom: 0.35rem;
+  }
+}</style>
+  
+
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#project-resource" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="unobin AWS library" class="md-header__button md-logo" aria-label="unobin AWS library" data-md-component="logo">
+      
+  <img src="../../../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            unobin AWS library
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              project
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cloudboss/unobin-library-aws" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cloudboss/unobin-library-aws
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="unobin AWS library" class="md-nav__button md-logo" aria-label="unobin AWS library" data-md-component="logo">
+      
+  <img src="../../../../assets/logo.svg" alt="logo">
+
+    </a>
+    unobin AWS library
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cloudboss/unobin-library-aws" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cloudboss/unobin-library-aws
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../meta/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS metadata
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../acm/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ACM
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../apigatewayv2/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Gateway v2
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../autoscaling/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto Scaling
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../cloudfront/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CloudFront
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../cloudtrail/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CloudTrail
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../cloudwatch/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CloudWatch
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../cloudwatchlogs/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CloudWatch Logs
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_10" id="__nav_2_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CodeBuild
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CodeBuild
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_10_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_10_3" id="__nav_2_10_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resources
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_10_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_10_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Resources
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    project
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../actions/start-build/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actions
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../cognitoidp/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cognito Identity Provider
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../dynamodb/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../dsql/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DSQL
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../ec2/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EC2
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../ecr/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ECR
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../ecs/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ECS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../efs/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EFS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../eks/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EKS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../elasticache/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ElastiCache
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../elbv2/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ELBv2
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../eventbridge/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EventBridge
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../iam/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IAM
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../kinesis/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kinesis
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../kms/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KMS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../lambda/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lambda
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../lambdamicrovms/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lambda MicroVMs
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../opensearch/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenSearch Service
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../rds/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RDS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../route53/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Route 53
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../s3/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../scheduler/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EventBridge Scheduler
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../secretsmanager/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Secrets Manager
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../sfn/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Step Functions
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../sns/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SNS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../sqs/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../ssm/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSM
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../sts/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    STS
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../../wafv2/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WAFv2
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Constraints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="project-resource">project resource<a class="headerlink" href="#project-resource" title="Permanent link">&para;</a></h1>
+<p>Source: <code>internal/service/codebuild/project_rsrc.go:12</code></p>
+<p>Example usage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>imports: {
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  aws-codebuild: &#39;github.com/cloudboss/unobin-library-aws//service/codebuild&#39;
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>}
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>resources: {
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  example: aws-codebuild.project {
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    # Set input fields here.
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  }
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>}
+</code></pre></div>
+<h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
+<div class="ub-fields">
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>name</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+<p class="ub-field-meta"><span class="ub-badge ub-badge--required">required</span></p>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>artifacts</strong></p>
+<details class="ub-field-type-details"><summary><code>object</code></summary>
+<pre class="ub-field-type-block"><code>object({
+  type: string
+  artifact-identifier: optional(string)
+  bucket-owner-access: optional(string)
+  encryption-disabled: optional(boolean)
+  location: optional(string)
+  name: optional(string)
+  namespace-type: optional(string)
+  override-artifact-name: optional(boolean)
+  packaging: optional(string)
+  path: optional(string)
+})</code></pre>
+</details>
+</div>
+<p class="ub-field-meta"><span class="ub-badge ub-badge--required">required</span></p>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>environment</strong></p>
+<details class="ub-field-type-details"><summary><code>object</code></summary>
+<pre class="ub-field-type-block"><code>object({
+  compute-type: string
+  image: string
+  type: string
+  certificate: optional(string)
+  docker-server: optional(
+    object({
+      compute-type: string
+      security-group-ids: optional(list(string))
+    })
+  )
+  fleet: optional(
+    object({
+      fleet-arn: optional(string)
+    })
+  )
+  environment-variables: optional(
+    list(
+      object({
+        name: string
+        value: string
+        type: optional(string)
+      })
+    )
+  )
+  image-pull-credentials-type: optional(string)
+  privileged-mode: optional(boolean)
+  registry-credential: optional(
+    object({
+      credential: string
+      credential-provider: string
+    })
+  )
+})</code></pre>
+</details>
+</div>
+<p class="ub-field-meta"><span class="ub-badge ub-badge--required">required</span></p>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>service-role</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+<p class="ub-field-meta"><span class="ub-badge ub-badge--required">required</span></p>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>source</strong></p>
+<details class="ub-field-type-details"><summary><code>object</code></summary>
+<pre class="ub-field-type-block"><code>object({
+  type: string
+  auth: optional(
+    object({
+      type: string
+      resource: string
+    })
+  )
+  build-status-config: optional(
+    object({
+      context: optional(string)
+      target-url: optional(string)
+    })
+  )
+  buildspec: optional(string)
+  git-clone-depth: optional(integer)
+  git-submodules-config: optional(
+    object({
+      fetch-submodules: boolean
+    })
+  )
+  insecure-ssl: optional(boolean)
+  location: optional(string)
+  report-build-status: optional(boolean)
+})</code></pre>
+</details>
+</div>
+<p class="ub-field-meta"><span class="ub-badge ub-badge--required">required</span></p>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>auto-retry-limit</strong></p>
+<p class="ub-field-type"><code>optional(integer)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>badge-enabled</strong></p>
+<p class="ub-field-type"><code>optional(boolean)</code></p>
+</div>
+<div class="ub-field-default">
+<span class="ub-default-label">default</span>
+<code class="ub-default-value">false</code>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>build-batch-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    service-role: string
+    combine-artifacts: optional(boolean)
+    restrictions: optional(
+      object({
+        compute-types-allowed: optional(list(string))
+        maximum-builds-allowed: optional(integer)
+      })
+    )
+    timeout-in-mins: optional(integer)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>cache</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    type: optional(string)
+    location: optional(string)
+    modes: optional(list(string))
+    cache-namespace: optional(string)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>concurrent-build-limit</strong></p>
+<p class="ub-field-type"><code>optional(integer)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>description</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>encryption-key</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>file-system-locations</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      identifier: optional(string)
+      location: optional(string)
+      mount-options: optional(string)
+      mount-point: optional(string)
+      type: optional(string)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>logs-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    cloud-watch-logs: optional(
+      object({
+        group-name: optional(string)
+        stream-name: optional(string)
+        status: optional(string)
+      })
+    )
+    s3-logs: optional(
+      object({
+        bucket-owner-access: optional(string)
+        encryption-disabled: optional(boolean)
+        location: optional(string)
+        status: optional(string)
+      })
+    )
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>project-visibility</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+<div class="ub-field-default">
+<span class="ub-default-label">default</span>
+<code class="ub-default-value">PRIVATE</code>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>queued-timeout-in-minutes</strong></p>
+<p class="ub-field-type"><code>integer</code></p>
+</div>
+<div class="ub-field-default">
+<span class="ub-default-label">default</span>
+<code class="ub-default-value">480</code>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>resource-access-role</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-artifacts</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      type: string
+      artifact-identifier: string
+      bucket-owner-access: optional(string)
+      encryption-disabled: optional(boolean)
+      location: optional(string)
+      name: optional(string)
+      namespace-type: optional(string)
+      override-artifact-name: optional(boolean)
+      packaging: optional(string)
+      path: optional(string)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-sources</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      type: string
+      source-identifier: string
+      auth: optional(
+        object({
+          type: string
+          resource: string
+        })
+      )
+      build-status-config: optional(
+        object({
+          context: optional(string)
+          target-url: optional(string)
+        })
+      )
+      buildspec: optional(string)
+      git-clone-depth: optional(integer)
+      git-submodules-config: optional(
+        object({
+          fetch-submodules: boolean
+        })
+      )
+      insecure-ssl: optional(boolean)
+      location: optional(string)
+      report-build-status: optional(boolean)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-source-versions</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      source-identifier: string
+      source-version: string
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>source-version</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>tags</strong></p>
+<p class="ub-field-type"><code>optional(map(string))</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>timeout-in-minutes</strong></p>
+<p class="ub-field-type"><code>integer</code></p>
+</div>
+<div class="ub-field-default">
+<span class="ub-default-label">default</span>
+<code class="ub-default-value">60</code>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>vpc-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    vpc-id: string
+    subnets: list(string)
+    security-group-ids: list(string)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+</div>
+
+<h2 id="input-constraints">Input Constraints<a class="headerlink" href="#input-constraints" title="Permanent link">&para;</a></h2>
+<div class="ub-constraints">
+<section class="ub-constraint-group" data-constraint-group="secondary-artifacts">
+<h3 class="ub-constraint-group-title">Secondary artifacts rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">ArtifactIdentifier is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.artifact-identifier != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">secondary collections accept at most 12 distinct configurations.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>@core.length(
+  {
+    for item in input.secondary-artifacts ?? [] :
+    @core.to-json(
+      {
+        artifact-identifier:    item.artifact-identifier
+        bucket-owner-access:    item.bucket-owner-access
+        encryption-disabled:    item.encryption-disabled
+        location:               item.location
+        name:                   item.name
+        namespace-type:         item.namespace-type
+        override-artifact-name: item.override-artifact-name
+        packaging:              item.packaging
+        path:                   item.path
+        type:                   item.type
+      },
+    ) =&gt; true...
+  },
+) &lt;= 12</code><br>
+<code>&amp;&amp; @core.length(
+  {
+    for item in input.secondary-sources ?? [] :
+    @core.to-json(
+      {
+        auth: if item.auth == null
+          then null
+          else { resource: item.auth.resource, type: item.auth.type }
+        build-status-config: if item.build-status-config == null
+          then null
+          else {
+            context:    item.build-status-config.context
+            target-url: item.build-status-config.target-url
+          }
+        buildspec:       item.buildspec
+        git-clone-depth: item.git-clone-depth
+        git-submodules-config: if item.git-submodules-config == null
+          then null
+          else { fetch-submodules: item.git-submodules-config.fetch-submodules }
+        insecure-ssl:        item.insecure-ssl
+        location:            item.location
+        report-build-status: item.report-build-status
+        source-identifier:   item.source-identifier
+        type:                item.type
+      },
+    ) =&gt; true...
+  },
+) &lt;= 12</code><br>
+<code>&amp;&amp; @core.length(
+  {
+    for item in input.secondary-source-versions ?? [] :
+    @core.to-json(
+      { source-identifier: item.source-identifier, source-version: item.source-version },
+    ) =&gt; true...
+  },
+) &lt;= 12</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">artifact must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type == &#39;CODEPIPELINE&#39;</code><br>
+<code>|| @each.value.type == &#39;S3&#39;</code><br>
+<code>|| @each.value.type == &#39;NO_ARTIFACTS&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">bucket must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.bucket-owner-access != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.bucket-owner-access == &#39;NONE&#39;</code><br>
+<code>|| @each.value.bucket-owner-access == &#39;READ_ONLY&#39;</code><br>
+<code>|| @each.value.bucket-owner-access == &#39;FULL&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">namespace must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.namespace-type != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.namespace-type == &#39;NONE&#39;</code><br>
+<code>|| @each.value.namespace-type == &#39;BUILD_ID&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">packaging must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-artifacts ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.packaging != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.packaging == &#39;NONE&#39;</code><br>
+<code>|| @each.value.packaging == &#39;ZIP&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="secondary-sources">
+<h3 class="ub-constraint-group-title">Secondary sources rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">SourceIdentifier is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.source-identifier != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">secondary source auth type and resource are required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.auth != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.auth.type != null</code><br>
+<code>&amp;&amp; @each.value.auth.resource != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">fetch-submodules is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.git-submodules-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.git-submodules-config.fetch-submodules != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">source must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type == &#39;CODECOMMIT&#39;</code><br>
+<code>|| @each.value.type == &#39;CODEPIPELINE&#39;</code><br>
+<code>|| @each.value.type == &#39;GITHUB&#39;</code><br>
+<code>|| @each.value.type == &#39;GITLAB&#39;</code><br>
+<code>|| @each.value.type == &#39;GITLAB_SELF_MANAGED&#39;</code><br>
+<code>|| @each.value.type == &#39;S3&#39;</code><br>
+<code>|| @each.value.type == &#39;BITBUCKET&#39;</code><br>
+<code>|| @each.value.type == &#39;GITHUB_ENTERPRISE&#39;</code><br>
+<code>|| @each.value.type == &#39;NO_SOURCE&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">auth must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.auth != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.auth.type == &#39;OAUTH&#39;</code><br>
+<code>|| @each.value.auth.type == &#39;BASIC_AUTH&#39;</code><br>
+<code>|| @each.value.auth.type == &#39;PERSONAL_ACCESS_TOKEN&#39;</code><br>
+<code>|| @each.value.auth.type == &#39;CODECONNECTIONS&#39;</code><br>
+<code>|| @each.value.auth.type == &#39;SECRETS_MANAGER&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">git-clone-depth must be at least 0.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-sources ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.git-clone-depth == null</code><br>
+<code>|| @each.value.git-clone-depth &gt;= 0</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="secondary-source-versions">
+<h3 class="ub-constraint-group-title">Secondary source versions rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">SourceIdentifier is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-source-versions ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.source-identifier != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">SourceVersion is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.secondary-source-versions ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.source-version != null</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="environment">
+<h3 class="ub-constraint-group-title">Environment rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Name is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.environment.environment-variables ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.name != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Value is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.environment.environment-variables ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.value != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.ComputeType is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment.compute-type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.Image is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment.image != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.DockerServer.ComputeType is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.docker-server != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.docker-server.compute-type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.RegistryCredential.Credential is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.registry-credential != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.registry-credential.credential != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Environment.RegistryCredential.CredentialProvider is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.registry-credential != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.registry-credential.credential-provider != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">certificate must end with .pem or .zip.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>@core.is-match(input.environment.certificate, &#39;\\.(pem|zip)$&#39;)</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">security groups or subnets exceed the collection limit.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>@core.length(input.environment.docker-server.security-group-ids ?? []) &lt;= 5</code><br>
+<code>&amp;&amp; @core.length({ for item in input.vpc-config.subnets ?? [] : item =&gt; true... }) &lt;= 16</code><br>
+<code>&amp;&amp; @core.length({ for item in input.vpc-config.security-group-ids ?? [] : item =&gt; true... }) &lt;= 5</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">compute must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment.compute-type == &#39;BUILD_GENERAL1_SMALL&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_GENERAL1_MEDIUM&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_GENERAL1_LARGE&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_GENERAL1_XLARGE&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_GENERAL1_2XLARGE&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_LAMBDA_1GB&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_LAMBDA_2GB&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_LAMBDA_4GB&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_LAMBDA_8GB&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;BUILD_LAMBDA_10GB&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;ATTRIBUTE_BASED_COMPUTE&#39;</code><br>
+<code>|| input.environment.compute-type == &#39;CUSTOM_INSTANCE_TYPE&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>environment</strong> must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.environment.type == &#39;WINDOWS_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;LINUX_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;LINUX_GPU_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;ARM_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;WINDOWS_SERVER_2019_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;WINDOWS_SERVER_2022_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;LINUX_LAMBDA_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;ARM_LAMBDA_CONTAINER&#39;</code><br>
+<code>|| input.environment.type == &#39;LINUX_EC2&#39;</code><br>
+<code>|| input.environment.type == &#39;ARM_EC2&#39;</code><br>
+<code>|| input.environment.type == &#39;WINDOWS_EC2&#39;</code><br>
+<code>|| input.environment.type == &#39;MAC_ARM&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">compute must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.docker-server != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.docker-server.compute-type == &#39;BUILD_GENERAL1_SMALL&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_GENERAL1_MEDIUM&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_GENERAL1_LARGE&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_GENERAL1_XLARGE&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_GENERAL1_2XLARGE&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_LAMBDA_1GB&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_LAMBDA_2GB&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_LAMBDA_4GB&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_LAMBDA_8GB&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;BUILD_LAMBDA_10GB&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;ATTRIBUTE_BASED_COMPUTE&#39;</code><br>
+<code>|| input.environment.docker-server.compute-type == &#39;CUSTOM_INSTANCE_TYPE&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">credentials must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.image-pull-credentials-type != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.image-pull-credentials-type == &#39;CODEBUILD&#39;</code><br>
+<code>|| input.environment.image-pull-credentials-type == &#39;SERVICE_ROLE&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">registry must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.environment.registry-credential != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.environment.registry-credential.credential-provider == &#39;SECRETS_MANAGER&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">variable must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.environment.environment-variables ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.type != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type == &#39;PLAINTEXT&#39;</code><br>
+<code>|| @each.value.type == &#39;PARAMETER_STORE&#39;</code><br>
+<code>|| @each.value.type == &#39;SECRETS_MANAGER&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="name">
+<h3 class="ub-constraint-group-title">Name rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Name is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.name != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>name</strong> must start with an alphanumeric and contain at most 255 bytes.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>@core.is-match(input.name, &#39;^[0-9A-Za-z][0-9A-Za-z_-]*$&#39;)</code><br>
+<code>&amp;&amp; @core.byte-length(input.name) &lt;= 255</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="artifacts">
+<h3 class="ub-constraint-group-title">Artifacts rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Artifacts is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.artifacts != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Artifacts.Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.artifacts.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">artifact must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.artifacts.type == &#39;CODEPIPELINE&#39;</code><br>
+<code>|| input.artifacts.type == &#39;S3&#39;</code><br>
+<code>|| input.artifacts.type == &#39;NO_ARTIFACTS&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">bucket must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.artifacts.bucket-owner-access != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.artifacts.bucket-owner-access == &#39;NONE&#39;</code><br>
+<code>|| input.artifacts.bucket-owner-access == &#39;READ_ONLY&#39;</code><br>
+<code>|| input.artifacts.bucket-owner-access == &#39;FULL&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">namespace must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.artifacts.namespace-type != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.artifacts.namespace-type == &#39;NONE&#39;</code><br>
+<code>|| input.artifacts.namespace-type == &#39;BUILD_ID&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">packaging must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.artifacts.packaging != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.artifacts.packaging == &#39;NONE&#39;</code><br>
+<code>|| input.artifacts.packaging == &#39;ZIP&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="service-role">
+<h3 class="ub-constraint-group-title">Service role rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">ServiceRole is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.service-role != null</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="source">
+<h3 class="ub-constraint-group-title">Source rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Source is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.source != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Source.Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.source.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Source.Auth.Type is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.source.auth != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.source.auth.type != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Source.Auth.Resource is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.source.auth != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.source.auth.resource != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">Source.GitSubmodulesConfig.FetchSubmodules is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.source.git-submodules-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.source.git-submodules-config.fetch-submodules != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">git-clone-depth must be at least 0.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.source.git-clone-depth == null</code><br>
+<code>|| input.source.git-clone-depth &gt;= 0</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>source</strong> must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.source.type == &#39;CODECOMMIT&#39;</code><br>
+<code>|| input.source.type == &#39;CODEPIPELINE&#39;</code><br>
+<code>|| input.source.type == &#39;GITHUB&#39;</code><br>
+<code>|| input.source.type == &#39;GITLAB&#39;</code><br>
+<code>|| input.source.type == &#39;GITLAB_SELF_MANAGED&#39;</code><br>
+<code>|| input.source.type == &#39;S3&#39;</code><br>
+<code>|| input.source.type == &#39;BITBUCKET&#39;</code><br>
+<code>|| input.source.type == &#39;GITHUB_ENTERPRISE&#39;</code><br>
+<code>|| input.source.type == &#39;NO_SOURCE&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">auth must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.source.auth != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.source.auth.type == &#39;OAUTH&#39;</code><br>
+<code>|| input.source.auth.type == &#39;BASIC_AUTH&#39;</code><br>
+<code>|| input.source.auth.type == &#39;PERSONAL_ACCESS_TOKEN&#39;</code><br>
+<code>|| input.source.auth.type == &#39;CODECONNECTIONS&#39;</code><br>
+<code>|| input.source.auth.type == &#39;SECRETS_MANAGER&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="build-batch-config">
+<h3 class="ub-constraint-group-title">Build batch config rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">BuildBatchConfig.ServiceRole is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.build-batch-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.build-batch-config.service-role != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">batch timeout-in-mins must be between 5 and 2160.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>(input.build-batch-config.timeout-in-mins == null || input.build-batch-config.timeout-in-mins &gt;= 5)</code><br>
+<code>&amp;&amp; (input.build-batch-config.timeout-in-mins == null || input.build-batch-config.timeout-in-mins &lt;= 2160)</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">maximum-builds-allowed must be between 1 and 100.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>(input.build-batch-config.restrictions.maximum-builds-allowed == null || input.build-batch-config.restrictions.maximum-builds-allowed &gt;= 1)</code><br>
+<code>&amp;&amp; (input.build-batch-config.restrictions.maximum-builds-allowed == null || input.build-batch-config.restrictions.maximum-builds-allowed &lt;= 100)</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">batch compute type must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.build-batch-config.restrictions.compute-types-allowed ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value == &#39;BUILD_GENERAL1_SMALL&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_GENERAL1_MEDIUM&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_GENERAL1_LARGE&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_GENERAL1_XLARGE&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_GENERAL1_2XLARGE&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_LAMBDA_1GB&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_LAMBDA_2GB&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_LAMBDA_4GB&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_LAMBDA_8GB&#39;</code><br>
+<code>|| @each.value == &#39;BUILD_LAMBDA_10GB&#39;</code><br>
+<code>|| @each.value == &#39;ATTRIBUTE_BASED_COMPUTE&#39;</code><br>
+<code>|| @each.value == &#39;CUSTOM_INSTANCE_TYPE&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="vpc-config">
+<h3 class="ub-constraint-group-title">Vpc config rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">VpcConfig.VpcId is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.vpc-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.vpc-config.vpc-id != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">VpcConfig.Subnets is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.vpc-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.vpc-config.subnets != null</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">VpcConfig.SecurityGroupIds is required.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.vpc-config != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.vpc-config.security-group-ids != null</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="description">
+<h3 class="ub-constraint-group-title">Description rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>description</strong> must contain at most 255 bytes.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>@core.byte-length(input.description ?? &#39;&#39;) &lt;= 255</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="timeout-in-minutes">
+<h3 class="ub-constraint-group-title">Timeout in minutes rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>timeout-in-minutes</strong> must be between 5 and 2160.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.timeout-in-minutes &gt;= 5</code><br>
+<code>&amp;&amp; input.timeout-in-minutes &lt;= 2160</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="queued-timeout-in-minutes">
+<h3 class="ub-constraint-group-title">Queued timeout in minutes rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>queued-timeout-in-minutes</strong> must be between 5 and 480.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.queued-timeout-in-minutes &gt;= 5</code><br>
+<code>&amp;&amp; input.queued-timeout-in-minutes &lt;= 480</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="concurrent-build-limit">
+<h3 class="ub-constraint-group-title">Concurrent build limit rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>concurrent-build-limit</strong> must be at least 1.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>Require</dt>
+<dd><code>input.concurrent-build-limit == null</code><br>
+<code>|| input.concurrent-build-limit &gt;= 1</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="cache">
+<h3 class="ub-constraint-group-title">Cache rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><code>S3</code> <strong>cache</strong> requires a nonempty location.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.cache.type == &#39;S3&#39;</code></dd>
+<dt>Require</dt>
+<dd><code>@core.length(input.cache.location ?? &#39;&#39;) &gt;= 1</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>cache</strong> must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.cache.type != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.cache.type == &#39;NO_CACHE&#39;</code><br>
+<code>|| input.cache.type == &#39;S3&#39;</code><br>
+<code>|| input.cache.type == &#39;LOCAL&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">modes must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.cache.modes ?? []</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value == &#39;LOCAL_DOCKER_LAYER_CACHE&#39;</code><br>
+<code>|| @each.value == &#39;LOCAL_SOURCE_CACHE&#39;</code><br>
+<code>|| @each.value == &#39;LOCAL_CUSTOM_CACHE&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="project-visibility">
+<h3 class="ub-constraint-group-title">Project visibility rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary"><strong>project-visibility</strong> must be <code>PUBLIC_READ</code> or <code>PRIVATE</code>.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.project-visibility != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.project-visibility == &#39;PUBLIC_READ&#39;</code><br>
+<code>|| input.project-visibility == &#39;PRIVATE&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="logs-config">
+<h3 class="ub-constraint-group-title">Logs config rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">status must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.logs-config.cloud-watch-logs.status != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.logs-config.cloud-watch-logs.status == &#39;ENABLED&#39;</code><br>
+<code>|| input.logs-config.cloud-watch-logs.status == &#39;DISABLED&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">status must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.logs-config.s3-logs.status != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.logs-config.s3-logs.status == &#39;ENABLED&#39;</code><br>
+<code>|| input.logs-config.s3-logs.status == &#39;DISABLED&#39;</code></dd>
+</dl>
+</details>
+</div>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">bucket must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>When</dt>
+<dd><code>input.logs-config.s3-logs.bucket-owner-access != null</code></dd>
+<dt>Require</dt>
+<dd><code>input.logs-config.s3-logs.bucket-owner-access == &#39;NONE&#39;</code><br>
+<code>|| input.logs-config.s3-logs.bucket-owner-access == &#39;READ_ONLY&#39;</code><br>
+<code>|| input.logs-config.s3-logs.bucket-owner-access == &#39;FULL&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+<section class="ub-constraint-group" data-constraint-group="file-system-locations">
+<h3 class="ub-constraint-group-title">File system locations rules</h3>
+<div class="ub-constraint">
+<p class="ub-constraint-summary">filesystem must be a supported value.</p>
+<details class="ub-constraint-logic">
+<summary>Rule logic</summary>
+<dl>
+<dt>For each</dt>
+<dd><code>input.file-system-locations ?? []</code></dd>
+<dt>When</dt>
+<dd><code>@each.value.type != null</code></dd>
+<dt>Require</dt>
+<dd><code>@each.value.type == &#39;EFS&#39;</code></dd>
+</dl>
+</details>
+</div>
+</section>
+</div>
+
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h2>
+<div class="ub-fields">
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>arn</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>name</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>artifacts</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    type: string
+    artifact-identifier: optional(string)
+    bucket-owner-access: optional(string)
+    encryption-disabled: optional(boolean)
+    location: optional(string)
+    name: optional(string)
+    namespace-type: optional(string)
+    override-artifact-name: optional(boolean)
+    packaging: optional(string)
+    path: optional(string)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>environment</strong></p>
+<details class="ub-field-type-details"><summary><code>object</code></summary>
+<pre class="ub-field-type-block"><code>object({
+  compute-type: string
+  image: string
+  type: string
+  certificate: optional(string)
+  docker-server: optional(
+    object({
+      compute-type: string
+      security-group-ids: optional(list(string))
+    })
+  )
+  fleet: optional(
+    object({
+      fleet-arn: optional(string)
+    })
+  )
+  environment-variables: optional(
+    list(
+      object({
+        name: string
+        value: string
+        type: optional(string)
+      })
+    )
+  )
+  image-pull-credentials-type: optional(string)
+  privileged-mode: optional(boolean)
+  registry-credential: optional(
+    object({
+      credential: string
+      credential-provider: string
+    })
+  )
+})</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>service-role</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>source</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    type: string
+    auth: optional(
+      object({
+        type: string
+        resource: string
+      })
+    )
+    build-status-config: optional(
+      object({
+        context: optional(string)
+        target-url: optional(string)
+      })
+    )
+    buildspec: optional(string)
+    git-clone-depth: optional(integer)
+    git-submodules-config: optional(
+      object({
+        fetch-submodules: boolean
+      })
+    )
+    insecure-ssl: optional(boolean)
+    location: optional(string)
+    report-build-status: optional(boolean)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>auto-retry-limit</strong></p>
+<p class="ub-field-type"><code>optional(integer)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>badge</strong></p>
+<details class="ub-field-type-details"><summary><code>object</code></summary>
+<pre class="ub-field-type-block"><code>object({
+  badge-enabled: boolean
+  badge-request-url: string
+})</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>build-batch-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    service-role: string
+    combine-artifacts: optional(boolean)
+    restrictions: optional(
+      object({
+        compute-types-allowed: optional(list(string))
+        maximum-builds-allowed: optional(integer)
+      })
+    )
+    timeout-in-mins: optional(integer)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>cache</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    type: optional(string)
+    location: optional(string)
+    modes: optional(list(string))
+    cache-namespace: optional(string)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>concurrent-build-limit</strong></p>
+<p class="ub-field-type"><code>optional(integer)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>description</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>encryption-key</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>file-system-locations</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      identifier: optional(string)
+      location: optional(string)
+      mount-options: optional(string)
+      mount-point: optional(string)
+      type: optional(string)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>logs-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    cloud-watch-logs: optional(
+      object({
+        group-name: optional(string)
+        stream-name: optional(string)
+        status: optional(string)
+      })
+    )
+    s3-logs: optional(
+      object({
+        bucket-owner-access: optional(string)
+        encryption-disabled: optional(boolean)
+        location: optional(string)
+        status: optional(string)
+      })
+    )
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>project-visibility</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>public-project-alias</strong></p>
+<p class="ub-field-type"><code>string</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>queued-timeout-in-minutes</strong></p>
+<p class="ub-field-type"><code>integer</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>resource-access-role</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-artifacts</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      type: string
+      artifact-identifier: string
+      bucket-owner-access: optional(string)
+      encryption-disabled: optional(boolean)
+      location: optional(string)
+      name: optional(string)
+      namespace-type: optional(string)
+      override-artifact-name: optional(boolean)
+      packaging: optional(string)
+      path: optional(string)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-sources</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      type: string
+      source-identifier: string
+      auth: optional(
+        object({
+          type: string
+          resource: string
+        })
+      )
+      build-status-config: optional(
+        object({
+          context: optional(string)
+          target-url: optional(string)
+        })
+      )
+      buildspec: optional(string)
+      git-clone-depth: optional(integer)
+      git-submodules-config: optional(
+        object({
+          fetch-submodules: boolean
+        })
+      )
+      insecure-ssl: optional(boolean)
+      location: optional(string)
+      report-build-status: optional(boolean)
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>secondary-source-versions</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(list(object))</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  list(
+    object({
+      source-identifier: string
+      source-version: string
+    })
+  )
+)</code></pre>
+</details>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>source-version</strong></p>
+<p class="ub-field-type"><code>optional(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>tags</strong></p>
+<p class="ub-field-type"><code>map(string)</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--simple">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>timeout-in-minutes</strong></p>
+<p class="ub-field-type"><code>integer</code></p>
+</div>
+</section>
+<section class="ub-field ub-field--complex">
+<div class="ub-field-header">
+<p class="ub-field-name"><strong>vpc-config</strong></p>
+<details class="ub-field-type-details"><summary><code>optional(object)</code></summary>
+<pre class="ub-field-type-block"><code>optional(
+  object({
+    vpc-id: string
+    subnets: list(string)
+    security-group-ids: list(string)
+  })
+)</code></pre>
+</details>
+</div>
+</section>
+</div>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright (c) 2026 cloudboss
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.prune", "navigation.sections", "navigation.top", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../../search/main.js"></script>
+      
+    
+  </body>
+</html>
