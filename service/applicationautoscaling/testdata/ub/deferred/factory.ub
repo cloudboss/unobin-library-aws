@@ -1,0 +1,56 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint:  { type: string }
+    resource:  { type: string }
+    namespace: { type: string }
+    dimension: { type: string }
+    min:       { type: integer }
+    max:       { type: integer }
+    selectors: { type: map(string) }
+    role:      { type: optional(string), default: null }
+    suspension: {
+      type: optional(
+        object(
+          {
+            dynamic-scaling-in-suspended:  optional(boolean)
+            dynamic-scaling-out-suspended: optional(boolean)
+            scheduled-scaling-suspended:   optional(boolean)
+          },
+        ),
+      )
+      default: null
+    }
+    tags: { type: optional(map(string)), default: null }
+  }
+  resources: {
+    seed: aas.scalable-target {
+      resource-id:        'seed'
+      service-namespace:  'dynamodb'
+      scalable-dimension: 'dynamodb:table:ReadCapacityUnits'
+      min-capacity:       0
+      max-capacity:       1
+    }
+    target: aas.scalable-target {
+      resource-id: if resource.seed.scalable-target-arn != ''
+        then @core.lookup({ preferred: input.resource }, input.selectors.resource)
+        else 'unused'
+      service-namespace: if resource.seed.scalable-target-arn != ''
+        then @core.lookup({ preferred: input.namespace }, input.selectors.namespace)
+        else 'unused'
+      scalable-dimension: if resource.seed.scalable-target-arn != ''
+        then @core.lookup({ preferred: input.dimension }, input.selectors.dimension)
+        else 'unused'
+      min-capacity: if resource.seed.scalable-target-arn != ''
+        then @core.lookup({ preferred: input.min }, input.selectors.min)
+        else 0
+      max-capacity: if resource.seed.scalable-target-arn != ''
+        then @core.lookup({ preferred: input.max }, input.selectors.max)
+        else 0
+      role-arn:        input.role
+      suspended-state: input.suspension
+      tags:            input.tags
+    }
+  }
+}

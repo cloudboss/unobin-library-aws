@@ -1,0 +1,39 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint:  { type: string }
+    resource:  { type: string }
+    namespace: { type: string }
+    dimension: { type: string }
+    min:       { type: integer }
+    max:       { type: integer }
+    selectors: { type: map(string) }
+    role:      { type: optional(string), default: null }
+    suspension: {
+      type: optional(
+        object(
+          {
+            dynamic-scaling-in-suspended:  optional(boolean)
+            dynamic-scaling-out-suspended: optional(boolean)
+            scheduled-scaling-suspended:   optional(boolean)
+          },
+        ),
+      )
+      default: null
+    }
+    tags: { type: optional(map(string)), default: null }
+  }
+  resources: {
+    target: aas.scalable-target {
+      resource-id:        @core.lookup({ preferred: input.resource }, input.selectors.resource)
+      service-namespace:  @core.lookup({ preferred: input.namespace }, input.selectors.namespace)
+      scalable-dimension: @core.lookup({ preferred: input.dimension }, input.selectors.dimension)
+      min-capacity:       @core.lookup({ preferred: input.min }, input.selectors.min)
+      max-capacity:       @core.lookup({ preferred: input.max }, input.selectors.max)
+      role-arn:           input.role
+      suspended-state:    input.suspension
+      tags:               input.tags
+    }
+  }
+}

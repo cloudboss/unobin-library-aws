@@ -1,0 +1,30 @@
+factory: {
+  library-configs: { aas: {} }
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  resources: {
+    target: aas.scalable-target {
+      resource-id:         1
+      service-namespace:   true
+      scalable-dimension:  []
+      min-capacity:        'bad'
+      max-capacity:        false
+      role-arn:            1
+      suspended-state:     []
+      tags:                []
+      scalable-target-arn: 'output-only'
+    }
+    members: aas.scalable-target {
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+      min-capacity:       0
+      max-capacity:       0
+      suspended-state: {
+        dynamic-scaling-in-suspended:  'bad'
+        dynamic-scaling-out-suspended: 1
+        scheduled-scaling-suspended:   []
+      }
+      tags: { invalid: true }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+factory: {
+  library-configs: { aas: {} }
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  resources: {
+    target: aas.scalable-target {}
+  }
+}

@@ -1,0 +1,38 @@
+factory: {
+  imports: {
+    aas:      'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling'
+    dynamodb: 'github.com/cloudboss/unobin-library-aws//service/dynamodb'
+  }
+  library-configs: { aas: input.aws-config, dynamodb: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    updated: { type: boolean, default: false }
+  }
+  resources: {
+    table: dynamodb.table {
+      name:           'unobin-it-scalable-target'
+      billing-mode:   'PROVISIONED'
+      hash-key:       'id'
+      attribute:      [{ name: 'id', type: 'S' }]
+      read-capacity:  5
+      write-capacity: 5
+    }
+    target: aas.scalable-target {
+      resource-id:        $'table/{{ resource.table.name }}'
+      service-namespace:  'dynamodb'
+      scalable-dimension: 'dynamodb:table:ReadCapacityUnits'
+      min-capacity:       if input.updated then 2 else 1
+      max-capacity:       if input.updated then 20 else 10
+      suspended-state: {
+        dynamic-scaling-in-suspended:  input.updated
+        dynamic-scaling-out-suspended: input.updated
+        scheduled-scaling-suspended:   input.updated
+      }
+      tags: if input.updated then { keep: '', stage: 'updated' } else { keep: '', remove: 'yes' }
+    }
+  }
+  outputs: { arn: { value: resource.target.scalable-target-arn } }
+}

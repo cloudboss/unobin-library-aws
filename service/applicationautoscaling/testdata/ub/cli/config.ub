@@ -1,0 +1,25 @@
+stack: {
+  factory: {
+    pin: { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: {
+      endpoint:  '__ENDPOINT__'
+      resource:  'table/a/b'
+      namespace: 'dynamodb'
+      dimension: 'dynamodb:table:ReadCapacityUnits'
+      min:       0
+      max:       9
+      selectors: {
+        resource:  'preferred'
+        namespace: 'preferred'
+        dimension: 'preferred'
+        min:       '__MIN__'
+        max:       'preferred'
+      }
+      suspension: {}
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}
