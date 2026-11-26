@@ -1,0 +1,18 @@
+factory: {
+  description: 'Generates a sensitive EKS token on each apply without a cluster lookup.'
+  imports:     { eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+  }
+  library-configs: { eks: input.aws-config }
+  actions: {
+    auth: eks.cluster-auth {
+      @trigger: 'always'
+      name:     'unobin-nonexistent-cluster'
+    }
+  }
+  outputs: { token: { value: action.auth.token }, name: { value: action.auth.name } }
+}

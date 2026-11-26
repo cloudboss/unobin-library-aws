@@ -1,0 +1,19 @@
+{
+  "name": "cluster-auth-valid",
+  "factoryPath": "src",
+  "libraryPath": "example.com/unobin/eks-cluster-auth",
+  "build": true,
+  "commands": [
+    {
+      "name": "validate",
+      "args": [
+        "validate",
+        "-c",
+        "stacks/dev.ub"
+      ],
+      "stdout": "want/validate.stdout",
+      "stderr": "want/validate.stderr"
+    }
+  ],
+  "deterministic": true
+}

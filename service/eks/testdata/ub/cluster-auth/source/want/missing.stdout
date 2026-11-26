@@ -1,0 +1,1 @@
+{"kind":"command-error","format-version":1,"command":"compile","code":"unobin.command.failed","message":"compile failed","diagnostics":[{"code":"unobin.resolve","severity":"error","message":"missing required input \"name\" on eks.cluster-auth","path":"missing/factory.ub","span":{"start":{"line":5,"column":28,"offset":165}}}],"files":[]}

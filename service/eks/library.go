@@ -48,6 +48,11 @@ func Library() *runtime.Library {
 				*svc.PodIdentityAssociationResourceOutput,
 			](),
 		},
+		Actions: map[string]runtime.ActionRegistration{
+			"cluster-auth": runtime.MakeAction[
+				svc.ClusterAuthAction, *svc.ClusterAuthActionOutput, *awscfg.Configuration,
+			](),
+		},
 		DataSources: map[string]runtime.DataSourceRegistration{
 			"cluster": runtime.MakeDataSource[
 				svc.ClusterDataSource, *svc.ClusterDataSourceOutput, *awscfg.Configuration,

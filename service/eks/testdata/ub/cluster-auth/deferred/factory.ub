@@ -1,0 +1,23 @@
+factory: {
+  imports: { eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: {
+    eks: { endpoint-url: input.endpoint, region: 'us-east-1' }
+  }
+  inputs: {
+    endpoint: { type: string }
+    name:     { type: string }
+    region:   { type: optional(string), default: null }
+    trigger:  { type: string }
+  }
+  actions: {
+    seed: test.seed {
+      echo: input.name
+    }
+    auth: eks.cluster-auth {
+      @trigger: input.trigger
+      name:     action.seed.value
+      region:   input.region
+    }
+  }
+  outputs: { token: { value: action.auth.token }, name: { value: action.auth.name } }
+}

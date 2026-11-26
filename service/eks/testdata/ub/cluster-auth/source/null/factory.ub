@@ -1,0 +1,9 @@
+factory: {
+  imports:         { eks: 'github.com/cloudboss/unobin-library-aws//service/eks' }
+  library-configs: { eks: {} }
+  actions: {
+    auth: eks.cluster-auth {
+      name: null
+    }
+  }
+}

@@ -1,0 +1,9 @@
+stack: {
+  factory: { inputs: { endpoint: 'https://sts.invalid', name: '', trigger: 'fixed' } }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: env-key {
+    env-var: 'UNOBIN_EKS_AUTH_KEY'
+  }
+}
