@@ -1,0 +1,26 @@
+stack: {
+  factory: {
+    pin: { supported-versions: [{ version: 'v0.0.0', content-revision: '__REVISION__' }] }
+    inputs: {
+      endpoint:           '__ENDPOINT__'
+      name:               'policy'
+      resource-id:        'table/a/b'
+      service-namespace:  'dynamodb'
+      scalable-dimension: 'dynamodb:table:ReadCapacityUnits'
+      selectors: {
+        name:                                         '__NAME__'
+        resource-id:                                  'preferred'
+        service-namespace:                            'preferred'
+        scalable-dimension:                           'preferred'
+        policy-type:                                  'preferred'
+        step-scaling-policy-configuration:            'preferred'
+        target-tracking-scaling-policy-configuration: 'preferred'
+        predictive-scaling-policy-configuration:      'preferred'
+      }
+    }
+  }
+  state: local {
+    path: '.unobin/state'
+  }
+  encryption: noop {}
+}

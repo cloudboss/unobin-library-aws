@@ -1,0 +1,332 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: { endpoint-url: input.endpoint, region: 'us-east-1', max-attempts: 1 } }
+  inputs: {
+    endpoint:           { type: string }
+    selectors:          { type: map(string) }
+    name:               { type: string }
+    resource-id:        { type: string }
+    service-namespace:  { type: string }
+    scalable-dimension: { type: string }
+    policy-type:        { type: optional(string), default: null }
+    step-scaling-policy-configuration: {
+      type: optional(
+        object(
+          {
+            adjustment-type:          optional(string)
+            cooldown:                 optional(integer)
+            metric-aggregation-type:  optional(string)
+            min-adjustment-magnitude: optional(integer)
+            step-adjustment: optional(
+              list(
+                object(
+                  {
+                    scaling-adjustment:          integer
+                    metric-interval-lower-bound: optional(number)
+                    metric-interval-upper-bound: optional(number)
+                  },
+                ),
+              ),
+            )
+          },
+        ),
+      )
+      default: null
+    }
+    target-tracking-scaling-policy-configuration: {
+      type: optional(
+        object(
+          {
+            target-value:       number
+            disable-scale-in:   optional(boolean)
+            scale-in-cooldown:  optional(integer)
+            scale-out-cooldown: optional(integer)
+            predefined-metric-specification: optional(
+              object(
+                {
+                  predefined-metric-type: string
+                  resource-label:         optional(string)
+                },
+              ),
+            )
+            customized-metric-specification: optional(
+              object(
+                {
+                  dimensions: optional(
+                    list(
+                      object(
+                        {
+                          name:  string
+                          value: string
+                        },
+                      ),
+                    ),
+                  )
+                  metric-name: optional(string)
+                  namespace:   optional(string)
+                  statistic:   optional(string)
+                  unit:        optional(string)
+                  metrics: optional(
+                    list(
+                      object(
+                        {
+                          id:          string
+                          expression:  optional(string)
+                          label:       optional(string)
+                          return-data: optional(boolean)
+                          metric-stat: optional(
+                            object(
+                              {
+                                stat: string
+                                unit: optional(string)
+                                metric: object(
+                                  {
+                                    metric-name: string
+                                    namespace:   string
+                                    dimensions: optional(
+                                      list(
+                                        object(
+                                          {
+                                            name:  string
+                                            value: string
+                                          },
+                                        ),
+                                      ),
+                                    )
+                                  },
+                                )
+                              },
+                            ),
+                          )
+                        },
+                      ),
+                    ),
+                  )
+                },
+              ),
+            )
+          },
+        ),
+      )
+      default: null
+    }
+    predictive-scaling-policy-configuration: {
+      type: optional(
+        object(
+          {
+            max-capacity-breach-behavior: optional(string)
+            max-capacity-buffer:          optional(integer)
+            mode:                         optional(string)
+            scheduling-buffer-time:       optional(integer)
+            metric-specification: list(
+              object(
+                {
+                  target-value: optional(number)
+                  customized-capacity-metric-specification: optional(
+                    object(
+                      {
+                        metric-data-query: list(
+                          object(
+                            {
+                              id:          string
+                              expression:  optional(string)
+                              label:       optional(string)
+                              return-data: optional(boolean)
+                              metric-stat: optional(
+                                object(
+                                  {
+                                    stat: string
+                                    unit: optional(string)
+                                    metric: object(
+                                      {
+                                        metric-name: optional(string)
+                                        namespace:   optional(string)
+                                        dimension: optional(
+                                          list(
+                                            object(
+                                              {
+                                                name:  string
+                                                value: string
+                                              },
+                                            ),
+                                          ),
+                                        )
+                                      },
+                                    )
+                                  },
+                                ),
+                              )
+                            },
+                          ),
+                        )
+                      },
+                    ),
+                  )
+                  customized-load-metric-specification: optional(
+                    object(
+                      {
+                        metric-data-query: list(
+                          object(
+                            {
+                              id:          string
+                              expression:  optional(string)
+                              label:       optional(string)
+                              return-data: optional(boolean)
+                              metric-stat: optional(
+                                object(
+                                  {
+                                    stat: string
+                                    unit: optional(string)
+                                    metric: object(
+                                      {
+                                        metric-name: optional(string)
+                                        namespace:   optional(string)
+                                        dimension: optional(
+                                          list(
+                                            object(
+                                              {
+                                                name:  string
+                                                value: string
+                                              },
+                                            ),
+                                          ),
+                                        )
+                                      },
+                                    )
+                                  },
+                                ),
+                              )
+                            },
+                          ),
+                        )
+                      },
+                    ),
+                  )
+                  customized-scaling-metric-specification: optional(
+                    object(
+                      {
+                        metric-data-query: list(
+                          object(
+                            {
+                              id:          string
+                              expression:  optional(string)
+                              label:       optional(string)
+                              return-data: optional(boolean)
+                              metric-stat: optional(
+                                object(
+                                  {
+                                    stat: string
+                                    unit: optional(string)
+                                    metric: object(
+                                      {
+                                        metric-name: optional(string)
+                                        namespace:   optional(string)
+                                        dimension: optional(
+                                          list(
+                                            object(
+                                              {
+                                                name:  string
+                                                value: string
+                                              },
+                                            ),
+                                          ),
+                                        )
+                                      },
+                                    )
+                                  },
+                                ),
+                              )
+                            },
+                          ),
+                        )
+                      },
+                    ),
+                  )
+                  predefined-load-metric-specification: optional(
+                    object(
+                      {
+                        predefined-metric-type: string
+                        resource-label:         optional(string)
+                      },
+                    ),
+                  )
+                  predefined-metric-pair-specification: optional(
+                    object(
+                      {
+                        predefined-metric-type: string
+                        resource-label:         optional(string)
+                      },
+                    ),
+                  )
+                  predefined-scaling-metric-specification: optional(
+                    object(
+                      {
+                        predefined-metric-type: string
+                        resource-label:         optional(string)
+                      },
+                    ),
+                  )
+                },
+              ),
+            )
+          },
+        ),
+      )
+      default: null
+    }
+  }
+  resources: {
+    seed: aas.scalable-target {
+      resource-id:        'seed'
+      service-namespace:  'dynamodb'
+      scalable-dimension: 'dynamodb:table:ReadCapacityUnits'
+      min-capacity:       0
+      max-capacity:       9
+    }
+    policy: aas.scaling-policy {
+      name: @core.lookup(
+        { preferred: input.name },
+        if resource.seed.scalable-target-arn != '' then input.selectors.name else 'absent',
+      )
+      resource-id: @core.lookup(
+        { preferred: input.resource-id },
+        if resource.seed.scalable-target-arn != '' then input.selectors.resource-id else 'absent',
+      )
+      service-namespace: @core.lookup(
+        { preferred: input.service-namespace },
+        if resource.seed.scalable-target-arn != ''
+          then input.selectors.service-namespace
+          else 'absent',
+      )
+      scalable-dimension: @core.lookup(
+        { preferred: input.scalable-dimension },
+        if resource.seed.scalable-target-arn != ''
+          then input.selectors.scalable-dimension
+          else 'absent',
+      )
+      policy-type: @core.lookup(
+        { preferred: input.policy-type },
+        if resource.seed.scalable-target-arn != '' then input.selectors.policy-type else 'absent',
+      )
+      step-scaling-policy-configuration: @core.lookup(
+        { preferred: input.step-scaling-policy-configuration },
+        if resource.seed.scalable-target-arn != ''
+          then input.selectors.step-scaling-policy-configuration
+          else 'absent',
+      )
+      target-tracking-scaling-policy-configuration: @core.lookup(
+        { preferred: input.target-tracking-scaling-policy-configuration },
+        if resource.seed.scalable-target-arn != ''
+          then input.selectors.target-tracking-scaling-policy-configuration
+          else 'absent',
+      )
+      predictive-scaling-policy-configuration: @core.lookup(
+        { preferred: input.predictive-scaling-policy-configuration },
+        if resource.seed.scalable-target-arn != ''
+          then input.selectors.predictive-scaling-policy-configuration
+          else 'absent',
+      )
+    }
+  }
+  outputs: { arn: { value: resource.policy.policy-arn } }
+}

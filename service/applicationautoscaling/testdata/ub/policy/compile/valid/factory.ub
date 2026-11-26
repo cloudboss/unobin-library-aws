@@ -1,0 +1,182 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: {} }
+  resources: {
+    step: aas.scaling-policy {
+      name:               ''
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+
+      step-scaling-policy-configuration: {
+        adjustment-type:          'PercentChangeInCapacity'
+        cooldown:                 -1
+        metric-aggregation-type:  'Maximum'
+        min-adjustment-magnitude: -5
+        step-adjustment: [
+          { scaling-adjustment: -1, metric-interval-upper-bound: -0.25 },
+          {
+            scaling-adjustment:          0
+            metric-interval-lower-bound: 0
+            metric-interval-upper-bound: 1.5
+          },
+          { scaling-adjustment: 2, metric-interval-lower-bound: 1.5 },
+        ]
+      }
+    }
+    inline: aas.scaling-policy {
+      name:               ''
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+
+      policy-type: 'TargetTrackingScaling'
+      target-tracking-scaling-policy-configuration: {
+        target-value:       0
+        disable-scale-in:   false
+        scale-in-cooldown:  -1
+        scale-out-cooldown: 0
+        customized-metric-specification: {
+          metric-name: ''
+          namespace:   ''
+          statistic:   'Sum'
+          unit:        ''
+          dimensions:  [{ name: '', value: '' }]
+        }
+      }
+    }
+    math: aas.scaling-policy {
+      name:               ''
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+
+      target-tracking-scaling-policy-configuration: {
+        target-value: -0.5
+        customized-metric-specification: {
+          metrics: [
+            { id: 'm', expression: 'SUM(q)', label: 'math', return-data: false },
+            {
+              id:         'q'
+              expression: 'm'
+              metric-stat: {
+                stat: 'Average'
+                unit: ''
+                metric: {
+                  metric-name: ''
+                  namespace:   ''
+                  dimensions:  [{ name: '', value: '' }]
+                }
+              }
+            },
+          ]
+        }
+      }
+    }
+    predictive: aas.scaling-policy {
+      name:               ''
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+
+      policy-type: 'PredictiveScaling'
+      predictive-scaling-policy-configuration: {
+        max-capacity-breach-behavior: 'IncreaseMaxCapacity'
+        max-capacity-buffer:          100
+        mode:                         'ForecastAndScale'
+        scheduling-buffer-time:       3600
+        metric-specification: [
+          {
+            target-value: null
+            customized-capacity-metric-specification: {
+              metric-data-query: [
+                { id: '', expression: 'SUM(q)', label: '', return-data: false },
+                {
+                  id: ''
+                  metric-stat: {
+                    stat: ''
+                    unit: ''
+                    metric: {
+                      metric-name: ''
+                      namespace:   ''
+                      dimension:   [{ name: '', value: '' }]
+                    }
+                  }
+                },
+              ]
+            }
+            customized-load-metric-specification: {
+              metric-data-query: [
+                { id: '', expression: 'SUM(q)', label: '', return-data: false },
+                {
+                  id: ''
+                  metric-stat: {
+                    stat: ''
+                    unit: ''
+                    metric: {
+                      metric-name: ''
+                      namespace:   ''
+                      dimension:   [{ name: '', value: '' }]
+                    }
+                  }
+                },
+              ]
+            }
+            customized-scaling-metric-specification: {
+              metric-data-query: [
+                { id: '', expression: 'SUM(q)', label: '', return-data: false },
+                {
+                  id: ''
+                  metric-stat: {
+                    stat: ''
+                    unit: ''
+                    metric: {
+                      metric-name: ''
+                      namespace:   ''
+                      dimension:   [{ name: '', value: '' }]
+                    }
+                  }
+                },
+              ]
+            }
+            predefined-load-metric-specification: {
+              predefined-metric-type: 'any'
+              resource-label:         'x'
+            }
+            predefined-metric-pair-specification: {
+              predefined-metric-type: 'any'
+              resource-label:         'x'
+            }
+            predefined-scaling-metric-specification: {
+              predefined-metric-type: 'any'
+              resource-label:         'x'
+            }
+          },
+          { target-value: 0 },
+        ]
+      }
+    }
+    combined: aas.scaling-policy {
+      name:                              ''
+      resource-id:                       ''
+      service-namespace:                 ''
+      scalable-dimension:                ''
+      step-scaling-policy-configuration: { step-adjustment: [] }
+      target-tracking-scaling-policy-configuration: {
+        target-value:                    0
+        customized-metric-specification: { metrics: [] }
+      }
+      predictive-scaling-policy-configuration: { metric-specification: [{}] }
+    }
+  }
+
+  outputs: {
+    arn:        { value: resource.step.policy-arn }
+    alarm-arns: { value: resource.math.alarm-arns }
+    identity:   { value: resource.inline.resource-id }
+    type:       { value: resource.step.policy-type }
+    step:       { value: resource.step.step-scaling-policy-configuration }
+    tracking:   { value: resource.math.target-tracking-scaling-policy-configuration }
+    predictive: { value: resource.predictive.predictive-scaling-policy-configuration }
+  }
+}

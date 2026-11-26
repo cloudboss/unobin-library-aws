@@ -1,0 +1,16 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: {} }
+  resources: {
+    policy: aas.scaling-policy {
+      name:               ''
+      resource-id:        ''
+      service-namespace:  ''
+      scalable-dimension: ''
+      step-scaling-policy-configuration: {
+        step-adjustment: [{ scaling-adjustment: 0, metric-interval-lower-bound: '0' }]
+      }
+      predictive-scaling-policy-configuration: { metric-specification: [{ target-value: '0' }] }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+factory: {
+  imports: {
+    aas:      'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling'
+    dynamodb: 'github.com/cloudboss/unobin-library-aws//service/dynamodb'
+  }
+  library-configs: { aas: input.aws-config, dynamodb: input.aws-config }
+  inputs: {
+    aws-config: {
+      type:    library-config('github.com/cloudboss/unobin-library-aws//config')
+      default: {}
+    }
+    updated: { type: boolean, default: false }
+  }
+  resources: {
+    table: dynamodb.table {
+      name:           'unobin-it-scaling-policy'
+      billing-mode:   'PROVISIONED'
+      hash-key:       'id'
+      attribute:      [{ name: 'id', type: 'S' }]
+      read-capacity:  5
+      write-capacity: 5
+    }
+    target: aas.scalable-target {
+      resource-id:        $'table/{{ resource.table.name }}'
+      service-namespace:  'dynamodb'
+      scalable-dimension: 'dynamodb:table:ReadCapacityUnits'
+      min-capacity:       1
+      max-capacity:       10
+    }
+    policy: aas.scaling-policy {
+      name:               'unobin-it-scaling-policy'
+      resource-id:        resource.target.resource-id
+      service-namespace:  resource.target.service-namespace
+      scalable-dimension: resource.target.scalable-dimension
+      policy-type:        'TargetTrackingScaling'
+      target-tracking-scaling-policy-configuration: {
+        target-value:       if input.updated then 65 else 50
+        disable-scale-in:   input.updated
+        scale-in-cooldown:  if input.updated then 60 else 30
+        scale-out-cooldown: if input.updated then 45 else 15
+        predefined-metric-specification: {
+          predefined-metric-type: 'DynamoDBReadCapacityUtilization'
+        }
+      }
+    }
+  }
+  outputs: { policy-arn: { value: resource.policy.policy-arn } }
+}

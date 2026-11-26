@@ -1,0 +1,33 @@
+factory: {
+  imports: { aas: 'github.com/cloudboss/unobin-library-aws//service/applicationautoscaling' }
+  library-configs: { aas: {} }
+  resources: {
+    policy: aas.scaling-policy {
+      name:                              ''
+      resource-id:                       ''
+      service-namespace:                 ''
+      scalable-dimension:                ''
+      step-scaling-policy-configuration: { step-adjustment: [{}] }
+      target-tracking-scaling-policy-configuration: {
+        customized-metric-specification: {
+          dimensions: [{}]
+          metrics:    [{ metric-stat: { metric: {} } }]
+        }
+      }
+      predictive-scaling-policy-configuration: {
+        metric-specification: [
+          {
+            customized-capacity-metric-specification: {}
+            customized-load-metric-specification:     { metric-data-query: [{}] }
+            customized-scaling-metric-specification: {
+              metric-data-query: [{ id: '', metric-stat: {} }]
+            }
+            predefined-load-metric-specification:    {}
+            predefined-metric-pair-specification:    {}
+            predefined-scaling-metric-specification: {}
+          },
+        ]
+      }
+    }
+  }
+}

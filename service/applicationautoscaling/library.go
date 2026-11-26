@@ -17,6 +17,10 @@ func Library() *runtime.Library {
 		},
 		Configuration: config.LibraryConfiguration(),
 		Resources: map[string]runtime.ResourceRegistration{
+			"scaling-policy": runtime.MakeResource[
+				svc.ScalingPolicyResource, *svc.ScalingPolicyResourceOutput,
+				*awscfg.Configuration, *svc.ScalingPolicyResource,
+			]((&svc.ScalingPolicyResource{}).ResourceDefinition()),
 			"scalable-target": runtime.MakeResource[
 				svc.ScalableTargetResource, *svc.ScalableTargetResourceOutput,
 				*awscfg.Configuration, *svc.ScalableTargetResource,

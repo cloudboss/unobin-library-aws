@@ -1,0 +1,121 @@
+{
+  "name": "scaling-policy-compile",
+  "rootPath": ".",
+  "executor": "root",
+  "commands": [
+    {
+      "name": "valid",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "valid/factory.ub",
+        "-o",
+        "build-valid",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/valid.stdout",
+      "exitCode": 0
+    },
+    {
+      "name": "missing",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "missing/factory.ub",
+        "-o",
+        "build-missing",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/missing.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "null",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "null/factory.ub",
+        "-o",
+        "build-null",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/null.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "wrong",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "wrong/factory.ub",
+        "-o",
+        "build-wrong",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/wrong.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "rules",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "rules/factory.ub",
+        "-o",
+        "build-rules",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/rules.stdout",
+      "exitCode": 1
+    },
+    {
+      "name": "nested",
+      "args": [
+        "compile",
+        "--format",
+        "json",
+        "-p",
+        "nested/factory.ub",
+        "-o",
+        "build-nested",
+        "--replace-unobin",
+        "$REPO_ROOT",
+        "--replace-go-module",
+        "github.com/cloudboss/unobin-library-aws=$WORKSPACE/modules/local/aws"
+      ],
+      "normalize": "json",
+      "stdout": "want/nested.stdout",
+      "exitCode": 1
+    }
+  ]
+}
