@@ -3,11 +3,13 @@ package applicationautoscaling
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/applicationautoscaling/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,9 +32,10 @@ func TestPrepareTarget(t *testing.T) {
 }
 
 type fakeClock struct {
-	now    time.Time
-	delays []time.Duration
-	cancel context.CancelFunc
+	now              time.Time
+	delays           []time.Duration
+	cancel           context.CancelFunc
+	cancelAfterSleep bool
 }
 
 func (c *fakeClock) Now() time.Time { return c.now }
@@ -40,7 +43,11 @@ func (c *fakeClock) Sleep(ctx context.Context, delay time.Duration) error {
 	c.delays = append(c.delays, delay)
 	c.now = c.now.Add(delay)
 	if c.cancel != nil {
-		c.cancel()
+		if c.cancelAfterSleep {
+			defer c.cancel()
+		} else {
+			c.cancel()
+		}
 	}
 	return context.Cause(ctx)
 }
@@ -60,6 +67,73 @@ func TestTargetRetryDeadline(t *testing.T) {
 		3500 * time.Millisecond, 7500 * time.Millisecond}, attempts)
 	assert.Equal(t, []time.Duration{500 * time.Millisecond, time.Second, 2 * time.Second,
 		4 * time.Second}, clock.delays)
+}
+
+func TestTargetRetryCancellationPreservesOperationError(t *testing.T) {
+	for _, mode := range []string{"sleep", "completed sleep", "operation"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithCancelCause(t.Context())
+			defer cancel(nil)
+			cause := errors.New("retry cancelled")
+			clock := &fakeClock{}
+			if mode != "operation" {
+				clock.cancelAfterSleep = mode == "completed sleep"
+				clock.cancel = func() {
+					if clock.Now().Sub(time.Time{}) >= time.Second {
+						cancel(cause)
+					}
+				}
+			}
+			var attempts []time.Duration
+			var lastError error
+			var lastTyped *types.ValidationException
+			err := retryTarget(ctx, clock, 2*time.Minute, func(operationCtx context.Context) error {
+				assert.Same(t, ctx, operationCtx)
+				assert.NoError(t, context.Cause(operationCtx))
+				attempts = append(attempts, clock.Now().Sub(time.Time{}))
+				lastTyped = &types.ValidationException{
+					Message: aws.String(fmt.Sprintf("pending attempt %d", len(attempts))),
+				}
+				lastError = fmt.Errorf("register scalable target: %w", lastTyped)
+				if mode == "operation" {
+					cancel(cause)
+				}
+				return lastError
+			}, func(error) bool { return true })
+			require.ErrorIs(t, err, lastError)
+			assert.Same(t, lastError, err)
+			var typed *types.ValidationException
+			require.ErrorAs(t, err, &typed)
+			assert.Same(t, lastTyped, typed)
+			assert.NotErrorIs(t, err, cause)
+			assert.ErrorIs(t, context.Cause(ctx), cause)
+			if mode != "operation" {
+				assert.Equal(t, []time.Duration{0, 500 * time.Millisecond}, attempts)
+				assert.Equal(t, []time.Duration{500 * time.Millisecond, time.Second}, clock.delays)
+			} else {
+				assert.Equal(t, []time.Duration{0}, attempts)
+				assert.Empty(t, clock.delays)
+			}
+		})
+	}
+}
+
+func TestTargetRetryPreCancellation(t *testing.T) {
+	for _, cause := range []error{context.Canceled, errors.New("parent stopped")} {
+		t.Run(cause.Error(), func(t *testing.T) {
+			ctx, cancel := context.WithCancelCause(t.Context())
+			cancel(cause)
+			clock := &fakeClock{}
+			calls := 0
+			err := retryTarget(ctx, clock, 2*time.Minute, func(context.Context) error {
+				calls++
+				return nil
+			}, func(error) bool { return true })
+			require.ErrorIs(t, err, cause)
+			assert.Zero(t, calls)
+			assert.Empty(t, clock.delays)
+		})
+	}
 }
 
 func TestTargetStableIdentity(t *testing.T) {

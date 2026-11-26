@@ -197,16 +197,21 @@ func retryTarget(
 	deadline := clock.Now().Add(timeout)
 	delay := 500 * time.Millisecond
 	final := false
+	var lastError error
 	for {
-		if err := context.Cause(ctx); err != nil {
-			return err
+		if cause := context.Cause(ctx); cause != nil {
+			if lastError != nil {
+				return lastError
+			}
+			return cause
 		}
 		err := operation(ctx)
 		if err == nil || !retryable(err) {
 			return err
 		}
-		if cause := context.Cause(ctx); cause != nil {
-			return cause
+		lastError = err
+		if context.Cause(ctx) != nil {
+			return err
 		}
 		if final {
 			return err
@@ -214,8 +219,11 @@ func retryTarget(
 		if !clock.Now().Before(deadline) {
 			final = true
 		}
-		if err := clock.Sleep(ctx, delay); err != nil {
-			return err
+		if sleepErr := clock.Sleep(ctx, delay); sleepErr != nil {
+			if context.Cause(ctx) != nil {
+				return err
+			}
+			return sleepErr
 		}
 		delay = min(2*delay, 10*time.Second)
 	}

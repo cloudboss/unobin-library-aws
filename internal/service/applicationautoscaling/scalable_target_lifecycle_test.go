@@ -318,7 +318,9 @@ func TestTargetRegisterFinalGraceSleep(t *testing.T) {
 				require.NoError(t, err)
 				wantAttempts = append(wantAttempts, 135500*time.Millisecond)
 			} else {
-				require.ErrorIs(t, err, context.Canceled)
+				var invalid *types.ValidationException
+				require.ErrorAs(t, err, &invalid)
+				assert.Equal(t, "Unable to assume IAM role", invalid.ErrorMessage())
 			}
 			assert.Equal(t, wantAttempts, attempts)
 			assert.Equal(t, []time.Duration{500 * time.Millisecond, time.Second, 2 * time.Second,
@@ -390,7 +392,7 @@ func TestTargetCreateAppearanceAndCompensation(t *testing.T) {
 				assert.Nil(t, api.target)
 			}
 			if mode == "cancelled" {
-				assert.ErrorIs(t, err, context.Canceled)
+				assert.ErrorIs(t, err, runtime.ErrNotFound)
 			}
 			if mode == "absent" {
 				assert.ErrorIs(t, err, runtime.ErrNotFound)
@@ -574,7 +576,7 @@ func TestTargetRetryFinalAndCancellation(t *testing.T) {
 				require.ErrorIs(t, err, pending)
 				assert.Equal(t, 8, calls)
 			default:
-				require.ErrorIs(t, err, context.Canceled)
+				require.ErrorIs(t, err, pending)
 				assert.Equal(t, 1, calls)
 			}
 			if mode == "backoff" || mode == "final success" {
